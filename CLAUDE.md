@@ -11,6 +11,7 @@ Since this project is intended to be added as a jar file
 to an existing Swing app, it must have as few runtime dependencies
 as possible, to avoid transitive dependency version clashes.
 Do not introduce new runtime dependencies without asking.
+On the other hand, we can use any number of testing dependencies.
 
 `libs.version.toml` and `build.gradle.kts`/`settings.gradle.kts`
 are the source of truth for dependencies and versions.
@@ -28,6 +29,12 @@ and requires a servlet container to run (another huge dependency).
 The server must also not use Quarkus MCP server (the Swing app
 startup is set in stone and is not to be changed to Quarkus way)
 nor Spring AI MCP (a huge dependency).
+
+For testing purposes, we are leveraging the official
+`modelcontextprotocol/java-sdk` Java SDK library which provides a MCP
+client. We hope that the official MCP client will run in strict mode and
+will throw an exception on any malformed MCP JSON message. The `mcp-test`
+module looks what we need. Alternatively we can use `LangChain4j`.
 
 ## swing-mcp
 
