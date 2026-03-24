@@ -33,8 +33,10 @@ nor Spring AI MCP (a huge dependency).
 For testing purposes, we are leveraging the official
 `modelcontextprotocol/java-sdk` Java SDK library which provides a MCP
 client. We hope that the official MCP client will run in strict mode and
-will throw an exception on any malformed MCP JSON message. The `mcp-test`
-module looks what we need. Alternatively we can use `LangChain4j`.
+will throw an exception on any malformed MCP JSON message. Don't use the
+`mcp-test` module - even though it looks like the perfect fit, it's the
+`java-sdk` internal testing tool not meant to be used by other projects.
+Alternatively we can use `LangChain4j`.
 
 ## swing-mcp
 
