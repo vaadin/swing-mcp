@@ -23,19 +23,19 @@ Every use case must have unit tests before it is considered implemented. See `ar
 ### UC-001: Message JSONs
 
 **Use case spec:** [`UC-001`](use-cases/use-case-001-message-jsons.md)
-**Verified by:** [Name/Agent]
-**Date:** [YYYY-MM-DD]
+**Verified by:** Claude
+**Date:** 2026-03-25
 
 #### Automated Tests
 
-- [ ] Test class exists and all tests pass (`./gradlew test --tests ClassName`)
-- [ ] Acceptance criteria covered by tests
-- [ ] Business rule edge cases tested
+- [x] Test class exists and all tests pass (`./gradlew test --tests MCPProtocolTest`)
+- [x] Acceptance criteria covered by tests
+- [x] Business rule edge cases tested
 
 #### Result
 
-- **Status:** [Pass / Fail / Partial]
-- **Notes:** [Any issues found or follow-up items]
+- **Status:** Pass
+- **Notes:** 40+ test methods in MCPProtocolTest covering all MCP message types (initialize, ping, tools, resources, prompts, completion, logging, sampling, roots, notifications), round-trip serialization, toString/equals/hashCode, and edge cases (unknown fields, null field omission).
 
 ### UC-002: Skeletal MCP Implementation
 
