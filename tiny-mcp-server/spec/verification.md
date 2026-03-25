@@ -20,11 +20,26 @@ Every use case must have unit tests before it is considered implemented. See `ar
 
 ## 3. Per-Use-Case Verification Checklist
 
-> Copy this section for each use case. Name it: **UC-[NNN]: [Feature Title]**
+### UC-001: Message JSONs
 
-### UC-[NNN]: [Feature Title]
+**Use case spec:** [`UC-001`](use-cases/use-case-001-message-jsons.md)
+**Verified by:** [Name/Agent]
+**Date:** [YYYY-MM-DD]
 
-**Use case spec:** [`use-case-NNN-name.md`](use-cases/use-case-NNN-name.md)
+#### Automated Tests
+
+- [ ] Test class exists and all tests pass (`./gradlew test --tests ClassName`)
+- [ ] Acceptance criteria covered by tests
+- [ ] Business rule edge cases tested
+
+#### Result
+
+- **Status:** [Pass / Fail / Partial]
+- **Notes:** [Any issues found or follow-up items]
+
+### UC-002: Skeletal MCP Implementation
+
+**Use case spec:** [`UC-002`](use-cases/use-case-002-skeletal-mcp-server.md)
 **Verified by:** [Name/Agent]
 **Date:** [YYYY-MM-DD]
 
