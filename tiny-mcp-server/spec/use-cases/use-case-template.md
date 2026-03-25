@@ -49,15 +49,3 @@
 - [ ] [Test class name — e.g., `BrowseMoviesTest`]
 - [ ] [What each test covers — map to acceptance criteria and business rules]
 
----
-
-## UI / Routes
-
-[Describe layout or interaction requirements. Reference a mockup if available.]
-
-- [Layout or component description]
-- [Key interaction or state]
-
-| Route | Access | Notes |
-|-------|--------|-------|
-| `[/path]` | [public/authenticated] | [Vaadin @Route] |
