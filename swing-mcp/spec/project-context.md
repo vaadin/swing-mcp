@@ -24,4 +24,4 @@ Testing: testing involves running a Swing app. TODO verify whether `javax.access
 API works in headless mode: if yes, we can test way simpler. However,
 the screenshot capturing functionality probably requires Xvfb.
 
-This subproject needs to be specified further and is currently not to be implemented.
+This subproject needs to be specified further and is currently not to be implemented. Ignore this subproject for now.
