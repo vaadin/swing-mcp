@@ -23,7 +23,7 @@ Therefore, the server supports at most single session:
 - A session is allowed to be opened only if there is no other session ongoing.
 - Only after a session is terminated, a new session is allowed to be started.
 - If second session is attempted via a MCP initialization request,
-  that request is denied. TODO Claude suggest an appropriate HTTP error code and response message.
+  that request is denied with HTTP 409 Conflict and response body `"Another session is already active"`.
 
 ## 1. Vision
 
