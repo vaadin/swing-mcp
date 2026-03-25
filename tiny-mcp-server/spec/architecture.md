@@ -62,4 +62,5 @@ serialization, deserialization, message construction etc.
   - Test with parameter variations and return values
   - Also test whatever you deem necessary
 - MCPProtocolTest: doesn't hurt to test the POJO deserialization as well.
+  - Most important tests: test parsing and serialization on an actual real-world MCP JSONs.
 
