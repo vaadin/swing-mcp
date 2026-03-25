@@ -50,6 +50,11 @@ In every subproject there is a folder called `spec`. In it, there are files:
 
 # Build & Run
 
-TODO add `./gradlew` commands to build the project and run its tests, including commands to run individual tests.
-Simply running `./gradlew` cleans and builds everything and runs all tests.
+```bash
+./gradlew                      # clean + build + all tests (default)
+./gradlew test                 # run all tests across all subprojects
+./gradlew :tiny-mcp-server:test  # run tests for tiny-mcp-server only
+./gradlew test --tests "com.vaadin.swingmcp.tinymcpserver.TinyMcpServerTest"  # run a specific test class
+./gradlew test --tests "com.vaadin.swingmcp.tinymcpserver.TinyMcpServerTest.myTest"  # run a specific test method
+```
 
