@@ -7,8 +7,8 @@ nor allows any registration of additional tools.
 
 Prerequisite: UC-001 implemented
 
-**Status:** [Draft | Approved | Implemented]
-**Date:** [YYYY-MM-DD]
+**Status:** Implemented
+**Date:** 2026-03-25
 
 ---
 
@@ -31,9 +31,9 @@ The server provides the following initialization information over MCP:
 
 ## Acceptance Criteria
 
-- [ ] TinyMCPServer starts and listens on given port
-- [ ] TinyMCPServer responds correctly to the official MCP SDK client connecting to it
-- [ ] TinyMCPServer responds to MCP SDK query for tools, resources and prompts,
+- [x] TinyMCPServer starts and listens on given port
+- [x] TinyMCPServer responds correctly to the official MCP SDK client connecting to it
+- [x] TinyMCPServer responds to MCP SDK query for tools, resources and prompts,
  and returns an empty list.
 
 ---
@@ -42,7 +42,7 @@ The server provides the following initialization information over MCP:
 
 > Write unit tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] Write TinyMCPServerTest, which uses the official MCP
+- [x] Write TinyMCPServerTest, which uses the official MCP
 SDK client to test that TinyMCPServer responds correctly to
 client calls: the SDK client must connect and assert that there are
 zero tools, prompts and resources, without throwing an exception.
