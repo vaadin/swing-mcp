@@ -87,6 +87,7 @@ the intended user.
 ## 3. Constraints
 
 - As few runtime dependencies as possible
+- Java 17+ required
 - Bind to `127.0.0.1` only — never `0.0.0.0`
 
 > For technology stack and application structure details, see [`architecture.md`](architecture.md).

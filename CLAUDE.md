@@ -21,7 +21,7 @@ are the source of truth for dependencies and versions.
 Do not modify these files without asking.
 
 Swing Java apps could be running on Java as old as Java 8;
-but let's target compatibility with Java 11 and higher for now.
+but let's target compatibility with Java 17 and higher for now.
 
 ## Ways of Working
 
