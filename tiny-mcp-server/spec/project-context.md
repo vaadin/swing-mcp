@@ -30,5 +30,4 @@ the intended user.
 # Related Documents
 
 - [Architecture](architecture.md) — technology stack and application structure
-- [Use Case Template](use-cases/use-case-template.md) — template for feature specifications
 - [Verification](verification.md) — visual verification checklists
