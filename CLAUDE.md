@@ -44,26 +44,6 @@ In every subproject there is a folder called `spec`. In it, there are files:
 5. **Verify** — Follow `verification.md` checklists for each implemented use case.
 6. **Write Tests** — Write UI tests covering acceptance criteria and business rules. Tests must pass before marking as Implemented.
 
-## tiny-mcp-server
-
-This subproject implements a generic MCP server in pure Java.
-It uses the GSON library for JSON creation and parsing, and
-runs on the HttpServer built-in in Java SDK 11+.
-
-The server must not use `io.modelcontextprotocol.sdk` runtime
-dependency since it brings the jackson library (a huge dependency)
-and requires a servlet container to run (another huge dependency).
-The server must also not use Quarkus MCP server (the Swing app
-startup is set in stone and is not to be changed to Quarkus way)
-nor Spring AI MCP (a huge dependency).
-
-For testing purposes, we are leveraging the official
-`modelcontextprotocol/java-sdk` Java SDK library which provides a MCP
-client. We hope that the official MCP client will run in strict mode and
-will throw an exception on any malformed MCP JSON message. Don't use the
-`mcp-test` module - even though it looks like the perfect fit, it's the
-`java-sdk` internal testing tool not meant to be used by other projects.
-Alternatively we can use `LangChain4j`.
 
 ## swing-mcp
 
@@ -90,4 +70,9 @@ API works in headless mode: if yes, we can test way simpler. However,
 the screenshot capturing functionality probably requires Xvfb.
 
 This subproject needs to be specified further and is currently not to be implemented.
+
+# Build & Run
+
+TODO add `./gradlew` commands to build the project and run its tests.
+Simply running `./gradlew` cleans and builds everything and runs all tests.
 
