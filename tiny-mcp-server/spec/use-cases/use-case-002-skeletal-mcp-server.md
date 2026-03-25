@@ -21,6 +21,11 @@ args. Zero-arg constructor with default values is provided too.
 The TinyMCPServer has initially two methods: `start()` starts
 the http server, `stop()` stops it.
 
+The server provides the following initialization information over MCP:
+
+- Server name: `Swing MCP`
+- Server version: `0.0.1`
+- Instructions: Figure out what Playwright MCP is returning, and return similar message but tailored towards Java Swing instead of a browser.
 
 ---
 
