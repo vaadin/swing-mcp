@@ -17,6 +17,9 @@ On the other hand, we can use any number of testing dependencies.
 are the source of truth for dependencies and versions.
 Do not modify these files without asking.
 
+Swing Java apps could be running on Java as old as Java 8;
+but let's target compatibility with Java 11 and higher for now.
+
 ## Ways of Working
 
 > Specs are written first, then used as input for AI-driven implementation and verification.
@@ -47,6 +50,6 @@ In every subproject there is a folder called `spec`. In it, there are files:
 
 # Build & Run
 
-TODO add `./gradlew` commands to build the project and run its tests.
+TODO add `./gradlew` commands to build the project and run its tests, including commands to run individual tests.
 Simply running `./gradlew` cleans and builds everything and runs all tests.
 
