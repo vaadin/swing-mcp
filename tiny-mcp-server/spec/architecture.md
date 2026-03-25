@@ -36,11 +36,11 @@ Alternatively we can use `LangChain4j`.
 
 ```
 com.vaadin.swingmcp.tinymcpserver
-  TinyMcpServer.java            — The tiny http MCP server implementation itself
+  TinyMCPServer.java            — The tiny http MCP server implementation itself
   MCPProtocol.java              — All Java POJO for JSON live here
 ```
 
-TinyMcpServer: intended life cycle is to create a new instance of this Java class, 
+TinyMCPServer: intended life cycle is to create a new instance of this Java class, 
 register any custom tools, start the MCP http server, and stop it.
 No need to support repeated start/stop cycles. Only support
 Strings as parameters; the return type is either string or an PNG image.
