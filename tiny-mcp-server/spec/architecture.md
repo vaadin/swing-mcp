@@ -10,7 +10,7 @@ dependency since it brings the jackson library (a huge dependency)
 and requires a servlet container to run (another huge dependency).
 The server must also not use Quarkus MCP server (the Swing app
 startup is set in stone and is not to be changed to Quarkus way)
-nor Spring AI MCP (a huge dependency).
+nor Spring AI MCP (a huge dependency), nor Jackson (a huge dependency).
 
 For testing purposes, we are leveraging the official
 `modelcontextprotocol/java-sdk` Java SDK library which provides a MCP
