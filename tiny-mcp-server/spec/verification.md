@@ -40,16 +40,16 @@ Every use case must have unit tests before it is considered implemented. See `ar
 ### UC-002: Skeletal MCP Implementation
 
 **Use case spec:** [`UC-002`](use-cases/use-case-002-skeletal-mcp-server.md)
-**Verified by:** [Name/Agent]
-**Date:** [YYYY-MM-DD]
+**Verified by:** Claude
+**Date:** 2026-03-25
 
 #### Automated Tests
 
-- [ ] Test class exists and all tests pass (`./gradlew test --tests ClassName`)
-- [ ] Acceptance criteria covered by tests
-- [ ] Business rule edge cases tested
+- [x] Test class exists and all tests pass (`./gradlew test --tests TinyMCPServerTest`)
+- [x] Acceptance criteria covered by tests
+- [x] Business rule edge cases tested
 
 #### Result
 
-- **Status:** [Pass / Fail / Partial]
-- **Notes:** [Any issues found or follow-up items]
+- **Status:** Pass
+- **Notes:** 5 test methods in TinyMCPServerTest using the official MCP SDK client: initializeAndConnect (server name/version), listToolsReturnsEmpty, listResourcesReturnsEmpty, listPromptsReturnsEmpty, pingSucceeds. All acceptance criteria covered.
