@@ -7,16 +7,23 @@ runs on the HttpServer built in Java.
 The MCP server is minimalistic:
 
 - No support for SSE streams for server-to-client push messages
-- No support for explicit termination of a session
 - No support for auth of any kind
 - No support for resources nor prompts, only tools
 
-The MCP server doesn't support stdio communication, it only supports
+The MCP server doesn't support STDIO communication, it only supports
 HTTP. It listens on localhost interface, on specified port and
 path, which default to:
 
 - port: `18088`
 - context path: `/mcp`
+
+Contrary to Playwright MCP, the server can not launch more browsers.
+Therefore, the server supports at most single session:
+
+- A session is allowed to be opened only if there is no other session ongoing.
+- Only after a session is terminated, a new session is allowed to be started.
+- If second session is attempted via a MCP initialization request,
+  that request is denied. TODO Claude suggest an appropriate HTTP error code and response message.
 
 ## 1. Vision
 
