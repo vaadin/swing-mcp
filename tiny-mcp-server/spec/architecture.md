@@ -28,64 +28,38 @@ Alternatively we can use `LangChain4j`.
 - For testing: the official Java MCP SDK
 - Gradle (wrapper included)
 - Java
-- Testing: JUnit 5
+- Testing: JUnit 6
 
 ---
-
-TODO
 
 ## 2. Application Structure
 
 ```
-com.example.specdriven/
-  Application.java              — Spring Boot entry point
-  [feature-package]/
-    [FeatureView].java          — Vaadin @Route view
-    [FeatureService].java       — Business logic (Spring @Service)
-    [FeatureRepository].java    — Data access (Spring Data)
+com.vaadin.swingmcp.tinymcpserver
+  TinyMcpServer.java            — The tiny http MCP server implementation itself
+  MCPProtocol.java              — All Java POJO for JSON live here
 ```
+
+TinyMcpServer: intended life cycle is to create a new instance of this Java class, 
+register any custom tools, start the MCP http server, and stop it.
+No need to support repeated start/stop cycles. Only support
+Strings as parameters; the return type is either string or an PNG image.
+
+MCPProtocol: contains all Java POJOs for JSON+GSON serialization purposes.
+Also include any necessary utility functions assisting MCP protocol JSON
+serialization, deserialization, message construction etc.
 
 ---
 
 ## 3. Testing
 
-- **Browserless Tests**: Vaadin Browserless Testing (`SpringBrowserlessTest`)
+- Pure JUnit 6 tests, testing the Tiny MCP server itself.
   - Tests live in `src/test/java/`, mirroring the main package structure
-  - Extend `SpringBrowserlessTest`, annotate with `@SpringBootTest`
-  - Use `@WithMockUser(roles = "ADMIN")` for admin views
-  - Use `@WithAnonymousUser` for access control tests
-  - Use `navigate(ViewClass.class)` to render views
-  - Use `$(ComponentClass.class)` to query components, `test(component)` to interact
-- **React View Tests**: Vitest with React Testing Library
-  - Tests live in `src/test/frontend/`, mirroring the view structure
-  - Mock `@BrowserCallable` endpoint calls
-  - Test component rendering, user interactions, and navigation
-  - Run via `npx vitest run`
-- **Service Tests**: JUnit tests for Spring `@Service` classes
-  - Tests live in `src/test/java/`, same as browserless tests
-  - Annotate with `@SpringBootTest`, autowire the service
-  - Test business rules, validation, and data access
-  - Endpoints (`@BrowserCallable`) typically delegate to services — test the service, not the endpoint
-- **Test Coverage Requirements**:
-  - React views: Vitest view tests
-  - Vaadin Flow views: Browserless view tests
-  - Services: JUnit service tests
-- **Visual Verification**: Playwright MCP during development (not automated)
+- The `TinyMcpServerTest` test class:
+  - It starts the TinyMcpServer before all tests, and stops it afterwards.
+  - A test client is initialized before all tests as well; use the official MCP client with the HTTP Transport and Jackson3
+  - Registers a testing tool, then verifies the tool was called.
+  - Test with parameter variations and return values
+  - Also test whatever you deem necessary
+- MCPProtocolTest: doesn't hurt to test the POJO deserialization as well.
 
----
-
-## 4. UIState Management
-
-- **Signals** are the primary mechanism for managing UI state
-- **Non-shared signals** for standard per-user UI state (e.g., form values, selection state, view-local data)
-- **Shared signals** when state must be visible across multiple users/sessions (collaborative or real-time features) — requires **server push** to be enabled
-- When using shared signals, enable push on the view/UI (e.g., `@Push` annotation)
-
----
-
-## 5. Security & Admin
-
-- **Spring Security** with `VaadinSecurityConfigurer`
-- Public views: `@AnonymousAllowed` (React Hilla endpoints, public routes)
-- Admin views: `@RolesAllowed("ADMIN")` (Vaadin Flow views)
-- Login: Vaadin `LoginForm` at `/login`

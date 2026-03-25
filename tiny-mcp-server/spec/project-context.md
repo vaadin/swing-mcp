@@ -11,6 +11,9 @@ to be used elsewhere. Its purpose is to have as few dependencies as possible,
 to avoid transitive dependency clashes when embedding into customer
 Swing Java apps.
 
+Only the tools are supported at the moment: no custom resources nor
+prompts are supported.
+
 ## 2. Users
 
 Internal project: no human users, only the swing-mcp subproject is
