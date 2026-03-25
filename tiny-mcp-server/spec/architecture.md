@@ -40,13 +40,48 @@ com.vaadin.swingmcp.tinymcpserver
   MCPProtocol.java              — All Java POJO for JSON live here
 ```
 
-TinyMCPServer: intended life cycle is to create a new instance of this Java class, 
-register any custom tools, start the MCP http server, and stop it.
-No need to support repeated start/stop cycles. Only support
-Strings as parameters; the return type is either string or an PNG image.
+### TinyMCPServer
 
-MCPProtocol: contains all Java POJOs for JSON+GSON serialization purposes.
-Also include any necessary utility functions assisting MCP protocol JSON
+Intended lifecycle: create a new instance, register custom tools, start
+the MCP HTTP server, and stop it. No need to support repeated start/stop cycles.
+The server binds to `127.0.0.1` only.
+
+#### Tool registration API
+
+Tools are registered via a Java method on the `TinyMCPServer` class before
+calling `start()`. The API accepts:
+
+- **name** — tool name (string)
+- **description** — human-readable description (string)
+- **inputSchema** — parameter schema built via a fluent builder (see below)
+- **handler** — a lambda/callback that receives parsed parameters and returns a result
+
+Supported parameter types: `string`, `integer`.
+Supported return types: `string` or `PNG image` (as bytes).
+
+#### Tool parameter schema builder
+
+A fluent Java builder class for defining tool input schemas. The builder
+produces MCP-compliant JSON Schema for the tool's `inputSchema` field.
+
+Example usage (illustrative):
+```java
+server.addTool("swing_click", "Click a UI element",
+    new ToolSchemaBuilder()
+        .requiredInteger("ref", "The element reference number")
+        .build(),
+    params -> { /* handler */ });
+```
+
+The builder supports:
+- `.requiredString(name, description)` / `.optionalString(name, description)`
+- `.requiredInteger(name, description)` / `.optionalInteger(name, description)`
+- `.build()` — produces the final schema object
+
+### MCPProtocol
+
+Contains all Java POJOs for JSON+GSON serialization purposes.
+Also includes any necessary utility functions assisting MCP protocol JSON
 serialization, deserialization, message construction etc.
 
 ---
