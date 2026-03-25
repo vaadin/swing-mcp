@@ -4,15 +4,26 @@ This subproject implements a generic minimalistic MCP server in pure Java.
 It uses the GSON library for JSON creation and parsing, and
 runs on the HttpServer built in Java.
 
+The MCP server is minimalistic:
+
+- No support for SSE streams for server-to-client push messages
+- No support for explicit termination of a session
+- No support for auth of any kind
+- No support for resources nor prompts, only tools
+
+The MCP server doesn't support stdio communication, it only supports
+HTTP. It listens on localhost interface, on specified port and
+path, which default to:
+
+- port: `18088`
+- context path: `/mcp`
+
 ## 1. Vision
 
 This subproject is an internal dependency of swing-mcp and not meant
 to be used elsewhere. Its purpose is to have as few dependencies as possible,
 to avoid transitive dependency clashes when embedding into customer
 Swing Java apps.
-
-Only the tools are supported at the moment: no custom resources nor
-prompts are supported.
 
 ## 2. Users
 
