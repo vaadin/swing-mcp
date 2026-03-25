@@ -7,6 +7,7 @@ dependencies {
     implementation(libs.gson)
 
     testImplementation(libs.mcp.client)
+    testImplementation(libs.mcp.json.jackson3)
     testImplementation(libs.slf4j.simple)
     testImplementation(libs.junit)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
