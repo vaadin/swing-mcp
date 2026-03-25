@@ -25,7 +25,7 @@ The server provides the following initialization information over MCP:
 
 - Server name: `Swing MCP`
 - Server version: `0.0.1`
-- Instructions: Figure out what Playwright MCP is returning, and return similar message but tailored towards Java Swing instead of a browser.
+- Instructions: omit.
 
 ---
 
