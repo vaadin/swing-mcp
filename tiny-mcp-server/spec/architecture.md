@@ -32,6 +32,8 @@ Alternatively we can use `LangChain4j`.
 
 ---
 
+TODO
+
 ## 2. Application Structure
 
 ```
