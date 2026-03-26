@@ -1,6 +1,6 @@
 # Architecture
 
-A MCP server which provides concrete MCP tasks designed to
+A MCP server which provides concrete MCP tools designed to
 manipulate a Swing application.
 
 For testing purposes, we are leveraging the official
