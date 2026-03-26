@@ -1,0 +1,32 @@
+# UC-001: MCPServer
+
+Let's get necessary infrastructure in place.
+
+**Status:** [Draft | Approved | Implemented]
+**Date:** [YYYY-MM-DD]
+
+---
+
+## Main Flow
+
+The Swing application creates the MCPServer upon boot, calls start(), and then
+goes on as usual. MCPServer also offers stop() function which stops the server.
+However, this will be primarily intended for internal MCPServer testing.
+The Swing app simply terminates, killing MCPServer as well. MCPServer could
+introduce a JVM shutdown hook to stop itself cleanly: a startAndAutoStop() perhaps - this is the function Swing Apps should use.
+
+---
+
+## Acceptance Criteria
+
+- [ ] MCPServer has all necessary functionality
+- [ ] Tests are written and pass
+
+---
+
+## Tests
+
+> Write UI tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+
+- [ ] MCPServer test tests smoke-test: simply start and stop
+
