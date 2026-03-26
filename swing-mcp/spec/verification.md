@@ -10,6 +10,33 @@ Every use case must have unit tests before it is considered implemented. See `ar
 - Business rules must have dedicated tests (especially edge cases like limits, validation, and error handling)
 - Tests must pass (`./gradlew test`) before the use case status is set to **Implemented**
 
+### Component Matrix
+
+Every tool must be tested against a standard set of 20 Swing components. Some
+tools will succeed on a given component (e.g., `swing_click` on a `JButton`),
+while others will correctly fail (e.g., `swing_click` on a `JLabel`). Both
+outcomes are valuable test data.
+
+**Interactive / Form inputs:**
+`JButton`, `JTextField`, `JPasswordField`, `JTextArea`, `JCheckBox`,
+`JRadioButton` (with `ButtonGroup`), `JComboBox`, `JToggleButton`,
+`JSpinner`, `JSlider`
+
+**Containers / structural:**
+`JPanel`, `JScrollPane`, `JTabbedPane`, `JSplitPane`
+
+**Display:**
+`JLabel`, `JProgressBar`
+
+**Menus:**
+`JMenuBar`, `JMenu`, `JMenuItem`
+
+**Other:**
+`JToolBar`, `JList` (simple single-selection)
+
+Each tool test class should include a test method per component from this list,
+verifying the tool's behavior (successful operation or appropriate error).
+
 ### Naming Conventions
 
 - **Test class**: `[FeatureName]Test.java`
