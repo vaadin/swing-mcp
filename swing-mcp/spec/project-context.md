@@ -23,6 +23,27 @@ obtainable from `AccessibleContext`:
 Start verbose — include all available data. If this proves too large for AI
 context windows (frequent context window compression), reduce verbosity.
 
+For reference, we can mimic the accessibility tree which is returned by Playwright MCP as a tree text-based representation:
+```
+- document "Page Title"
+  - banner
+    - heading "Site Name" [level=1]
+    - navigation "Main Nav"
+      - link "Home" [ref=1]
+      - link "About" [ref=2]
+      - link "Contact" [ref=3]
+  - main
+    - heading "Welcome to the App" [level=2]
+    - paragraph "Some descriptive text here."
+    - button "Sign In" [ref=4]
+    - textbox "Email Address" [ref=5, required]
+    - textbox "Password" [ref=6, required]
+    - checkbox "Remember me" [ref=7, checked]
+    - link "Forgot password?" [ref=8]
+  - contentinfo
+    - text "© 2026 Example Corp"
+```
+
 ### Component addressing
 
 Components are identified by **short numeric refs** (starting from 1), assigned
@@ -31,6 +52,14 @@ ref → component is maintained internally.
 
 Refs are valid only until the next action is invoked. After any interaction tool
 call, the AI must call `swing_snapshot` to get fresh refs.
+
+## Which Components are considered
+
+All tools must only consider the components the user can interact with.
+That means:
+
+- If there is a modal Window, use the topmost modal Window.
+- If there isn't a modal Window, consider all Windows.
 
 ## 2. Screenshot Capture
 
