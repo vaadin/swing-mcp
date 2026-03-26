@@ -67,7 +67,7 @@ produces MCP-compliant JSON Schema for the tool's `inputSchema` field.
 Example usage (illustrative):
 ```java
 server.addTool("swing_click", "Click a UI element",
-    new ToolSchemaBuilder()
+    new InputSchemaBuilder()
         .requiredInteger("ref", "The element reference number")
         .build(),
     params -> { /* handler */ });
