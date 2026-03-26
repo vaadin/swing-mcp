@@ -13,7 +13,8 @@
 
 - I call the `swing_snapshot` tool with no parameters.
 - The tool walks the `javax.accessibility` tree of each considered window.
-- The tool returns a compact indented text tree with each node showing role, name, states, available actions, current value, and a numeric ref.
+- The tool returns a compact indented text tree with each node showing role, name, states, available actions, and current value.
+  - Nodes that expose at least one `AccessibleAction` also receive a numeric ref.
   - Only include accessibility name and description if those are not blank.
 
 ---
@@ -22,7 +23,7 @@
 
 | ID | Rule |
 |----|------|
-| BR-01 | Refs are short integers starting from 1, assigned fresh with each snapshot call. |
+| BR-01 | Refs are short integers starting from 1, assigned fresh with each snapshot call. Only nodes that expose at least one `AccessibleAction` receive a ref. |
 | BR-02 | Refs from a previous snapshot are invalidated after any interaction tool call. |
 | BR-03 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
 | BR-04 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. |
@@ -32,7 +33,7 @@
 ## Acceptance Criteria
 
 - [ ] Calling `swing_snapshot` returns a text tree containing role, name, states, actions, and value for each accessible node.
-- [ ] Each interactive node in the tree has a unique numeric `ref` starting from 1.
+- [ ] Only nodes exposing at least one `AccessibleAction` receive a ref; purely structural nodes (e.g., panels, labels) do not.
 - [ ] A panel with a button and a text field produces a tree with the expected structure and refs.
 - [ ] Nested component hierarchies are represented with correct indentation.
 - [ ] Non-visible components are excluded from the tree.
