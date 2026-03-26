@@ -181,4 +181,32 @@ class InputSchemaBuilderTest {
         assertThrows(IllegalArgumentException.class, () ->
                 new InputSchemaBuilder().requiredString("name", ""));
     }
+
+    @Test
+    void nameStartingWithDigitThrows() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new InputSchemaBuilder().requiredString("1name", "desc"));
+    }
+
+    @Test
+    void nameWithSpaceThrows() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new InputSchemaBuilder().requiredString("my name", "desc"));
+    }
+
+    @Test
+    void nameWithSpecialCharThrows() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new InputSchemaBuilder().requiredString("my-name", "desc"));
+    }
+
+    @Test
+    void validNamesAccepted() {
+        assertEquals("file_path: string, maxResults: integer, _tmp: boolean",
+                new InputSchemaBuilder()
+                        .requiredString("file_path", "a path")
+                        .requiredInteger("maxResults", "max results")
+                        .requiredBoolean("_tmp", "temp flag")
+                        .toString());
+    }
 }

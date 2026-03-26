@@ -18,7 +18,8 @@ Example methods:
 - `.build()` — produces the final schema object `MCPProtocol.InputSchema`
 
 All build methods return `this`, to allow fluent API.
-Both `name` and `description` must not be null nor blank; throw `IllegalArgumentException` if it is.
+Both `name` and `description` must not be null nor blank; throw `IllegalArgumentException` if they are.
+Parameter `name` must also match the pattern `[a-zA-Z_][a-zA-Z0-9_]*` (starts with a letter or underscore, followed by alphanumeric characters or underscores); throw `IllegalArgumentException` otherwise.
 
 Parameters appear in the built `InputSchema` and in `toString()` in **insertion order** (the order they were added to the builder). This ordering is part of the contract.
 
@@ -56,4 +57,5 @@ Prerequisite: UC-002 implemented
 - [x] Test that duplicite parameter fails
 - [x] Test the `.build()` method.
 - [x] Test not-null/not-blank cases
+- [x] Test that invalid parameter names (spaces, leading digit, special chars) throw `IllegalArgumentException`
 
