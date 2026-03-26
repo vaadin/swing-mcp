@@ -12,9 +12,9 @@
 ## Main Flow
 
 - I call the `swing_snapshot` tool with no parameters.
-- The tool determines which windows are considered (modal window only, or all visible windows).
 - The tool walks the `javax.accessibility` tree of each considered window.
 - The tool returns a compact indented text tree with each node showing role, name, states, available actions, current value, and a numeric ref.
+  - Only include accessibility name and description if those are not blank.
 
 ---
 
@@ -22,12 +22,10 @@
 
 | ID | Rule |
 |----|------|
-| BR-01 | If a modal window is visible, only that window is included in the snapshot. |
-| BR-02 | If no modal window is visible, all visible windows are included. |
-| BR-03 | Refs are short integers starting from 1, assigned fresh with each snapshot call. |
-| BR-04 | Refs from a previous snapshot are invalidated after any interaction tool call. |
-| BR-05 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
-| BR-06 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. |
+| BR-01 | Refs are short integers starting from 1, assigned fresh with each snapshot call. |
+| BR-02 | Refs from a previous snapshot are invalidated after any interaction tool call. |
+| BR-03 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
+| BR-04 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. |
 
 ---
 
@@ -44,6 +42,8 @@
 ## Tests
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+
+Understand that headless mode is on, which means you have to use JPanel instead of Window/Dialog/JFrame for testing.
 
 - [ ] `SwingSnapshotTest`
   - [ ] A simple hierarchy (panel with button and text field) produces a tree with correct roles, names, and refs.
