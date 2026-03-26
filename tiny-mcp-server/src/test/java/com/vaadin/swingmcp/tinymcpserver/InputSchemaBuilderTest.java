@@ -272,6 +272,14 @@ class InputSchemaBuilderTest {
     }
 
     @Test
+    void withEnumEmptyThrows() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new InputSchemaBuilder()
+                        .requiredString("status", "desc")
+                        .withEnum());
+    }
+
+    @Test
     void withEnumBeforeAnyParamThrows() {
         assertThrows(IllegalStateException.class, () ->
                 new InputSchemaBuilder().withEnum("a", "b"));

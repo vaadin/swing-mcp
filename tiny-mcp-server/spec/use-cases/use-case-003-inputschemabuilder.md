@@ -15,7 +15,7 @@ The builder supports the following types: `string`, `integer`, `number`, `boolea
 Example methods:
 - `.requiredString(name, description)` / `.optionalString(name, description)`
 - `.requiredInteger(name, description)` / `.optionalInteger(name, description)`
-- `.withEnum(String... values)` — adds `enum` constraint to the last added parameter; throws `IllegalStateException` if called before any parameter is added, or if `enum` is already set for that parameter
+- `.withEnum(String... values)` — adds `enum` constraint to the last added parameter; throws `IllegalArgumentException` if `values` is empty; throws `IllegalStateException` if called before any parameter is added, or if `enum` is already set for that parameter
 - `.withMinimum(Number min)` / `.withMaximum(Number max)` — adds `minimum`/`maximum` constraint to the last added parameter; throws `IllegalStateException` if called before any parameter is added, or if already set for that parameter
 - `.build()` — produces the final schema object `MCPProtocol.InputSchema`
 

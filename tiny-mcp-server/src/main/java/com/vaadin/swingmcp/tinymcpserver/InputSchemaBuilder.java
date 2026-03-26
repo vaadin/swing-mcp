@@ -82,6 +82,9 @@ public class InputSchemaBuilder {
         if (lastAdded == null) {
             throw new IllegalStateException("No parameter has been added yet");
         }
+        if (values == null || values.length == 0) {
+            throw new IllegalArgumentException("Enum values must not be empty");
+        }
         MCPProtocol.PropertySchema schema = properties.get(lastAdded);
         if (schema.getEnumValues() != null) {
             throw new IllegalStateException("Enum already set for parameter: " + lastAdded);
