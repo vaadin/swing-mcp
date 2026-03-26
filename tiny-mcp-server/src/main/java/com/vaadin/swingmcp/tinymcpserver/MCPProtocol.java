@@ -187,6 +187,54 @@ public class MCPProtocol {
         public void setMimeType(String mimeType) { this.mimeType = mimeType; }
         public ResourceContents getResource() { return resource; }
         public void setResource(ResourceContents resource) { this.resource = resource; }
+
+        /** Creates a text content item. */
+        public static Content text(String text) {
+            Content c = new Content();
+            c.setType("text");
+            c.setText(text);
+            return c;
+        }
+
+        /**
+         * Creates an image content item.
+         *
+         * @param data     base64-encoded image data
+         * @param mimeType the MIME type of the image (e.g. "image/png")
+         */
+        public static Content image(String data, String mimeType) {
+            Content c = new Content();
+            c.setType("image");
+            c.setData(data);
+            c.setMimeType(mimeType);
+            return c;
+        }
+
+        /**
+         * Creates an audio content item.
+         *
+         * @param data     base64-encoded audio data
+         * @param mimeType the MIME type of the audio (e.g. "audio/wav")
+         */
+        public static Content audio(String data, String mimeType) {
+            Content c = new Content();
+            c.setType("audio");
+            c.setData(data);
+            c.setMimeType(mimeType);
+            return c;
+        }
+
+        /**
+         * Creates an embedded resource content item.
+         *
+         * @param resource the resource contents to embed
+         */
+        public static Content resource(ResourceContents resource) {
+            Content c = new Content();
+            c.setType("resource");
+            c.setResource(resource);
+            return c;
+        }
     }
 
     public static class Root extends McpPojo {

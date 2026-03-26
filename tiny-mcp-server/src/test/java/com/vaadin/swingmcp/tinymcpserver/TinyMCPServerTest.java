@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -81,5 +82,69 @@ class TinyMCPServerTest {
     void pingSucceeds() {
         client.initialize();
         assertDoesNotThrow(() -> client.ping());
+    }
+
+    // ===== addTool() validation tests =====
+
+    @Test
+    void addToolRejectsNullName() {
+        TinyMCPServer s = new TinyMCPServer(19001, "/mcp");
+        assertThrows(IllegalArgumentException.class, () ->
+                s.addTool(null, "desc", new InputSchemaBuilder().build(), params -> null));
+    }
+
+    @Test
+    void addToolRejectsBlankName() {
+        TinyMCPServer s = new TinyMCPServer(19002, "/mcp");
+        assertThrows(IllegalArgumentException.class, () ->
+                s.addTool("  ", "desc", new InputSchemaBuilder().build(), params -> null));
+    }
+
+    @Test
+    void addToolRejectsNullDescription() {
+        TinyMCPServer s = new TinyMCPServer(19003, "/mcp");
+        assertThrows(IllegalArgumentException.class, () ->
+                s.addTool("my_tool", null, new InputSchemaBuilder().build(), params -> null));
+    }
+
+    @Test
+    void addToolRejectsBlankDescription() {
+        TinyMCPServer s = new TinyMCPServer(19004, "/mcp");
+        assertThrows(IllegalArgumentException.class, () ->
+                s.addTool("my_tool", "  ", new InputSchemaBuilder().build(), params -> null));
+    }
+
+    @Test
+    void addToolRejectsNullInputSchema() {
+        TinyMCPServer s = new TinyMCPServer(19005, "/mcp");
+        assertThrows(IllegalArgumentException.class, () ->
+                s.addTool("my_tool", "desc", null, params -> null));
+    }
+
+    @Test
+    void addToolRejectsNullFunction() {
+        TinyMCPServer s = new TinyMCPServer(19006, "/mcp");
+        assertThrows(IllegalArgumentException.class, () ->
+                s.addTool("my_tool", "desc", new InputSchemaBuilder().build(), null));
+    }
+
+    @Test
+    void addToolAfterStartThrows() throws Exception {
+        TinyMCPServer s = new TinyMCPServer(19007, "/mcp");
+        s.start();
+        try {
+            assertThrows(IllegalStateException.class, () ->
+                    s.addTool("my_tool", "desc", new InputSchemaBuilder().build(), params -> null));
+        } finally {
+            s.stop();
+        }
+    }
+
+    @Test
+    void addToolDuplicateNameThrows() {
+        TinyMCPServer s = new TinyMCPServer(19008, "/mcp");
+        s.addTool("my_tool", "desc", new InputSchemaBuilder().build(), params -> null);
+        assertThrows(IllegalStateException.class, () ->
+                s.addTool("my_tool", "other desc", new InputSchemaBuilder().build(), params -> null));
     }
 }

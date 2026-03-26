@@ -42,16 +42,16 @@ Add convenient factory methods to `MCPProtocol.Content`:
 
 Prerequisite: UC-003 implemented
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-03-26
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] The method is created
-- [ ] `tools/list` returns all registered tools (name, description, InputSchema passed as-is)
-- [ ] All tests created and pass
+- [x] The method is created
+- [x] `tools/list` returns all registered tools (name, description, InputSchema passed as-is)
+- [x] All tests created and pass
 
 ---
 
@@ -59,17 +59,17 @@ Prerequisite: UC-003 implemented
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] Test that null/blank values are rejected with `IllegalArgumentException`
-- [ ] Test that `addTool()` after `start()` throws `IllegalStateException`
-- [ ] Test that `addTool()` with a duplicate name throws `IllegalStateException`
-- [ ] Test `tools/list` via MCP client returns all registered tools with correct name, description, and InputSchema
-- [ ] Test function invocation, by running the server and calling the function via the MCP client
-  - [ ] Parameter passing to the function: test empty map, test all supported types (string, integer, number, boolean)
-  - [ ] Integer coercion: whole-number Double is converted to Integer; fractional Double returns -32602
-  - [ ] Missing required parameter returns JSON-RPC error -32602
-  - [ ] Unknown parameters are silently ignored (warning logged)
-  - [ ] Null parameter value treated as missing (required → -32602, optional → absent from map)
-  - [ ] Tool not found returns JSON-RPC error -32601
-  - [ ] Result handling: null content (empty array), text content, image content, audio content, resource content
-  - [ ] Exception handling: if the function throws, return isError=true with exception.toString() as text content
+- [x] Test that null/blank values are rejected with `IllegalArgumentException`
+- [x] Test that `addTool()` after `start()` throws `IllegalStateException`
+- [x] Test that `addTool()` with a duplicate name throws `IllegalStateException`
+- [x] Test `tools/list` via MCP client returns all registered tools with correct name, description, and InputSchema
+- [x] Test function invocation, by running the server and calling the function via the MCP client
+  - [x] Parameter passing to the function: test empty map, test all supported types (string, integer, number, boolean)
+  - [x] Integer coercion: whole-number Double is converted to Integer; fractional Double returns -32602
+  - [x] Missing required parameter returns JSON-RPC error -32602
+  - [x] Unknown parameters are silently ignored (warning logged)
+  - [x] Null parameter value treated as missing (required → -32602, optional → absent from map)
+  - [x] Tool not found returns JSON-RPC error -32601
+  - [x] Result handling: null content (empty array), text content, image content, audio content, resource content
+  - [x] Exception handling: if the function throws, return isError=true with exception.toString() as text content
 

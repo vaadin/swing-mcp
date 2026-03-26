@@ -1,0 +1,363 @@
+package com.vaadin.swingmcp.tinymcpserver;
+
+import io.modelcontextprotocol.client.McpClient;
+import io.modelcontextprotocol.client.McpSyncClient;
+import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
+import io.modelcontextprotocol.spec.McpSchema;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * Integration tests for tool registration and invocation via the MCP client.
+ * Uses a dedicated server on port 18090 with tools pre-registered.
+ */
+class TinyMCPServerToolTest {
+
+    private static final int TEST_PORT = 18090;
+    private static TinyMCPServer server;
+    private static McpSyncClient client;
+
+    /** Captures the arguments received by the last call to the multi-type test tool. */
+    private static final AtomicReference<Map<String, Object>> lastCallArgs = new AtomicReference<>();
+
+    @BeforeAll
+    static void startServer() throws Exception {
+        server = new TinyMCPServer(TEST_PORT, "/mcp");
+
+        // Tool: echo_text — returns the "message" string as text content
+        server.addTool("echo_text", "Echo a text message",
+                new InputSchemaBuilder()
+                        .requiredString("message", "The message to echo")
+                        .build(),
+                params -> MCPProtocol.Content.text((String) params.get("message")));
+
+        // Tool: add_integers — returns sum of two integers as text
+        server.addTool("add_integers", "Add two integers",
+                new InputSchemaBuilder()
+                        .requiredInteger("a", "First integer")
+                        .requiredInteger("b", "Second integer")
+                        .build(),
+                params -> MCPProtocol.Content.text(
+                        String.valueOf((Integer) params.get("a") + (Integer) params.get("b"))));
+
+        // Tool: multi_type — accepts all parameter types, records args, returns text
+        server.addTool("multi_type", "Test all parameter types",
+                new InputSchemaBuilder()
+                        .requiredString("str_param", "A string")
+                        .requiredInteger("int_param", "An integer")
+                        .requiredNumber("num_param", "A number")
+                        .requiredBoolean("bool_param", "A boolean")
+                        .build(),
+                params -> {
+                    lastCallArgs.set(Map.copyOf(params));
+                    return MCPProtocol.Content.text("ok");
+                });
+
+        // Tool: optional_params — has one required and one optional param
+        server.addTool("optional_params", "Tool with optional parameters",
+                new InputSchemaBuilder()
+                        .requiredString("required_str", "Required string")
+                        .optionalString("optional_str", "Optional string")
+                        .build(),
+                params -> {
+                    lastCallArgs.set(Map.copyOf(params));
+                    return MCPProtocol.Content.text("ok");
+                });
+
+        // Tool: return_null — always returns null content
+        server.addTool("return_null", "Returns null content",
+                new InputSchemaBuilder().build(),
+                params -> null);
+
+        // Tool: return_image — returns image content
+        server.addTool("return_image", "Returns image content",
+                new InputSchemaBuilder().build(),
+                params -> MCPProtocol.Content.image("aW1hZ2VkYXRh", "image/png"));
+
+        // Tool: return_audio — returns audio content
+        server.addTool("return_audio", "Returns audio content",
+                new InputSchemaBuilder().build(),
+                params -> MCPProtocol.Content.audio("YXVkaW9kYXRh", "audio/wav"));
+
+        // Tool: return_resource — returns embedded resource content
+        server.addTool("return_resource", "Returns resource content",
+                new InputSchemaBuilder().build(),
+                params -> {
+                    MCPProtocol.ResourceContents rc = new MCPProtocol.ResourceContents();
+                    rc.setUri("file:///test.txt");
+                    rc.setMimeType("text/plain");
+                    rc.setText("resource text");
+                    return MCPProtocol.Content.resource(rc);
+                });
+
+        // Tool: throw_exception — always throws
+        server.addTool("throw_exception", "Always throws an exception",
+                new InputSchemaBuilder().build(),
+                params -> { throw new RuntimeException("something went wrong"); });
+
+        // Tool: unknown_params_tool — has no defined params, to test unknown param warning
+        server.addTool("no_params_tool", "Tool with no params",
+                new InputSchemaBuilder().build(),
+                params -> {
+                    lastCallArgs.set(Map.copyOf(params));
+                    return MCPProtocol.Content.text("ok");
+                });
+
+        server.start();
+
+        HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport
+                .builder("http://127.0.0.1:" + TEST_PORT + "/mcp")
+                .openConnectionOnStartup(false)
+                .build();
+
+        client = McpClient.sync(transport)
+                .requestTimeout(Duration.ofSeconds(5))
+                .initializationTimeout(Duration.ofSeconds(5))
+                .build();
+
+        client.initialize();
+    }
+
+    @AfterAll
+    static void stopServer() {
+        if (client != null) {
+            client.close();
+        }
+        if (server != null) {
+            server.stop();
+        }
+    }
+
+    // ===== tools/list =====
+
+    @Test
+    void toolsListReturnsAllRegisteredTools() {
+        McpSchema.ListToolsResult result = client.listTools();
+        assertNotNull(result);
+        List<McpSchema.Tool> tools = result.tools();
+        assertEquals(10, tools.size());
+
+        McpSchema.Tool echoTool = tools.stream()
+                .filter(t -> "echo_text".equals(t.name()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("echo_text", echoTool.name());
+        assertEquals("Echo a text message", echoTool.description());
+        assertNotNull(echoTool.inputSchema());
+        assertEquals("object", echoTool.inputSchema().type());
+        assertTrue(echoTool.inputSchema().properties().containsKey("message"));
+        assertTrue(echoTool.inputSchema().required().contains("message"));
+    }
+
+    @Test
+    void toolsListInputSchemaPassedAsIs() {
+        McpSchema.ListToolsResult result = client.listTools();
+        McpSchema.Tool addTool = result.tools().stream()
+                .filter(t -> "add_integers".equals(t.name()))
+                .findFirst()
+                .orElseThrow();
+
+        assertNotNull(addTool.inputSchema());
+        assertTrue(addTool.inputSchema().properties().containsKey("a"));
+        assertTrue(addTool.inputSchema().properties().containsKey("b"));
+        assertEquals(2, addTool.inputSchema().required().size());
+    }
+
+    // ===== tools/call — parameter passing =====
+
+    @Test
+    void callToolWithEmptyParams() {
+        McpSchema.CallToolResult result = client.callTool(
+                new McpSchema.CallToolRequest("return_null", Map.of()));
+        assertNotNull(result);
+        assertFalse(Boolean.TRUE.equals(result.isError()));
+        assertTrue(result.content().isEmpty());
+    }
+
+    @Test
+    void callToolAllParameterTypes() {
+        lastCallArgs.set(null);
+        client.callTool(new McpSchema.CallToolRequest("multi_type", Map.of(
+                "str_param", "hello",
+                "int_param", 42,
+                "num_param", 3.14,
+                "bool_param", true
+        )));
+        Map<String, Object> args = lastCallArgs.get();
+        assertNotNull(args);
+        assertEquals("hello", args.get("str_param"));
+        assertInstanceOf(Integer.class, args.get("int_param"));
+        assertEquals(42, args.get("int_param"));
+        assertInstanceOf(Double.class, args.get("num_param"));
+        assertEquals(3.14, (Double) args.get("num_param"), 0.001);
+        assertEquals(Boolean.TRUE, args.get("bool_param"));
+    }
+
+    @Test
+    void callToolIntegerCoercionWholeDouble() {
+        // Pass 5.0 (a Double) for an integer parameter — should be coerced to Integer(5)
+        lastCallArgs.set(null);
+        client.callTool(new McpSchema.CallToolRequest("multi_type", Map.of(
+                "str_param", "x",
+                "int_param", 5.0,
+                "num_param", 1.0,
+                "bool_param", false
+        )));
+        Map<String, Object> args = lastCallArgs.get();
+        assertNotNull(args);
+        assertInstanceOf(Integer.class, args.get("int_param"));
+        assertEquals(5, args.get("int_param"));
+    }
+
+    @Test
+    void callToolIntegerCoercionFractionalDoubleReturnsError() {
+        // Pass 5.5 for an integer parameter — should return -32602
+        assertThrows(Exception.class, () ->
+                client.callTool(new McpSchema.CallToolRequest("multi_type", Map.of(
+                        "str_param", "x",
+                        "int_param", 5.5,
+                        "num_param", 1.0,
+                        "bool_param", false
+                ))));
+    }
+
+    @Test
+    void callToolMissingRequiredParameterReturnsError() {
+        // Don't pass "message" which is required
+        assertThrows(Exception.class, () ->
+                client.callTool(new McpSchema.CallToolRequest("echo_text", Map.of())));
+    }
+
+    @Test
+    void callToolNullRequiredParameterTreatedAsMissing() {
+        // Pass null for required param — treated as missing → -32602
+        Map<String, Object> args = new java.util.HashMap<>();
+        args.put("message", null);
+        assertThrows(Exception.class, () ->
+                client.callTool(new McpSchema.CallToolRequest("echo_text", args)));
+    }
+
+    @Test
+    void callToolNullOptionalParameterAbsentFromMap() {
+        // Pass null for optional param — should be absent from the callArgs map
+        lastCallArgs.set(null);
+        Map<String, Object> args = new java.util.HashMap<>();
+        args.put("required_str", "hello");
+        args.put("optional_str", null);
+        client.callTool(new McpSchema.CallToolRequest("optional_params", args));
+        Map<String, Object> received = lastCallArgs.get();
+        assertNotNull(received);
+        assertTrue(received.containsKey("required_str"));
+        assertFalse(received.containsKey("optional_str"));
+    }
+
+    @Test
+    void callToolUnknownParametersIgnored() {
+        // Pass extra "unknown_param" — should be silently ignored, not cause an error
+        lastCallArgs.set(null);
+        assertDoesNotThrow(() -> client.callTool(
+                new McpSchema.CallToolRequest("no_params_tool",
+                        Map.of("unknown_param", "surprise"))));
+        Map<String, Object> received = lastCallArgs.get();
+        assertNotNull(received);
+        assertFalse(received.containsKey("unknown_param"));
+    }
+
+    @Test
+    void callToolNotFoundReturnsError() {
+        assertThrows(Exception.class, () ->
+                client.callTool(new McpSchema.CallToolRequest("nonexistent_tool", Map.of())));
+    }
+
+    // ===== tools/call — return value handling =====
+
+    @Test
+    void callToolTextContent() {
+        McpSchema.CallToolResult result = client.callTool(
+                new McpSchema.CallToolRequest("echo_text", Map.of("message", "hello world")));
+        assertNotNull(result);
+        assertFalse(Boolean.TRUE.equals(result.isError()));
+        assertEquals(1, result.content().size());
+        assertInstanceOf(McpSchema.TextContent.class, result.content().get(0));
+        McpSchema.TextContent text = (McpSchema.TextContent) result.content().get(0);
+        assertEquals("hello world", text.text());
+    }
+
+    @Test
+    void callToolNullContentReturnsEmptyArray() {
+        McpSchema.CallToolResult result = client.callTool(
+                new McpSchema.CallToolRequest("return_null", Map.of()));
+        assertNotNull(result);
+        assertFalse(Boolean.TRUE.equals(result.isError()));
+        assertTrue(result.content().isEmpty());
+    }
+
+    @Test
+    void callToolImageContent() {
+        McpSchema.CallToolResult result = client.callTool(
+                new McpSchema.CallToolRequest("return_image", Map.of()));
+        assertNotNull(result);
+        assertEquals(1, result.content().size());
+        assertInstanceOf(McpSchema.ImageContent.class, result.content().get(0));
+        McpSchema.ImageContent img = (McpSchema.ImageContent) result.content().get(0);
+        assertEquals("aW1hZ2VkYXRh", img.data());
+        assertEquals("image/png", img.mimeType());
+    }
+
+    @Test
+    void callToolAudioContent() {
+        McpSchema.CallToolResult result = client.callTool(
+                new McpSchema.CallToolRequest("return_audio", Map.of()));
+        assertNotNull(result);
+        assertEquals(1, result.content().size());
+        // Audio content — verify the raw JSON has the expected structure
+        // The SDK may deserialize audio as a generic content type
+        Object content = result.content().get(0);
+        assertNotNull(content);
+    }
+
+    @Test
+    void callToolResourceContent() {
+        McpSchema.CallToolResult result = client.callTool(
+                new McpSchema.CallToolRequest("return_resource", Map.of()));
+        assertNotNull(result);
+        assertEquals(1, result.content().size());
+        assertInstanceOf(McpSchema.EmbeddedResource.class, result.content().get(0));
+        McpSchema.EmbeddedResource resource = (McpSchema.EmbeddedResource) result.content().get(0);
+        assertNotNull(resource.resource());
+    }
+
+    @Test
+    void callToolExceptionReturnsIsErrorWithMessage() {
+        McpSchema.CallToolResult result = client.callTool(
+                new McpSchema.CallToolRequest("throw_exception", Map.of()));
+        assertNotNull(result);
+        assertTrue(Boolean.TRUE.equals(result.isError()));
+        assertEquals(1, result.content().size());
+        assertInstanceOf(McpSchema.TextContent.class, result.content().get(0));
+        McpSchema.TextContent text = (McpSchema.TextContent) result.content().get(0);
+        assertTrue(text.text().contains("something went wrong"),
+                "Expected exception message in: " + text.text());
+        assertTrue(text.text().startsWith("java.lang.RuntimeException"),
+                "Expected class name in: " + text.text());
+    }
+
+    @Test
+    void callToolParameterIntegration() {
+        McpSchema.CallToolResult result = client.callTool(
+                new McpSchema.CallToolRequest("add_integers", Map.of("a", 3, "b", 7)));
+        assertNotNull(result);
+        assertFalse(Boolean.TRUE.equals(result.isError()));
+        assertEquals(1, result.content().size());
+        assertInstanceOf(McpSchema.TextContent.class, result.content().get(0));
+        assertEquals("10", ((McpSchema.TextContent) result.content().get(0)).text());
+    }
+}

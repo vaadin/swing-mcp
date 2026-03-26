@@ -11,7 +11,12 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -28,8 +33,50 @@ public class TinyMCPServer {
     private static final String SERVER_NAME = "Swing MCP";
     private static final String SERVER_VERSION = "0.0.1";
 
+    /**
+     * A tool handler function that receives parsed parameters and returns content.
+     *
+     * <p>The parameter map is always non-null, even when no parameters are defined or passed.
+     * Values are typed according to their schema: {@code String} for string parameters,
+     * {@code Integer} for integer parameters, {@code Double} for number parameters,
+     * and {@code Boolean} for boolean parameters. Optional parameters absent from the call
+     * are not included in the map.
+     *
+     * <p>Returning {@code null} produces an empty content array in the response.
+     * Throwing any exception causes the tool result to have {@code isError=true} with
+     * the exception's {@link Throwable#toString()} as the text content.
+     */
+    @FunctionalInterface
+    public interface ToolFunction {
+        /**
+         * Invokes the tool.
+         *
+         * @param params the parameter values, never null
+         * @return the result content, or {@code null} for an empty result
+         * @throws Exception if tool execution fails
+         */
+        MCPProtocol.Content call(Map<String, Object> params) throws Exception;
+    }
+
+    private static class RegisteredTool {
+        final MCPProtocol.InputSchema inputSchema;
+        final ToolFunction function;
+        final MCPProtocol.Tool descriptor;
+
+        RegisteredTool(String name, String description, MCPProtocol.InputSchema inputSchema, ToolFunction function) {
+            this.inputSchema = inputSchema;
+            this.function = function;
+            this.descriptor = new MCPProtocol.Tool();
+            this.descriptor.setName(name);
+            this.descriptor.setDescription(description);
+            this.descriptor.setInputSchema(inputSchema);
+        }
+    }
+
     private final int port;
     private final String contextPath;
+    private final Map<String, RegisteredTool> tools = new LinkedHashMap<>();
+    private volatile boolean started = false;
     private HttpServer httpServer;
     private String activeSessionId;
 
@@ -42,7 +89,41 @@ public class TinyMCPServer {
         this.contextPath = contextPath;
     }
 
+    /**
+     * Registers a tool with this server. Must be called before {@link #start()}.
+     *
+     * @param name        the tool name; not null, not blank
+     * @param description human-readable description of the tool; not null, not blank
+     * @param inputSchema the parameter schema; not null; consider using {@link InputSchemaBuilder}
+     * @param function    the handler to invoke when the tool is called; not null
+     * @throws IllegalArgumentException if any argument is null or blank
+     * @throws IllegalStateException    if the server has already been started
+     * @throws IllegalStateException    if a tool with the same name is already registered
+     */
+    public void addTool(String name, String description, MCPProtocol.InputSchema inputSchema, ToolFunction function) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Tool name must not be null or blank");
+        }
+        if (description == null || description.isBlank()) {
+            throw new IllegalArgumentException("Tool description must not be null or blank");
+        }
+        if (inputSchema == null) {
+            throw new IllegalArgumentException("InputSchema must not be null");
+        }
+        if (function == null) {
+            throw new IllegalArgumentException("ToolFunction must not be null");
+        }
+        if (started) {
+            throw new IllegalStateException("Cannot add tools after server has been started");
+        }
+        if (tools.containsKey(name)) {
+            throw new IllegalStateException("A tool with name '" + name + "' is already registered");
+        }
+        tools.put(name, new RegisteredTool(name, description, inputSchema, function));
+    }
+
     public void start() throws IOException {
+        started = true;
         httpServer = HttpServer.create(
                 new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port), 0);
         httpServer.createContext(contextPath, this::handleRequest);
@@ -113,6 +194,9 @@ public class TinyMCPServer {
             case "tools/list":
                 handleToolsList(exchange, request);
                 break;
+            case "tools/call":
+                handleToolsCall(exchange, request);
+                break;
             case "resources/list":
                 handleResourcesList(exchange, request);
                 break;
@@ -159,8 +243,106 @@ public class TinyMCPServer {
 
     private void handleToolsList(HttpExchange exchange, MCPProtocol.JsonRpcRequest request) throws IOException {
         MCPProtocol.ListToolsResult result = new MCPProtocol.ListToolsResult();
-        result.setTools(Collections.emptyList());
+        List<MCPProtocol.Tool> toolList = new ArrayList<>();
+        for (RegisteredTool rt : tools.values()) {
+            toolList.add(rt.descriptor);
+        }
+        result.setTools(toolList);
         sendJsonRpcResponse(exchange, request.getId(), result);
+    }
+
+    private void handleToolsCall(HttpExchange exchange, MCPProtocol.JsonRpcRequest request) throws IOException {
+        MCPProtocol.CallToolParams params = request.getParamsAs(MCPProtocol.CallToolParams.class);
+        if (params == null || params.getName() == null) {
+            sendJsonRpcError(exchange, request.getId(), -32601, "Method not found");
+            return;
+        }
+
+        String toolName = params.getName();
+        RegisteredTool tool = tools.get(toolName);
+        if (tool == null) {
+            sendJsonRpcError(exchange, request.getId(), -32601, "Method not found: " + toolName);
+            return;
+        }
+
+        Map<String, Object> rawArgs = params.getArguments() != null ? params.getArguments() : Collections.emptyMap();
+        MCPProtocol.InputSchema schema = tool.inputSchema;
+        Map<String, MCPProtocol.PropertySchema> properties =
+                schema.getProperties() != null ? schema.getProperties() : Collections.emptyMap();
+        List<String> required =
+                schema.getRequired() != null ? schema.getRequired() : Collections.emptyList();
+
+        // Warn about unknown parameters
+        for (String key : rawArgs.keySet()) {
+            if (!properties.containsKey(key)) {
+                LOG.warn("Unknown parameter '{}' for tool '{}', ignoring", key, toolName);
+            }
+        }
+
+        // Validate and coerce parameters
+        Map<String, Object> callArgs = new HashMap<>();
+        for (Map.Entry<String, MCPProtocol.PropertySchema> entry : properties.entrySet()) {
+            String paramName = entry.getKey();
+            String paramType = entry.getValue().getType();
+            Object value = rawArgs.get(paramName);
+            boolean isRequired = required.contains(paramName);
+
+            if (value == null) {
+                if (isRequired) {
+                    sendJsonRpcError(exchange, request.getId(), -32602,
+                            "Invalid parameter '" + paramName + "'");
+                    return;
+                }
+                // optional and absent: omit from callArgs
+                continue;
+            }
+
+            if ("integer".equals(paramType)) {
+                if (value instanceof Long) {
+                    long l = (Long) value;
+                    if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
+                        sendJsonRpcError(exchange, request.getId(), -32602,
+                                "Invalid parameter '" + paramName + "'");
+                        return;
+                    }
+                    value = (int) l;
+                } else if (value instanceof Double) {
+                    double d = (Double) value;
+                    if (Double.isNaN(d) || Double.isInfinite(d) || d != Math.floor(d)) {
+                        sendJsonRpcError(exchange, request.getId(), -32602,
+                                "Invalid parameter '" + paramName + "'");
+                        return;
+                    }
+                    long l = (long) d;
+                    if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
+                        sendJsonRpcError(exchange, request.getId(), -32602,
+                                "Invalid parameter '" + paramName + "'");
+                        return;
+                    }
+                    value = (int) l;
+                }
+            }
+
+            callArgs.put(paramName, value);
+        }
+
+        // Invoke the tool function
+        try {
+            MCPProtocol.Content content = tool.function.call(callArgs);
+            MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
+            if (content == null) {
+                result.setContent(Collections.emptyList());
+            } else {
+                result.setContent(Collections.singletonList(content));
+            }
+            sendJsonRpcResponse(exchange, request.getId(), result);
+        } catch (Exception e) {
+            LOG.debug("Tool '{}' threw an exception", toolName, e);
+            MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
+            result.setIsError(true);
+            result.setContent(Collections.singletonList(MCPProtocol.Content.text(e.toString())));
+            sendJsonRpcResponse(exchange, request.getId(), result);
+        }
     }
 
     private void handleResourcesList(HttpExchange exchange, MCPProtocol.JsonRpcRequest request) throws IOException {
