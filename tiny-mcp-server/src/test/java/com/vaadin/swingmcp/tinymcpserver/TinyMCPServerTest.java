@@ -101,6 +101,17 @@ class TinyMCPServerTest {
     }
 
     @Test
+    void addToolRejectsInvalidName() {
+        TinyMCPServer s = new TinyMCPServer(19009, "/mcp");
+        assertThrows(IllegalArgumentException.class, () ->
+                s.addTool("1tool", "desc", new InputSchemaBuilder().build(), params -> null));
+        assertThrows(IllegalArgumentException.class, () ->
+                s.addTool("my-tool", "desc", new InputSchemaBuilder().build(), params -> null));
+        assertThrows(IllegalArgumentException.class, () ->
+                s.addTool("my tool", "desc", new InputSchemaBuilder().build(), params -> null));
+    }
+
+    @Test
     void addToolRejectsNullDescription() {
         TinyMCPServer s = new TinyMCPServer(19003, "/mcp");
         assertThrows(IllegalArgumentException.class, () ->

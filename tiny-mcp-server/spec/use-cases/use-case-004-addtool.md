@@ -2,7 +2,7 @@
 
 Implement `TinyMCPServer.addTool()` which accepts the following parameters:
 
-* The tool name: not null, not blank
+* The tool name: not null, not blank, must match `[a-zA-Z_][a-zA-Z0-9_]*` (same convention as parameter names)
 * The tool description: not null, not blank
 * `InputSchema`; not null; in Javadoc recommend to use `InputSchemaBuilder`
 * A `TinyMCPServer.ToolFunction` (custom `@FunctionalInterface`); not null
@@ -59,7 +59,7 @@ Prerequisite: UC-003 implemented
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [x] Test that null/blank values are rejected with `IllegalArgumentException`
+- [x] Test that null/blank/invalid-pattern tool names are rejected with `IllegalArgumentException`
 - [x] Test that `addTool()` after `start()` throws `IllegalStateException`
 - [x] Test that `addTool()` with a duplicate name throws `IllegalStateException`
 - [x] Test `tools/list` via MCP client returns all registered tools with correct name, description, and InputSchema

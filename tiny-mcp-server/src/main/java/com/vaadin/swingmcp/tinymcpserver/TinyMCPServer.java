@@ -104,6 +104,9 @@ public class TinyMCPServer {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Tool name must not be null or blank");
         }
+        if (!name.matches("[a-zA-Z_][a-zA-Z0-9_]*")) {
+            throw new IllegalArgumentException("Tool name must start with a letter or underscore and contain only alphanumeric characters and underscores: " + name);
+        }
         if (description == null || description.isBlank()) {
             throw new IllegalArgumentException("Tool description must not be null or blank");
         }
