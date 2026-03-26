@@ -5,6 +5,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.SwingUtilities;
+import com.vaadin.swingmcp.mcp.tools.AbstractSwingTool;
+
 import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.Window;
@@ -43,6 +45,26 @@ public class MCPServer {
 
     private void registerTools() {
         // Tools will be registered here as they are implemented in subsequent use cases.
+    }
+
+    /**
+     * Registers a Swing tool with the underlying MCP server. The tool is
+     * wrapped so that every invocation:
+     * <ol>
+     *   <li>Marshals onto the EDT via {@link #runInEDT(Callable)}</li>
+     *   <li>Retrieves the current considered components</li>
+     *   <li>Delegates to {@link AbstractSwingTool#execute}</li>
+     * </ol>
+     *
+     * @param tool the Swing tool to register
+     */
+    protected void registerTool(AbstractSwingTool tool) {
+        server.addTool(tool.getName(), tool.getDescription(), tool.getInputSchema(), params ->
+                runInEDT(() -> {
+                    List<Component> components = getConsideredComponents();
+                    return tool.execute(params, components);
+                })
+        );
     }
 
     /**
