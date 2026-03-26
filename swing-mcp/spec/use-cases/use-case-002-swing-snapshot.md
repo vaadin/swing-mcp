@@ -26,7 +26,7 @@
 | BR-01 | Refs are short integers starting from 1, assigned fresh with each snapshot call. Only nodes that expose at least one `AccessibleAction` receive a ref. |
 | BR-02 | Refs from a previous snapshot are invalidated after any interaction tool call. |
 | BR-03 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
-| BR-04 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. |
+| BR-04 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. Line format: `- role "name" value="val" [ref=N] [states] actions: action1, action2`. Omit each segment if empty/not applicable (e.g., no `value=` for a button, no `[ref=]` for a panel). |
 
 ---
 
