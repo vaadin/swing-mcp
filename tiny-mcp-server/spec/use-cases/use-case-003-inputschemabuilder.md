@@ -27,16 +27,16 @@ a: integer, b: integer, ref: string
 
 Prerequisite: UC-002 implemented
 
-**Status:** [Draft | Approved | Implemented]
-**Date:** [YYYY-MM-DD]
+**Status:** Implemented
+**Date:** 2026-03-26
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] InputSchemaBuilder Java class created
-- [ ] All methods created
-- [ ] All tests created
+- [x] InputSchemaBuilder Java class created
+- [x] All methods created
+- [x] All tests created
 
 ---
 
@@ -44,7 +44,7 @@ Prerequisite: UC-002 implemented
 
 > Write unit tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] Write InputSchemaBuilder test and test all types thoroughly. Use `toString()` instead of `build()` to make test methods more succinct.
-- [ ] Test the fluent API by chaining multiple calls
-- [ ] Test the `.build()` method.
+- [x] Write InputSchemaBuilder test and test all types thoroughly. Use `toString()` instead of `build()` to make test methods more succinct.
+- [x] Test the fluent API by chaining multiple calls
+- [x] Test the `.build()` method.
 
