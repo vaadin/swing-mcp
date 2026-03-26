@@ -43,6 +43,18 @@ use JPanel instead => the method should return `List<Component>` instead.
 The tests will override the method and will return their own component hierarchy,
 whatever suits the test needs.
 
+For upcoming Swing Tools, we create an utility class AbstractSwingTool which:
+
+1. Implements a function similar to TinyMCPServer.ToolFunction, but also receives the list of considered components.
+2. Gives assurance that it's run in Swing EDT thread
+
+Every Swing tool must extend that class. When swing tool is registered to
+MCPServer, it must register a wrapper ToolFunction which, upon invocation:
+
+1. Calls immediately runInEDT() and runs the remainder of the function there.
+2. Retrieves a list of considered components
+3. Calls AbstractSwingTool.
+
 ---
 
 ## 3. Ref Lifecycle

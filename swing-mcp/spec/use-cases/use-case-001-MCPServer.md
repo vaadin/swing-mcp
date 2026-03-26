@@ -15,6 +15,13 @@ However, this will be primarily intended for internal MCPServer testing.
 The Swing app simply terminates, killing MCPServer as well. MCPServer could
 introduce a JVM shutdown hook to stop itself cleanly: a startAndAutoStop() perhaps - this is the function Swing Apps should use.
 
+
+To support future tests, let's introduce a FakeMCPServer which extends MCPServer, goes into the test sources, and:
+
+1. Overrides MCPServer.runInEDT() and calls the Callable right away
+2. Provides setConsideredComponents() which allows tests to set a `List<Component>` to be returned by any subsequent calls to getConsideredComponents(). Modify `getConsideredComponents()` accordingly.
+For thread safety, wrap given List in CopyOnWriteArrayList and store into a volatile private field.
+
 ---
 
 ## Acceptance Criteria
