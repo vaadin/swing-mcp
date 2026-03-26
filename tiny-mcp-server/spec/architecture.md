@@ -57,6 +57,7 @@ calling `start()`. The API accepts:
 - **handler** — a lambda/callback that receives parsed parameters and returns a result
 
 Supported parameter types: `string`, `integer`, `number`, `boolean`.
+For `integer` parameters, TinyMCPServer accepts a JSON number with no fractional part (e.g. `1.0` is accepted as `1`); a number with a non-zero fractional part is rejected.
 Supported return types: `string` or `PNG image` (as bytes).
 
 #### Tool parameter schema builder
