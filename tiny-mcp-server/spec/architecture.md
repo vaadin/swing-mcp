@@ -56,7 +56,7 @@ calling `start()`. The API accepts:
 - **inputSchema** — parameter schema built via a fluent builder (see below)
 - **handler** — a lambda/callback that receives parsed parameters and returns a result
 
-Supported parameter types: `string`, `integer`.
+Supported parameter types: `string`, `integer`, `number`, `boolean`.
 Supported return types: `string` or `PNG image` (as bytes).
 
 #### Tool parameter schema builder
