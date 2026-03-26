@@ -92,3 +92,7 @@ components. The ref system is shared across all tools and follows these rules:
   - A test client is initialized before all tests as well; use the official MCP client with the HTTP Transport and Jackson3
   - No tools are tested: we will test each tool in its own separate test class.
 
+For every tool test class, the following holds:
+- Remember we are headless.
+- SwingUtilities.invokeAndWait() will fail => needs to go into protected function MCPServer.runInEDT(block); the tests will override and simply run the block right away. It is thread-unsafe; if the tests will fail we will revisit and think of some locking mechanism.
+
