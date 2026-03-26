@@ -25,9 +25,8 @@
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | After any interaction tool call, previously assigned refs are invalidated. |
-| BR-04 | The click is performed via the component's `AccessibleAction` if available. |
-| BR-05 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
+| BR-03 | The click is performed via the component's `AccessibleAction` if available. |
+| BR-04 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
 
 ---
 

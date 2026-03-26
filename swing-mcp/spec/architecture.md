@@ -45,7 +45,41 @@ whatever suits the test needs.
 
 ---
 
-## 3. Testing
+## 3. Ref Lifecycle
+
+Tools that inspect or interact with the UI use **short numeric refs** to address
+components. The ref system is shared across all tools and follows these rules:
+
+1. **Assignment.** `swing_snapshot` assigns refs starting from 1 to every node
+   that exposes at least one `AccessibleAction`. Structural nodes (panels, labels,
+   scroll panes, etc.) do not receive refs. The ref-to-component map is held by
+   `MCPServer` and replaced in its entirety on each `swing_snapshot` call.
+
+2. **Validity window.** Refs are valid from the moment `swing_snapshot` returns
+   until the next **interaction tool call** (`swing_click`, `swing_set_text`,
+   `swing_set_value`, or any future interaction tool). An interaction may change
+   the component tree (e.g., clicking a button may open a dialog, setting text
+   may trigger a validator that disables other fields), so stale refs cannot be
+   trusted.
+
+3. **Invalidation.** After any interaction tool call, the existing ref map is
+   cleared. Subsequent attempts to use an old ref must return an MCP-level error
+   (`isError: true`) with a recovery message suggesting the AI call
+   `swing_snapshot` to obtain fresh refs.
+
+4. **Expected AI workflow.** The AI is expected to follow a
+   snapshot → interact → snapshot loop:
+   ```
+   swing_snapshot          → get refs
+   swing_click ref=3       → refs invalidated
+   swing_snapshot          → get fresh refs
+   swing_set_text ref=1 …  → refs invalidated
+   swing_snapshot          → get fresh refs
+   ```
+
+---
+
+## 4. Testing
 
 - Pure JUnit 6 tests
   - Tests live in `src/test/java/`, mirroring the main package structure
