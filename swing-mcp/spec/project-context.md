@@ -123,9 +123,8 @@ When creating a snapshot or screenshot, consider only visible windows:
 
 ## 6. Testing
 
-Testing involves running a Swing app. TODO: verify whether `javax.accessibility`
-API works in headless mode — if yes, testing is simpler. The screenshot
-capturing functionality probably requires Xvfb.
+Testing involves running a Swing app. The `javax.accessibility` API works in
+headless mode. The screenshot capturing functionality probably requires Xvfb.
 
 ## 7. Constraints
 
