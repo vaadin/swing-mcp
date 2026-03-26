@@ -5,6 +5,7 @@ plugins {
     `maven-publish`
     signing
     id("io.github.gradle-nexus.publish-plugin") version "2.0.0"
+    id("idea")
 }
 
 defaultTasks("clean", "build")
@@ -24,6 +25,7 @@ subprojects {
         plugin("maven-publish")
         plugin("java")
         plugin("org.gradle.signing")
+        plugin("idea")
     }
 
     tasks.withType<Test> {
@@ -38,7 +40,12 @@ subprojects {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
+    idea {
+        module {
+            isDownloadSources = true
+            isDownloadJavadoc = true
+        }
+    }
     // creates a reusable function which configures proper deployment to Maven Central
     ext["configureMavenCentral"] = { artifactId: String ->
 
