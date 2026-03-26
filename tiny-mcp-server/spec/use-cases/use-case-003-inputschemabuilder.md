@@ -15,6 +15,8 @@ The builder supports the following types: `string`, `integer`, `number`, `boolea
 Example methods:
 - `.requiredString(name, description)` / `.optionalString(name, description)`
 - `.requiredInteger(name, description)` / `.optionalInteger(name, description)`
+- `.withEnum(String... values)` — adds `enum` constraint to the last added parameter; throws `IllegalStateException` if called before any parameter is added, or if `enum` is already set for that parameter
+- `.withMinimum(Number min)` / `.withMaximum(Number max)` — adds `minimum`/`maximum` constraint to the last added parameter; throws `IllegalStateException` if called before any parameter is added, or if already set for that parameter
 - `.build()` — produces the final schema object `MCPProtocol.InputSchema`
 
 All build methods return `this`, to allow fluent API.
@@ -28,10 +30,12 @@ will throw `IllegalStateException`.
 
 Builder's `toString()` method will produce the following succinct output:
 ```
-a: integer, b: integer?, ref: string
+a: integer, b: integer?, ref: string, status: string(active|inactive), page: integer[1,], price: number[0.0,999.99]
 ```
-Required parameters are shown as `type`, optional parameters as `type?` (Kotlin/TypeScript convention).
-The description is omitted.
+- Required parameters are shown as `type`, optional as `type?` (Kotlin/TypeScript convention)
+- Enum constraints are shown as `type(val1|val2|...)`
+- Range constraints are shown as `type[min,max]` — either bound may be empty if not set
+- Description is omitted
 
 Prerequisite: UC-002 implemented
 
@@ -59,4 +63,8 @@ Prerequisite: UC-002 implemented
 - [x] Test the `.build()` method.
 - [x] Test not-null/not-blank cases
 - [x] Test that invalid parameter names (spaces, leading digit, special chars) throw `IllegalArgumentException`
+- [x] Test `withEnum`, `withMinimum`, `withMaximum` in `toString()` and `build()`
+- [x] Test that calling `withEnum`/`withMinimum`/`withMaximum` before any parameter throws `IllegalStateException`
+- [x] Test that calling `withEnum`/`withMinimum`/`withMaximum` twice on the same parameter throws `IllegalStateException`
+- [x] Test that constraints apply only to the last-added parameter
 

@@ -191,6 +191,131 @@ class InputSchemaBuilderTest {
                 new InputSchemaBuilder().requiredString("name", ""));
     }
 
+    // --- withEnum / withMinimum / withMaximum ---
+
+    @Test
+    void withEnumToString() {
+        assertEquals("status: string(active|inactive|pending)",
+                new InputSchemaBuilder()
+                        .requiredString("status", "Current status")
+                        .withEnum("active", "inactive", "pending")
+                        .toString());
+    }
+
+    @Test
+    void withMinimumOnlyToString() {
+        assertEquals("page: integer[1,]",
+                new InputSchemaBuilder()
+                        .requiredInteger("page", "Page number")
+                        .withMinimum(1)
+                        .toString());
+    }
+
+    @Test
+    void withMaximumOnlyToString() {
+        assertEquals("count: integer[,100]",
+                new InputSchemaBuilder()
+                        .requiredInteger("count", "Max count")
+                        .withMaximum(100)
+                        .toString());
+    }
+
+    @Test
+    void withMinimumAndMaximumToString() {
+        assertEquals("price: number[0.0,999.99]",
+                new InputSchemaBuilder()
+                        .requiredNumber("price", "Price in USD")
+                        .withMinimum(0.0).withMaximum(999.99)
+                        .toString());
+    }
+
+    @Test
+    void withEnumOptionalToString() {
+        assertEquals("status: string?(active|inactive)",
+                new InputSchemaBuilder()
+                        .optionalString("status", "Status")
+                        .withEnum("active", "inactive")
+                        .toString());
+    }
+
+    @Test
+    void withConstraintsApplyToLastAddedOnly() {
+        assertEquals("a: integer[1,10], b: string",
+                new InputSchemaBuilder()
+                        .requiredInteger("a", "first")
+                        .withMinimum(1).withMaximum(10)
+                        .requiredString("b", "second")
+                        .toString());
+    }
+
+    @Test
+    void withEnumSetOnBuildResult() {
+        MCPProtocol.PropertySchema prop = new InputSchemaBuilder()
+                .requiredString("status", "Status")
+                .withEnum("active", "inactive")
+                .build()
+                .getProperties().get("status");
+
+        assertEquals(List.of("active", "inactive"), prop.getEnumValues());
+    }
+
+    @Test
+    void withMinimumAndMaximumSetOnBuildResult() {
+        MCPProtocol.PropertySchema prop = new InputSchemaBuilder()
+                .requiredNumber("price", "Price")
+                .withMinimum(0.0).withMaximum(999.99)
+                .build()
+                .getProperties().get("price");
+
+        assertEquals(0.0, prop.getMinimum().doubleValue());
+        assertEquals(999.99, prop.getMaximum().doubleValue());
+    }
+
+    @Test
+    void withEnumBeforeAnyParamThrows() {
+        assertThrows(IllegalStateException.class, () ->
+                new InputSchemaBuilder().withEnum("a", "b"));
+    }
+
+    @Test
+    void withMinimumBeforeAnyParamThrows() {
+        assertThrows(IllegalStateException.class, () ->
+                new InputSchemaBuilder().withMinimum(1));
+    }
+
+    @Test
+    void withMaximumBeforeAnyParamThrows() {
+        assertThrows(IllegalStateException.class, () ->
+                new InputSchemaBuilder().withMaximum(10));
+    }
+
+    @Test
+    void withEnumTwiceThrows() {
+        assertThrows(IllegalStateException.class, () ->
+                new InputSchemaBuilder()
+                        .requiredString("s", "desc")
+                        .withEnum("a")
+                        .withEnum("b"));
+    }
+
+    @Test
+    void withMinimumTwiceThrows() {
+        assertThrows(IllegalStateException.class, () ->
+                new InputSchemaBuilder()
+                        .requiredInteger("n", "desc")
+                        .withMinimum(1)
+                        .withMinimum(2));
+    }
+
+    @Test
+    void withMaximumTwiceThrows() {
+        assertThrows(IllegalStateException.class, () ->
+                new InputSchemaBuilder()
+                        .requiredInteger("n", "desc")
+                        .withMaximum(10)
+                        .withMaximum(20));
+    }
+
     @Test
     void nameStartingWithDigitThrows() {
         assertThrows(IllegalArgumentException.class, () ->

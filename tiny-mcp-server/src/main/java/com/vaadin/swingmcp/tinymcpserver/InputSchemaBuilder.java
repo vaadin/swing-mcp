@@ -20,6 +20,7 @@ public class InputSchemaBuilder {
 
     private final LinkedHashMap<String, MCPProtocol.PropertySchema> properties = new LinkedHashMap<>();
     private final List<String> required = new ArrayList<>();
+    private String lastAdded = null;
 
     public InputSchemaBuilder requiredString(String name, String description) {
         return add(name, "string", description, true);
@@ -70,9 +71,46 @@ public class InputSchemaBuilder {
         schema.setType(type);
         schema.setDescription(description);
         properties.put(name, schema);
+        lastAdded = name;
         if (isRequired) {
             required.add(name);
         }
+        return this;
+    }
+
+    public InputSchemaBuilder withEnum(String... values) {
+        if (lastAdded == null) {
+            throw new IllegalStateException("No parameter has been added yet");
+        }
+        MCPProtocol.PropertySchema schema = properties.get(lastAdded);
+        if (schema.getEnumValues() != null) {
+            throw new IllegalStateException("Enum already set for parameter: " + lastAdded);
+        }
+        schema.setEnumValues(List.of(values));
+        return this;
+    }
+
+    public InputSchemaBuilder withMinimum(Number min) {
+        if (lastAdded == null) {
+            throw new IllegalStateException("No parameter has been added yet");
+        }
+        MCPProtocol.PropertySchema schema = properties.get(lastAdded);
+        if (schema.getMinimum() != null) {
+            throw new IllegalStateException("Minimum already set for parameter: " + lastAdded);
+        }
+        schema.setMinimum(min);
+        return this;
+    }
+
+    public InputSchemaBuilder withMaximum(Number max) {
+        if (lastAdded == null) {
+            throw new IllegalStateException("No parameter has been added yet");
+        }
+        MCPProtocol.PropertySchema schema = properties.get(lastAdded);
+        if (schema.getMaximum() != null) {
+            throw new IllegalStateException("Maximum already set for parameter: " + lastAdded);
+        }
+        schema.setMaximum(max);
         return this;
     }
 
@@ -86,7 +124,23 @@ public class InputSchemaBuilder {
     @Override
     public String toString() {
         return properties.entrySet().stream()
-                .map(e -> e.getKey() + ": " + e.getValue().getType() + (required.contains(e.getKey()) ? "" : "?"))
+                .map(this::propertyToString)
                 .collect(Collectors.joining(", "));
+    }
+
+    private String propertyToString(Map.Entry<String, MCPProtocol.PropertySchema> e) {
+        String name = e.getKey();
+        MCPProtocol.PropertySchema schema = e.getValue();
+        String optionalMark = required.contains(name) ? "" : "?";
+        String result = name + ": " + schema.getType() + optionalMark;
+        if (schema.getEnumValues() != null) {
+            result += "(" + String.join("|", schema.getEnumValues()) + ")";
+        }
+        if (schema.getMinimum() != null || schema.getMaximum() != null) {
+            String min = schema.getMinimum() != null ? schema.getMinimum().toString() : "";
+            String max = schema.getMaximum() != null ? schema.getMaximum().toString() : "";
+            result += "[" + min + "," + max + "]";
+        }
+        return result;
     }
 }

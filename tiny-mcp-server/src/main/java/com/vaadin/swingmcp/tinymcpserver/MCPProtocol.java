@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.ToNumberPolicy;
+import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 import java.util.Map;
@@ -374,11 +375,21 @@ public class MCPProtocol {
     public static class PropertySchema extends McpPojo {
         private String type;
         private String description;
+        @SerializedName("enum")
+        private List<String> enumValues;
+        private Number minimum;
+        private Number maximum;
 
         public String getType() { return type; }
         public void setType(String type) { this.type = type; }
         public String getDescription() { return description; }
         public void setDescription(String description) { this.description = description; }
+        public List<String> getEnumValues() { return enumValues; }
+        public void setEnumValues(List<String> enumValues) { this.enumValues = enumValues; }
+        public Number getMinimum() { return minimum; }
+        public void setMinimum(Number minimum) { this.minimum = minimum; }
+        public Number getMaximum() { return maximum; }
+        public void setMaximum(Number maximum) { this.maximum = maximum; }
     }
 
     public static class ListToolsParams extends McpPojo {
