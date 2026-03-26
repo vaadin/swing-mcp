@@ -135,4 +135,28 @@ class InputSchemaBuilderTest {
                         .requiredInteger("ref", "first")
                         .requiredString("ref", "duplicate"));
     }
+
+    @Test
+    void nullNameThrows() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new InputSchemaBuilder().requiredString(null, "desc"));
+    }
+
+    @Test
+    void blankNameThrows() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new InputSchemaBuilder().requiredString("  ", "desc"));
+    }
+
+    @Test
+    void nullDescriptionThrows() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new InputSchemaBuilder().requiredString("name", null));
+    }
+
+    @Test
+    void blankDescriptionThrows() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new InputSchemaBuilder().requiredString("name", ""));
+    }
 }

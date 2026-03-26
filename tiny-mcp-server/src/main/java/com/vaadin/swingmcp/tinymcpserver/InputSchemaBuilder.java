@@ -54,6 +54,12 @@ public class InputSchemaBuilder {
     }
 
     private InputSchemaBuilder add(String name, String type, String description, boolean isRequired) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Parameter name must not be null or blank");
+        }
+        if (description == null || description.isBlank()) {
+            throw new IllegalArgumentException("Parameter description must not be null or blank");
+        }
         if (properties.containsKey(name)) {
             throw new IllegalStateException("Parameter already exists: " + name);
         }

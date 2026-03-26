@@ -18,6 +18,7 @@ Example methods:
 - `.build()` — produces the final schema object `MCPProtocol.InputSchema`
 
 All build methods return `this`, to allow fluent API.
+Also, both `name` and `description` must not be null nor blank; throw `IllegalArgumentException` if it is.
 
 Note: it is not allowed to add a parameter second time: attempting to add a parameter when it already exists
 will throw `IllegalStateException`.
@@ -51,4 +52,5 @@ Prerequisite: UC-002 implemented
 - [x] Test the fluent API by chaining multiple calls
 - [x] Test that duplicite parameter fails
 - [x] Test the `.build()` method.
+- [x] Test not-null/not-blank cases
 
