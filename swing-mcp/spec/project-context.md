@@ -83,7 +83,7 @@ snapshots or screenshots — the AI decides when it needs fresh state.
 | `swing_snapshot` | Text (compact tree) | Accessibility tree of visible windows |
 | `swing_screenshot` | PNG image | Screenshot of visible windows |
 | `swing_click` | Empty string | Click a component by ref |
-| `swing_fill` | Empty string | Set text on a text component by ref |
+| `swing_set_text` | Empty string | Set text on a text component by ref |
 | `swing_set_value` | Empty string | Set value on a component by ref |
 
 Additional interaction tools may be added as needed (e.g., `swing_select`,
