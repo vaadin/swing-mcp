@@ -3,6 +3,7 @@ package com.vaadin.swingmcp.tinymcpserver;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
+import io.modelcontextprotocol.spec.McpError;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -220,20 +221,24 @@ class TinyMCPServerToolTest {
     @Test
     void callToolIntegerCoercionFractionalDoubleReturnsError() {
         // Pass 5.5 for an integer parameter — should return -32602
-        assertThrows(Exception.class, () ->
+        Exception ex = assertThrows(Exception.class, () ->
                 client.callTool(new McpSchema.CallToolRequest("multi_type", Map.of(
                         "str_param", "x",
                         "int_param", 5.5,
                         "num_param", 1.0,
                         "bool_param", false
                 ))));
+        McpError mcpError = assertInstanceOf(McpError.class, McpError.findRootCause(ex));
+        assertEquals(-32602, mcpError.getJsonRpcError().code());
     }
 
     @Test
     void callToolMissingRequiredParameterReturnsError() {
         // Don't pass "message" which is required
-        assertThrows(Exception.class, () ->
+        Exception ex = assertThrows(Exception.class, () ->
                 client.callTool(new McpSchema.CallToolRequest("echo_text", Map.of())));
+        McpError mcpError = assertInstanceOf(McpError.class, McpError.findRootCause(ex));
+        assertEquals(-32602, mcpError.getJsonRpcError().code());
     }
 
     @Test
@@ -241,8 +246,10 @@ class TinyMCPServerToolTest {
         // Pass null for required param — treated as missing → -32602
         Map<String, Object> args = new java.util.HashMap<>();
         args.put("message", null);
-        assertThrows(Exception.class, () ->
+        Exception ex = assertThrows(Exception.class, () ->
                 client.callTool(new McpSchema.CallToolRequest("echo_text", args)));
+        McpError mcpError = assertInstanceOf(McpError.class, McpError.findRootCause(ex));
+        assertEquals(-32602, mcpError.getJsonRpcError().code());
     }
 
     @Test
