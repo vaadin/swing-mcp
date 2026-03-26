@@ -29,4 +29,5 @@ introduce a JVM shutdown hook to stop itself cleanly: a startAndAutoStop() perha
 > Write UI tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
 - [ ] MCPServer test tests smoke-test: simply start and stop
+  - [ ] Additional test will use the official MCP SDK client to ping MCPServer and retrieve the list of tasks; don't assert on the number of tasks since that will change as tasks are implemented, simply assert that the list is not null.
 
