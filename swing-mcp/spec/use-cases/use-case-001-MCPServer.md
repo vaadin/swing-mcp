@@ -2,8 +2,8 @@
 
 Let's get necessary infrastructure in place.
 
-**Status:** [Draft | Approved | Implemented]
-**Date:** [YYYY-MM-DD]
+**Status:** Implemented
+**Date:** 2026-03-26
 
 ---
 
@@ -19,10 +19,10 @@ introduce a JVM shutdown hook to stop itself cleanly: a startAndAutoStop() perha
 
 ## Acceptance Criteria
 
-- [ ] MCPServer has all necessary functionality
-- [ ] `SwingUtils.getTopmostModalDialog()` returns the topmost visible modal dialog (or null)
-- [ ] `MCPServer.getConsideredComponents()` delegates modal detection to `SwingUtils.getTopmostModalDialog()`
-- [ ] Tests are written and pass
+- [x] MCPServer has all necessary functionality
+- [x] `SwingUtils.getTopmostModalDialog()` returns the topmost visible modal dialog (or null)
+- [x] `MCPServer.getConsideredComponents()` delegates modal detection to `SwingUtils.getTopmostModalDialog()`
+- [x] Tests are written and pass
 
 ---
 
@@ -30,6 +30,6 @@ introduce a JVM shutdown hook to stop itself cleanly: a startAndAutoStop() perha
 
 > Write UI tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] MCPServer test tests smoke-test: simply start and stop
-  - [ ] Additional test will use the official MCP SDK client to ping MCPServer and retrieve the list of tasks; don't assert on the number of tasks since that will change as tasks are implemented, simply assert that the list is not null.
+- [x] MCPServer test tests smoke-test: simply start and stop
+  - [x] Additional test will use the official MCP SDK client to ping MCPServer and retrieve the list of tasks; don't assert on the number of tasks since that will change as tasks are implemented, simply assert that the list is not null.
 
