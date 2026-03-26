@@ -49,6 +49,17 @@ class InputSchemaBuilderTest {
     }
 
     @Test
+    void buildPreservesInsertionOrderInProperties() {
+        MCPProtocol.InputSchema schema = new InputSchemaBuilder()
+                .requiredInteger("a", "first")
+                .requiredInteger("b", "second")
+                .requiredString("ref", "third")
+                .build();
+
+        assertEquals(List.of("a", "b", "ref"), List.copyOf(schema.getProperties().keySet()));
+    }
+
+    @Test
     void buildProducesCorrectType() {
         MCPProtocol.InputSchema schema = new InputSchemaBuilder()
                 .requiredInteger("ref", "The element reference number")

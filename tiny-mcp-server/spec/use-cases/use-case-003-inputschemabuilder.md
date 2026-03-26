@@ -18,7 +18,9 @@ Example methods:
 - `.build()` — produces the final schema object `MCPProtocol.InputSchema`
 
 All build methods return `this`, to allow fluent API.
-Also, both `name` and `description` must not be null nor blank; throw `IllegalArgumentException` if it is.
+Both `name` and `description` must not be null nor blank; throw `IllegalArgumentException` if it is.
+
+Parameters appear in the built `InputSchema` and in `toString()` in **insertion order** (the order they were added to the builder). This ordering is part of the contract.
 
 Note: it is not allowed to add a parameter second time: attempting to add a parameter when it already exists
 will throw `IllegalStateException`.
@@ -50,6 +52,7 @@ Prerequisite: UC-002 implemented
 
 - [x] Write InputSchemaBuilder test and test all types thoroughly. Use `toString()` instead of `build()` to make test methods more succinct.
 - [x] Test the fluent API by chaining multiple calls
+- [x] Test that insertion order is preserved in both `toString()` and `build()`
 - [x] Test that duplicite parameter fails
 - [x] Test the `.build()` method.
 - [x] Test not-null/not-blank cases
