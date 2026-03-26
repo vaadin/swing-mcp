@@ -76,9 +76,7 @@ public class InputSchemaBuilder {
     public MCPProtocol.InputSchema build() {
         MCPProtocol.InputSchema schema = new MCPProtocol.InputSchema();
         schema.setProperties(new LinkedHashMap<>(properties));
-        if (!required.isEmpty()) {
-            schema.setRequired(new ArrayList<>(required));
-        }
+        schema.setRequired(new ArrayList<>(required));
         return schema;
     }
 

@@ -88,13 +88,24 @@ class InputSchemaBuilderTest {
     }
 
     @Test
-    void buildWithNoRequiredFieldsProducesNullRequiredList() {
+    void buildWithNoRequiredFieldsProducesEmptyRequiredList() {
         MCPProtocol.InputSchema schema = new InputSchemaBuilder()
                 .optionalString("x", "opt")
                 .optionalInteger("y", "opt2")
                 .build();
 
-        assertNull(schema.getRequired());
+        assertNotNull(schema.getRequired());
+        assertTrue(schema.getRequired().isEmpty());
+    }
+
+    @Test
+    void emptyBuilderProducesEmptyPropertiesAndRequiredList() {
+        MCPProtocol.InputSchema schema = new InputSchemaBuilder().build();
+
+        assertNotNull(schema.getProperties());
+        assertTrue(schema.getProperties().isEmpty());
+        assertNotNull(schema.getRequired());
+        assertTrue(schema.getRequired().isEmpty());
     }
 
     @Test
