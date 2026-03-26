@@ -35,7 +35,8 @@
 - [ ] Only nodes exposing at least one `AccessibleAction` receive a ref; purely structural nodes (e.g., panels, labels) do not.
 - [ ] A panel with a button and a text field produces a tree with the expected structure and refs.
 - [ ] Nested component hierarchies are represented with correct indentation.
-- [ ] Non-visible components are excluded from the tree.
+- [ ] Non-visible components (`setVisible(false)`) are excluded from the tree.
+- [ ] Disabled components (`setEnabled(false)`) are included in the tree; their state reflects that they are disabled.
 
 ---
 
