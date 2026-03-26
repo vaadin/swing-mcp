@@ -30,7 +30,7 @@ class InputSchemaBuilderTest {
 
     @Test
     void optionalTypesToString() {
-        assertEquals("x: string, y: number, z: boolean",
+        assertEquals("x: string?, y: number?, z: boolean?",
                 new InputSchemaBuilder()
                         .optionalString("x", "optional string")
                         .optionalNumber("y", "optional number")
@@ -133,6 +133,15 @@ class InputSchemaBuilderTest {
         assertEquals("integer", props.get("i").getType());
         assertEquals("number", props.get("n").getType());
         assertEquals("boolean", props.get("b").getType());
+    }
+
+    @Test
+    void toStringShowsRequiredVsOptional() {
+        assertEquals("a: integer, b: string?",
+                new InputSchemaBuilder()
+                        .requiredInteger("a", "required int")
+                        .optionalString("b", "optional string")
+                        .toString());
     }
 
     @Test

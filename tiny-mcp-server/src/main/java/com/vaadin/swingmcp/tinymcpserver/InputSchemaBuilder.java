@@ -86,7 +86,7 @@ public class InputSchemaBuilder {
     @Override
     public String toString() {
         return properties.entrySet().stream()
-                .map(e -> e.getKey() + ": " + e.getValue().getType())
+                .map(e -> e.getKey() + ": " + e.getValue().getType() + (required.contains(e.getKey()) ? "" : "?"))
                 .collect(Collectors.joining(", "));
     }
 }

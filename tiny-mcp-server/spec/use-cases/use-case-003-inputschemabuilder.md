@@ -28,9 +28,10 @@ will throw `IllegalStateException`.
 
 Builder's `toString()` method will produce the following succinct output:
 ```
-a: integer, b: integer, ref: string
+a: integer, b: integer?, ref: string
 ```
-(note that the description is omitted).
+Required parameters are shown as `type`, optional parameters as `type?` (Kotlin/TypeScript convention).
+The description is omitted.
 
 Prerequisite: UC-002 implemented
 
