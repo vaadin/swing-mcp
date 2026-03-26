@@ -53,24 +53,12 @@ ref → component is maintained internally.
 Refs are valid only until the next action is invoked. After any interaction tool
 call, the AI must call `swing_snapshot` to get fresh refs.
 
-## Which Components are considered
-
-All tools must only consider the components the user can interact with.
-That means:
-
-- If there is a modal Window, use the topmost modal Window.
-- If there isn't a modal Window, consider all Windows.
-
 ## 2. Screenshot Capture
 
 Leverages Swing built-in capability to obtain screenshots of the app by
 rendering Swing Windows (via `window.paint()` to a `BufferedImage` graphics).
-
-Only considers visible Windows of the app. If there is a modal visible window,
-only consider that particular window (use `KeyboardFocusManager` to figure out
-the current modal window); if there is no modal window, consider all
-visible Windows. When creating a screenshot, always create one PNG image: if
-there are multiple Windows to be considered, they should be arranged vertically
+See §5 for which windows are considered. Always creates one PNG image: if
+there are multiple windows to be considered, they are arranged vertically
 in the PNG image with no overlapping.
 
 ## 3. MCP Tools
@@ -112,7 +100,8 @@ dismissed manually.
 
 ## 5. Window Selection
 
-When creating a snapshot or screenshot, consider only visible windows:
+All tools must only consider the windows the user can interact with.
+Consider only visible windows:
 
 - If there is a modal visible window, only consider that window
   (use `KeyboardFocusManager` to determine the current modal window).
@@ -124,7 +113,12 @@ When creating a snapshot or screenshot, consider only visible windows:
 ## 6. Testing
 
 Testing involves running a Swing app. The `javax.accessibility` API works in
-headless mode. The screenshot capturing functionality probably requires Xvfb.
+headless mode. The screenshot capturing functionality probably requires Xvfb,
+and will be tested elsewhere.
+
+In headless mode, tests can't instantiate Window. Therefore,
+the window Selection functionality must be overridable in MCPServer,
+and must be overriden by tests (which provide a list of JPanels instead).
 
 ## 7. Constraints
 
