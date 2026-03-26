@@ -22,6 +22,7 @@ introduce a JVM shutdown hook to stop itself cleanly: a startAndAutoStop() perha
 - [x] MCPServer has all necessary functionality
 - [x] `SwingUtils.getTopmostModalDialog()` returns the topmost visible modal dialog (or null)
 - [x] `MCPServer.getConsideredComponents()` delegates modal detection to `SwingUtils.getTopmostModalDialog()`
+- [x] `MCPServer.runInEDT(Callable<T>)` dispatches to EDT via `SwingUtilities.invokeAndWait()` and returns the result; protected so tests can override to run directly
 - [x] Tests are written and pass
 
 ---

@@ -4,13 +4,17 @@ import com.vaadin.swingmcp.tinymcpserver.TinyMCPServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.swing.SwingUtilities;
 import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.Window;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * MCP server providing Swing-specific tools for UI inspection and interaction.
@@ -85,6 +89,35 @@ public class MCPServer {
 
     public String getContextPath() {
         return server.getContextPath();
+    }
+
+    /**
+     * Executes the given block on the Event Dispatch Thread, waits for it
+     * to complete, and returns its result. Tools must use this method for
+     * all Swing interactions.
+     * <p>
+     * Tests override this to run the block directly on the calling thread,
+     * since headless mode does not have a functioning EDT.
+     *
+     * @param <T>   the return type of the block
+     * @param block the code to execute on the EDT
+     * @return the value returned by the block
+     * @throws Exception if the block throws an exception
+     */
+    protected <T> T runInEDT(Callable<T> block) throws Exception {
+        AtomicReference<T> result = new AtomicReference<>();
+        AtomicReference<Exception> error = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(() -> {
+            try {
+                result.set(block.call());
+            } catch (Exception e) {
+                error.set(e);
+            }
+        });
+        if (error.get() != null) {
+            throw error.get();
+        }
+        return result.get();
     }
 
     /**
