@@ -112,6 +112,29 @@ class TinyMCPServerToolTest {
                     return MCPProtocol.Content.text("ok");
                 });
 
+        // Tool: bounded_integer — integer param with min and max constraints
+        server.addTool("bounded_integer", "Tool with bounded integer parameter",
+                new InputSchemaBuilder()
+                        .requiredInteger("count", "Number of items")
+                        .withMinimum(1)
+                        .withMaximum(100)
+                        .build(),
+                params -> {
+                    lastCallArgs.set(Map.copyOf(params));
+                    return MCPProtocol.Content.text("ok");
+                });
+
+        // Tool: enum_string — string param with enum constraint
+        server.addTool("enum_string", "Tool with enum string parameter",
+                new InputSchemaBuilder()
+                        .requiredString("color", "A color")
+                        .withEnum("red", "green", "blue")
+                        .build(),
+                params -> {
+                    lastCallArgs.set(Map.copyOf(params));
+                    return MCPProtocol.Content.text("ok");
+                });
+
         server.start();
 
         HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport
@@ -144,7 +167,7 @@ class TinyMCPServerToolTest {
         McpSchema.ListToolsResult result = client.listTools();
         assertNotNull(result);
         List<McpSchema.Tool> tools = result.tools();
-        assertEquals(10, tools.size());
+        assertEquals(12, tools.size());
 
         McpSchema.Tool echoTool = tools.stream()
                 .filter(t -> "echo_text".equals(t.name()))
@@ -363,5 +386,53 @@ class TinyMCPServerToolTest {
         assertEquals(1, result.content().size());
         assertInstanceOf(McpSchema.TextContent.class, result.content().get(0));
         assertEquals("10", ((McpSchema.TextContent) result.content().get(0)).text());
+    }
+
+    // ===== min/max integer parameter =====
+
+    @Test
+    void toolWithBoundedIntegerIsAcceptedByClient() {
+        McpSchema.ListToolsResult result = client.listTools();
+        McpSchema.Tool tool = result.tools().stream()
+                .filter(t -> "bounded_integer".equals(t.name()))
+                .findFirst()
+                .orElseThrow();
+        assertNotNull(tool.inputSchema());
+        assertTrue(tool.inputSchema().properties().containsKey("count"));
+    }
+
+    @Test
+    void callToolWithBoundedIntegerValidValue() {
+        lastCallArgs.set(null);
+        McpSchema.CallToolResult result = client.callTool(
+                new McpSchema.CallToolRequest("bounded_integer", Map.of("count", 50)));
+        assertFalse(Boolean.TRUE.equals(result.isError()));
+        Map<String, Object> args = lastCallArgs.get();
+        assertNotNull(args);
+        assertEquals(50, args.get("count"));
+    }
+
+    // ===== enum string parameter =====
+
+    @Test
+    void toolWithEnumStringIsAcceptedByClient() {
+        McpSchema.ListToolsResult result = client.listTools();
+        McpSchema.Tool tool = result.tools().stream()
+                .filter(t -> "enum_string".equals(t.name()))
+                .findFirst()
+                .orElseThrow();
+        assertNotNull(tool.inputSchema());
+        assertTrue(tool.inputSchema().properties().containsKey("color"));
+    }
+
+    @Test
+    void callToolWithEnumStringValidValue() {
+        lastCallArgs.set(null);
+        McpSchema.CallToolResult result = client.callTool(
+                new McpSchema.CallToolRequest("enum_string", Map.of("color", "green")));
+        assertFalse(Boolean.TRUE.equals(result.isError()));
+        Map<String, Object> args = lastCallArgs.get();
+        assertNotNull(args);
+        assertEquals("green", args.get("color"));
     }
 }
