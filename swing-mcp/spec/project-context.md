@@ -4,9 +4,6 @@ Implements the Swing MCP server itself. This subproject builds on top of
 `tiny-mcp-server` and adds Swing-specific MCP tools for UI inspection and
 interaction. The primary use case is AI-driven migration of Swing apps to Vaadin.
 
-This subproject needs to be specified further and is currently not to be implemented.
-Ignore this subproject for now.
-
 ## 1. Accessibility Tree Snapshot
 
 Leverages the `javax.accessibility` API to construct an accessibility tree.
