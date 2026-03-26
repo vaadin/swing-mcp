@@ -20,6 +20,8 @@ introduce a JVM shutdown hook to stop itself cleanly: a startAndAutoStop() perha
 ## Acceptance Criteria
 
 - [ ] MCPServer has all necessary functionality
+- [ ] `SwingUtils.getTopmostModalDialog()` returns the topmost visible modal dialog (or null)
+- [ ] `MCPServer.getConsideredComponents()` delegates modal detection to `SwingUtils.getTopmostModalDialog()`
 - [ ] Tests are written and pass
 
 ---
