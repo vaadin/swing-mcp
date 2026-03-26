@@ -37,12 +37,13 @@ Add convenient factory methods to `MCPProtocol.Content`:
 
 * `Content.text(String text)`
 * `Content.image(String data, String mimeType)` — `data` is base64-encoded
+* `Content.audio(String data, String mimeType)` — `data` is base64-encoded
 * `Content.resource(ResourceContents resource)`
 
 Prerequisite: UC-003 implemented
 
-**Status:** [Draft | Approved | Implemented]
-**Date:** [YYYY-MM-DD]
+**Status:** Approved
+**Date:** 2026-03-26
 
 ---
 
@@ -69,6 +70,6 @@ Prerequisite: UC-003 implemented
   - [ ] Unknown parameters are silently ignored (warning logged)
   - [ ] Null parameter value treated as missing (required → -32602, optional → absent from map)
   - [ ] Tool not found returns JSON-RPC error -32601
-  - [ ] Result handling: null content (empty array), text content, image content, resource content
+  - [ ] Result handling: null content (empty array), text content, image content, audio content, resource content
   - [ ] Exception handling: if the function throws, return isError=true with exception.toString() as text content
 
