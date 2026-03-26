@@ -12,7 +12,7 @@ Every use case must have unit tests before it is considered implemented. See `ar
 
 ### Naming Conventions
 
-- **Test class**: `[FeatureName]Test.java` or `[FeatureName].test.tsx` (e.g., `BrowseMoviesTest`, `BuyTickets.test.tsx`)
+- **Test class**: `[FeatureName]Test.java`
 - **Test methods**: descriptive names that map to acceptance criteria or business rules (e.g., `onlyItemsWithFutureEventsAreDisplayed`, `maximumSixItemsPerTransaction`)
 - **Structure**: one test class per use case, with individual test methods for each acceptance criterion and business rule edge case
 
