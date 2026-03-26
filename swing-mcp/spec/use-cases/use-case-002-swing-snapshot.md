@@ -50,4 +50,5 @@ Understand that headless mode is on, which means you have to use JPanel instead 
   - [ ] A simple hierarchy (panel with button and text field) produces a tree with correct roles, names, and refs.
   - [ ] Refs are assigned starting from 1.
   - [ ] Nested containers produce correctly indented output.
+  - [ ] Components with `setVisible(false)` are excluded from the tree.
   - [ ] Calling `swing_snapshot` via the MCP client returns a valid text response.
