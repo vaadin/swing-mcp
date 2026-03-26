@@ -127,4 +127,12 @@ class InputSchemaBuilderTest {
     void emptyBuilderToStringIsEmpty() {
         assertEquals("", new InputSchemaBuilder().toString());
     }
+
+    @Test
+    void duplicateParameterThrows() {
+        assertThrows(IllegalStateException.class, () ->
+                new InputSchemaBuilder()
+                        .requiredInteger("ref", "first")
+                        .requiredString("ref", "duplicate"));
+    }
 }

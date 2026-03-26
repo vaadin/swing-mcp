@@ -19,6 +19,9 @@ Example methods:
 
 All build methods return `this`, to allow fluent API.
 
+Note: it is not allowed to add a parameter second time: attempting to add a parameter when it already exists
+will throw `IllegalStateException`.
+
 Builder's `toString()` method will produce the following succinct output:
 ```
 a: integer, b: integer, ref: string
@@ -46,5 +49,6 @@ Prerequisite: UC-002 implemented
 
 - [x] Write InputSchemaBuilder test and test all types thoroughly. Use `toString()` instead of `build()` to make test methods more succinct.
 - [x] Test the fluent API by chaining multiple calls
+- [x] Test that duplicite parameter fails
 - [x] Test the `.build()` method.
 

@@ -54,6 +54,9 @@ public class InputSchemaBuilder {
     }
 
     private InputSchemaBuilder add(String name, String type, String description, boolean isRequired) {
+        if (properties.containsKey(name)) {
+            throw new IllegalStateException("Parameter already exists: " + name);
+        }
         MCPProtocol.PropertySchema schema = new MCPProtocol.PropertySchema();
         schema.setType(type);
         schema.setDescription(description);
