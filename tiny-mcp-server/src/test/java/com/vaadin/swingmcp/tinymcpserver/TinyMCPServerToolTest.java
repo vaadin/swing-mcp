@@ -344,10 +344,7 @@ class TinyMCPServerToolTest {
         assertEquals(1, result.content().size());
         assertInstanceOf(McpSchema.TextContent.class, result.content().get(0));
         McpSchema.TextContent text = (McpSchema.TextContent) result.content().get(0);
-        assertTrue(text.text().contains("something went wrong"),
-                "Expected exception message in: " + text.text());
-        assertTrue(text.text().startsWith("java.lang.RuntimeException"),
-                "Expected class name in: " + text.text());
+        assertEquals("java.lang.RuntimeException: something went wrong", text.text());
     }
 
     @Test
