@@ -12,7 +12,7 @@
 ## Main Flow
 
 - I call the `swing_screenshot` tool with no parameters.
-- The tool determines which components are considered (modal window only, or all visible windows).
+- The tool calls `context.getConsideredComponents()` to obtain the list of components to render.
 - The tool renders each considered component to a `BufferedImage` using `component.paint(g)` on a freshly created `BufferedImage` sized to `component.getWidth()` × `component.getHeight()`. This captures the full Swing-rendered content including menu bar and internal borders, but not OS-managed window decorations (title bar, native border).
 - If multiple components are considered, the tool arranges them vertically into a single image: composite width = max of all component widths; each component is horizontally centered; no overlapping.
 - The components are ordered by creation order (as returned by `Window.getWindows()`).
@@ -24,12 +24,11 @@
 
 | ID | Rule |
 |----|------|
-| BR-01 | If a modal window is visible, only that window is captured. |
-| BR-02 | If no modal window is visible, all visible windows are captured. |
-| BR-03 | Multiple windows are arranged vertically in a single PNG: composite width is the max of all window widths; narrower windows are horizontally centered; no overlapping. |
-| BR-04 | The result is always a single PNG image returned as MCP image content (`type=image`, `mimeType=image/png`, base64-encoded). |
-| BR-05 | All Swing component access happens on the EDT (via `MCPServer.runInEDT()`). |
-| BR-06 | Each component is rendered via `component.paint(g)` (not `printAll`) to capture the visual state as the user sees it. |
+| BR-01 | Use `SwingToolContext.getConsideredComponents()` to determine which components to capture (modal-vs-all selection is handled upstream by `MCPServer`). |
+| BR-02 | Multiple windows are arranged vertically in a single PNG: composite width is the max of all window widths; narrower windows are horizontally centered; no overlapping. |
+| BR-03 | The result is always a single PNG image returned as MCP image content (`type=image`, `mimeType=image/png`, base64-encoded). |
+| BR-04 | All Swing component access happens on the EDT (via `MCPServer.runInEDT()`). |
+| BR-05 | Each component is rendered via `component.paint(g)` (not `printAll`) to capture the visual state as the user sees it. |
 
 ---
 
@@ -49,9 +48,9 @@
 
 ### Headless tests (`src/test`) — `SwingScreenshotTest`
 
-In headless mode, the test overrides `MCPServer.getConsideredComponents()` to return `JPanel` instances
+In headless mode, the test uses `FakeMCPServer.setConsideredComponents()` to supply `JPanel` instances
 sized via `panel.setSize(w, h)` + `panel.doLayout()` (never shown on screen).
-The test overrides `runInEDT()` to run the block inline.
+`FakeMCPServer` already overrides `runInEDT()` to run the block inline.
 
 - [ ] A single sized `JPanel` produces a PNG with the expected dimensions.
 - [ ] The returned MCP result has `type=image` and `mimeType=image/png`.
