@@ -2,6 +2,7 @@ package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 
+import javax.accessibility.Accessible;
 import java.awt.Component;
 import java.util.Collections;
 import java.util.HashMap;
@@ -17,11 +18,12 @@ public class SwingToolContext {
 
     private List<Component> consideredComponents;
     /**
-     * The {@link AbstractSwingTool#TOOL_SWING_SNAPSHOT} populates this map by assigning IDs to every component
-     * that the client MCP can interact with. The map is cleared after every
-     * interaction and needs to be re-populated by another call to SwingSnapshotTool.
+     * The {@link AbstractSwingTool#TOOL_SWING_SNAPSHOT} populates this map by assigning IDs to every accessible
+     * that the client MCP can interact with. Stored as {@link Accessible} rather than {@link Component} because
+     * virtual accessibility children (e.g. JTable cells, JTree nodes) are {@link Accessible} but not {@link Component}.
+     * The map is cleared after every mutation and needs to be re-populated by another call to SwingSnapshotTool.
      */
-    private final Map<Integer, Component> componentRefs = new HashMap<>();
+    private final Map<Integer, Accessible> componentRefs = new HashMap<>();
 
     public void setConsideredComponents(List<Component> consideredComponents) {
         this.consideredComponents = consideredComponents == null
@@ -38,10 +40,14 @@ public class SwingToolContext {
     }
 
     public void clearRefMap() {
-       componentRefs.clear();
+        componentRefs.clear();
     }
 
-    public Component getComponentByRef(int ref) {
+    public void putRef(int ref, Accessible accessible) {
+        componentRefs.put(ref, accessible);
+    }
+
+    public Accessible getAccessibleByRef(int ref) {
         var result = componentRefs.get(ref);
         if (result == null) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS, "No component with ref " + ref + ". Maybe the Swing component tree has changed? Call swing_snapshot to obtain the newest component tree snapshot");
