@@ -140,6 +140,59 @@ Which states from `AccessibleStateSet` appear in the snapshot output:
 
 ---
 
+## Implementation Notes
+
+### Internal Representation: `SnapshotNode`
+
+Because Swing's accessibility tree is read-only (owned by the framework), the tool builds its own mutable tree of `SnapshotNode` instances. Each node holds a reference to an `AccessibleContext` and an ordered list of `SnapshotNode` children. The node is the natural home for all pruning and ref-assignment logic.
+
+### Four-Phase Pipeline
+
+```
+Accessible tree
+      │  build()
+      ▼
+SnapshotNode tree   (full mirror of the accessibility tree)
+      │  prune()
+      ▼
+Pruned tree         (hard exclusions dropped, transparent nodes flattened)
+      │  assignRefs()
+      ▼
+Ref-annotated tree  (action-bearing nodes numbered 1…N)
+      │  render()
+      ▼
+Text output
+```
+
+**Phase 1 — build**
+Recursively walks `AccessibleContext.getAccessibleChild(i)`, constructing one `SnapshotNode` per accessible child. Special cases that affect *which* children to walk are applied here:
+- SC-1: walk menu children even when popup is closed
+- SC-2: walk all tab pages of a `JTabbedPane`, not just the selected one
+- SC-3: cap large-data components (`JTable`, `JList`, `JTree`) at `MAX_DATA_CHILDREN` accessible children; append a synthetic `... and N more items` node when truncated
+
+The output of this phase is a complete, unfiltered mirror of the accessibility tree.
+
+**Phase 2 — prune**
+Each `SnapshotNode` evaluates itself by returning one of three outcomes:
+
+| Outcome | Meaning |
+|---------|---------|
+| `Keep` | Include this node; recurse into children and prune them too |
+| `Drop` | Hard-exclude this node and all its descendants (Stages 1) |
+| `Transparent` | Drop this node; its pruned children are promoted to the grandparent (Stage 2) |
+
+The parent processes its children list, substituting each child's result: `Keep` → add child, `Drop` → omit, `Transparent` → add the child's (recursively pruned) children in its place.
+
+Stage 3 (Always Included) acts as a safety guard inside the `Keep`/`Transparent` decision: a node matching any AI-1…AI-5 criterion must return `Keep` regardless of other rules.
+
+**Phase 3 — assignRefs**
+A depth-first traversal over the pruned tree. Each node that exposes at least one `AccessibleAction` (`getAccessibleAction() != null && getActionCount() > 0`) receives the next integer ref, starting at 1.
+
+**Phase 4 — render**
+A depth-first traversal that serialises each node to a line of text per BR-03, using indentation depth to represent the tree structure.
+
+---
+
 ## Business Rules
 
 | ID | Rule |
