@@ -34,8 +34,13 @@ outcomes are valuable test data.
 **Other:**
 `JToolBar`, `JList` (simple single-selection)
 
+**Top-level windows (screen required — `testSwing` sources):**
+`JFrame`, `JDialog`
+
 Each tool test class should include a test method per component from this list,
 verifying the tool's behavior (successful operation or appropriate error).
+Tests for `JFrame` and `JDialog` require a display and must live in the
+`testSwing` source set (run via `./gradlew :swing-mcp:testSwing`).
 
 ### Naming Conventions
 
