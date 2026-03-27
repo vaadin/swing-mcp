@@ -104,6 +104,30 @@ class TinyMCPServerToolTest {
                 new InputSchemaBuilder().build(),
                 params -> { throw new RuntimeException("something went wrong"); });
 
+        // Tool: throw_mcp_internal_error — throws MCPServerException with INTERNAL_ERROR
+        server.addTool("throw_mcp_internal_error", "Throws MCPServerException INTERNAL_ERROR",
+                new InputSchemaBuilder().build(),
+                params -> {
+                    throw new MCPServerException(MCPServerException.INTERNAL_ERROR, "internal failure");
+                });
+
+        // Tool: throw_mcp_invalid_params — throws MCPServerException with INVALID_PARAMS
+        server.addTool("throw_mcp_invalid_params", "Throws MCPServerException INVALID_PARAMS",
+                new InputSchemaBuilder()
+                        .requiredString("value", "A value to validate")
+                        .build(),
+                params -> {
+                    throw new MCPServerException(MCPServerException.INVALID_PARAMS,
+                            "value must be non-empty");
+                });
+
+        // Tool: throw_mcp_custom_code — throws MCPServerException with a custom code
+        server.addTool("throw_mcp_custom_code", "Throws MCPServerException with custom code",
+                new InputSchemaBuilder().build(),
+                params -> {
+                    throw new MCPServerException(-32000, "custom server error");
+                });
+
         // Tool: unknown_params_tool — has no defined params, to test unknown param warning
         server.addTool("no_params_tool", "Tool with no params",
                 new InputSchemaBuilder().build(),
@@ -167,7 +191,7 @@ class TinyMCPServerToolTest {
         McpSchema.ListToolsResult result = client.listTools();
         assertNotNull(result);
         List<McpSchema.Tool> tools = result.tools();
-        assertEquals(12, tools.size());
+        assertEquals(15, tools.size());
 
         McpSchema.Tool echoTool = tools.stream()
                 .filter(t -> "echo_text".equals(t.name()))
@@ -434,5 +458,46 @@ class TinyMCPServerToolTest {
         Map<String, Object> args = lastCallArgs.get();
         assertNotNull(args);
         assertEquals("green", args.get("color"));
+    }
+
+    // ===== MCPServerException handling =====
+
+    @Test
+    void callToolMCPServerExceptionReturnsJsonRpcError() {
+        Exception ex = assertThrows(Exception.class, () ->
+                client.callTool(new McpSchema.CallToolRequest("throw_mcp_internal_error", Map.of())));
+        McpError mcpError = assertInstanceOf(McpError.class, McpError.findRootCause(ex));
+        assertEquals(-32603, mcpError.getJsonRpcError().code());
+        assertEquals("internal failure", mcpError.getJsonRpcError().message());
+    }
+
+    @Test
+    void callToolMCPServerExceptionInvalidParamsReturnsJsonRpcError() {
+        Exception ex = assertThrows(Exception.class, () ->
+                client.callTool(new McpSchema.CallToolRequest("throw_mcp_invalid_params",
+                        Map.of("value", "test"))));
+        McpError mcpError = assertInstanceOf(McpError.class, McpError.findRootCause(ex));
+        assertEquals(-32602, mcpError.getJsonRpcError().code());
+        assertEquals("value must be non-empty", mcpError.getJsonRpcError().message());
+    }
+
+    @Test
+    void callToolMCPServerExceptionCustomCodeReturnsJsonRpcError() {
+        Exception ex = assertThrows(Exception.class, () ->
+                client.callTool(new McpSchema.CallToolRequest("throw_mcp_custom_code", Map.of())));
+        McpError mcpError = assertInstanceOf(McpError.class, McpError.findRootCause(ex));
+        assertEquals(-32000, mcpError.getJsonRpcError().code());
+        assertEquals("custom server error", mcpError.getJsonRpcError().message());
+    }
+
+    @Test
+    void regularExceptionStillReturnsIsErrorToolResult() {
+        // Verify that non-MCPServerException still produces isError tool result, not JSON-RPC error
+        McpSchema.CallToolResult result = client.callTool(
+                new McpSchema.CallToolRequest("throw_exception", Map.of()));
+        assertNotNull(result);
+        assertTrue(Boolean.TRUE.equals(result.isError()));
+        assertEquals(1, result.content().size());
+        assertInstanceOf(McpSchema.TextContent.class, result.content().get(0));
     }
 }

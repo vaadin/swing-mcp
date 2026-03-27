@@ -54,6 +54,7 @@ public class TinyMCPServer {
          * @param params the parameter values, never null
          * @return the result content, or {@code null} for an empty result
          * @throws Exception if tool execution fails
+         * @throws MCPServerException if you want to return a specific failure to the client.
          */
         MCPProtocol.Content call(Map<String, Object> params) throws Exception;
     }
@@ -339,6 +340,9 @@ public class TinyMCPServer {
                 result.setContent(Collections.singletonList(content));
             }
             sendJsonRpcResponse(exchange, request.getId(), result);
+        } catch (MCPServerException e) {
+            LOG.debug("Tool '{}' threw MCPServerException (code={})", toolName, e.getCode(), e);
+            sendJsonRpcError(exchange, request.getId(), e.getCode(), e.getMessage());
         } catch (Exception e) {
             LOG.debug("Tool '{}' threw an exception", toolName, e);
             MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
