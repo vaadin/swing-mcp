@@ -146,9 +146,9 @@ Which states from `AccessibleStateSet` appear in the snapshot output:
 
 Because Swing's accessibility tree is read-only (owned by the framework), the tool builds its own mutable tree of `SnapshotNode` instances. Each node holds a reference to an `Accessible` (from which `AccessibleContext` is retrieved on demand via `getAccessibleContext()`) and an ordered list of `SnapshotNode` children. The node is the natural home for all pruning and ref-assignment logic.
 
-### Role Name Resolution
+### Role and State Name Resolution
 
-`AccessibleRole` is a class with ~60 public static final instances, not an enum, so there is no built-in way to get a field name from an instance. A static `Map<AccessibleRole, String>` is populated once at class-load time via reflection over `AccessibleRole`'s declared fields, mapping each `AccessibleRole` instance to its field name lowercased (e.g. `PUSH_BUTTON` → `"push_button"`). Unknown roles (custom subclasses) fall back to `"unknown"`. This map lives in a dedicated utility class (e.g. `AccessibleRoles`).
+`AccessibleRole` and `AccessibleState` are classes with public static final instances, not enums, so there is no built-in way to get a field name from an instance. For both, a static `Map<T, String>` is populated once at class-load time via reflection over the class's declared fields, mapping each instance to its field name lowercased (e.g. `PUSH_BUTTON` → `"push_button"`, `DISABLED` → `"disabled"`). Unknown instances (custom subclasses) fall back to `"unknown"`. These maps live in a dedicated utility class (e.g. `AccessibleNames`).
 
 ### Four-Phase Pipeline
 
