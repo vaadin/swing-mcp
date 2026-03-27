@@ -59,5 +59,6 @@ In every subproject there is a folder called `spec`. In it, there are files:
 ./gradlew :tiny-mcp-server:test  # run tests for tiny-mcp-server only
 ./gradlew test --tests "com.vaadin.swingmcp.tinymcpserver.TinyMcpServerTest"  # run a specific test class
 ./gradlew test --tests "com.vaadin.swingmcp.tinymcpserver.TinyMcpServerTest.myTest"  # run a specific test method
+./gradlew :swing-mcp:testSwing # run screen-mode tests (requires a display; uses Xvfb in CI)
 ```
 
