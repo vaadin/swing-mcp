@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** obtain an accessibility tree snapshot of the Swing application **so that** I can understand the current UI structure and identify components for interaction.
 
-**Status:** Draft
+**Status:** Approved
 **Date:** 2026-03-26
 
 ---
