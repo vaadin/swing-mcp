@@ -31,6 +31,7 @@
 | BR-06 | Each component is rendered via `component.paint(g)` (not `printAll`) to capture the visual state as the user sees it. |
 | BR-07 | `BufferedImage` instances are created with type `TYPE_INT_RGB` (windows are assumed opaque). |
 | BR-08 | Components with zero width or zero height are silently skipped (they are effectively invisible). If all components are skipped, BR-03 applies. |
+| BR-09 | `swing_screenshot` is a read-only tool: `isMutation()` returns `false` and the ref map is not cleared after invocation. |
 
 ---
 
