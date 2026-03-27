@@ -12,7 +12,7 @@ import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class MCPServerTest {
+class MCPServerTest extends AbstractHeadlessTest {
 
     private static final int TEST_PORT = 18090;
     private static MCPServer server;
