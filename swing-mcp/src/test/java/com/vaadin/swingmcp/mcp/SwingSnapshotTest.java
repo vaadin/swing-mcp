@@ -93,17 +93,11 @@ class SwingSnapshotTest {
 
         String output = snapshot(panel);
 
-        // Root panel appears
-        assertTrue(output.contains("panel"), "root panel should appear");
-        // Button with name and ref
-        assertTrue(output.contains("push_button"), "button role");
-        assertTrue(output.contains("\"Save\""), "button name");
-        assertTrue(output.contains("ref=1"), "button gets ref 1");
-        assertTrue(output.contains("actions: click"), "button action");
-        // Text field with ref
-        assertTrue(output.contains("text"), "text field role");
-        assertTrue(output.contains("ref=2"), "text field gets ref 2");
-        assertTrue(output.contains("actions: type"), "text field action");
+        assertEquals(
+                "- panel\n"
+                + "  - push_button \"Save\" [ref=1] actions: click\n"
+                + "  - text [ref=2, editable] actions: type",
+                output);
     }
 
     @Test
@@ -114,9 +108,11 @@ class SwingSnapshotTest {
 
         String output = snapshot(panel);
 
-        assertTrue(output.contains("ref=1"), "first ref is 1");
-        assertTrue(output.contains("ref=2"), "second ref is 2");
-        assertFalse(output.contains("ref=0"), "ref 0 must never appear");
+        assertEquals(
+                "- panel\n"
+                + "  - push_button \"First\" [ref=1] actions: click\n"
+                + "  - push_button \"Second\" [ref=2] actions: click",
+                output);
     }
 
     @Test
@@ -131,20 +127,12 @@ class SwingSnapshotTest {
         outer.add(inner);
 
         String output = snapshot(outer);
-        String[] lines = output.split("\n");
 
-        // outer panel at depth 0: "- panel "Outer""
-        // inner panel at depth 1: "  - panel "Inner""
-        // button at depth 2:      "    - push_button "Go""
-        boolean foundOuter = false, foundInner = false, foundButton = false;
-        for (String line : lines) {
-            if (line.equals("- panel \"Outer\"")) foundOuter = true;
-            if (line.equals("  - panel \"Inner\"")) foundInner = true;
-            if (line.startsWith("    - push_button \"Go\"")) foundButton = true;
-        }
-        assertTrue(foundOuter, "outer panel line: " + output);
-        assertTrue(foundInner, "inner panel line: " + output);
-        assertTrue(foundButton, "button at depth 2: " + output);
+        assertEquals(
+                "- panel \"Outer\"\n"
+                + "  - panel \"Inner\"\n"
+                + "    - push_button \"Go\" [ref=1] actions: click",
+                output);
     }
 
     @Test
@@ -158,8 +146,10 @@ class SwingSnapshotTest {
 
         String output = snapshot(panel);
 
-        assertTrue(output.contains("\"Visible\""), "visible button should appear");
-        assertFalse(output.contains("\"Hidden\""), "invisible button must not appear");
+        assertEquals(
+                "- panel\n"
+                + "  - push_button \"Visible\" [ref=1] actions: click",
+                output);
     }
 
     @Test
@@ -173,17 +163,12 @@ class SwingSnapshotTest {
         root.add(unnamed);
 
         String output = snapshot(root);
-        String[] lines = output.split("\n");
 
         // The button should appear directly under root (depth 1), not at depth 2
-        boolean buttonAtDepth1 = false;
-        for (String line : lines) {
-            if (line.startsWith("  - push_button")) {
-                buttonAtDepth1 = true;
-            }
-        }
-        assertTrue(buttonAtDepth1, "button should be at depth 1 after unnamed panel is pruned: " + output);
-        assertFalse(output.contains("\n    - push_button"), "button must NOT be at depth 2: " + output);
+        assertEquals(
+                "- panel \"Root\"\n"
+                + "  - push_button \"Click\" [ref=1] actions: click",
+                output);
     }
 
     @Test
@@ -196,17 +181,13 @@ class SwingSnapshotTest {
         root.add(titled);
 
         String output = snapshot(root);
-        String[] lines = output.split("\n");
 
-        // The titled panel has no accessible name but it has a TitledBorder → must be kept
-        // So the button should be at depth 2 (under the titled panel), not depth 1
-        boolean buttonAtDepth2 = false;
-        for (String line : lines) {
-            if (line.startsWith("    - push_button")) {
-                buttonAtDepth2 = true;
-            }
-        }
-        assertTrue(buttonAtDepth2, "button under titled panel should be at depth 2: " + output);
+        // The titled panel has a TitledBorder → must be kept, button at depth 2
+        assertEquals(
+                "- panel\n"
+                + "  - panel \"Details\"\n"
+                + "    - push_button \"OK\" [ref=1] actions: click",
+                output);
     }
 
     @Test
@@ -220,10 +201,11 @@ class SwingSnapshotTest {
 
         String output = snapshot(root);
 
-        // Named panel must appear in output
-        assertTrue(output.contains("\"FormSection\""), "named panel should appear: " + output);
-        // Button at depth 2
-        assertTrue(output.contains("    - push_button"), "button at depth 2: " + output);
+        assertEquals(
+                "- panel\n"
+                + "  - panel \"FormSection\"\n"
+                + "    - push_button \"Submit\" [ref=1] actions: click",
+                output);
     }
 
     @Test
@@ -239,16 +221,11 @@ class SwingSnapshotTest {
 
         String output = snapshot(panel);
 
-        assertTrue(output.contains("push_button"), "real button should appear");
-        // The CellRendererPane has role PANEL and no children; it should be excluded by HE-2.
-        // Count panel lines: only the root panel line and no extra panel from crp.
-        long panelLines = Arrays.stream(output.split("\n"))
-                .filter(l -> l.trim().startsWith("- panel") || l.trim().startsWith("- panel"))
-                .count();
-        // Root is a panel; the CellRendererPane-backed accessible should NOT appear
-        // (verified indirectly: button is there, and we have at most 1 "panel" line)
-        assertEquals(1, panelLines,
-                "CellRendererPane must be excluded; only root panel line expected: " + output);
+        // The CellRendererPane should be excluded (HE-2); only the real button appears
+        assertEquals(
+                "- panel\n"
+                + "  - push_button \"Real\" [ref=1] actions: click",
+                output);
     }
 
     @Test
@@ -263,10 +240,10 @@ class SwingSnapshotTest {
 
         String output = snapshot(wrapper);
 
-        assertFalse(output.contains("root_pane"), "root_pane must be pruned: " + output);
-        assertFalse(output.contains("layered_pane"), "layered_pane must be pruned: " + output);
-        // Button must still be present
-        assertTrue(output.contains("push_button"), "button must survive pruning: " + output);
+        assertEquals(
+                "- panel\n"
+                + "  - push_button \"Action\" [ref=1] actions: click",
+                output);
     }
 
     @Test
@@ -280,13 +257,19 @@ class SwingSnapshotTest {
 
         String output = snapshot(root);
 
-        assertTrue(output.contains("scroll_pane"), "scroll_pane must be kept: " + output);
-        assertFalse(output.contains("viewport"), "viewport must be pruned: " + output);
-        // list should appear directly under scroll_pane
-        int scrollPaneDepth = depthOf(output, "scroll_pane");
-        int listDepth = depthOf(output, "list");
-        assertEquals(scrollPaneDepth + 1, listDepth,
-                "list should be direct child of scroll_pane: " + output);
+        assertEquals(
+                "- panel\n"
+                + "  - scroll_pane\n"
+                + "    - list\n"
+                + "      - label \"A\" [ref=1] actions: click\n"
+                + "      - label \"B\" [ref=2] actions: click\n"
+                + "    - scroll_bar [vertical]\n"
+                + "      - push_button [ref=3] actions: click\n"
+                + "      - push_button [ref=4] actions: click\n"
+                + "    - scroll_bar [horizontal]\n"
+                + "      - push_button [ref=5] actions: click\n"
+                + "      - push_button [ref=6] actions: click",
+                output);
     }
 
     @Test
@@ -301,15 +284,21 @@ class SwingSnapshotTest {
 
         String output = snapshot(root);
 
-        // Truncation summary must appear
-        assertTrue(output.contains("... and 5 more items"),
-                "truncation summary missing (expected '... and 5 more items'): " + output);
-        // Exactly MAX_DATA_CHILDREN rows shown (count row occurrences by depth)
-        long tableChildLines = Arrays.stream(output.split("\n"))
-                .filter(l -> l.startsWith("      - ")) // depth 2 = 6 spaces + "- "
-                .count();
-        assertTrue(tableChildLines <= SwingSnapshotTool.MAX_DATA_CHILDREN,
-                "at most " + SwingSnapshotTool.MAX_DATA_CHILDREN + " rows should appear: " + output);
+        assertEquals(
+                "- panel\n"
+                + "  - table\n"
+                + "    - label \"row0\"\n"
+                + "    - label \"row1\"\n"
+                + "    - label \"row2\"\n"
+                + "    - label \"row3\"\n"
+                + "    - label \"row4\"\n"
+                + "    - label \"row5\"\n"
+                + "    - label \"row6\"\n"
+                + "    - label \"row7\"\n"
+                + "    - label \"row8\"\n"
+                + "    - label \"row9\"\n"
+                + "    ... and 5 more items",
+                output);
     }
 
     @Test
@@ -327,10 +316,13 @@ class SwingSnapshotTest {
 
         String output = snapshot(root);
 
-        assertTrue(output.contains("menu_bar"), "menu_bar should appear: " + output);
-        assertTrue(output.contains("\"File\""), "menu name should appear: " + output);
-        assertTrue(output.contains("\"Open\""), "Open item should appear even when menu is closed: " + output);
-        assertTrue(output.contains("\"Save\""), "Save item should appear even when menu is closed: " + output);
+        assertEquals(
+                "- panel\n"
+                + "  - menu_bar\n"
+                + "    - menu \"File\" [ref=1] actions: click\n"
+                + "      - menu_item \"Open\" [ref=2] actions: click\n"
+                + "      - menu_item \"Save\" [ref=3] actions: click",
+                output);
     }
 
     @Test
@@ -349,14 +341,13 @@ class SwingSnapshotTest {
 
         String output = snapshot(panel);
 
-        // page_tab_list (JTabbedPane) must appear
-        assertTrue(output.contains("page_tab_list"), "page_tab_list should appear: " + output);
-        // The selected tab should be marked with [selected]
-        assertTrue(output.contains("selected"), "selected state must appear on selected tab: " + output);
-        // Selected tab's content button must appear
-        assertTrue(output.contains("\"InTab1\""), "selected tab content must appear: " + output);
-        // Non-selected tab's content must NOT appear (not accessible via standard API)
-        assertFalse(output.contains("\"InTab2\""), "non-selected tab content must not appear: " + output);
+        assertEquals(
+                "- panel\n"
+                + "  - page_tab_list \"Tab1\"\n"
+                + "    - page_tab \"Tab1\" [selected]\n"
+                + "      - push_button \"InTab1\" [ref=1] actions: click\n"
+                + "    - page_tab \"Tab2\"",
+                output);
     }
 
     @Test
@@ -367,11 +358,11 @@ class SwingSnapshotTest {
 
         String output = snapshot(panel);
 
-        // These states must NEVER appear in the output
-        assertFalse(output.contains("visible"), "'visible' state must be omitted: " + output);
-        assertFalse(output.contains("enabled"), "'enabled' state must be omitted: " + output);
-        assertFalse(output.contains("showing"), "'showing' state must be omitted: " + output);
-        assertFalse(output.contains("opaque"), "'opaque' state must be omitted: " + output);
+        // Only ref is shown; visible/enabled/showing/opaque are omitted
+        assertEquals(
+                "- panel\n"
+                + "  - push_button \"Normal\" [ref=1] actions: click",
+                output);
     }
 
     @Test
@@ -383,8 +374,10 @@ class SwingSnapshotTest {
 
         String output = snapshot(panel);
 
-        assertTrue(output.contains("push_button"), "disabled button should appear: " + output);
-        assertTrue(output.contains("disabled"), "disabled state must appear: " + output);
+        assertEquals(
+                "- panel\n"
+                + "  - push_button \"Disabled\" [ref=1, disabled] actions: click",
+                output);
     }
 
     @Test
@@ -397,15 +390,14 @@ class SwingSnapshotTest {
 
         String output = snapshot(root1, root2);
 
-        assertTrue(output.contains("---"), "roots must be separated by '---': " + output);
-        // Refs are global: first button gets ref=1, second gets ref=2
-        assertTrue(output.contains("ref=1"), "ref 1 in root1: " + output);
-        assertTrue(output.contains("ref=2"), "ref 2 in root2 (global numbering): " + output);
-
-        // ref=1 must appear before ref=2 in the output
-        int idx1 = output.indexOf("ref=1");
-        int idx2 = output.indexOf("ref=2");
-        assertTrue(idx1 < idx2, "ref=1 must come before ref=2: " + output);
+        // Roots separated by "---"; refs are globally numbered across roots
+        assertEquals(
+                "- panel\n"
+                + "  - push_button \"A\" [ref=1] actions: click\n"
+                + "---\n"
+                + "- panel\n"
+                + "  - push_button \"B\" [ref=2] actions: click",
+                output);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -425,35 +417,16 @@ class SwingSnapshotTest {
         assertNotEquals(Boolean.TRUE, result.isError(), "result must not be an error");
         assertFalse(result.content().isEmpty(), "content must not be empty");
 
-        // Get the text from the first content item
-        Object first = result.content().get(0);
-        // Content is a polymorphic type; use toString to get a string representation
-        // that includes the actual text value
-        String contentText = first.toString();
-        assertTrue(contentText.contains("push_button") || contentText.contains("panel"),
-                "snapshot output must mention UI components: " + contentText);
+        McpSchema.TextContent textContent = (McpSchema.TextContent) result.content().get(0);
+        assertEquals(
+                "- panel\n"
+                + "  - push_button \"MCP\" [ref=1] actions: click",
+                textContent.text());
     }
 
     // ══════════════════════════════════════════════════════════════════════════
     // Helpers
     // ══════════════════════════════════════════════════════════════════════════
-
-    /**
-     * Returns the indentation depth of the first line in {@code output} that contains {@code keyword}.
-     * Depth is the number of leading "  " (two-space) pairs before the "- ".
-     */
-    private static int depthOf(String output, String keyword) {
-        for (String line : output.split("\n")) {
-            if (line.contains(keyword)) {
-                int indent = 0;
-                while (indent * 2 < line.length() && line.charAt(indent * 2) == ' ') {
-                    indent++;
-                }
-                return indent;
-            }
-        }
-        throw new AssertionError("Keyword '" + keyword + "' not found in output:\n" + output);
-    }
 
     /**
      * A CellRendererPane that also implements Accessible so it can appear
