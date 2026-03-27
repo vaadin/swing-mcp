@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** capture a screenshot of the Swing application **so that** I can visually inspect the current state of the UI.
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-03-26
 
 ---
@@ -37,12 +37,12 @@
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_screenshot` returns MCP image content with `mimeType=image/png`.
-- [ ] The returned PNG is a valid image decodable by `ImageIO.read()`.
-- [ ] A single component produces an image with that component's exact dimensions (`getWidth()` × `getHeight()`).
-- [ ] Multiple visible components produce a single image with components stacked vertically, each horizontally centered, composite width = max of component widths, composite height = sum of component heights + 4 px gap between each pair.
-- [ ] If a modal window is visible, only that window appears in the image.
-- [ ] If no components are considered, the tool returns an MCP error response (`isError: true`).
+- [x] Calling `swing_screenshot` returns MCP image content with `mimeType=image/png`.
+- [x] The returned PNG is a valid image decodable by `ImageIO.read()`.
+- [x] A single component produces an image with that component's exact dimensions (`getWidth()` × `getHeight()`).
+- [x] Multiple visible components produce a single image with components stacked vertically, each horizontally centered, composite width = max of component widths, composite height = sum of component heights + 4 px gap between each pair.
+- [x] If a modal window is visible, only that window appears in the image.
+- [x] If no components are considered, the tool returns an MCP error response (`isError: true`).
 
 ---
 
@@ -56,18 +56,18 @@ In headless mode, the test uses `FakeMCPServer.setConsideredComponents()` to sup
 sized via `panel.setSize(w, h)` + `panel.doLayout()` (never shown on screen).
 `FakeMCPServer` already overrides `runInEDT()` to run the block inline.
 
-- [ ] A single sized `JPanel` produces a PNG with the expected dimensions.
-- [ ] The returned MCP result has `type=image` and `mimeType=image/png`.
-- [ ] The returned PNG is decodable by `ImageIO.read()`.
-- [ ] Calling `swing_screenshot` via the MCP client returns an image content response.
-- [ ] With an empty component list, `swing_screenshot` returns an MCP error response (`isError: true`).
-- [ ] A zero-size `JPanel` mixed with a normal-sized `JPanel` produces a PNG matching only the normal panel's dimensions.
-- [ ] Two sized `JPanel`s produce a single PNG with composite width = max of the two widths and composite height = sum of heights + 4 px gap.
+- [x] A single sized `JPanel` produces a PNG with the expected dimensions.
+- [x] The returned MCP result has `type=image` and `mimeType=image/png`.
+- [x] The returned PNG is decodable by `ImageIO.read()`.
+- [x] Calling `swing_screenshot` via the MCP client returns an image content response.
+- [x] With an empty component list, `swing_screenshot` returns an MCP error response (`isError: true`).
+- [x] A zero-size `JPanel` mixed with a normal-sized `JPanel` produces a PNG matching only the normal panel's dimensions.
+- [x] Two sized `JPanel`s produce a single PNG with composite width = max of the two widths and composite height = sum of heights + 4 px gap.
 
 ### Screen-mode tests (`src/testSwing`) — `SwingScreenshotScreenTest`
 
 Uses real `JFrame`/`JDialog` instances on an actual display.
 
-- [ ] A single visible `JFrame` produces a PNG with that frame's dimensions.
-- [ ] Multiple visible frames produce a single vertically stacked image with correct composite dimensions.
-- [ ] With a modal `JDialog` open, only the dialog is captured.
+- [x] A single visible `JFrame` produces a PNG with that frame's dimensions.
+- [x] Multiple visible frames produce a single vertically stacked image with correct composite dimensions.
+- [x] With a modal `JDialog` open, only the dialog is captured.
