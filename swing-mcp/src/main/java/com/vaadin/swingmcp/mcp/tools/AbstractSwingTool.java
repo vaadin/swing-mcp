@@ -47,6 +47,9 @@ public abstract class AbstractSwingTool {
      * @return the result content, or {@code null} for an empty result
      * @throws com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException to return
      *         {@code isError=true} with a clean, human-readable message
+     * @throws com.vaadin.swingmcp.tinymcpserver.MCPServerException to return a JSON-RPC
+     *         protocol error, e.g. {@code MCPServerException(INVALID_PARAMS, "...")} when
+     *         a tool parameter has an invalid value
      * @throws Exception if tool execution fails unexpectedly
      */
     public abstract MCPProtocol.Content execute(Map<String, Object> params,
