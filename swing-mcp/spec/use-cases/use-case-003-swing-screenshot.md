@@ -26,9 +26,10 @@
 |----|------|
 | BR-01 | Use `SwingToolContext.getConsideredComponents()` to determine which components to capture (modal-vs-all selection is handled upstream by `MCPServer`). |
 | BR-02 | Multiple windows are arranged vertically in a single PNG: composite width is the max of all window widths; narrower windows are horizontally centered; no overlapping. |
-| BR-03 | The result is always a single PNG image returned as MCP image content (`type=image`, `mimeType=image/png`, base64-encoded). |
-| BR-04 | All Swing component access happens on the EDT (via `MCPServer.runInEDT()`). |
-| BR-05 | Each component is rendered via `component.paint(g)` (not `printAll`) to capture the visual state as the user sees it. |
+| BR-03 | If `getConsideredComponents()` returns an empty list, return an MCP error (`isError: true`) with a message indicating there are no visible windows and suggesting the caller retry. |
+| BR-04 | The result is always a single PNG image returned as MCP image content (`type=image`, `mimeType=image/png`, base64-encoded). |
+| BR-05 | All Swing component access happens on the EDT (via `MCPServer.runInEDT()`). |
+| BR-06 | Each component is rendered via `component.paint(g)` (not `printAll`) to capture the visual state as the user sees it. |
 
 ---
 
@@ -39,6 +40,7 @@
 - [ ] A single component produces an image with that component's exact dimensions (`getWidth()` × `getHeight()`).
 - [ ] Multiple visible components produce a single image with components stacked vertically, each horizontally centered, composite width = max of component widths.
 - [ ] If a modal window is visible, only that window appears in the image.
+- [ ] If no components are considered, the tool returns an MCP error response (`isError: true`).
 
 ---
 
@@ -56,6 +58,7 @@ sized via `panel.setSize(w, h)` + `panel.doLayout()` (never shown on screen).
 - [ ] The returned MCP result has `type=image` and `mimeType=image/png`.
 - [ ] The returned PNG is decodable by `ImageIO.read()`.
 - [ ] Calling `swing_screenshot` via the MCP client returns an image content response.
+- [ ] With an empty component list, `swing_screenshot` returns an MCP error response (`isError: true`).
 
 ### Screen-mode tests (`src/testSwing`) — `SwingScreenshotScreenTest`
 
