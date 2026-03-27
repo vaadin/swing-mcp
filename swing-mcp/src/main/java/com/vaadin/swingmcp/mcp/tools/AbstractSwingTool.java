@@ -43,4 +43,10 @@ public abstract class AbstractSwingTool {
      */
     public abstract MCPProtocol.Content execute(Map<String, Object> params,
                                                 SwingToolContext context) throws Exception;
+
+    /**
+     * @return true if this tool mutates Swing app: e.g. clicks a button or the like.
+     * For example snapshot/screenshot doesn't mutate the app.
+     */
+    public abstract boolean isMutation();
 }

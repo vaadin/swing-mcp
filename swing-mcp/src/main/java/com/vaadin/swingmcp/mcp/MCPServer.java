@@ -1,5 +1,6 @@
 package com.vaadin.swingmcp.mcp;
 
+import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.TinyMCPServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,8 @@ public class MCPServer {
         // Tools will be registered here as they are implemented in subsequent use cases.
     }
 
+    private final SwingToolContext context = new SwingToolContext();
+
     /**
      * Registers a Swing tool with the underlying MCP server. The tool is
      * wrapped so that every invocation:
@@ -61,8 +64,14 @@ public class MCPServer {
     protected void registerTool(AbstractSwingTool tool) {
         server.addTool(tool.getName(), tool.getDescription(), tool.getInputSchema(), params ->
                 runInEDT(() -> {
-                    SwingToolContext context = new SwingToolContext(getConsideredComponents());
-                    return tool.execute(params, context);
+                    context.setConsideredComponents(getConsideredComponents());
+                    try {
+                        return tool.execute(params, context);
+                    } finally {
+                        if (tool.isMutation()) {
+                            context.clearRefMap();
+                        }
+                    }
                 })
         );
     }
