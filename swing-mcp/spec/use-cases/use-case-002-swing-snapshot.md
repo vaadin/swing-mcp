@@ -16,7 +16,7 @@
 - The tree walker applies the **Snapshot Inclusion Rules** (below) to decide which nodes appear in the output and which are pruned.
 - The tool returns a compact indented text tree with each node showing role, name, states, and available actions.
   - Nodes that expose at least one `AccessibleAction` also receive a numeric ref.
-  - Only include accessibility name and description if those are not blank.
+  - Only include accessibility name and description if those are not blank. Description follows the name in the line format.
 
 ---
 
