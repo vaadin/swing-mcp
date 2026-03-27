@@ -104,5 +104,5 @@ Uses real `JFrame`/`JDialog` instances on an actual display.
 Each top-level window is shown on screen, sized to 200×100, and rendered.
 All are expected to produce a valid 200×100 PNG.
 
-- [ ] `JFrame`
-- [ ] `JDialog`
+- [x] `JFrame`
+- [x] `JDialog`

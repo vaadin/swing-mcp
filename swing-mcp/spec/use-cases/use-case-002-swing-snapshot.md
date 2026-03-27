@@ -291,9 +291,9 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [x] When two roots are provided, their trees are separated by a `---` line and refs are numbered globally (not reset between roots).
   - [x] Calling `swing_snapshot` via the MCP client returns a valid text response.
 
-### Screen-mode tests (`src/testSwing`) — `SwingSnapshotScreenTest`
+### Screen-mode tests (`src/testSwing`) — `SwingSnapshotToolWithScreenTest`
 
 Uses real `JFrame`/`JDialog` instances on an actual display. The snapshot tool is called with the frame or dialog as the considered component.
 
-- [ ] A visible `JFrame` with child components produces a snapshot tree rooted at the frame's content (framework-internal wrappers pruned).
-- [ ] A visible `JDialog` with child components produces a snapshot tree rooted at the dialog's content (framework-internal wrappers pruned).
+- [x] A visible `JFrame` with child components produces a snapshot tree rooted at the frame's content (framework-internal wrappers pruned).
+- [x] A visible `JDialog` with child components produces a snapshot tree rooted at the dialog's content (framework-internal wrappers pruned).

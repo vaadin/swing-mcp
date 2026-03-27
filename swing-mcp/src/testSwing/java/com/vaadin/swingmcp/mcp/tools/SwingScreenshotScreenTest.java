@@ -86,12 +86,15 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         JFrame frame2 = showFrame(300, 200);
         mcpServer.setConsideredComponents(List.of(frame1, frame2));
 
+        // Read dimensions before calling the tool: the OS may apply window decorations
+        // asynchronously, so reading after the call can yield different values.
+        int expectedWidth = Math.max(frame1.getWidth(), frame2.getWidth());
+        int expectedHeight = frame1.getHeight() + frame2.getHeight() + SwingScreenshotTool.WINDOW_GAP;
+
         McpSchema.CallToolResult result = mcpClient.callTool(
                 new McpSchema.CallToolRequest("swing_screenshot", Map.of()));
         BufferedImage image = decodeResult(result);
 
-        int expectedWidth = Math.max(frame1.getWidth(), frame2.getWidth());
-        int expectedHeight = frame1.getHeight() + frame2.getHeight() + SwingScreenshotTool.WINDOW_GAP;
         assertEquals(expectedWidth, image.getWidth());
         assertEquals(expectedHeight, image.getHeight());
     }
@@ -111,5 +114,34 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
 
         assertEquals(dialog.getWidth(), image.getWidth());
         assertEquals(dialog.getHeight(), image.getHeight());
+    }
+
+    // ── Component matrix ───────────────────────────────────────────────────────
+
+    @Test
+    void jFrameRendersSuccessfully() throws Exception {
+        JFrame frame = showFrame(200, 100);
+        mcpServer.setConsideredComponents(List.of(frame));
+
+        McpSchema.CallToolResult result = mcpClient.callTool(
+                new McpSchema.CallToolRequest("swing_screenshot", Map.of()));
+        BufferedImage image = decodeResult(result);
+
+        assertEquals(200, image.getWidth());
+        assertEquals(100, image.getHeight());
+    }
+
+    @Test
+    void jDialogRendersSuccessfully() throws Exception {
+        JFrame owner = showFrame(200, 100);
+        JDialog dialog = showDialog(owner, 200, 100);
+        mcpServer.setConsideredComponents(List.of(dialog));
+
+        McpSchema.CallToolResult result = mcpClient.callTool(
+                new McpSchema.CallToolRequest("swing_screenshot", Map.of()));
+        BufferedImage image = decodeResult(result);
+
+        assertEquals(200, image.getWidth());
+        assertEquals(100, image.getHeight());
     }
 }
