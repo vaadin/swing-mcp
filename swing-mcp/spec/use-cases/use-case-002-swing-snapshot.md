@@ -12,7 +12,7 @@
 ## Main Flow
 
 - I call the `swing_snapshot` tool with no parameters.
-- The tool walks the `javax.accessibility` tree of each considered window.
+- The tool walks the `javax.accessibility` tree of each considered component (usually a Window or JFrame, but during testing it could be any component)
 - The tool returns a compact indented text tree with each node showing role, name, states, available actions, and current value.
   - Nodes that expose at least one `AccessibleAction` also receive a numeric ref.
   - Only include accessibility name and description if those are not blank.
