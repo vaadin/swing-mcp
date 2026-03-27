@@ -115,4 +115,5 @@ There are two test source sets:
 - Registered as the `testSwing` Gradle task in the `verification` group; included in the `check` lifecycle.
 - Reports go to `build/reports/testSwing/` and `build/test-results/testSwing/` (separate from headless test reports).
 - Base class: `AbstractScreenTest`; inherits from it for screen-dependent tool tests.
+- These tests should primarily focus on testing with JFrame/Dialog/Window since those Swing components require screen.
 
