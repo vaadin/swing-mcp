@@ -1,6 +1,7 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
+import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import java.awt.*;
@@ -56,7 +57,7 @@ public class SwingScreenshotTool extends AbstractSwingTool {
 
         // BR-03: empty after filtering → error
         if (renderables.isEmpty()) {
-            throw new RuntimeException(
+            throw new MCPErrorResponseException(
                     "No visible windows to capture. The application may still be starting up — retry shortly.");
         }
 

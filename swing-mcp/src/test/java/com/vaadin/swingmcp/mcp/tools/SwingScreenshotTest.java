@@ -100,10 +100,8 @@ class SwingScreenshotTest extends AbstractHeadlessTest {
 
         assertEquals(Boolean.TRUE, result.isError());
         McpSchema.TextContent textContent = (McpSchema.TextContent) result.content().get(0);
-        assertTrue(textContent.text().contains("No visible windows to capture"),
-                "error message should mention no visible windows");
-        assertTrue(textContent.text().contains("retry"),
-                "error message should suggest retrying");
+        assertEquals("No visible windows to capture. The application may still be starting up — retry shortly.",
+                textContent.text());
     }
 
     @Test

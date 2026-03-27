@@ -128,6 +128,13 @@ class TinyMCPServerToolTest {
                     throw new MCPServerException(-32000, "custom server error");
                 });
 
+        // Tool: throw_mcp_error_response — throws MCPErrorResponseException
+        server.addTool("throw_mcp_error_response", "Throws MCPErrorResponseException",
+                new InputSchemaBuilder().build(),
+                params -> {
+                    throw new MCPErrorResponseException("clean error message");
+                });
+
         // Tool: unknown_params_tool — has no defined params, to test unknown param warning
         server.addTool("no_params_tool", "Tool with no params",
                 new InputSchemaBuilder().build(),
@@ -191,7 +198,7 @@ class TinyMCPServerToolTest {
         McpSchema.ListToolsResult result = client.listTools();
         assertNotNull(result);
         List<McpSchema.Tool> tools = result.tools();
-        assertEquals(15, tools.size());
+        assertEquals(16, tools.size());
 
         McpSchema.Tool echoTool = tools.stream()
                 .filter(t -> "echo_text".equals(t.name()))
@@ -488,6 +495,29 @@ class TinyMCPServerToolTest {
         McpError mcpError = assertInstanceOf(McpError.class, McpError.findRootCause(ex));
         assertEquals(-32000, mcpError.getJsonRpcError().code());
         assertEquals("custom server error", mcpError.getJsonRpcError().message());
+    }
+
+    // ===== MCPErrorResponseException handling =====
+
+    @Test
+    void callToolMCPErrorResponseExceptionReturnsIsErrorWithCleanMessage() {
+        McpSchema.CallToolResult result = client.callTool(
+                new McpSchema.CallToolRequest("throw_mcp_error_response", Map.of()));
+        assertNotNull(result);
+        assertTrue(Boolean.TRUE.equals(result.isError()));
+        assertEquals(1, result.content().size());
+        assertInstanceOf(McpSchema.TextContent.class, result.content().get(0));
+        McpSchema.TextContent text = (McpSchema.TextContent) result.content().get(0);
+        assertEquals("clean error message", text.text());
+    }
+
+    @Test
+    void callToolMCPErrorResponseExceptionDoesNotExposeClassName() {
+        McpSchema.CallToolResult result = client.callTool(
+                new McpSchema.CallToolRequest("throw_mcp_error_response", Map.of()));
+        McpSchema.TextContent text = (McpSchema.TextContent) result.content().get(0);
+        assertFalse(text.text().contains("Exception"),
+                "error message must not contain any Java class name");
     }
 
     @Test

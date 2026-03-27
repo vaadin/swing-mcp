@@ -340,11 +340,17 @@ public class TinyMCPServer {
                 result.setContent(Collections.singletonList(content));
             }
             sendJsonRpcResponse(exchange, request.getId(), result);
+        } catch (MCPErrorResponseException e) {
+            LOG.debug("Tool '{}' returned error response: {}", toolName, e.getMessage());
+            MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
+            result.setIsError(true);
+            result.setContent(Collections.singletonList(MCPProtocol.Content.text(e.getMessage())));
+            sendJsonRpcResponse(exchange, request.getId(), result);
         } catch (MCPServerException e) {
             LOG.debug("Tool '{}' threw MCPServerException (code={})", toolName, e.getCode(), e);
             sendJsonRpcError(exchange, request.getId(), e.getCode(), e.getMessage());
         } catch (Exception e) {
-            LOG.debug("Tool '{}' threw an exception", toolName, e);
+            LOG.warn("Tool '{}' threw an exception", toolName, e);
             MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
             result.setIsError(true);
             result.setContent(Collections.singletonList(MCPProtocol.Content.text(e.toString())));
