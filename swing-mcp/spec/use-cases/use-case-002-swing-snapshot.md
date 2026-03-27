@@ -58,8 +58,8 @@ and re-parenting their children produces a cleaner tree without losing semantic 
 
 **`SCROLL_PANE` is NOT pruned** even when unnamed. Scrollability is a semantic property
 that can influence migration decisions (e.g., wrapping content in a Vaadin `Scroller`).
-The `VIEWPORT` inside it IS pruned (TP-3), so the tree shows `scroll pane → content`
-rather than `scroll pane → viewport → content`.
+The `VIEWPORT` inside it IS pruned (TP-3), so the tree shows `scroll_pane → content`
+rather than `scroll_pane → viewport → content`.
 
 #### Example — before and after pruning
 
@@ -124,7 +124,7 @@ After Stages 1 and 2, any surviving node is included. The following criteria ser
 |----|------|-----------|
 | SC-1 | **JMenu items: include even when menu is closed.** Walk `AccessibleContext.getAccessibleChild(i)` for menus regardless of popup visibility. | The full menu structure is needed for migration. The accessibility API exposes menu items as accessible children even when the popup is not shown. |
 | SC-2 | **JTabbedPane: include only the selected tab's content.** Walk `getAccessibleChild()` naturally — it exposes the tab items (`PAGE_TAB`) and the selected tab's content panel. Mark the selected tab via `SELECTED` state. | The user can only see and interact with the selected tab's content; non-selected content is not accessible via the standard accessibility API anyway. |
-| SC-3 | **Large data components (JTable, JList, JTree): truncate to first N accessible children** where N is a static final constant in the tool class (initially **10**). Append a synthetic node `... and X more items` when truncated. | A table with thousands of rows would blow up the AI context window. 10 rows gives enough structural overview. |
+| SC-3 | **Large data components (JTable, JList, JTree): truncate to first N accessible children** where N is a static final constant in the tool class (initially **10**). When truncated, Phase 4 emits a render-only `... and X more items` summary line (not a `SnapshotNode`). | A table with thousands of rows would blow up the AI context window. 10 rows gives enough structural overview. |
 | SC-4 | **Disabled components: included with `disabled` state.** | Already in spec. The AI needs to see disabled components to understand the full UI. |
 | SC-5 | **JInternalFrame: include all, mark iconified ones** via `ICONIFIED` state. | Iconified internal frames are minimized but not invisible. |
 
@@ -203,10 +203,10 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 |----|------|
 | BR-01 | Refs are short integers starting from 1, assigned fresh with each snapshot call, globally across all roots. Only nodes that expose at least one `AccessibleAction` receive a ref. |
 | BR-02 | The entire four-phase pipeline runs on the EDT via a single `SwingUtilities.invokeAndWait()` call. All phases — including prune, assignRefs, and render — execute inside that call. Off-EDT optimisation is deferred until a performance problem is demonstrated. |
-| BR-03 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. Line format: `- role "name" [ref=N, state1, state2] actions: action1, action2`. Role is the `AccessibleRole` field name lowercased with underscores (e.g. `push_button`, `text`, `scroll_pane`) — never `toDisplayString()`, which is locale-sensitive. Ref and states share one bracket, comma-separated, lowercase. Omit the bracket entirely if there is no ref and no states. Omit `actions:` if none. Field values (`AccessibleText` content, `AccessibleValue`) are **not** shown in the output — only the accessible name (caption) is shown, consistent with Playwright MCP's approach. Revisit if the AI needs field values in future. |
+| BR-03 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. Line format: `- role "name" "description" [ref=N, state1, state2] actions: action1, action2`. Role is the `AccessibleRole` field name lowercased with underscores (e.g. `push_button`, `text`, `scroll_pane`) — never `toDisplayString()`, which is locale-sensitive. Omit `"name"` if blank; omit `"description"` if blank. Ref and states share one bracket, comma-separated, lowercase. Omit the bracket entirely if there is no ref and no states. Omit `actions:` if none. Field values (`AccessibleText` content, `AccessibleValue`) are **not** shown in the output — only name and description are shown, consistent with Playwright MCP's approach. Revisit if the AI needs field values in future. |
 | BR-04 | The tree walker walks the `javax.accessibility` tree via `AccessibleContext.getAccessibleChild(i)`, **not** the `Component.getComponents()` component tree. The accessibility tree provides virtual children for complex components (table cells, list items, tree nodes). |
 | BR-05 | Large data components (JTable, JList, JTree) are truncated to `MAX_DATA_CHILDREN` accessible children (static final constant, initially 10). When truncated, a synthetic `... and N more items` node is appended. |
-| BR-06 | Action names are a **fixed English vocabulary** derived from the component's accessible role — they are never taken from `AccessibleAction.getAccessibleActionDescription()`, which is locale-sensitive. Only actions from the table below are shown; custom component actions outside this set are silently omitted. See **Role → Action mapping** below. |
+| BR-06 | Action labels displayed in the snapshot are determined by a two-step algorithm (see **Role → Action Mapping**): first check whether all `AccessibleAction` descriptions are known `AccessibleAction` constants (locale-safe); if not, fall back to a role-based table. Labels are never taken raw from `getAccessibleActionDescription()` when locale-sensitive strings may be returned. |
 
 ### Role → Action Mapping (BR-06)
 
@@ -286,4 +286,5 @@ Understand that headless mode is on, which means you have to use JPanel instead 
   - [ ] JTabbedPane shows tab items; selected tab has `SELECTED` state; non-selected tab content is not included.
   - [ ] Only meaningful states are shown (e.g., `disabled` appears, `visible`/`enabled` do not).
   - [ ] Disabled components appear in the tree with `disabled` state.
+  - [ ] When two roots are provided, their trees are separated by a `---` line and refs are numbered globally (not reset between roots).
   - [ ] Calling `swing_snapshot` via the MCP client returns a valid text response.
