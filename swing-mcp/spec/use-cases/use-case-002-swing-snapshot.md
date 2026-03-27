@@ -186,10 +186,10 @@ The parent processes its children list, substituting each child's result: `Keep`
 Stage 3 (Always Included) acts as a safety guard inside the `Keep`/`Transparent` decision: a node matching any AI-1…AI-5 criterion must return `Keep` regardless of other rules.
 
 **Phase 3 — assignRefs**
-A depth-first traversal over the pruned tree. Each node that exposes at least one `AccessibleAction` (`getAccessibleAction() != null && getActionCount() > 0`) receives the next integer ref, starting at 1.
+A depth-first traversal over the pruned tree. Each node that exposes at least one `AccessibleAction` (`getAccessibleAction() != null && getActionCount() > 0`) receives the next integer ref. `assignRefs` accepts a `startRef` parameter (the first ref it may assign) so that multiple roots share a single global sequence: root 1 calls `assignRefs(1)` and returns the next free ref; root 2 calls `assignRefs` with that value, and so on.
 
 **Phase 4 — render**
-A depth-first traversal that serialises each node to a line of text per BR-03, using indentation depth to represent the tree structure. After rendering the last `SnapshotNode` child of a truncated large-data component, emits a synthetic `... and N more items` line (not a node — no ref, no pruning).
+A depth-first traversal that serialises each node to a line of text per BR-03, using indentation depth to represent the tree structure. After rendering the last `SnapshotNode` child of a truncated large-data component, emits a synthetic `... and N more items` line (not a node — no ref, no pruning). When multiple roots are present, their rendered trees are separated by a `---` line.
 
 ---
 
@@ -197,7 +197,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 
 | ID | Rule |
 |----|------|
-| BR-01 | Refs are short integers starting from 1, assigned fresh with each snapshot call. Only nodes that expose at least one `AccessibleAction` receive a ref. |
+| BR-01 | Refs are short integers starting from 1, assigned fresh with each snapshot call, globally across all roots. Only nodes that expose at least one `AccessibleAction` receive a ref. |
 | BR-02 | The entire four-phase pipeline runs on the EDT via a single `SwingUtilities.invokeAndWait()` call. All phases — including prune, assignRefs, and render — execute inside that call. Off-EDT optimisation is deferred until a performance problem is demonstrated. |
 | BR-03 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. Line format: `- role "name" [ref=N, state1, state2] actions: action1, action2`. Ref and states share one bracket, comma-separated, lowercase. Omit the bracket entirely if there is no ref and no states. Omit `actions:` if none. Field values (`AccessibleText` content, `AccessibleValue`) are **not** shown in the output — only the accessible name (caption) is shown, consistent with Playwright MCP's approach. Revisit if the AI needs field values in future. |
 | BR-04 | The tree walker walks the `javax.accessibility` tree via `AccessibleContext.getAccessibleChild(i)`, **not** the `Component.getComponents()` component tree. The accessibility tree provides virtual children for complex components (table cells, list items, tree nodes). |
