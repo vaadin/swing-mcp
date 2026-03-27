@@ -2,19 +2,18 @@ package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
-import java.awt.Component;
-import java.util.List;
 import java.util.Map;
 
 /**
  * Base class for all Swing MCP tools. Subclasses implement
- * {@link #execute(Map, List)} which is guaranteed to run on the EDT
- * (or the test-equivalent) and receives the list of considered components.
+ * {@link #execute(Map, SwingToolContext)} which is guaranteed to run on the EDT
+ * (or the test-equivalent) and receives a context containing the considered
+ * components.
  * <p>
  * Registration is handled by {@code MCPServer.registerTool(AbstractSwingTool)}
  * which wraps this in a {@code TinyMCPServer.ToolFunction} that marshals onto
- * the EDT and resolves the considered components before calling
- * {@link #execute(Map, List)}.
+ * the EDT and resolves the context before calling
+ * {@link #execute(Map, SwingToolContext)}.
  */
 public abstract class AbstractSwingTool {
 
@@ -37,11 +36,11 @@ public abstract class AbstractSwingTool {
      * Executes the tool. Callers guarantee this runs on the EDT (or the
      * test override of {@code MCPServer.runInEDT}).
      *
-     * @param params               the parameter values from the MCP request, never null
-     * @param consideredComponents the top-level components to inspect/interact with
+     * @param params  the parameter values from the MCP request, never null
+     * @param context the tool execution context, never null
      * @return the result content, or {@code null} for an empty result
      * @throws Exception if tool execution fails
      */
     public abstract MCPProtocol.Content execute(Map<String, Object> params,
-                                                List<Component> consideredComponents) throws Exception;
+                                                SwingToolContext context) throws Exception;
 }

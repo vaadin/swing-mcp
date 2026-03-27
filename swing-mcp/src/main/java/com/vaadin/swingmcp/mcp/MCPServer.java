@@ -6,12 +6,12 @@ import org.slf4j.LoggerFactory;
 
 import javax.swing.SwingUtilities;
 import com.vaadin.swingmcp.mcp.tools.AbstractSwingTool;
+import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 
 import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.Window;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -61,8 +61,8 @@ public class MCPServer {
     protected void registerTool(AbstractSwingTool tool) {
         server.addTool(tool.getName(), tool.getDescription(), tool.getInputSchema(), params ->
                 runInEDT(() -> {
-                    List<Component> components = getConsideredComponents();
-                    return tool.execute(params, components);
+                    SwingToolContext context = new SwingToolContext(getConsideredComponents());
+                    return tool.execute(params, context);
                 })
         );
     }
