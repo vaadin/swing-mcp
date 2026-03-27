@@ -21,7 +21,7 @@ public class FakeMCPServer extends MCPServer {
     }
 
     @Override
-    protected <T> T runInEDT(Callable<T> block) throws Exception {
+    protected synchronized <T> T runInEDT(Callable<T> block) throws Exception {
         return block.call();
     }
 
