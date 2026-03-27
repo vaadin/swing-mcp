@@ -45,7 +45,7 @@ public class MCPServer {
     }
 
     private void registerTools() {
-        // Tools will be registered here as they are implemented in subsequent use cases.
+        registerTool(new com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool());
     }
 
     private final SwingToolContext context = new SwingToolContext();
