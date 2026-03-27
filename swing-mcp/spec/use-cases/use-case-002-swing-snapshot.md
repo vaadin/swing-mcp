@@ -271,7 +271,7 @@ Notes:
 
 Understand that headless mode is on, which means you have to use JPanel instead of Window/Dialog/JFrame for testing.
 
-- [x] `SwingSnapshotTest`
+- [x] `SwingSnapshotToolTest`
   - [x] A simple hierarchy (panel with button and text field) produces a tree with correct roles, names, and refs.
   - [x] Refs are assigned starting from 1.
   - [x] Nested containers produce correctly indented output.

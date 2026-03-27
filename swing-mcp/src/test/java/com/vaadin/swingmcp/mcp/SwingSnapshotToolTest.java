@@ -24,7 +24,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class SwingSnapshotTest {
+class SwingSnapshotToolTest {
 
     // ── Instance-level setup for direct tool invocation ───────────────────────
 
@@ -80,7 +80,7 @@ class SwingSnapshotTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Direct tool invocation tests
+    // Acceptance criteria tests
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -416,6 +416,293 @@ class SwingSnapshotTest {
                 + "- panel\n"
                 + "  - push_button \"B\" [ref=2] actions: click",
                 output);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Component matrix tests
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jButtonAppearsAsPushButton() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JButton("Save"));
+
+        assertEquals(
+                "- panel\n"
+                + "  - push_button \"Save\" [ref=1] actions: click",
+                snapshot(panel));
+    }
+
+    @Test
+    void jTextFieldAppearsAsEditableText() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JTextField());
+
+        assertEquals(
+                "- panel\n"
+                + "  - text [ref=1, editable] actions: type",
+                snapshot(panel));
+    }
+
+    @Test
+    void jPasswordFieldAppearsAsPasswordText() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JPasswordField());
+
+        assertEquals(
+                "- panel\n"
+                + "  - password_text [ref=1, editable] actions: type",
+                snapshot(panel));
+    }
+
+    @Test
+    void jTextAreaAppearsAsMultiLineText() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JTextArea());
+
+        assertEquals(
+                "- panel\n"
+                + "  - text [ref=1, editable, multi_line] actions: type",
+                snapshot(panel));
+    }
+
+    @Test
+    void jCheckBoxAppearsAsCheckBox() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JCheckBox("Accept"));
+
+        assertEquals(
+                "- panel\n"
+                + "  - check_box \"Accept\" [ref=1] actions: click",
+                snapshot(panel));
+    }
+
+    @Test
+    void jRadioButtonAppearsAsRadioButton() throws Exception {
+        JPanel panel = new JPanel();
+        ButtonGroup group = new ButtonGroup();
+        JRadioButton optionA = new JRadioButton("Option A");
+        JRadioButton optionB = new JRadioButton("Option B");
+        group.add(optionA);
+        group.add(optionB);
+        panel.add(optionA);
+        panel.add(optionB);
+
+        assertEquals(
+                "- panel\n"
+                + "  - radio_button \"Option A\" [ref=1] actions: click\n"
+                + "  - radio_button \"Option B\" [ref=2] actions: click",
+                snapshot(panel));
+    }
+
+    @Test
+    void jComboBoxAppearsAsComboBox() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JComboBox<>(new String[]{"One", "Two", "Three"}));
+
+        assertEquals(
+                "- panel\n"
+                + "  - combo_box [ref=1, collapsed] actions: select",
+                snapshot(panel));
+    }
+
+    @Test
+    void jToggleButtonAppearsAsToggleButton() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JToggleButton("Bold"));
+
+        assertEquals(
+                "- panel\n"
+                + "  - toggle_button \"Bold\" [ref=1] actions: click",
+                snapshot(panel));
+    }
+
+    @Test
+    void jSpinnerAppearsAsSpinBoxWithIncrementDecrement() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JSpinner(new SpinnerNumberModel(1, 0, 10, 1)));
+
+        assertEquals(
+                "- panel\n"
+                + "  - spin_box [ref=1] actions: increment, decrement\n"
+                + "    - text [ref=2, editable] actions: type",
+                snapshot(panel));
+    }
+
+    @Test
+    void jSliderAppearsAsSliderWithIncrementDecrement() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JSlider(0, 100, 50));
+
+        assertEquals(
+                "- panel\n"
+                + "  - slider [ref=1, horizontal] actions: increment, decrement",
+                snapshot(panel));
+    }
+
+    @Test
+    void jSplitPaneAppearsAsSplitPane() throws Exception {
+        JPanel panel = new JPanel();
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
+                new JLabel("Left"), new JLabel("Right"));
+        panel.add(splitPane);
+
+        assertEquals(
+                "- panel\n"
+                + "  - split_pane [horizontal]\n"
+                + "    - label \"Left\"\n"
+                + "    - label \"Right\"",
+                snapshot(panel));
+    }
+
+    @Test
+    void jLabelAppearsAsLabel() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JLabel("Status"));
+
+        assertEquals(
+                "- panel\n"
+                + "  - label \"Status\"",
+                snapshot(panel));
+    }
+
+    @Test
+    void jProgressBarAppearsAsProgressBar() throws Exception {
+        JPanel panel = new JPanel();
+        JProgressBar bar = new JProgressBar(0, 100);
+        bar.setValue(42);
+        panel.add(bar);
+
+        assertEquals(
+                "- panel\n"
+                + "  - progress_bar [horizontal]",
+                snapshot(panel));
+    }
+
+    @Test
+    void jToolBarAppearsAsToolBar() throws Exception {
+        JPanel panel = new JPanel();
+        JToolBar toolBar = new JToolBar();
+        toolBar.add(new JButton("Save"));
+        panel.add(toolBar);
+
+        assertEquals(
+                "- panel\n"
+                + "  - tool_bar\n"
+                + "    - push_button \"Save\" [ref=1] actions: click",
+                snapshot(panel));
+    }
+
+    @Test
+    void jPanelAppearsWhenNamed() throws Exception {
+        JPanel root = new JPanel();
+        root.getAccessibleContext().setAccessibleName("Form");
+
+        assertEquals(
+                "- panel \"Form\"",
+                snapshot(root));
+    }
+
+    @Test
+    void jScrollPaneAppearsAsScrollPane() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JScrollPane(new JLabel("Content"),
+                JScrollPane.VERTICAL_SCROLLBAR_NEVER,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER));
+
+        String output = snapshot(panel);
+
+        // scroll_pane is kept even without a name; label is its direct child (viewport pruned)
+        assertEquals(
+                "- panel\n"
+                + "  - scroll_pane\n"
+                + "    - label \"Content\"\n"
+                + "    - scroll_bar [vertical]\n"
+                + "      - push_button [ref=1] actions: click\n"
+                + "      - push_button [ref=2] actions: click\n"
+                + "    - scroll_bar [horizontal]\n"
+                + "      - push_button [ref=3] actions: click\n"
+                + "      - push_button [ref=4] actions: click",
+                output);
+    }
+
+    @Test
+    void jTabbedPaneAppearsAsPageTabList() throws Exception {
+        JPanel panel = new JPanel();
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.addTab("General", new JPanel());
+        tabbedPane.addTab("Advanced", new JPanel());
+        panel.add(tabbedPane);
+
+        assertEquals(
+                "- panel\n"
+                + "  - page_tab_list \"General\"\n"
+                + "    - page_tab \"General\" [selected]\n"
+                + "    - page_tab \"Advanced\"",
+                snapshot(panel));
+    }
+
+    @Test
+    void jMenuBarAppearsAsMenuBar() throws Exception {
+        JPanel panel = new JPanel();
+        JMenuBar menuBar = new JMenuBar();
+        JMenu fileMenu = new JMenu("File");
+        menuBar.add(fileMenu);
+        panel.add(menuBar);
+
+        assertEquals(
+                "- panel\n"
+                + "  - menu_bar\n"
+                + "    - menu \"File\" [ref=1] actions: click",
+                snapshot(panel));
+    }
+
+    @Test
+    void jMenuAppearsAsMenu() throws Exception {
+        JPanel panel = new JPanel();
+        JMenuBar menuBar = new JMenuBar();
+        JMenu editMenu = new JMenu("Edit");
+        editMenu.add(new JMenuItem("Cut"));
+        menuBar.add(editMenu);
+        panel.add(menuBar);
+
+        assertEquals(
+                "- panel\n"
+                + "  - menu_bar\n"
+                + "    - menu \"Edit\" [ref=1] actions: click\n"
+                + "      - menu_item \"Cut\" [ref=2] actions: click",
+                snapshot(panel));
+    }
+
+    @Test
+    void jMenuItemAppearsAsMenuItem() throws Exception {
+        JPanel panel = new JPanel();
+        JMenuBar menuBar = new JMenuBar();
+        JMenu menu = new JMenu("Actions");
+        JMenuItem deleteItem = new JMenuItem("Delete");
+        menu.add(deleteItem);
+        menuBar.add(menu);
+        panel.add(menuBar);
+
+        assertEquals(
+                "- panel\n"
+                + "  - menu_bar\n"
+                + "    - menu \"Actions\" [ref=1] actions: click\n"
+                + "      - menu_item \"Delete\" [ref=2] actions: click",
+                snapshot(panel));
+    }
+
+    @Test
+    void jListAppearsAsList() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JList<>(new String[]{"Alpha", "Beta"}));
+
+        assertEquals(
+                "- panel\n"
+                + "  - list\n"
+                + "    - label \"Alpha\" [ref=1] actions: click\n"
+                + "    - label \"Beta\" [ref=2] actions: click",
+                snapshot(panel));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
