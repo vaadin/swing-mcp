@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** obtain an accessibility tree snapshot of the Swing application **so that** I can understand the current UI structure and identify components for interaction.
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-03-26
 
 ---
@@ -247,21 +247,21 @@ Notes:
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_snapshot` returns a text tree containing role, name, states, and actions for each accessible node.
-- [ ] Only nodes exposing at least one `AccessibleAction` receive a ref; purely structural nodes (e.g., panels, labels) do not.
-- [ ] A panel with a button and a text field produces a tree with the expected structure and refs.
-- [ ] Nested component hierarchies are represented with correct indentation.
-- [ ] Non-visible components (`setVisible(false)`) are excluded from the tree, including all descendants.
-- [ ] Disabled components (`setEnabled(false)`) are included in the tree; their state reflects that they are disabled.
-- [ ] Framework-internal containers (`root_pane`, `layered_pane`, `viewport`, `filler`) are transparently pruned — their children appear under the parent.
-- [ ] Unnamed panels (no accessible name, no accessible description, no titled border) are transparently pruned.
-- [ ] Named panels (with accessible name, description, or titled border) are kept in the tree.
-- [ ] `scroll_pane` is kept in the tree even when unnamed; `viewport` inside it is pruned.
-- [ ] `CellRendererPane` instances and their descendants are excluded.
-- [ ] Menu items are included even when the menu is closed.
-- [ ] JTabbedPane shows tab items with the selected tab marked `SELECTED`; only the selected tab's content is included.
-- [ ] A JTable/JList/JTree with more than `MAX_DATA_CHILDREN` rows shows only the first `MAX_DATA_CHILDREN` rows plus a `... and N more items` summary.
-- [ ] Only meaningful accessible states are shown (see **Accessible States — Display Rules**).
+- [x] Calling `swing_snapshot` returns a text tree containing role, name, states, and actions for each accessible node.
+- [x] Only nodes exposing at least one `AccessibleAction` receive a ref; purely structural nodes (e.g., panels, labels) do not.
+- [x] A panel with a button and a text field produces a tree with the expected structure and refs.
+- [x] Nested component hierarchies are represented with correct indentation.
+- [x] Non-visible components (`setVisible(false)`) are excluded from the tree, including all descendants.
+- [x] Disabled components (`setEnabled(false)`) are included in the tree; their state reflects that they are disabled.
+- [x] Framework-internal containers (`root_pane`, `layered_pane`, `viewport`, `filler`) are transparently pruned — their children appear under the parent.
+- [x] Unnamed panels (no accessible name, no accessible description, no titled border) are transparently pruned.
+- [x] Named panels (with accessible name, description, or titled border) are kept in the tree.
+- [x] `scroll_pane` is kept in the tree even when unnamed; `viewport` inside it is pruned.
+- [x] `CellRendererPane` instances and their descendants are excluded.
+- [x] Menu items are included even when the menu is closed.
+- [x] JTabbedPane shows tab items with the selected tab marked `SELECTED`; only the selected tab's content is included.
+- [x] A JTable/JList/JTree with more than `MAX_DATA_CHILDREN` rows shows only the first `MAX_DATA_CHILDREN` rows plus a `... and N more items` summary.
+- [x] Only meaningful accessible states are shown (see **Accessible States — Display Rules**).
 
 ---
 
@@ -271,20 +271,20 @@ Notes:
 
 Understand that headless mode is on, which means you have to use JPanel instead of Window/Dialog/JFrame for testing.
 
-- [ ] `SwingSnapshotTest`
-  - [ ] A simple hierarchy (panel with button and text field) produces a tree with correct roles, names, and refs.
-  - [ ] Refs are assigned starting from 1.
-  - [ ] Nested containers produce correctly indented output.
-  - [ ] Components with `setVisible(false)` are excluded from the tree.
-  - [ ] Unnamed panels are transparently pruned — their children appear under the grandparent.
-  - [ ] Named panels (with titled border or accessible name) are kept in the tree.
-  - [ ] `CellRendererPane` instances are excluded.
-  - [ ] Framework-internal roles (`root_pane`, `layered_pane`, `viewport`, `filler`) are transparently pruned.
-  - [ ] `scroll_pane` is kept; `viewport` inside it is pruned.
-  - [ ] A JTable with more than `MAX_DATA_CHILDREN` rows is truncated with a summary node.
-  - [ ] Menu items appear in the tree even when the menu is not open.
-  - [ ] JTabbedPane shows tab items; selected tab has `SELECTED` state; non-selected tab content is not included.
-  - [ ] Only meaningful states are shown (e.g., `disabled` appears, `visible`/`enabled` do not).
-  - [ ] Disabled components appear in the tree with `disabled` state.
-  - [ ] When two roots are provided, their trees are separated by a `---` line and refs are numbered globally (not reset between roots).
-  - [ ] Calling `swing_snapshot` via the MCP client returns a valid text response.
+- [x] `SwingSnapshotTest`
+  - [x] A simple hierarchy (panel with button and text field) produces a tree with correct roles, names, and refs.
+  - [x] Refs are assigned starting from 1.
+  - [x] Nested containers produce correctly indented output.
+  - [x] Components with `setVisible(false)` are excluded from the tree.
+  - [x] Unnamed panels are transparently pruned — their children appear under the grandparent.
+  - [x] Named panels (with titled border or accessible name) are kept in the tree.
+  - [x] `CellRendererPane` instances are excluded.
+  - [x] Framework-internal roles (`root_pane`, `layered_pane`, `viewport`, `filler`) are transparently pruned.
+  - [x] `scroll_pane` is kept; `viewport` inside it is pruned.
+  - [x] A JTable with more than `MAX_DATA_CHILDREN` rows is truncated with a summary node.
+  - [x] Menu items appear in the tree even when the menu is not open.
+  - [x] JTabbedPane shows tab items; selected tab has `SELECTED` state; non-selected tab content is not included.
+  - [x] Only meaningful states are shown (e.g., `disabled` appears, `visible`/`enabled` do not).
+  - [x] Disabled components appear in the tree with `disabled` state.
+  - [x] When two roots are provided, their trees are separated by a `---` line and refs are numbered globally (not reset between roots).
+  - [x] Calling `swing_snapshot` via the MCP client returns a valid text response.

@@ -247,6 +247,24 @@ class SwingSnapshotTest {
     }
 
     @Test
+    void fillerIsTransparentlyPruned() throws Exception {
+        // Box.createRigidArea() produces a Box.Filler with AccessibleRole.FILLER.
+        // It is a pure layout spacer — transparent pruning drops it; its children
+        // (none) are promoted, so it simply disappears.
+        JPanel root = new JPanel();
+        root.getAccessibleContext().setAccessibleName("Root");
+        root.add(Box.createRigidArea(new Dimension(10, 10)));
+        root.add(new JButton("OK"));
+
+        String output = snapshot(root);
+
+        assertEquals(
+                "- panel \"Root\"\n"
+                + "  - push_button \"OK\" [ref=1] actions: click",
+                output);
+    }
+
+    @Test
     void scrollPaneIsKeptViewportIsPruned() throws Exception {
         JPanel root = new JPanel();
         JList<String> list = new JList<>(new String[]{"A", "B"});
