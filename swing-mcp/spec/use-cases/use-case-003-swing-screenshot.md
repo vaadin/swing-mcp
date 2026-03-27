@@ -64,6 +64,33 @@ sized via `panel.setSize(w, h)` + `panel.doLayout()` (never shown on screen).
 - [x] A zero-size `JPanel` mixed with a normal-sized `JPanel` produces a PNG matching only the normal panel's dimensions.
 - [x] Two sized `JPanel`s produce a single PNG with composite width = max of the two widths and composite height = sum of heights + 4 px gap.
 
+#### Component matrix
+
+Each component is placed inside a 200×100 `JPanel` (sized via `setSize` + `doLayout`) and rendered.
+All components are expected to render successfully to a valid 200×100 PNG.
+
+- [x] `JButton`
+- [x] `JTextField`
+- [x] `JPasswordField`
+- [x] `JTextArea`
+- [x] `JCheckBox`
+- [x] `JRadioButton` (with `ButtonGroup`)
+- [x] `JComboBox`
+- [x] `JToggleButton`
+- [x] `JSpinner`
+- [x] `JSlider`
+- [x] `JPanel`
+- [x] `JScrollPane`
+- [x] `JTabbedPane`
+- [x] `JSplitPane`
+- [x] `JLabel`
+- [x] `JProgressBar`
+- [x] `JMenuBar`
+- [x] `JMenu`
+- [x] `JMenuItem`
+- [x] `JToolBar`
+- [x] `JList`
+
 ### Screen-mode tests (`src/testSwing`) — `SwingScreenshotScreenTest`
 
 Uses real `JFrame`/`JDialog` instances on an actual display.

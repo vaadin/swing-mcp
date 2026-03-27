@@ -131,4 +131,152 @@ class SwingScreenshotTest extends AbstractHeadlessTest {
         assertEquals(300, image.getWidth()); // max(300, 200)
         assertEquals(200 + 100 + SwingScreenshotTool.WINDOW_GAP, image.getHeight());
     }
+
+    // ── Component matrix tests ─────────────────────────────────────────────────
+
+    /** Creates a 200×100 panel containing the given children, laid out and ready to render. */
+    private JPanel sizedPanel(Component... children) {
+        JPanel panel = new JPanel();
+        for (Component c : children) panel.add(c);
+        panel.setSize(200, 100);
+        panel.doLayout();
+        return panel;
+    }
+
+    private void assertRendersToValidPng(JPanel panel) throws Exception {
+        BufferedImage image = decodeImage(screenshot(panel));
+        assertNotNull(image);
+        assertEquals(200, image.getWidth());
+        assertEquals(100, image.getHeight());
+    }
+
+    @Test
+    void jButtonRendersSuccessfully() throws Exception {
+        assertRendersToValidPng(sizedPanel(new JButton("Save")));
+    }
+
+    @Test
+    void jTextFieldRendersSuccessfully() throws Exception {
+        assertRendersToValidPng(sizedPanel(new JTextField("Hello")));
+    }
+
+    @Test
+    void jPasswordFieldRendersSuccessfully() throws Exception {
+        assertRendersToValidPng(sizedPanel(new JPasswordField("secret")));
+    }
+
+    @Test
+    void jTextAreaRendersSuccessfully() throws Exception {
+        assertRendersToValidPng(sizedPanel(new JTextArea("text")));
+    }
+
+    @Test
+    void jCheckBoxRendersSuccessfully() throws Exception {
+        assertRendersToValidPng(sizedPanel(new JCheckBox("Accept")));
+    }
+
+    @Test
+    void jRadioButtonRendersSuccessfully() throws Exception {
+        ButtonGroup group = new ButtonGroup();
+        JRadioButton optionA = new JRadioButton("Option A");
+        JRadioButton optionB = new JRadioButton("Option B");
+        group.add(optionA);
+        group.add(optionB);
+        assertRendersToValidPng(sizedPanel(optionA, optionB));
+    }
+
+    @Test
+    void jComboBoxRendersSuccessfully() throws Exception {
+        assertRendersToValidPng(sizedPanel(new JComboBox<>(new String[]{"One", "Two", "Three"})));
+    }
+
+    @Test
+    void jToggleButtonRendersSuccessfully() throws Exception {
+        assertRendersToValidPng(sizedPanel(new JToggleButton("Bold")));
+    }
+
+    @Test
+    void jSpinnerRendersSuccessfully() throws Exception {
+        assertRendersToValidPng(sizedPanel(new JSpinner(new SpinnerNumberModel(1, 0, 10, 1))));
+    }
+
+    @Test
+    void jSliderRendersSuccessfully() throws Exception {
+        assertRendersToValidPng(sizedPanel(new JSlider(0, 100, 50)));
+    }
+
+    @Test
+    void jPanelRendersSuccessfully() throws Exception {
+        JPanel inner = new JPanel();
+        inner.getAccessibleContext().setAccessibleName("Inner");
+        assertRendersToValidPng(sizedPanel(inner));
+    }
+
+    @Test
+    void jScrollPaneRendersSuccessfully() throws Exception {
+        assertRendersToValidPng(sizedPanel(new JScrollPane(new JLabel("Content"))));
+    }
+
+    @Test
+    void jTabbedPaneRendersSuccessfully() throws Exception {
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.addTab("Tab1", new JPanel());
+        tabbedPane.addTab("Tab2", new JPanel());
+        assertRendersToValidPng(sizedPanel(tabbedPane));
+    }
+
+    @Test
+    void jSplitPaneRendersSuccessfully() throws Exception {
+        assertRendersToValidPng(sizedPanel(
+                new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JLabel("Left"), new JLabel("Right"))));
+    }
+
+    @Test
+    void jLabelRendersSuccessfully() throws Exception {
+        assertRendersToValidPng(sizedPanel(new JLabel("Status")));
+    }
+
+    @Test
+    void jProgressBarRendersSuccessfully() throws Exception {
+        JProgressBar bar = new JProgressBar(0, 100);
+        bar.setValue(42);
+        assertRendersToValidPng(sizedPanel(bar));
+    }
+
+    @Test
+    void jMenuBarRendersSuccessfully() throws Exception {
+        JMenuBar menuBar = new JMenuBar();
+        menuBar.add(new JMenu("File"));
+        assertRendersToValidPng(sizedPanel(menuBar));
+    }
+
+    @Test
+    void jMenuRendersSuccessfully() throws Exception {
+        JMenuBar menuBar = new JMenuBar();
+        JMenu menu = new JMenu("Edit");
+        menu.add(new JMenuItem("Cut"));
+        menuBar.add(menu);
+        assertRendersToValidPng(sizedPanel(menuBar));
+    }
+
+    @Test
+    void jMenuItemRendersSuccessfully() throws Exception {
+        JMenuBar menuBar = new JMenuBar();
+        JMenu menu = new JMenu("Actions");
+        menu.add(new JMenuItem("Delete"));
+        menuBar.add(menu);
+        assertRendersToValidPng(sizedPanel(menuBar));
+    }
+
+    @Test
+    void jToolBarRendersSuccessfully() throws Exception {
+        JToolBar toolBar = new JToolBar();
+        toolBar.add(new JButton("Save"));
+        assertRendersToValidPng(sizedPanel(toolBar));
+    }
+
+    @Test
+    void jListRendersSuccessfully() throws Exception {
+        assertRendersToValidPng(sizedPanel(new JList<>(new String[]{"Alpha", "Beta"})));
+    }
 }
