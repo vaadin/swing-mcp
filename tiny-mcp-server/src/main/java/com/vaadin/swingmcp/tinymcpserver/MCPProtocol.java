@@ -212,6 +212,24 @@ public class MCPProtocol {
         }
 
         /**
+         * Creates an image content item from a {@link java.awt.image.BufferedImage},
+         * encoding it as a base64 PNG.
+         *
+         * @param image the image to encode
+         * @return a Content item with type "image" and mimeType "image/png"
+         */
+        public static Content image(java.awt.image.BufferedImage image) {
+            try {
+                java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                javax.imageio.ImageIO.write(image, "png", baos);
+                String base64 = java.util.Base64.getEncoder().encodeToString(baos.toByteArray());
+                return image(base64, "image/png");
+            } catch (java.io.IOException e) {
+                throw new RuntimeException("Failed to encode BufferedImage as PNG", e);
+            }
+        }
+
+        /**
          * Creates an audio content item.
          *
          * @param data     base64-encoded audio data

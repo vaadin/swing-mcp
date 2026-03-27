@@ -155,6 +155,15 @@ class MCPProtocolTest {
     }
 
     @Test
+    void contentImageFromBufferedImage() throws java.io.IOException {
+        java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(2, 2, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        MCPProtocol.Content content = MCPProtocol.Content.image(img);
+        assertEquals("image", content.getType());
+        assertEquals("image/png", content.getMimeType());
+        assertEquals("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAC0lEQVR4XmNgQAYAAA4AAdXbrS0AAAAASUVORK5CYII=", content.getData());
+    }
+
+    @Test
     void toolsCallResponseError() {
         String json = "{\"jsonrpc\":\"2.0\",\"id\":6,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Ref not found\"}],\"isError\":true}}";
         MCPProtocol.JsonRpcResponse resp = assertRoundTrip(json, MCPProtocol.JsonRpcResponse.class);
