@@ -198,7 +198,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 | ID | Rule |
 |----|------|
 | BR-01 | Refs are short integers starting from 1, assigned fresh with each snapshot call. Only nodes that expose at least one `AccessibleAction` receive a ref. |
-| BR-02 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
+| BR-02 | The entire four-phase pipeline runs on the EDT via a single `SwingUtilities.invokeAndWait()` call. All phases — including prune, assignRefs, and render — execute inside that call. Off-EDT optimisation is deferred until a performance problem is demonstrated. |
 | BR-03 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. Line format: `- role "name" [ref=N, state1, state2] actions: action1, action2`. Ref and states share one bracket, comma-separated, lowercase. Omit the bracket entirely if there is no ref and no states. Omit `actions:` if none. Field values (`AccessibleText` content, `AccessibleValue`) are **not** shown in the output — only the accessible name (caption) is shown, consistent with Playwright MCP's approach. Revisit if the AI needs field values in future. |
 | BR-04 | The tree walker walks the `javax.accessibility` tree via `AccessibleContext.getAccessibleChild(i)`, **not** the `Component.getComponents()` component tree. The accessibility tree provides virtual children for complex components (table cells, list items, tree nodes). |
 | BR-05 | Large data components (JTable, JList, JTree) are truncated to `MAX_DATA_CHILDREN` accessible children (static final constant, initially 10). When truncated, a synthetic `... and N more items` node is appended. |
@@ -232,11 +232,12 @@ Actions shown in the snapshot are determined solely by the node's `AccessibleRol
 | `TEXT`, `PASSWORD_TEXT` | `type` |
 | `COMBO_BOX` | `select` |
 | `LIST` | `select` |
-| `SLIDER` | `set-value` |
-| `SPINNER` | `set-value` |
 | `PAGE_TAB` | `click` |
 
-Any role not in this table and not passing the constants check: no actions shown.
+Notes:
+- `SLIDER` is absent from this table because `JSlider` exposes `INCREMENT`/`DECREMENT` as `AccessibleAction` constants — Step 1 handles it, producing `increment, decrement`.
+- `SPINNER` is absent for the same reason — `JSpinner` exposes `INCREMENT`/`DECREMENT` constants, handled by Step 1.
+- Any role not in this table and not passing the constants check: no actions shown.
 
 ---
 
