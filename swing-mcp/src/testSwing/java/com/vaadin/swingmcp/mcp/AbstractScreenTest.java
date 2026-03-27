@@ -6,12 +6,17 @@ import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTranspor
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 
+import javax.swing.*;
+
 import java.time.Duration;
 
-public abstract class AbstractHeadlessTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+public abstract class AbstractScreenTest {
     @BeforeAll
-    public static void enableHeadless() {
-        System.setProperty("java.awt.headless", "true");
+    public static void assertScreenPresent() {
+        assertEquals("false", System.getProperty("java.awt.headless"));
+        new JFrame(); // this fails on headless
     }
 
     private static final int MCP_PORT = 18090;
