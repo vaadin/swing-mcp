@@ -8,10 +8,12 @@ import org.junit.jupiter.api.BeforeAll;
 
 import java.time.Duration;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public abstract class AbstractHeadlessTest {
     @BeforeAll
-    public static void enableHeadless() {
-        System.setProperty("java.awt.headless", "true");
+    public static void checkHeadless() {
+        assertEquals("true", System.getProperty("java.awt.headless"));
     }
 
     private static final int MCP_PORT = 18090;

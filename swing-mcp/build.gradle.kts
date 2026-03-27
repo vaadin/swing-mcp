@@ -47,3 +47,6 @@ val testSwing by tasks.registering(Test::class) {
 tasks.named("check") {
     dependsOn(testSwing)
 }
+tasks.named<Test>("test") {
+    systemProperty("java.awt.headless", "true")
+}
