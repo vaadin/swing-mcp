@@ -3,10 +3,7 @@ package com.vaadin.swingmcp.mcp;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
-import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.spec.McpSchema;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -15,7 +12,6 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -42,31 +38,6 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         context.setConsideredComponents(Arrays.asList(roots));
         MCPProtocol.Content result = tool.execute(Map.of(), context);
         return result.getText();
-    }
-
-    // ── Static setup for the MCP integration test ─────────────────────────────
-
-    private static final int MCP_PORT = 18090;
-    private static FakeMCPServer mcpServer;
-    private static McpSyncClient mcpClient;
-
-    @BeforeAll
-    static void startMcpServer() throws Exception {
-        mcpServer = new FakeMCPServer(MCP_PORT, "/mcp");
-        mcpServer.start();
-
-        mcpClient = buildSyncClient("http://127.0.0.1:" + MCP_PORT + "/mcp", Duration.ofSeconds(5));
-        mcpClient.initialize();
-    }
-
-    @AfterAll
-    static void stopMcpServer() {
-        if (mcpClient != null) {
-            mcpClient.close();
-        }
-        if (mcpServer != null) {
-            mcpServer.stop();
-        }
     }
 
     // ══════════════════════════════════════════════════════════════════════════
