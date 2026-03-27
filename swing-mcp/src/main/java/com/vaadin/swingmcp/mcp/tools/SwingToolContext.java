@@ -17,7 +17,7 @@ public class SwingToolContext {
 
     private List<Component> consideredComponents;
     /**
-     * The SwingSnapshotTool populates this map by assigning IDs to every component
+     * The {@link AbstractSwingTool#TOOL_SWING_SNAPSHOT} populates this map by assigning IDs to every component
      * that the client MCP can interact with. The map is cleared after every
      * interaction and needs to be re-populated by another call to SwingSnapshotTool.
      */

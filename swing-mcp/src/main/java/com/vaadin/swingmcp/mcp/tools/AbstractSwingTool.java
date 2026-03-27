@@ -17,6 +17,12 @@ import java.util.Map;
  */
 public abstract class AbstractSwingTool {
 
+    public static final String TOOL_SWING_SNAPSHOT = "swing_snapshot";
+    public static final String TOOL_SWING_SCREENSHOT = "swing_screenshot";
+    public static final String TOOL_SWING_CLICK = "swing_click";
+    public static final String TOOL_SWING_SET_TEXT = "swing_set_text";
+    public static final String TOOL_SWING_SET_VALUE = "swing_set_value";
+
     /**
      * @return the MCP tool name (e.g. {@code "swing_snapshot"})
      */
