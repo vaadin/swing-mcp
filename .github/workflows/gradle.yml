@@ -26,6 +26,8 @@ jobs:
           ~/.gradle/caches
           ~/.gradle/wrapper
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle', 'gradle/wrapper/gradle-wrapper.properties') }}
+    - name: Install Xvfb
+      run: sudo apt-get install -y xvfb
     - name: Build with Gradle
-      run: ./gradlew clean build '-Pvaadin.productionMode' --stacktrace --info --no-daemon
+      run: xvfb-run --auto-servernum ./gradlew clean build '-Pvaadin.productionMode' --stacktrace --info --no-daemon
 
