@@ -144,7 +144,7 @@ Which states from `AccessibleStateSet` appear in the snapshot output:
 
 ### Internal Representation: `SnapshotNode`
 
-Because Swing's accessibility tree is read-only (owned by the framework), the tool builds its own mutable tree of `SnapshotNode` instances. Each node holds a reference to an `AccessibleContext` and an ordered list of `SnapshotNode` children. The node is the natural home for all pruning and ref-assignment logic.
+Because Swing's accessibility tree is read-only (owned by the framework), the tool builds its own mutable tree of `SnapshotNode` instances. Each node holds a reference to an `Accessible` (from which `AccessibleContext` is retrieved on demand via `getAccessibleContext()`) and an ordered list of `SnapshotNode` children. The node is the natural home for all pruning and ref-assignment logic.
 
 ### Four-Phase Pipeline
 
@@ -168,7 +168,7 @@ Text output
 Recursively walks `AccessibleContext.getAccessibleChild(i)`, constructing one `SnapshotNode` per accessible child. Special cases that affect *which* children to walk are applied here:
 - SC-1: walk menu children even when popup is closed
 - SC-2: walk `JTabbedPane` children naturally via `getAccessibleChild()` — only the selected tab's content is exposed
-- SC-3: cap large-data components (`JTable`, `JList`, `JTree`) at `MAX_DATA_CHILDREN` accessible children; append a synthetic `... and N more items` node when truncated
+- SC-3: cap large-data components (`JTable`, `JList`, `JTree`) at `MAX_DATA_CHILDREN` accessible children; only the first `MAX_DATA_CHILDREN` children become `SnapshotNode`s. The `... and N more items` summary is a render-only artifact emitted by Phase 4 — it is never a `SnapshotNode` and can never receive a ref.
 
 The output of this phase is a complete, unfiltered mirror of the accessibility tree.
 
@@ -189,7 +189,7 @@ Stage 3 (Always Included) acts as a safety guard inside the `Keep`/`Transparent`
 A depth-first traversal over the pruned tree. Each node that exposes at least one `AccessibleAction` (`getAccessibleAction() != null && getActionCount() > 0`) receives the next integer ref, starting at 1.
 
 **Phase 4 — render**
-A depth-first traversal that serialises each node to a line of text per BR-03, using indentation depth to represent the tree structure.
+A depth-first traversal that serialises each node to a line of text per BR-03, using indentation depth to represent the tree structure. After rendering the last `SnapshotNode` child of a truncated large-data component, emits a synthetic `... and N more items` line (not a node — no ref, no pruning).
 
 ---
 
