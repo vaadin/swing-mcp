@@ -65,25 +65,25 @@ rather than `scroll pane → viewport → content`.
 
 Before (raw accessibility tree):
 ```
-frame "Invoice Editor"
-  root pane                            ← TP-1
-    layered pane                       ← TP-2
-      panel                            ← TP-5 (content pane, unnamed)
-        panel                          ← TP-5 (unnamed toolbar wrapper)
-          toolbar "Main"
-            button "Save"
-        panel                          ← TP-5 (unnamed main area)
-          split pane
-            panel                      ← TP-5 (unnamed left side)
-              label "Invoices"
-              scroll pane
-                viewport               ← TP-3
-                  list
-            panel                      ← TP-5 (unnamed right side)
-              panel "Details"          ← KEPT (has titled border)
-                text field "Name"
-              panel                    ← TP-5 (unnamed button bar)
-                button "Add"
+- frame "Invoice Editor"
+  - root_pane                          ← TP-1
+    - layered_pane                     ← TP-2
+      - panel                          ← TP-5 (content pane, unnamed)
+        - panel                        ← TP-5 (unnamed toolbar wrapper)
+          - tool_bar "Main"
+            - push_button "Save"
+        - panel                        ← TP-5 (unnamed main area)
+          - split_pane
+            - panel                    ← TP-5 (unnamed left side)
+              - label "Invoices"
+              - scroll_pane
+                - viewport             ← TP-3
+                  - list
+            - panel                    ← TP-5 (unnamed right side)
+              - panel "Details"        ← KEPT (has titled border)
+                - text "Name"
+              - panel                  ← TP-5 (unnamed button bar)
+                - push_button "Add"
 ```
 
 After pruning:
@@ -253,10 +253,10 @@ Notes:
 - [ ] Nested component hierarchies are represented with correct indentation.
 - [ ] Non-visible components (`setVisible(false)`) are excluded from the tree, including all descendants.
 - [ ] Disabled components (`setEnabled(false)`) are included in the tree; their state reflects that they are disabled.
-- [ ] Framework-internal containers (`ROOT_PANE`, `LAYERED_PANE`, `VIEWPORT`, `FILLER`) are transparently pruned — their children appear under the parent.
+- [ ] Framework-internal containers (`root_pane`, `layered_pane`, `viewport`, `filler`) are transparently pruned — their children appear under the parent.
 - [ ] Unnamed panels (no accessible name, no accessible description, no titled border) are transparently pruned.
 - [ ] Named panels (with accessible name, description, or titled border) are kept in the tree.
-- [ ] `SCROLL_PANE` is kept in the tree even when unnamed; `VIEWPORT` inside it is pruned.
+- [ ] `scroll_pane` is kept in the tree even when unnamed; `viewport` inside it is pruned.
 - [ ] `CellRendererPane` instances and their descendants are excluded.
 - [ ] Menu items are included even when the menu is closed.
 - [ ] JTabbedPane shows tab items with the selected tab marked `SELECTED`; only the selected tab's content is included.
@@ -279,8 +279,8 @@ Understand that headless mode is on, which means you have to use JPanel instead 
   - [ ] Unnamed panels are transparently pruned — their children appear under the grandparent.
   - [ ] Named panels (with titled border or accessible name) are kept in the tree.
   - [ ] `CellRendererPane` instances are excluded.
-  - [ ] Framework-internal roles (`ROOT_PANE`, `LAYERED_PANE`, `VIEWPORT`, `FILLER`) are transparently pruned.
-  - [ ] `SCROLL_PANE` is kept; `VIEWPORT` inside it is pruned.
+  - [ ] Framework-internal roles (`root_pane`, `layered_pane`, `viewport`, `filler`) are transparently pruned.
+  - [ ] `scroll_pane` is kept; `viewport` inside it is pruned.
   - [ ] A JTable with more than `MAX_DATA_CHILDREN` rows is truncated with a summary node.
   - [ ] Menu items appear in the tree even when the menu is not open.
   - [ ] JTabbedPane shows tab items; selected tab has `SELECTED` state; non-selected tab content is not included.
