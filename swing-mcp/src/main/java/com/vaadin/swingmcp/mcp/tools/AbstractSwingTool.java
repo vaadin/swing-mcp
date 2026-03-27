@@ -45,7 +45,9 @@ public abstract class AbstractSwingTool {
      * @param params  the parameter values from the MCP request, never null
      * @param context the tool execution context, never null
      * @return the result content, or {@code null} for an empty result
-     * @throws Exception if tool execution fails
+     * @throws com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException to return
+     *         {@code isError=true} with a clean, human-readable message
+     * @throws Exception if tool execution fails unexpectedly
      */
     public abstract MCPProtocol.Content execute(Map<String, Object> params,
                                                 SwingToolContext context) throws Exception;

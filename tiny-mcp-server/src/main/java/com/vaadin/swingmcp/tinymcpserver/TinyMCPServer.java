@@ -43,8 +43,11 @@ public class TinyMCPServer {
      * are not included in the map.
      *
      * <p>Returning {@code null} produces an empty content array in the response.
-     * Throwing any exception causes the tool result to have {@code isError=true} with
-     * the exception's {@link Throwable#toString()} as the text content.
+     * Throwing {@link MCPErrorResponseException} produces {@code isError=true} with
+     * the exception's message as the text content (no Java class name prefix).
+     * Throwing any other exception also produces {@code isError=true} but uses
+     * {@link Throwable#toString()} as the text content.
+     * Throwing {@link MCPServerException} sends a JSON-RPC protocol error instead.
      */
     @FunctionalInterface
     public interface ToolFunction {
@@ -53,8 +56,9 @@ public class TinyMCPServer {
          *
          * @param params the parameter values, never null
          * @return the result content, or {@code null} for an empty result
-         * @throws Exception if tool execution fails
-         * @throws MCPServerException if you want to return a specific failure to the client.
+         * @throws MCPErrorResponseException to return {@code isError=true} with a clean message
+         * @throws MCPServerException to return a JSON-RPC protocol error
+         * @throws Exception if tool execution fails unexpectedly
          */
         MCPProtocol.Content call(Map<String, Object> params) throws Exception;
     }
