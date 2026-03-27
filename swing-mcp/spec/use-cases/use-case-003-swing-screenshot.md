@@ -15,7 +15,6 @@
 - The tool calls `context.getConsideredComponents()` to obtain the list of components to render.
 - The tool renders each considered component to a `BufferedImage` using `component.paint(g)` on a freshly created `BufferedImage` sized to `component.getWidth()` × `component.getHeight()`. This captures the full Swing-rendered content including menu bar and internal borders, but not OS-managed window decorations (title bar, native border).
 - If multiple components are considered, the tool arranges them vertically into a single image: composite width = max of all component widths; each component is horizontally centered; no overlapping.
-- The components are ordered by creation order (as returned by `Window.getWindows()`).
 - The tool encodes the result as PNG and returns it as `MCPProtocol.Content.image(base64, "image/png")`.
 
 ---
@@ -25,11 +24,13 @@
 | ID | Rule |
 |----|------|
 | BR-01 | Use `SwingToolContext.getConsideredComponents()` to determine which components to capture (modal-vs-all selection is handled upstream by `MCPServer`). |
-| BR-02 | Multiple windows are arranged vertically in a single PNG: composite width is the max of all window widths; narrower windows are horizontally centered; no overlapping. |
+| BR-02 | Multiple windows are arranged vertically in a single PNG: composite width is the max of all window widths; composite height is the sum of all window heights; narrower windows are horizontally centered; no overlapping. |
 | BR-03 | If `getConsideredComponents()` returns an empty list, return an MCP error (`isError: true`) with a message indicating there are no visible windows and suggesting the caller retry. |
 | BR-04 | The result is always a single PNG image returned as MCP image content (`type=image`, `mimeType=image/png`, base64-encoded). |
 | BR-05 | All Swing component access happens on the EDT (via `MCPServer.runInEDT()`). |
 | BR-06 | Each component is rendered via `component.paint(g)` (not `printAll`) to capture the visual state as the user sees it. |
+| BR-07 | `BufferedImage` instances are created with type `TYPE_INT_RGB` (windows are assumed opaque). |
+| BR-08 | Components with zero width or zero height are silently skipped (they are effectively invisible). If all components are skipped, BR-03 applies. |
 
 ---
 
