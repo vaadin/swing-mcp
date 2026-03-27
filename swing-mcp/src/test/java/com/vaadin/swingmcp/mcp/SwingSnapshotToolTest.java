@@ -3,9 +3,7 @@ package com.vaadin.swingmcp.mcp;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
-import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
-import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -48,7 +46,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     // ── Static setup for the MCP integration test ─────────────────────────────
 
-    private static final int MCP_PORT = 18093;
+    private static final int MCP_PORT = 18090;
     private static FakeMCPServer mcpServer;
     private static McpSyncClient mcpClient;
 
@@ -57,15 +55,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         mcpServer = new FakeMCPServer(MCP_PORT, "/mcp");
         mcpServer.start();
 
-        HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport
-                .builder("http://127.0.0.1:" + MCP_PORT + "/mcp")
-                .openConnectionOnStartup(false)
-                .build();
-
-        mcpClient = McpClient.sync(transport)
-                .requestTimeout(Duration.ofSeconds(10))
-                .initializationTimeout(Duration.ofSeconds(10))
-                .build();
+        mcpClient = buildSyncClient("http://127.0.0.1:" + MCP_PORT + "/mcp", Duration.ofSeconds(5));
         mcpClient.initialize();
     }
 
