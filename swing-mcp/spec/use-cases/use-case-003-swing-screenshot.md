@@ -64,7 +64,7 @@ sized via `panel.setSize(w, h)` + `panel.doLayout()` (never shown on screen).
 - [x] A zero-size `JPanel` mixed with a normal-sized `JPanel` produces a PNG matching only the normal panel's dimensions.
 - [x] Two sized `JPanel`s produce a single PNG with composite width = max of the two widths and composite height = sum of heights + 4 px gap.
 
-#### Component matrix
+#### Component matrix (headless)
 
 Each component is placed inside a 200×100 `JPanel` (sized via `setSize` + `doLayout`) and rendered.
 All components are expected to render successfully to a valid 200×100 PNG.
@@ -98,3 +98,11 @@ Uses real `JFrame`/`JDialog` instances on an actual display.
 - [x] A single visible `JFrame` produces a PNG with that frame's dimensions.
 - [x] Multiple visible frames produce a single vertically stacked image with correct composite dimensions.
 - [x] With a modal `JDialog` open, only the dialog is captured.
+
+#### Component matrix (screen-mode)
+
+Each top-level window is shown on screen, sized to 200×100, and rendered.
+All are expected to produce a valid 200×100 PNG.
+
+- [ ] `JFrame`
+- [ ] `JDialog`

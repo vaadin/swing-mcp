@@ -269,7 +269,9 @@ Notes:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-Understand that headless mode is on, which means you have to use JPanel instead of Window/Dialog/JFrame for testing.
+### Headless tests (`src/test`) — `SwingSnapshotToolTest`
+
+In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-level windows require a display).
 
 - [x] `SwingSnapshotToolTest`
   - [x] A simple hierarchy (panel with button and text field) produces a tree with correct roles, names, and refs.
@@ -288,3 +290,10 @@ Understand that headless mode is on, which means you have to use JPanel instead 
   - [x] Disabled components appear in the tree with `disabled` state.
   - [x] When two roots are provided, their trees are separated by a `---` line and refs are numbered globally (not reset between roots).
   - [x] Calling `swing_snapshot` via the MCP client returns a valid text response.
+
+### Screen-mode tests (`src/testSwing`) — `SwingSnapshotScreenTest`
+
+Uses real `JFrame`/`JDialog` instances on an actual display. The snapshot tool is called with the frame or dialog as the considered component.
+
+- [ ] A visible `JFrame` with child components produces a snapshot tree rooted at the frame's content (framework-internal wrappers pruned).
+- [ ] A visible `JDialog` with child components produces a snapshot tree rooted at the dialog's content (framework-internal wrappers pruned).
