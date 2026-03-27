@@ -123,7 +123,7 @@ After Stages 1 and 2, any surviving node is included. The following criteria ser
 | ID | Rule | Rationale |
 |----|------|-----------|
 | SC-1 | **JMenu items: include even when menu is closed.** Walk `AccessibleContext.getAccessibleChild(i)` for menus regardless of popup visibility. | The full menu structure is needed for migration. The accessibility API exposes menu items as accessible children even when the popup is not shown. |
-| SC-2 | **JTabbedPane: include ALL tab pages, not just selected.** Mark the selected tab via `SELECTED` state. | Migration needs the complete tab structure. |
+| SC-2 | **JTabbedPane: include only the selected tab's content.** Walk `getAccessibleChild()` naturally — it exposes the tab items (`PAGE_TAB`) and the selected tab's content panel. Mark the selected tab via `SELECTED` state. | The user can only see and interact with the selected tab's content; non-selected content is not accessible via the standard accessibility API anyway. |
 | SC-3 | **Large data components (JTable, JList, JTree): truncate to first N accessible children** where N is a static final constant in the tool class (initially **10**). Append a synthetic node `... and X more items` when truncated. | A table with thousands of rows would blow up the AI context window. 10 rows gives enough structural overview. |
 | SC-4 | **Disabled components: included with `disabled` state.** | Already in spec. The AI needs to see disabled components to understand the full UI. |
 | SC-5 | **JInternalFrame: include all, mark iconified ones** via `ICONIFIED` state. | Iconified internal frames are minimized but not invisible. |
@@ -167,7 +167,7 @@ Text output
 **Phase 1 — build**
 Recursively walks `AccessibleContext.getAccessibleChild(i)`, constructing one `SnapshotNode` per accessible child. Special cases that affect *which* children to walk are applied here:
 - SC-1: walk menu children even when popup is closed
-- SC-2: walk all tab pages of a `JTabbedPane`, not just the selected one
+- SC-2: walk `JTabbedPane` children naturally via `getAccessibleChild()` — only the selected tab's content is exposed
 - SC-3: cap large-data components (`JTable`, `JList`, `JTree`) at `MAX_DATA_CHILDREN` accessible children; append a synthetic `... and N more items` node when truncated
 
 The output of this phase is a complete, unfiltered mirror of the accessibility tree.
@@ -219,7 +219,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 - [ ] `SCROLL_PANE` is kept in the tree even when unnamed; `VIEWPORT` inside it is pruned.
 - [ ] `CellRendererPane` instances and their descendants are excluded.
 - [ ] Menu items are included even when the menu is closed.
-- [ ] JTabbedPane includes all tab pages; the selected tab is marked with `SELECTED` state.
+- [ ] JTabbedPane shows tab items with the selected tab marked `SELECTED`; only the selected tab's content is included.
 - [ ] A JTable/JList/JTree with more than `MAX_DATA_CHILDREN` rows shows only the first `MAX_DATA_CHILDREN` rows plus a `... and N more items` summary.
 - [ ] Only meaningful accessible states are shown (see **Accessible States — Display Rules**).
 
@@ -243,7 +243,7 @@ Understand that headless mode is on, which means you have to use JPanel instead 
   - [ ] `SCROLL_PANE` is kept; `VIEWPORT` inside it is pruned.
   - [ ] A JTable with more than `MAX_DATA_CHILDREN` rows is truncated with a summary node.
   - [ ] Menu items appear in the tree even when the menu is not open.
-  - [ ] JTabbedPane shows all tabs; selected tab has `SELECTED` state.
+  - [ ] JTabbedPane shows tab items; selected tab has `SELECTED` state; non-selected tab content is not included.
   - [ ] Only meaningful states are shown (e.g., `disabled` appears, `visible`/`enabled` do not).
   - [ ] Disabled components appear in the tree with `disabled` state.
   - [ ] Calling `swing_snapshot` via the MCP client returns a valid text response.
