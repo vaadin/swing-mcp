@@ -202,12 +202,47 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 | BR-03 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. Line format: `- role "name" [ref=N, state1, state2] actions: action1, action2`. Ref and states share one bracket, comma-separated, lowercase. Omit the bracket entirely if there is no ref and no states. Omit `actions:` if none. Field values (`AccessibleText` content, `AccessibleValue`) are **not** shown in the output — only the accessible name (caption) is shown, consistent with Playwright MCP's approach. Revisit if the AI needs field values in future. |
 | BR-04 | The tree walker walks the `javax.accessibility` tree via `AccessibleContext.getAccessibleChild(i)`, **not** the `Component.getComponents()` component tree. The accessibility tree provides virtual children for complex components (table cells, list items, tree nodes). |
 | BR-05 | Large data components (JTable, JList, JTree) are truncated to `MAX_DATA_CHILDREN` accessible children (static final constant, initially 10). When truncated, a synthetic `... and N more items` node is appended. |
+| BR-06 | Action names are a **fixed English vocabulary** derived from the component's accessible role — they are never taken from `AccessibleAction.getAccessibleActionDescription()`, which is locale-sensitive. Only actions from the table below are shown; custom component actions outside this set are silently omitted. See **Role → Action mapping** below. |
+
+### Role → Action Mapping (BR-06)
+
+Actions shown in the snapshot are determined solely by the node's `AccessibleRole`, not by `AccessibleAction.getAccessibleActionDescription()`.
+
+**Why not use `AccessibleAction` descriptions directly?**
+- `AbstractButton.getAccessibleActionDescription()` delegates to `UIManager.getString("AbstractButton.clickText")` — locale-sensitive.
+- `AccessibleJTextComponent` exposes ~58 actions sourced from the Swing `Action` API (caret-forward, selection-down, page-up, …) — useless noise for an AI agent.
+- `AccessibleHyperlink` returns the link caption as the action description — unpredictable.
+
+**Two-step resolution algorithm:**
+
+**Step 1 — Constants check.** Collect all action descriptions via `getAccessibleActionDescription(i)`. If **every** description equals one of the static `String` constants declared in `AccessibleAction` (e.g. `CLICK`, `TOGGLE_EXPAND`, `INCREMENT`, `DECREMENT`, `TOGGLE`, …), use those constant values as the displayed action names. This handles components like `AccessibleJTreeNode` whose action set is variable but always drawn from the constants.
+
+**Step 2 — Role table fallback.** If any description does not match a constant (localized strings, arbitrary Action names), ignore all descriptions and look up the role in the table below. This handles `AbstractButton` on non-English JVMs and the noisy `AccessibleJTextComponent`.
+
+`AccessibleAction` is still used to gate **ref assignment** (BR-01) and **node inclusion** (AI-3) — this algorithm only governs what action labels are *displayed*.
+
+| Accessible Role | Actions shown (fallback) |
+|-----------------|--------------------------|
+| `PUSH_BUTTON` | `click` |
+| `TOGGLE_BUTTON` | `click` |
+| `CHECK_BOX` | `click` |
+| `RADIO_BUTTON` | `click` |
+| `MENU_ITEM` | `click` |
+| `MENU` | `click` |
+| `TEXT`, `PASSWORD_TEXT` | `type` |
+| `COMBO_BOX` | `select` |
+| `LIST` | `select` |
+| `SLIDER` | `set-value` |
+| `SPINNER` | `set-value` |
+| `PAGE_TAB` | `click` |
+
+Any role not in this table and not passing the constants check: no actions shown.
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_snapshot` returns a text tree containing role, name, states, actions, and value for each accessible node.
+- [ ] Calling `swing_snapshot` returns a text tree containing role, name, states, and actions for each accessible node.
 - [ ] Only nodes exposing at least one `AccessibleAction` receive a ref; purely structural nodes (e.g., panels, labels) do not.
 - [ ] A panel with a button and a text field produces a tree with the expected structure and refs.
 - [ ] Nested component hierarchies are represented with correct indentation.
