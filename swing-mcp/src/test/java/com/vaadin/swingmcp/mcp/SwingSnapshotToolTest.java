@@ -706,6 +706,54 @@ class SwingSnapshotToolTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    // Real-world scenario test
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void loginPanelSnapshot() throws Exception {
+        // Simulates a typical login form: titled panel containing labelled inputs,
+        // a "remember me" checkbox, and action buttons.
+        JPanel root = new JPanel();
+
+        JPanel loginPanel = new JPanel();
+        loginPanel.setBorder(new TitledBorder("Login"));
+
+        JLabel usernameLabel = new JLabel("Username");
+        JTextField usernameField = new JTextField(20);
+        usernameField.getAccessibleContext().setAccessibleName("Username");
+
+        JLabel passwordLabel = new JLabel("Password");
+        JPasswordField passwordField = new JPasswordField(20);
+        passwordField.getAccessibleContext().setAccessibleName("Password");
+
+        JCheckBox rememberMe = new JCheckBox("Remember me");
+
+        JButton signInButton = new JButton("Sign In");
+        JButton cancelButton = new JButton("Cancel");
+
+        loginPanel.add(usernameLabel);
+        loginPanel.add(usernameField);
+        loginPanel.add(passwordLabel);
+        loginPanel.add(passwordField);
+        loginPanel.add(rememberMe);
+        loginPanel.add(signInButton);
+        loginPanel.add(cancelButton);
+        root.add(loginPanel);
+
+        assertEquals(
+                "- panel\n"
+                + "  - panel \"Login\"\n"
+                + "    - label \"Username\"\n"
+                + "    - text \"Username\" [ref=1, editable] actions: type\n"
+                + "    - label \"Password\"\n"
+                + "    - password_text \"Password\" [ref=2, editable] actions: type\n"
+                + "    - check_box \"Remember me\" [ref=3] actions: click\n"
+                + "    - push_button \"Sign In\" [ref=4] actions: click\n"
+                + "    - push_button \"Cancel\" [ref=5] actions: click",
+                snapshot(root));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // MCP integration test
     // ══════════════════════════════════════════════════════════════════════════
 
