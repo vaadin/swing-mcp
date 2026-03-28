@@ -220,6 +220,8 @@ For each node, collect actions by running the following checks in order. All det
 5. `supportsGetValue()` → add `get_value`; additionally `supportsSetValue()` → add `set_value`
 6. `supportsSelection()` → add `get_selection`, `set_selection`, `clear_selection`, `select_all`, `get_children_count`
 
+**Why `get_children_count` is gated on `supportsSelection()` rather than `Accessible`:** Technically, `getAccessibleChildrenCount()` is available on any `AccessibleContext`, so `get_children_count` could be offered for all components. However, the action is only useful when an AI agent needs to know the number of items before making a selection (e.g. to iterate or validate index bounds). Exposing it universally would cause all components — including purely structural ones — to receive a ref (via BR-07), creating unnecessary noise in the snapshot. Limiting it to selectable components keeps the action set focused on its actual use context.
+
 `getAccessibleActionDescription()` is **never** used to derive display labels directly — it is only compared against known constants in step 3.
 
 **Why step 3 only matches known constants:** `JTextComponent` subclasses expose dozens of dynamic `AccessibleAction` descriptions derived from `Action.NAME` (e.g. `"cut-to-clipboard"`, `"paste-from-clipboard"`, `"select-all"`). These are deliberately ignored. The primary interaction for any text component is reading and writing its value via `get_text`/`set_text` (step 4). An AI agent filling a form will set field values and move on — it has no need to invoke cut, copy, paste, or select-all via the accessibility API.
