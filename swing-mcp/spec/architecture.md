@@ -150,13 +150,16 @@ for each Swing component type.
 
 ### Action Types Summary
 
-| Action | Components | Source type |
+Action display names use lower-case underscore-separated format regardless of the raw
+`AccessibleAction` constant value (e.g. `"toggleexpand"` → `toggle_expand`, `"toggle popup"` → `toggle_popup`).
+
+| Display name | Components | Source type |
 |---|---|---|
 | `click` | AWT: `Button`, `MenuItem`, `Menu`, `PopupMenu` | Literal |
 | `click` | Swing: all `AbstractButton` subclasses (`JButton`, `JCheckBox`, `JRadioButton`, `JToggleButton`, `JMenuItem`, `JCheckBoxMenuItem`, `JRadioButtonMenuItem`, `JMenu`), `JListChild` | UIManager |
-| `toggle popup` | `JComboBox` | UIManager |
+| `toggle_popup` | `JComboBox` | UIManager |
 | `increment`, `decrement` | `JSlider`, `JSpinner` | Static field |
-| `toggleexpand` | `JTree` non-leaf nodes | Static field |
+| `toggle_expand` | `JTree` non-leaf nodes | Static field |
 | Dynamic (cannot be enumerated statically) | All `JTextComponent` subclasses (`JTextField`, `JPasswordField`, `JTextArea`, `JEditorPane`, `AccessibleJEditorPaneHTML`); `HTMLLink` | Algorithm |
 | None (unimplemented stubs) | AWT `Checkbox`, `CheckboxMenuItem`, `Choice` | — |
 
@@ -225,6 +228,8 @@ corresponding actions are available. Since the snapshot deliberately omits field
 BR-03), both read and write actions are needed so the AI can retrieve data it cannot see.
 
 ### Capability → Action Mapping
+
+All action names follow lower-case underscore-separated format.
 
 | `AccessibleContext` getter | Non-null means | Actions exposed |
 |---|---|---|
