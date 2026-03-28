@@ -78,6 +78,10 @@ components. The ref system is shared across all tools and follows these rules:
    cleared. Subsequent attempts to use an old ref must return an MCP-level error
    (`isError: true`) with a recovery message suggesting the AI call
    `swing_snapshot` to obtain fresh refs.
+   `swing_get_children` also replaces the ref map (with a fresh local numbering
+   scoped to its output window), even though it is an inspection tool, not an
+   interaction tool. Refs from a prior `swing_snapshot` or `swing_get_children`
+   call are no longer valid after a `swing_get_children` call.
 
 4. **Expected AI workflow.** The AI is expected to follow a
    snapshot → interact → snapshot loop:
