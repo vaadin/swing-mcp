@@ -259,6 +259,12 @@ boolean supportsGetValue(Component c) {
 // Roles whose AccessibleValue is read-only (value changes programmatically, not by the user).
 // The MCP server must only perform actions a real user can perform — exposing set_value on a
 // read-only component risks putting the Swing app into an undefined state.
+//
+// Membership criterion: the component displays a value via AccessibleValue (non-null), but
+// a real user fundamentally cannot edit that value. Add roles here as they are discovered.
+//
+// Components that return null from getAccessibleValue() (e.g. JInternalFrame) are excluded
+// automatically by the null-check above — they never reach this set.
 private static final Set<AccessibleRole> READ_ONLY_VALUE_ROLES = Set.of(
     AccessibleRole.PROGRESS_BAR
 );
