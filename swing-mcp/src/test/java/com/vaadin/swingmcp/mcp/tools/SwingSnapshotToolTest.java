@@ -270,12 +270,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 + "    - label \"row2\"\n"
                 + "    - label \"row3\"\n"
                 + "    - label \"row4\"\n"
-                + "    - label \"row5\"\n"
-                + "    - label \"row6\"\n"
-                + "    - label \"row7\"\n"
-                + "    - label \"row8\"\n"
-                + "    - label \"row9\"\n"
-                + "    ... and 5 more items",
+                + "    ... and 10 more items",
                 output);
     }
 

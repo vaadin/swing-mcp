@@ -30,7 +30,7 @@ import java.util.List;
 public class SwingSnapshotTool extends AbstractSwingTool {
 
     /** Maximum accessible children shown for JTable / JList / JTree. */
-    public static final int MAX_DATA_CHILDREN = 10;
+    public static final int MAX_DATA_CHILDREN = 5;
 
     // ── Roles that are always included (AI-1) ──────────────────────────────────
 
