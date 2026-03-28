@@ -285,6 +285,12 @@ read-only.
 
 **Imperative: the MCP server must only expose actions a real user can perform.** Exposing write actions on read-only or programmatically-controlled components risks putting the Swing app into an undefined state. When in doubt, prefer fewer actions over more.
 
+This imperative operates at two levels:
+
+1. **Snapshot level (component type).** Mutation actions (`set_text`, `set_value`, `select`, etc.) are listed for components that *generally* allow their value to be changed by a user — e.g. a text field, a slider. Components that are structurally read-only regardless of state (e.g. `JProgressBar`) never receive the corresponding mutation action in the snapshot. The current enabled/disabled state of the component does **not** affect which actions appear in the snapshot.
+
+2. **Tool execution level (runtime state).** When a mutation tool is called, it must check whether the target component is currently enabled. If the component is disabled, the tool must return an MCP-level error (`isError: true`) with an informative message explaining that the component is disabled and therefore the user cannot change its value.
+
 Authoritative mapping between spec action names, their detection mechanism, and the corresponding MCP tool.
 Other specs reference this table instead of duplicating detection logic.
 
