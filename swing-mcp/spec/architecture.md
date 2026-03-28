@@ -268,7 +268,28 @@ read-only.
 
 ---
 
-## 6. Testing
+## 6. Action Detection Summary
+
+Authoritative mapping between spec action names, their detection mechanism, and the corresponding MCP tool.
+Other specs reference this table instead of duplicating detection logic.
+
+| Spec Action Name | Detection Method | Java Mechanism | MCP Tool | Notes |
+|---|---|---|---|---|
+| `click` | `supportsClick()` | `AccessibleAction.CLICK` (AWT literal) OR `UIManager.getString("AbstractButton.clickText")` (Swing UIManager) | `swing_click` | AWT hardcodes the literal; Swing uses a potentially localized UIManager lookup — both must be checked |
+| `toggle_popup` | `supportsTogglePopup()` | `AccessibleAction.TOGGLE_POPUP` OR `UIManager.getString("ComboBox.togglePopupText")` | `swing_toggle_popup` | Toggles open/closed; AI can infer current state from snapshot |
+| `increment` | Raw `AccessibleAction` description compare | `AccessibleAction.INCREMENT` static constant | `swing_increment` | Safe to match by raw constant — `JSlider`/`JSpinner` use the static field directly, no UIManager variant exists |
+| `decrement` | Raw `AccessibleAction` description compare | `AccessibleAction.DECREMENT` static constant | `swing_decrement` | Same rationale as `increment` |
+| `toggle_expand` | Raw `AccessibleAction` description compare | `AccessibleAction.TOGGLE_EXPAND` static constant | `swing_toggle_expand` | Toggles expanded/collapsed; AI can infer current state from `EXPANDED`/`COLLAPSED` in snapshot |
+| `get_text` | `supportsGetText()` | `getAccessibleText()` non-null | `swing_get_text` | On `JPasswordField`, returns echo characters (masked), **not** the actual password |
+| `set_text` | `supportsSetText()` | `getAccessibleEditableText()` non-null | `swing_set_text` | `supportsSetText()` implies `supportsGetText()` (`AccessibleEditableText extends AccessibleText`) |
+| `get_value` | `supportsValue()` | `getAccessibleValue()` non-null | `swing_get_value` | The API has no read-only variant; same check as `set_value` |
+| `set_value` | `supportsValue()` | `getAccessibleValue()` non-null | `swing_set_value` | The API has no read-only variant; same check as `get_value` |
+| `get_selection` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_get_selection` | The API has no read-only variant; same check as `select` |
+| `select` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_select` | The API has no read-only variant; same check as `get_selection` |
+
+---
+
+## 7. Testing
 
 There are two test source sets:
 
