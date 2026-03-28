@@ -148,6 +148,18 @@ for each Swing component type.
 | `JEditorPaneAccessibleHypertextSupport` | `JEditorPane` | — | *(hypertext support wrapper, delegates to HTMLLink)* | — |
 | `AccessibleJEditorPaneHTML` | `JEditorPane` | *dynamic* | *(inherits from JTextComponent via JEditorPane)* | Algorithm |
 
+### Action Types Summary
+
+| Action | Components | Source type |
+|---|---|---|
+| `click` | AWT: `Button`, `MenuItem`, `Menu`, `PopupMenu` | Literal |
+| `click` | Swing: all `AbstractButton` subclasses (`JButton`, `JCheckBox`, `JRadioButton`, `JToggleButton`, `JMenuItem`, `JCheckBoxMenuItem`, `JRadioButtonMenuItem`, `JMenu`), `JListChild` | UIManager |
+| `toggle popup` | `JComboBox` | UIManager |
+| `increment`, `decrement` | `JSlider`, `JSpinner` | Static field |
+| `toggleexpand` | `JTree` non-leaf nodes | Static field |
+| Dynamic (cannot be enumerated statically) | All `JTextComponent` subclasses (`JTextField`, `JPasswordField`, `JTextArea`, `JEditorPane`, `AccessibleJEditorPaneHTML`); `HTMLLink` | Algorithm |
+| None (unimplemented stubs) | AWT `Checkbox`, `CheckboxMenuItem`, `Choice` | — |
+
 ### Detecting Click Support
 
 A component supports the click action if any of its accessible action descriptions matches a
