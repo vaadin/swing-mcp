@@ -91,7 +91,66 @@ components. The ref system is shared across all tools and follows these rules:
 
 ---
 
-## 4. Testing
+## 4. Accessible Actions Reference
+
+The table below documents every `AccessibleAction` implementation in the Java SDK (Java 21),
+listing the actions each class provides. This informs which MCP interaction tools make sense
+for each Swing component type.
+
+**Action description source types:**
+- **Static field** — value of a constant on `AccessibleAction` (e.g. `AccessibleAction.CLICK = "click"`)
+- **UIManager** — localized string looked up via `UIManager.getString(key)` at runtime
+- **Literal** — hardcoded string in source (AWT legacy)
+- **Algorithm** — computed at runtime; cannot be statically determined
+
+### AccessibleAction Interface Constants
+
+| Constant | Value |
+|---|---|
+| `AccessibleAction.CLICK` | `"click"` |
+| `AccessibleAction.INCREMENT` | `"increment"` |
+| `AccessibleAction.DECREMENT` | `"decrement"` |
+| `AccessibleAction.TOGGLE_EXPAND` | `"toggleexpand"` |
+| `AccessibleAction.TOGGLE_POPUP` | `"toggle popup"` |
+
+### Per-Class Action Table
+
+| Class | Enclosing Class | Count | Action Description | Source Type |
+|---|---|---|---|---|
+| `AccessibleAWTButton` | `Button` | 1 | `"click"` | Literal |
+| `AccessibleAWTCheckbox` | `Checkbox` | 0 | *(not implemented)* | — |
+| `AccessibleAWTCheckboxMenuItem` | `CheckboxMenuItem` | 0 | *(not implemented)* | — |
+| `AccessibleAWTChoice` | `Choice` | 0 | *(not implemented)* | — |
+| `AccessibleAWTMenuItem` | `MenuItem` | 1 | `"click"` | Literal |
+| `AccessibleAWTMenu` | `Menu` | 1 | `"click"` *(inherited from MenuItem)* | Literal |
+| `AccessibleAWTPopupMenu` | `PopupMenu` | 1 | `"click"` *(inherited via Menu)* | Literal |
+| `AccessibleAbstractButton` | `AbstractButton` | 1 | `UIManager.getString("AbstractButton.clickText")` | UIManager |
+| `AccessibleJButton` | `JButton` | 1 | *(inherited from AbstractButton)* | UIManager |
+| `AccessibleJCheckBox` | `JCheckBox` | 1 | *(inherited from AbstractButton)* | UIManager |
+| `AccessibleJRadioButton` | `JRadioButton` | 1 | *(inherited from AbstractButton)* | UIManager |
+| `AccessibleJToggleButton` | `JToggleButton` | 1 | *(inherited from AbstractButton)* | UIManager |
+| `AccessibleJMenuItem` | `JMenuItem` | 1 | *(inherited from AbstractButton)* | UIManager |
+| `AccessibleJCheckBoxMenuItem` | `JCheckBoxMenuItem` | 1 | *(inherited via JMenuItem)* | UIManager |
+| `AccessibleJRadioButtonMenuItem` | `JRadioButtonMenuItem` | 1 | *(inherited via JMenuItem)* | UIManager |
+| `AccessibleJMenu` | `JMenu` | 1 | *(inherited via JMenuItem)* | UIManager |
+| `AccessibleJComboBox` | `JComboBox` | 1 | `UIManager.getString("ComboBox.togglePopupText")` | UIManager |
+| `AccessibleJSlider` | `JSlider` | 2 | `AccessibleAction.INCREMENT`, `AccessibleAction.DECREMENT` | Static field |
+| `AccessibleJSpinner` | `JSpinner` | 2 | `AccessibleAction.INCREMENT`, `AccessibleAction.DECREMENT` | Static field |
+| `AccessibleJTextComponent` | `JTextComponent` | *dynamic* | `Action.NAME` from `getActions()` — cannot be statically determined | Algorithm |
+| `AccessibleJEditorPane` | `JEditorPane` | *dynamic* | *(inherited from JTextComponent)* | Algorithm |
+| `AccessibleJTextArea` | `JTextArea` | *dynamic* | *(inherited from JTextComponent)* | Algorithm |
+| `AccessibleJTextField` | `JTextField` | *dynamic* | *(inherited from JTextComponent)* | Algorithm |
+| `AccessibleJPasswordField` | `JPasswordField` | *dynamic* | *(inherited via JTextField)* | Algorithm |
+| `AccessibleJTreeNode` | `JTree.AccessibleJTree` | *dynamic* | `AccessibleAction.TOGGLE_EXPAND` (index 0, non-leaf only); remaining actions delegated to underlying component's `AccessibleAction` | Static field + Algorithm |
+| `AccessibleJListChild` | `JList.AccessibleJList` | 1 | `UIManager.getString("AbstractButton.clickText")` | UIManager |
+| `AccessibleHyperlink` | *(abstract base)* | *abstract* | *(abstract — subclass-defined)* | — |
+| `HTMLLink` | `JEditorPane.JEditorPaneAccessibleHypertextSupport` | 1 | Anchor text extracted from the HTML document at link position | Algorithm |
+| `JEditorPaneAccessibleHypertextSupport` | `JEditorPane` | — | *(hypertext support wrapper, delegates to HTMLLink)* | — |
+| `AccessibleJEditorPaneHTML` | `JEditorPane` | *dynamic* | *(inherits from JTextComponent via JEditorPane)* | Algorithm |
+
+---
+
+## 5. Testing
 
 There are two test source sets:
 
