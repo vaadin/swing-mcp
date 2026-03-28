@@ -210,6 +210,11 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 
 ### Role → Action Mapping (BR-06)
 
+> The role table below lists `click` for several roles. Whether a component at such a role
+> actually supports click at runtime is determined by the **Detecting Click Support** algorithm
+> in **architecture.md § 4**. The same algorithm is used by `swing_click` (UC-004) to validate
+> a ref before invoking the action.
+
 Actions shown in the snapshot are determined solely by the node's `AccessibleRole`, not by `AccessibleAction.getAccessibleActionDescription()`.
 
 **Why not use `AccessibleAction` descriptions directly?**

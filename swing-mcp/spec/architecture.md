@@ -148,6 +148,38 @@ for each Swing component type.
 | `JEditorPaneAccessibleHypertextSupport` | `JEditorPane` | — | *(hypertext support wrapper, delegates to HTMLLink)* | — |
 | `AccessibleJEditorPaneHTML` | `JEditorPane` | *dynamic* | *(inherits from JTextComponent via JEditorPane)* | Algorithm |
 
+### Detecting Click Support
+
+A component supports the click action if any of its accessible action descriptions matches a
+known click string. Because Swing localizes the click description via `UIManager` while AWT
+uses a hardcoded literal, both must be checked:
+
+```java
+boolean supportsClick(Component component) {
+    AccessibleContext ac = component.getAccessibleContext();
+    if (ac == null) return false;
+    AccessibleAction aa = ac.getAccessibleAction();
+    if (aa == null) return false;
+    for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
+        String desc = aa.getAccessibleActionDescription(i);
+        if (AccessibleAction.CLICK.equals(desc) ||
+            UIManager.getString("AbstractButton.clickText").equals(desc))
+            return true;
+    }
+    return false;
+}
+```
+
+- `AccessibleAction.CLICK` (`"click"`) covers AWT components (`Button`, `MenuItem`, `Menu`,
+  `PopupMenu`) which hardcode this literal.
+- `UIManager.getString("AbstractButton.clickText")` covers Swing components (`AbstractButton`
+  subclasses, `JListChild`) which look up a potentially localized string. Comparing against the
+  same UIManager lookup ensures locale-safe matching.
+- Components with dynamic/algorithm-derived actions (text components, tree nodes, hyperlinks)
+  never produce either string and are therefore excluded automatically.
+
+To invoke the click, call `doAccessibleAction(i)` on the matching index `i`.
+
 ---
 
 ## 5. Testing

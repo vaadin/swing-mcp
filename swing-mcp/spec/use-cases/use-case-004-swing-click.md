@@ -25,8 +25,14 @@
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | The click is performed via the component's `AccessibleAction` if available. |
+| BR-03 | The click is performed by finding and invoking the component's `AccessibleAction` whose description matches the click action (see algorithm below). |
 | BR-04 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
+
+### Algorithm: detecting and invoking the click action
+
+See **architecture.md § 4 — Detecting Click Support** for the full algorithm and rationale.
+
+To invoke the click, call `doAccessibleAction(i)` on the matching index `i`.
 
 ---
 
