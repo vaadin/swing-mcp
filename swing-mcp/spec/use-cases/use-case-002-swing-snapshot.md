@@ -222,6 +222,8 @@ For each node, collect actions by running the following checks in order. All det
 
 `getAccessibleActionDescription()` is **never** used to derive display labels directly — it is only compared against known constants in step 3.
 
+**Why step 3 only matches known constants:** `JTextComponent` subclasses expose dozens of dynamic `AccessibleAction` descriptions derived from `Action.NAME` (e.g. `"cut-to-clipboard"`, `"paste-from-clipboard"`, `"select-all"`). These are deliberately ignored. The primary interaction for any text component is reading and writing its value via `get_text`/`set_text` (step 4). An AI agent filling a form will set field values and move on — it has no need to invoke cut, copy, paste, or select-all via the accessibility API.
+
 > **TODO:** `JListChild` exposes both `click` (via `AccessibleAction`) and `select` (via `AccessibleSelection`), so both actions will appear in its snapshot entry. The behavioral difference between `swing_click` and `swing_select` on a list item is unclear — it is unknown whether `swing_click` clicks the component, the active item, or something else. Both are exposed for now; revisit once `swing_click` and `swing_select` are implemented and tested against a real `JList`.
 
 ---
