@@ -96,7 +96,7 @@ After pruning:
     - scroll_pane
       - list [ref=2] actions: select
     - panel "Details"
-      - text "Name" [ref=3] actions: type
+      - text "Name" [ref=3] actions: get_text, set_text
     - push_button "Add" [ref=4] actions: click
 ```
 
@@ -108,7 +108,7 @@ After Stages 1 and 2, any surviving node is included. The following criteria ser
 |----|-----------|-----------------|
 | AI-1 | Has a non-structural accessible role | See **semantic roles** list below |
 | AI-2 | Has an accessible name | `getAccessibleName()` non-null and non-empty |
-| AI-3 | Has `AccessibleAction` | `getAccessibleAction()` non-null with action count > 0 |
+| AI-3 | Has at least one action | Any action detected by the BR-06 algorithm (click, toggle_popup, increment, decrement, toggle_expand, get_text, set_text, get_value, set_value, get_selection, select) |
 | AI-4 | Has `AccessibleText` with content, or `AccessibleValue` | Component carries meaningful data |
 | AI-5 | Is focused | `AccessibleState.FOCUSED` in state set |
 
@@ -190,7 +190,7 @@ The parent processes its children list, substituting each child's result: `Keep`
 Stage 3 (Always Included) acts as a safety guard inside the `Keep`/`Transparent` decision: a node matching any AI-1…AI-5 criterion must return `Keep` regardless of other rules.
 
 **Phase 3 — assignRefs**
-A depth-first traversal over the pruned tree. Each node that exposes at least one `AccessibleAction` (`getAccessibleAction() != null && getActionCount() > 0`) receives the next integer ref. `assignRefs` accepts a `startRef` parameter (the first ref it may assign) so that multiple roots share a single global sequence: root 1 calls `assignRefs(1)` and returns the next free ref; root 2 calls `assignRefs` with that value, and so on.
+A depth-first traversal over the pruned tree. Each node that exposes at least one action under the BR-06 algorithm receives the next integer ref. `assignRefs` accepts a `startRef` parameter (the first ref it may assign) so that multiple roots share a single global sequence: root 1 calls `assignRefs(1)` and returns the next free ref; root 2 calls `assignRefs` with that value, and so on.
 
 **Phase 4 — render**
 A depth-first traversal that serialises each node to a line of text per BR-03, using indentation depth to represent the tree structure. After rendering the last `SnapshotNode` child of a truncated large-data component, emits a synthetic `... and N more items` line (not a node — no ref, no pruning). When multiple roots are present, their rendered trees are separated by a `---` line.
@@ -201,52 +201,26 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 
 | ID | Rule |
 |----|------|
-| BR-01 | Refs are short integers starting from 1, assigned fresh with each snapshot call, globally across all roots. Only nodes that expose at least one `AccessibleAction` receive a ref. |
+| BR-01 | Refs are short integers starting from 1, assigned fresh with each snapshot call, globally across all roots. Only nodes that expose at least one action under the BR-06/BR-07 algorithm receive a ref. |
 | BR-02 | The entire four-phase pipeline runs on the EDT via a single `SwingUtilities.invokeAndWait()` call. All phases — including prune, assignRefs, and render — execute inside that call. Off-EDT optimisation is deferred until a performance problem is demonstrated. |
 | BR-03 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. Line format: `- role "name" "description" [ref=N, state1, state2] actions: action1, action2`. Role is the `AccessibleRole` field name lowercased with underscores (e.g. `push_button`, `text`, `scroll_pane`) — never `toDisplayString()`, which is locale-sensitive. Omit `"name"` if blank; omit `"description"` if blank. Ref and states share one bracket, comma-separated, lowercase. Omit the bracket entirely if there is no ref and no states. Omit `actions:` if none. Field values (`AccessibleText` content, `AccessibleValue`) are **not** shown in the output — only name and description are shown, consistent with Playwright MCP's approach. Revisit if the AI needs field values in future. |
 | BR-04 | The tree walker walks the `javax.accessibility` tree via `AccessibleContext.getAccessibleChild(i)`, **not** the `Component.getComponents()` component tree. The accessibility tree provides virtual children for complex components (table cells, list items, tree nodes). |
 | BR-05 | Large data components (JTable, JList, JTree) are truncated to `MAX_DATA_CHILDREN` accessible children (static final constant, initially 10). When truncated, a synthetic `... and N more items` node is appended. |
-| BR-06 | Action labels displayed in the snapshot are determined by a two-step algorithm (see **Role → Action Mapping**): first check whether all `AccessibleAction` descriptions are known `AccessibleAction` constants (locale-safe); if not, fall back to a role-based table. Labels are never taken raw from `getAccessibleActionDescription()` when locale-sensitive strings may be returned. |
+| BR-06 | Action labels displayed in the snapshot are determined by direct capability detection against the accessibility API — never by reading raw `AccessibleAction` descriptions, which may be locale-sensitive or contain noise. See **Action Label Algorithm** below. All action names use lower-case underscore-separated format. |
+| BR-07 | A node receives a ref if it exposes at least one action under the BR-06 algorithm — i.e. any of: `supportsClick()`, `supportsTogglePopup()`, a known `AccessibleAction` constant, `getAccessibleText()`, `getAccessibleEditableText()`, `getAccessibleValue()`, or `getAccessibleSelection()` returns non-null/true. This supersedes the `AccessibleAction`-only gate in BR-01. |
 
-### Role → Action Mapping (BR-06)
+### Action Label Algorithm (BR-06)
 
-> The role table below lists `click` for several roles. Whether a component at such a role
-> actually supports click at runtime is determined by the **Detecting Click Support** algorithm
-> in **architecture.md § 4**. The same algorithm is used by `swing_click` (UC-004) to validate
-> a ref before invoking the action.
+For each node, collect actions by running the following checks in order. All detection methods are defined in **architecture.md §§ 4–5**.
 
-Actions shown in the snapshot are determined solely by the node's `AccessibleRole`, not by `AccessibleAction.getAccessibleActionDescription()`.
+1. `supportsClick()` → add `click`
+2. `supportsTogglePopup()` → add `toggle_popup`
+3. Iterate `AccessibleAction` descriptions; for each that equals a known constant (`AccessibleAction.INCREMENT`, `DECREMENT`, `TOGGLE_EXPAND`), normalize to lower-case underscore format and add it (`increment`, `decrement`, `toggle_expand`)
+4. `supportsSetText()` → add `get_text`, `set_text`; else `supportsGetText()` → add `get_text`
+5. `supportsValue()` → add `get_value`, `set_value`
+6. `supportsSelection()` → add `get_selection`, `select`
 
-**Why not use `AccessibleAction` descriptions directly?**
-- `AbstractButton.getAccessibleActionDescription()` delegates to `UIManager.getString("AbstractButton.clickText")` — locale-sensitive.
-- `AccessibleJTextComponent` exposes ~58 actions sourced from the Swing `Action` API (caret-forward, selection-down, page-up, …) — useless noise for an AI agent.
-- `AccessibleHyperlink` returns the link caption as the action description — unpredictable.
-
-**Two-step resolution algorithm:**
-
-**Step 1 — Constants check.** Collect all action descriptions via `getAccessibleActionDescription(i)`. If **every** description equals one of the static `String` constants declared in `AccessibleAction` (e.g. `CLICK`, `TOGGLE_EXPAND`, `INCREMENT`, `DECREMENT`, `TOGGLE`, …), use those constant values as the displayed action names. This handles components like `AccessibleJTreeNode` whose action set is variable but always drawn from the constants.
-
-**Step 2 — Role table fallback.** If any description does not match a constant (localized strings, arbitrary Action names), ignore all descriptions and look up the role in the table below. This handles `AbstractButton` on non-English JVMs and the noisy `AccessibleJTextComponent`.
-
-`AccessibleAction` is still used to gate **ref assignment** (BR-01) and **node inclusion** (AI-3) — this algorithm only governs what action labels are *displayed*.
-
-| Accessible Role | Actions shown (fallback) |
-|-----------------|--------------------------|
-| `PUSH_BUTTON` | `click` |
-| `TOGGLE_BUTTON` | `click` |
-| `CHECK_BOX` | `click` |
-| `RADIO_BUTTON` | `click` |
-| `MENU_ITEM` | `click` |
-| `MENU` | `click` |
-| `TEXT`, `PASSWORD_TEXT` | `type` |
-| `COMBO_BOX` | `select` |
-| `LIST` | `select` |
-| `PAGE_TAB` | `click` |
-
-Notes:
-- `SLIDER` is absent from this table because `JSlider` exposes `INCREMENT`/`DECREMENT` as `AccessibleAction` constants — Step 1 handles it, producing `increment, decrement`.
-- `SPINNER` is absent for the same reason — `JSpinner` exposes `INCREMENT`/`DECREMENT` constants, handled by Step 1.
-- Any role not in this table and not passing the constants check: no actions shown.
+`getAccessibleActionDescription()` is **never** used to derive display labels directly — it is only compared against known constants in step 3.
 
 ---
 
