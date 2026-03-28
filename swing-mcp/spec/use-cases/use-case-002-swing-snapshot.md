@@ -226,7 +226,7 @@ For each node, collect actions by running the following checks in order. All det
 
 **Why step 3 only matches known constants:** `JTextComponent` subclasses expose dozens of dynamic `AccessibleAction` descriptions derived from `Action.NAME` (e.g. `"cut-to-clipboard"`, `"paste-from-clipboard"`, `"select-all"`). These are deliberately ignored. The primary interaction for any text component is reading and writing its value via `get_text`/`set_text` (step 4). An AI agent filling a form will set field values and move on — it has no need to invoke cut, copy, paste, or select-all via the accessibility API.
 
-> **TODO:** `JListChild` exposes both `click` (via `AccessibleAction`) and the selection actions (via `AccessibleSelection`), so both will appear in its snapshot entry. The behavioral difference between `swing_click` and `swing_set_selection` on a list item is unclear — it is unknown whether `swing_click` clicks the component, the active item, or something else. Both are exposed for now; revisit once `swing_click` and the selection tools are implemented and tested against a real `JList`.
+> **`JListChild` action note:** `click` is always present on `JListChild` (via `AccessibleAction`) and is always legitimate — a list item can always be clicked. Selection actions (`get_selection`, `set_selection`, etc.) appear on a `JListChild` only when that child's `getAccessibleSelection()` is non-null, which occurs only in unusual cases where the cell renderer itself contains a selectable component (e.g. a nested `JList`). In that case the selection actions are also legitimate. No special-casing of `JListChild` is needed — the Action Label Algorithm handles it correctly.
 
 ---
 

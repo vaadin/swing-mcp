@@ -265,6 +265,10 @@ boolean supportsGetValue(Component c) {
 //
 // Components that return null from getAccessibleValue() (e.g. JInternalFrame) are excluded
 // automatically by the null-check above — they never reach this set.
+//
+// Explicitly NOT in this set (intentional):
+//   - SCROLL_BAR (JScrollBar): a user can drag the scrollbar, so set_value is a legitimate
+//     action even when the scrollbar is inside a JScrollPane.
 private static final Set<AccessibleRole> READ_ONLY_VALUE_ROLES = Set.of(
     AccessibleRole.PROGRESS_BAR
 );
