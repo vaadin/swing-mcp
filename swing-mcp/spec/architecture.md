@@ -217,7 +217,53 @@ To invoke the click, call `doAccessibleAction(i)` on the matching index `i`.
 
 ---
 
-## 5. Testing
+## 5. Additional Actions
+
+Beyond `AccessibleAction`, the accessibility API exposes further interaction capabilities via
+dedicated interfaces on `AccessibleContext`. Each interface returning non-null signals that the
+corresponding actions are available. Since the snapshot deliberately omits field values (UC-002
+BR-03), both read and write actions are needed so the AI can retrieve data it cannot see.
+
+### Capability → Action Mapping
+
+| `AccessibleContext` getter | Non-null means | Actions exposed |
+|---|---|---|
+| `getAccessibleText()` | Text is readable | `get_text` |
+| `getAccessibleEditableText()` | Text is readable **and** writable (`AccessibleEditableText` extends `AccessibleText`) | `get_text`, `set_text` |
+| `getAccessibleValue()` | Numeric value is readable and writable (no read-only variant in the API) | `get_value`, `set_value` |
+| `getAccessibleSelection()` | Selection is readable and writable (no read-only variant in the API) | `get_selection`, `select` |
+
+### Detection
+
+```java
+boolean supportsGetText(Component c) {
+    AccessibleContext ac = c.getAccessibleContext();
+    return ac != null && ac.getAccessibleText() != null;
+}
+
+boolean supportsSetText(Component c) {
+    AccessibleContext ac = c.getAccessibleContext();
+    return ac != null && ac.getAccessibleEditableText() != null;
+}
+
+boolean supportsValue(Component c) {
+    AccessibleContext ac = c.getAccessibleContext();
+    return ac != null && ac.getAccessibleValue() != null;
+}
+
+boolean supportsSelection(Component c) {
+    AccessibleContext ac = c.getAccessibleContext();
+    return ac != null && ac.getAccessibleSelection() != null;
+}
+```
+
+Note: `supportsSetText` implies `supportsGetText` (since `AccessibleEditableText` extends
+`AccessibleText`), so only one check is needed — check editable first, then fall back to
+read-only.
+
+---
+
+## 6. Testing
 
 There are two test source sets:
 
