@@ -48,3 +48,5 @@
   - [ ] Clicking a checkbox ref toggles its selected state.
   - [ ] Clicking an invalid ref returns an MCP error with `isError: true`.
   - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
+  - [ ] Each component from the component matrix is tested.
+
