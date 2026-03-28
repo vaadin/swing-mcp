@@ -235,7 +235,7 @@ All action names follow lower-case underscore-separated format.
 |---|---|---|
 | `getAccessibleText()` | Text is readable | `get_text` |
 | `getAccessibleEditableText()` | Text is readable **and** writable (`AccessibleEditableText` extends `AccessibleText`) | `get_text`, `set_text` |
-| `getAccessibleValue()` | Numeric value is readable and writable (no read-only variant in the API) | `get_value`, `set_value` |
+| `getAccessibleValue()` | Numeric value is readable; writable only if the component is not a known read-only role (see `supportsSetValue()`) | `get_value`; `set_value` only when `supportsSetValue()` |
 | `getAccessibleSelection()` | Selection is readable and writable (no read-only variant in the API) | `get_selection`, `select` |
 
 ### Detection
@@ -251,9 +251,22 @@ boolean supportsSetText(Component c) {
     return ac != null && ac.getAccessibleEditableText() != null;
 }
 
-boolean supportsValue(Component c) {
+boolean supportsGetValue(Component c) {
     AccessibleContext ac = c.getAccessibleContext();
     return ac != null && ac.getAccessibleValue() != null;
+}
+
+// Roles whose AccessibleValue is read-only (value changes programmatically, not by the user).
+// The MCP server must only perform actions a real user can perform — exposing set_value on a
+// read-only component risks putting the Swing app into an undefined state.
+private static final Set<AccessibleRole> READ_ONLY_VALUE_ROLES = Set.of(
+    AccessibleRole.PROGRESS_BAR
+);
+
+boolean supportsSetValue(Component c) {
+    AccessibleContext ac = c.getAccessibleContext();
+    if (ac == null || ac.getAccessibleValue() == null) return false;
+    return !READ_ONLY_VALUE_ROLES.contains(ac.getAccessibleRole());
 }
 
 boolean supportsSelection(Component c) {
@@ -270,6 +283,8 @@ read-only.
 
 ## 6. Action Detection Summary
 
+**Imperative: the MCP server must only expose actions a real user can perform.** Exposing write actions on read-only or programmatically-controlled components risks putting the Swing app into an undefined state. When in doubt, prefer fewer actions over more.
+
 Authoritative mapping between spec action names, their detection mechanism, and the corresponding MCP tool.
 Other specs reference this table instead of duplicating detection logic.
 
@@ -282,8 +297,8 @@ Other specs reference this table instead of duplicating detection logic.
 | `toggle_expand` | Raw `AccessibleAction` description compare | `AccessibleAction.TOGGLE_EXPAND` static constant | `swing_toggle_expand` | Toggles expanded/collapsed; AI can infer current state from `EXPANDED`/`COLLAPSED` in snapshot. **TODO (revisit):** The source type is "Static field" per the per-class table, meaning the standard JTree implementation uses the constant directly. However, it has not been verified that every Look-and-Feel (Nimbus, GTK, Windows, etc.) upholds this. If a L&F localizes the description, detection silently fails and the node loses its ref and action. The chosen approach is to stay deterministic: accept that a localizing L&F would silently suppress `toggle_expand` rather than risk a non-deterministic matching algorithm. Verify against non-default L&Fs when time permits. |
 | `get_text` | `supportsGetText()` | `getAccessibleText()` non-null | `swing_get_text` | On `JPasswordField`, returns echo characters (masked), **not** the actual password |
 | `set_text` | `supportsSetText()` | `getAccessibleEditableText()` non-null | `swing_set_text` | `supportsSetText()` implies `supportsGetText()` (`AccessibleEditableText extends AccessibleText`) |
-| `get_value` | `supportsValue()` | `getAccessibleValue()` non-null | `swing_get_value` | The API has no read-only variant; same check as `set_value` |
-| `set_value` | `supportsValue()` | `getAccessibleValue()` non-null | `swing_set_value` | The API has no read-only variant; same check as `get_value` |
+| `get_value` | `supportsGetValue()` | `getAccessibleValue()` non-null | `swing_get_value` | All components with `AccessibleValue` expose `get_value`, including read-only ones like `JProgressBar`. |
+| `set_value` | `supportsSetValue()` | `getAccessibleValue()` non-null AND role not in `READ_ONLY_VALUE_ROLES` | `swing_set_value` | Only exposed for components a user can actually modify. `JProgressBar` is explicitly excluded. Add other read-only value roles to `READ_ONLY_VALUE_ROLES` as discovered. |
 | `get_selection` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_get_selection` | The API has no read-only variant; same check as `select` |
 | `select` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_select` | The API has no read-only variant; same check as `get_selection` |
 

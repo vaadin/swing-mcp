@@ -207,7 +207,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 | BR-04 | The tree walker walks the `javax.accessibility` tree via `AccessibleContext.getAccessibleChild(i)`, **not** the `Component.getComponents()` component tree. The accessibility tree provides virtual children for complex components (table cells, list items, tree nodes). |
 | BR-05 | Large data components (JTable, JList, JTree) are truncated to `MAX_DATA_CHILDREN` accessible children (static final constant, initially 10). When truncated, a synthetic `... and N more items` node is appended. |
 | BR-06 | Action labels displayed in the snapshot are determined by the **Action Label Algorithm** below. Detection methods, Java mechanisms, and MCP tool names are defined in **architecture.md §6**. All action names use lower-case underscore-separated format. |
-| BR-07 | A node receives a ref if it exposes at least one action under the BR-06 algorithm — i.e. any of: `supportsClick()`, `supportsTogglePopup()`, a known `AccessibleAction` constant, `getAccessibleText()`, `getAccessibleEditableText()`, `getAccessibleValue()`, or `getAccessibleSelection()` returns non-null/true. This supersedes the `AccessibleAction`-only gate in BR-01. |
+| BR-07 | A node receives a ref if it exposes at least one action under the BR-06 algorithm — i.e. any of: `supportsClick()`, `supportsTogglePopup()`, a known `AccessibleAction` constant, `supportsGetText()`, `supportsSetText()`, `supportsGetValue()`, `supportsSetValue()`, or `supportsSelection()` returns non-null/true. This supersedes the `AccessibleAction`-only gate in BR-01. |
 
 ### Action Label Algorithm (BR-06)
 
@@ -217,7 +217,7 @@ For each node, collect actions by running the following checks in order. All det
 2. `supportsTogglePopup()` → add `toggle_popup`
 3. Iterate `AccessibleAction` descriptions; for each that equals a known constant (`AccessibleAction.INCREMENT`, `DECREMENT`, `TOGGLE_EXPAND`), normalize to lower-case underscore format and add it (`increment`, `decrement`, `toggle_expand`)
 4. `supportsSetText()` → add `get_text`, `set_text`; else `supportsGetText()` → add `get_text`
-5. `supportsValue()` → add `get_value`, `set_value`
+5. `supportsGetValue()` → add `get_value`; additionally `supportsSetValue()` → add `set_value`
 6. `supportsSelection()` → add `get_selection`, `select`
 
 `getAccessibleActionDescription()` is **never** used to derive display labels directly — it is only compared against known constants in step 3.
