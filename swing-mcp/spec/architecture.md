@@ -160,6 +160,29 @@ for each Swing component type.
 | Dynamic (cannot be enumerated statically) | All `JTextComponent` subclasses (`JTextField`, `JPasswordField`, `JTextArea`, `JEditorPane`, `AccessibleJEditorPaneHTML`); `HTMLLink` | Algorithm |
 | None (unimplemented stubs) | AWT `Checkbox`, `CheckboxMenuItem`, `Choice` | — |
 
+### Detecting Toggle-Popup Support
+
+```java
+boolean supportsTogglePopup(Component component) {
+    AccessibleContext ac = component.getAccessibleContext();
+    if (ac == null) return false;
+    AccessibleAction aa = ac.getAccessibleAction();
+    if (aa == null) return false;
+    for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
+        String desc = aa.getAccessibleActionDescription(i);
+        if (AccessibleAction.TOGGLE_POPUP.equals(desc) ||
+            UIManager.getString("ComboBox.togglePopupText").equals(desc))
+            return true;
+    }
+    return false;
+}
+```
+
+- `AccessibleAction.TOGGLE_POPUP` (`"toggle popup"`) covers any component that uses the constant directly.
+- `UIManager.getString("ComboBox.togglePopupText")` covers `JComboBox`, which uses a potentially localized lookup.
+
+To invoke, call `doAccessibleAction(i)` on the matching index `i`.
+
 ### Detecting Click Support
 
 A component supports the click action if any of its accessible action descriptions matches a
