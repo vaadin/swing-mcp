@@ -94,7 +94,7 @@ After pruning:
   - split_pane
     - label "Invoices"
     - scroll_pane
-      - list [ref=2] actions: get_selection, set_selection, clear_selection, select_all, get_children_count
+      - list [ref=2] actions: get_selection, set_selection, clear_selection, select_all, get_children_count, get_children
     - panel "Details"
       - text "Name" [ref=3] actions: get_text, set_text
     - push_button "Add" [ref=4] actions: click
@@ -108,7 +108,7 @@ After Stages 1 and 2, any surviving node is included. The following criteria ser
 |----|-----------|-----------------|
 | AI-1 | Has a non-structural accessible role | See **semantic roles** list below |
 | AI-2 | Has an accessible name | `getAccessibleName()` non-null and non-empty |
-| AI-3 | Has at least one action | Any action detected by the BR-06 algorithm (click, toggle_popup, increment, decrement, toggle_expand, get_text, set_text, get_value, set_value, get_selection, set_selection, clear_selection, select_all, get_children_count) |
+| AI-3 | Has at least one action | Any action detected by the BR-06 algorithm (click, toggle_popup, increment, decrement, toggle_expand, get_text, set_text, get_value, set_value, get_selection, set_selection, clear_selection, select_all, get_children_count, get_children) |
 | AI-4 | Has `AccessibleText` with content, or `AccessibleValue` | Component carries meaningful data |
 | AI-5 | Is focused | `AccessibleState.FOCUSED` in state set |
 
@@ -207,7 +207,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 | BR-04 | The tree walker walks the `javax.accessibility` tree via `AccessibleContext.getAccessibleChild(i)`, **not** the `Component.getComponents()` component tree. The accessibility tree provides virtual children for complex components (table cells, list items, tree nodes). |
 | BR-05 | Large data components (JTable, JList, JTree) are truncated to `MAX_DATA_CHILDREN` accessible children (static final constant, initially 5). When truncated, a synthetic `... and N more items` node is appended. |
 | BR-06 | Action labels displayed in the snapshot are determined by the **Action Label Algorithm** below. Detection methods, Java mechanisms, and MCP tool names are defined in **architecture.md §6**. All action names use lower-case underscore-separated format. |
-| BR-07 | A node receives a ref if it exposes at least one action under the BR-06 algorithm — i.e. any of: `supportsClick()`, `supportsTogglePopup()`, a known `AccessibleAction` constant, `supportsGetText()`, `supportsSetText()`, `supportsGetValue()`, `supportsSetValue()`, or `supportsSelection()` returns non-null/true. `supportsSelection()` maps to five actions: `get_selection`, `set_selection`, `clear_selection`, `select_all`, `get_children_count`. This supersedes the `AccessibleAction`-only gate in BR-01. |
+| BR-07 | A node receives a ref if it exposes at least one action under the BR-06 algorithm — i.e. any of: `supportsClick()`, `supportsTogglePopup()`, a known `AccessibleAction` constant, `supportsGetText()`, `supportsSetText()`, `supportsGetValue()`, `supportsSetValue()`, or `supportsSelection()` returns non-null/true. `supportsSelection()` maps to six actions: `get_selection`, `set_selection`, `clear_selection`, `select_all`, `get_children_count`, `get_children`. This supersedes the `AccessibleAction`-only gate in BR-01. |
 
 ### Action Label Algorithm (BR-06)
 
@@ -218,9 +218,9 @@ For each node, collect actions by running the following checks in order. All det
 3. Iterate `AccessibleAction` descriptions; for each that equals a known constant (`AccessibleAction.INCREMENT`, `DECREMENT`, `TOGGLE_EXPAND`), normalize to lower-case underscore format and add it (`increment`, `decrement`, `toggle_expand`)
 4. `supportsSetText()` → add `get_text`, `set_text`; else `supportsGetText()` → add `get_text`
 5. `supportsGetValue()` → add `get_value`; additionally `supportsSetValue()` → add `set_value`
-6. `supportsSelection()` → add `get_selection`, `set_selection`, `clear_selection`, `select_all`, `get_children_count`
+6. `supportsSelection()` → add `get_selection`, `set_selection`, `clear_selection`, `select_all`, `get_children_count`, `get_children`
 
-**Why `get_children_count` is gated on `supportsSelection()` rather than `Accessible`:** Technically, `getAccessibleChildrenCount()` is available on any `AccessibleContext`, so `get_children_count` could be offered for all components. However, the action is only useful when an AI agent needs to know the number of items before making a selection (e.g. to iterate or validate index bounds). Exposing it universally would cause all components — including purely structural ones — to receive a ref (via BR-07), creating unnecessary noise in the snapshot. Limiting it to selectable components keeps the action set focused on its actual use context.
+**Why `get_children_count` and `get_children` are gated on `supportsSelection()` rather than `Accessible`:** Technically, `getAccessibleChildrenCount()` and `getAccessibleChild(i)` are available on any `AccessibleContext`, so these actions could be offered for all components. However, both are only useful in the context of selection: an AI agent needs to page through children to identify items it may want to select. Exposing them universally would cause all components — including purely structural ones — to receive a ref (via BR-07), creating unnecessary noise in the snapshot. Limiting them to selectable components keeps the action set focused on their actual use context.
 
 `getAccessibleActionDescription()` is **never** used to derive display labels directly — it is only compared against known constants in step 3.
 

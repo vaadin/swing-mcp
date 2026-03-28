@@ -236,7 +236,7 @@ All action names follow lower-case underscore-separated format.
 | `getAccessibleText()` | Text is readable | `get_text` |
 | `getAccessibleEditableText()` | Text is readable **and** writable (`AccessibleEditableText` extends `AccessibleText`) | `get_text`, `set_text` |
 | `getAccessibleValue()` | Numeric value is readable; writable only if the component is not a known read-only role (see `supportsSetValue()`) | `get_value`; `set_value` only when `supportsSetValue()` |
-| `getAccessibleSelection()` | Selection is readable and writable (no read-only variant in the API) | `get_selection`, `set_selection`, `clear_selection`, `select_all`, `get_children_count` |
+| `getAccessibleSelection()` | Selection is readable and writable (no read-only variant in the API) | `get_selection`, `set_selection`, `clear_selection`, `select_all`, `get_children_count`, `get_children` |
 
 ### Detection
 
@@ -310,6 +310,7 @@ Other specs reference this table instead of duplicating detection logic.
 | `clear_selection` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_clear_selection` | Clears the current selection. Equivalent to `set_selection` with an empty list. |
 | `select_all` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_select_all` | Selects all children. |
 | `get_children_count` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_get_children_count` | Returns the number of accessible children that can potentially be selected. |
+| `get_children` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_get_children` | Returns a paged accessibility tree dump of the component's accessible children. Parameters: `ref` (integer), `offset` (integer, 0-based), `length` (integer, max children to return). The output format mirrors `swing_snapshot` — the same indented text tree — but rooted at the requested children rather than the full UI. Intended for AI agents that need to browse selectable items before issuing `set_selection`. |
 
 ---
 
