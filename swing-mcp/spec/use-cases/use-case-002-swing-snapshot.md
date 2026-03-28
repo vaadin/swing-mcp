@@ -94,7 +94,7 @@ After pruning:
   - split_pane
     - label "Invoices"
     - scroll_pane
-      - list [ref=2] actions: select
+      - list [ref=2] actions: get_selection, set_selection, clear_selection, select_all, get_children_count
     - panel "Details"
       - text "Name" [ref=3] actions: get_text, set_text
     - push_button "Add" [ref=4] actions: click
@@ -108,7 +108,7 @@ After Stages 1 and 2, any surviving node is included. The following criteria ser
 |----|-----------|-----------------|
 | AI-1 | Has a non-structural accessible role | See **semantic roles** list below |
 | AI-2 | Has an accessible name | `getAccessibleName()` non-null and non-empty |
-| AI-3 | Has at least one action | Any action detected by the BR-06 algorithm (click, toggle_popup, increment, decrement, toggle_expand, get_text, set_text, get_value, set_value, get_selection, select) |
+| AI-3 | Has at least one action | Any action detected by the BR-06 algorithm (click, toggle_popup, increment, decrement, toggle_expand, get_text, set_text, get_value, set_value, get_selection, set_selection, clear_selection, select_all, get_children_count) |
 | AI-4 | Has `AccessibleText` with content, or `AccessibleValue` | Component carries meaningful data |
 | AI-5 | Is focused | `AccessibleState.FOCUSED` in state set |
 
@@ -207,7 +207,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 | BR-04 | The tree walker walks the `javax.accessibility` tree via `AccessibleContext.getAccessibleChild(i)`, **not** the `Component.getComponents()` component tree. The accessibility tree provides virtual children for complex components (table cells, list items, tree nodes). |
 | BR-05 | Large data components (JTable, JList, JTree) are truncated to `MAX_DATA_CHILDREN` accessible children (static final constant, initially 5). When truncated, a synthetic `... and N more items` node is appended. |
 | BR-06 | Action labels displayed in the snapshot are determined by the **Action Label Algorithm** below. Detection methods, Java mechanisms, and MCP tool names are defined in **architecture.md §6**. All action names use lower-case underscore-separated format. |
-| BR-07 | A node receives a ref if it exposes at least one action under the BR-06 algorithm — i.e. any of: `supportsClick()`, `supportsTogglePopup()`, a known `AccessibleAction` constant, `supportsGetText()`, `supportsSetText()`, `supportsGetValue()`, `supportsSetValue()`, or `supportsSelection()` returns non-null/true. This supersedes the `AccessibleAction`-only gate in BR-01. |
+| BR-07 | A node receives a ref if it exposes at least one action under the BR-06 algorithm — i.e. any of: `supportsClick()`, `supportsTogglePopup()`, a known `AccessibleAction` constant, `supportsGetText()`, `supportsSetText()`, `supportsGetValue()`, `supportsSetValue()`, or `supportsSelection()` returns non-null/true. `supportsSelection()` maps to five actions: `get_selection`, `set_selection`, `clear_selection`, `select_all`, `get_children_count`. This supersedes the `AccessibleAction`-only gate in BR-01. |
 
 ### Action Label Algorithm (BR-06)
 
@@ -218,13 +218,13 @@ For each node, collect actions by running the following checks in order. All det
 3. Iterate `AccessibleAction` descriptions; for each that equals a known constant (`AccessibleAction.INCREMENT`, `DECREMENT`, `TOGGLE_EXPAND`), normalize to lower-case underscore format and add it (`increment`, `decrement`, `toggle_expand`)
 4. `supportsSetText()` → add `get_text`, `set_text`; else `supportsGetText()` → add `get_text`
 5. `supportsGetValue()` → add `get_value`; additionally `supportsSetValue()` → add `set_value`
-6. `supportsSelection()` → add `get_selection`, `select`
+6. `supportsSelection()` → add `get_selection`, `set_selection`, `clear_selection`, `select_all`, `get_children_count`
 
 `getAccessibleActionDescription()` is **never** used to derive display labels directly — it is only compared against known constants in step 3.
 
 **Why step 3 only matches known constants:** `JTextComponent` subclasses expose dozens of dynamic `AccessibleAction` descriptions derived from `Action.NAME` (e.g. `"cut-to-clipboard"`, `"paste-from-clipboard"`, `"select-all"`). These are deliberately ignored. The primary interaction for any text component is reading and writing its value via `get_text`/`set_text` (step 4). An AI agent filling a form will set field values and move on — it has no need to invoke cut, copy, paste, or select-all via the accessibility API.
 
-> **TODO:** `JListChild` exposes both `click` (via `AccessibleAction`) and `select` (via `AccessibleSelection`), so both actions will appear in its snapshot entry. The behavioral difference between `swing_click` and `swing_select` on a list item is unclear — it is unknown whether `swing_click` clicks the component, the active item, or something else. Both are exposed for now; revisit once `swing_click` and `swing_select` are implemented and tested against a real `JList`.
+> **TODO:** `JListChild` exposes both `click` (via `AccessibleAction`) and the selection actions (via `AccessibleSelection`), so both will appear in its snapshot entry. The behavioral difference between `swing_click` and `swing_set_selection` on a list item is unclear — it is unknown whether `swing_click` clicks the component, the active item, or something else. Both are exposed for now; revisit once `swing_click` and the selection tools are implemented and tested against a real `JList`.
 
 ---
 

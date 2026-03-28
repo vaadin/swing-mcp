@@ -236,7 +236,7 @@ All action names follow lower-case underscore-separated format.
 | `getAccessibleText()` | Text is readable | `get_text` |
 | `getAccessibleEditableText()` | Text is readable **and** writable (`AccessibleEditableText` extends `AccessibleText`) | `get_text`, `set_text` |
 | `getAccessibleValue()` | Numeric value is readable; writable only if the component is not a known read-only role (see `supportsSetValue()`) | `get_value`; `set_value` only when `supportsSetValue()` |
-| `getAccessibleSelection()` | Selection is readable and writable (no read-only variant in the API) | `get_selection`, `select` |
+| `getAccessibleSelection()` | Selection is readable and writable (no read-only variant in the API) | `get_selection`, `set_selection`, `clear_selection`, `select_all`, `get_children_count` |
 
 ### Detection
 
@@ -287,7 +287,7 @@ read-only.
 
 This imperative operates at two levels:
 
-1. **Snapshot level (component type).** Mutation actions (`set_text`, `set_value`, `select`, etc.) are listed for components that *generally* allow their value to be changed by a user — e.g. a text field, a slider. Components that are structurally read-only regardless of state (e.g. `JProgressBar`) never receive the corresponding mutation action in the snapshot. The current enabled/disabled state of the component does **not** affect which actions appear in the snapshot.
+1. **Snapshot level (component type).** Mutation actions (`set_text`, `set_value`, `set_selection`, etc.) are listed for components that *generally* allow their value to be changed by a user — e.g. a text field, a slider. Components that are structurally read-only regardless of state (e.g. `JProgressBar`) never receive the corresponding mutation action in the snapshot. The current enabled/disabled state of the component does **not** affect which actions appear in the snapshot.
 
 2. **Tool execution level (runtime state).** When a mutation tool is called, it must check whether the target component is currently enabled. If the component is disabled, the tool must return an MCP-level error (`isError: true`) with an informative message explaining that the component is disabled and therefore the user cannot change its value.
 
@@ -305,8 +305,11 @@ Other specs reference this table instead of duplicating detection logic.
 | `set_text` | `supportsSetText()` | `getAccessibleEditableText()` non-null | `swing_set_text` | `supportsSetText()` implies `supportsGetText()` (`AccessibleEditableText extends AccessibleText`) |
 | `get_value` | `supportsGetValue()` | `getAccessibleValue()` non-null | `swing_get_value` | All components with `AccessibleValue` expose `get_value`, including read-only ones like `JProgressBar`. |
 | `set_value` | `supportsSetValue()` | `getAccessibleValue()` non-null AND role not in `READ_ONLY_VALUE_ROLES` | `swing_set_value` | Only exposed for components a user can actually modify. `JProgressBar` is explicitly excluded. Add other read-only value roles to `READ_ONLY_VALUE_ROLES` as discovered. |
-| `get_selection` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_get_selection` | The API has no read-only variant; same check as `select` |
-| `select` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_select` | The API has no read-only variant; same check as `get_selection` |
+| `get_selection` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_get_selection` | Returns a list of integer indices of currently selected children. |
+| `set_selection` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_set_selection` | Accepts a list of integer indices of children to select. Replaces the current selection. |
+| `clear_selection` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_clear_selection` | Clears the current selection. Equivalent to `set_selection` with an empty list. |
+| `select_all` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_select_all` | Selects all children. |
+| `get_children_count` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_get_children_count` | Returns the number of accessible children that can potentially be selected. |
 
 ---
 
