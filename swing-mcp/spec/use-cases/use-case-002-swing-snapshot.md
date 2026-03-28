@@ -206,7 +206,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 | BR-03 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. Line format: `- role "name" "description" [ref=N, state1, state2] actions: action1, action2`. Role is the `AccessibleRole` field name lowercased with underscores (e.g. `push_button`, `text`, `scroll_pane`) — never `toDisplayString()`, which is locale-sensitive. Omit `"name"` if blank; omit `"description"` if blank. Ref and states share one bracket, comma-separated, lowercase. Omit the bracket entirely if there is no ref and no states. Omit `actions:` if none. Field values (`AccessibleText` content, `AccessibleValue`) are **not** shown in the output — only name and description are shown, consistent with Playwright MCP's approach. Revisit if the AI needs field values in future. |
 | BR-04 | The tree walker walks the `javax.accessibility` tree via `AccessibleContext.getAccessibleChild(i)`, **not** the `Component.getComponents()` component tree. The accessibility tree provides virtual children for complex components (table cells, list items, tree nodes). |
 | BR-05 | Large data components (JTable, JList, JTree) are truncated to `MAX_DATA_CHILDREN` accessible children (static final constant, initially 10). When truncated, a synthetic `... and N more items` node is appended. |
-| BR-06 | Action labels displayed in the snapshot are determined by direct capability detection against the accessibility API — never by reading raw `AccessibleAction` descriptions, which may be locale-sensitive or contain noise. See **Action Label Algorithm** below. All action names use lower-case underscore-separated format. |
+| BR-06 | Action labels displayed in the snapshot are determined by the **Action Label Algorithm** below. Detection methods, Java mechanisms, and MCP tool names are defined in **architecture.md §6**. All action names use lower-case underscore-separated format. |
 | BR-07 | A node receives a ref if it exposes at least one action under the BR-06 algorithm — i.e. any of: `supportsClick()`, `supportsTogglePopup()`, a known `AccessibleAction` constant, `getAccessibleText()`, `getAccessibleEditableText()`, `getAccessibleValue()`, or `getAccessibleSelection()` returns non-null/true. This supersedes the `AccessibleAction`-only gate in BR-01. |
 
 ### Action Label Algorithm (BR-06)
@@ -221,6 +221,8 @@ For each node, collect actions by running the following checks in order. All det
 6. `supportsSelection()` → add `get_selection`, `select`
 
 `getAccessibleActionDescription()` is **never** used to derive display labels directly — it is only compared against known constants in step 3.
+
+> **TODO:** `JListChild` exposes both `click` (via `AccessibleAction`) and `select` (via `AccessibleSelection`), so both actions will appear in its snapshot entry. The behavioral difference between `swing_click` and `swing_select` on a list item is unclear — it is unknown whether `swing_click` clicks the component, the active item, or something else. Both are exposed for now; revisit once `swing_click` and `swing_select` are implemented and tested against a real `JList`.
 
 ---
 
