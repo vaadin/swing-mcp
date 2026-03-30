@@ -56,7 +56,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         assertEquals(
                 "- panel\n"
                 + "  - push_button \"Save\" [ref=1] actions: click\n"
-                + "  - text [ref=2, editable] actions: type",
+                + "  - text [ref=2, editable] actions: get_text, set_text",
                 output);
     }
 
@@ -238,15 +238,15 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         assertEquals(
                 "- panel\n"
                 + "  - scroll_pane\n"
-                + "    - list\n"
-                + "      - label \"A\" [ref=1] actions: click\n"
-                + "      - label \"B\" [ref=2] actions: click\n"
-                + "    - scroll_bar [vertical]\n"
-                + "      - push_button [ref=3] actions: click\n"
-                + "      - push_button [ref=4] actions: click\n"
-                + "    - scroll_bar [horizontal]\n"
+                + "    - list [ref=1] actions: get_selection, set_selection, clear_selection, select_all, get_children_count, get_children\n"
+                + "      - label \"A\" [ref=2] actions: click\n"
+                + "      - label \"B\" [ref=3] actions: click\n"
+                + "    - scroll_bar [ref=4, vertical] actions: get_value, set_value\n"
                 + "      - push_button [ref=5] actions: click\n"
-                + "      - push_button [ref=6] actions: click",
+                + "      - push_button [ref=6] actions: click\n"
+                + "    - scroll_bar [ref=7, horizontal] actions: get_value, set_value\n"
+                + "      - push_button [ref=8] actions: click\n"
+                + "      - push_button [ref=9] actions: click",
                 output);
     }
 
@@ -264,7 +264,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - table\n"
+                + "  - table [ref=1] actions: get_selection, set_selection, clear_selection, select_all, get_children_count, get_children\n"
                 + "    - label \"row0\"\n"
                 + "    - label \"row1\"\n"
                 + "    - label \"row2\"\n"
@@ -316,9 +316,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - page_tab_list \"Tab1\"\n"
+                + "  - page_tab_list \"Tab1\" [ref=1] actions: get_selection, set_selection, clear_selection, select_all, get_children_count, get_children\n"
                 + "    - page_tab \"Tab1\" [selected]\n"
-                + "      - push_button \"InTab1\" [ref=1] actions: click\n"
+                + "      - push_button \"InTab1\" [ref=2] actions: click\n"
                 + "    - page_tab \"Tab2\"",
                 output);
     }
@@ -395,7 +395,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - text [ref=1, editable] actions: type",
+                + "  - text [ref=1, editable] actions: get_text, set_text",
                 snapshot(panel));
     }
 
@@ -406,7 +406,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - password_text [ref=1, editable] actions: type",
+                + "  - password_text [ref=1, editable] actions: get_text, set_text",
                 snapshot(panel));
     }
 
@@ -417,7 +417,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - text [ref=1, editable, multi_line] actions: type",
+                + "  - text [ref=1, editable, multi_line] actions: get_text, set_text",
                 snapshot(panel));
     }
 
@@ -457,7 +457,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - combo_box [ref=1, collapsed] actions: select",
+                + "  - combo_box [ref=1, collapsed] actions: toggle_popup, get_selection, set_selection, clear_selection, select_all, get_children_count, get_children",
                 snapshot(panel));
     }
 
@@ -479,8 +479,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - spin_box [ref=1] actions: increment, decrement\n"
-                + "    - text [ref=2, editable] actions: type",
+                + "  - spin_box [ref=1] actions: increment, decrement, get_text, get_value, set_value\n"
+                + "    - text [ref=2, editable] actions: get_text, set_text",
                 snapshot(panel));
     }
 
@@ -491,7 +491,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - slider [ref=1, horizontal] actions: increment, decrement",
+                + "  - slider [ref=1, horizontal] actions: increment, decrement, get_value, set_value",
                 snapshot(panel));
     }
 
@@ -504,7 +504,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - split_pane [horizontal]\n"
+                + "  - split_pane [ref=1, horizontal] actions: get_value, set_value\n"
                 + "    - label \"Left\"\n"
                 + "    - label \"Right\"",
                 snapshot(panel));
@@ -530,7 +530,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - progress_bar [horizontal]",
+                + "  - progress_bar [ref=1, horizontal] actions: get_value",
                 snapshot(panel));
     }
 
@@ -572,12 +572,12 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 "- panel\n"
                 + "  - scroll_pane\n"
                 + "    - label \"Content\"\n"
-                + "    - scroll_bar [vertical]\n"
-                + "      - push_button [ref=1] actions: click\n"
+                + "    - scroll_bar [ref=1, vertical] actions: get_value, set_value\n"
                 + "      - push_button [ref=2] actions: click\n"
-                + "    - scroll_bar [horizontal]\n"
                 + "      - push_button [ref=3] actions: click\n"
-                + "      - push_button [ref=4] actions: click",
+                + "    - scroll_bar [ref=4, horizontal] actions: get_value, set_value\n"
+                + "      - push_button [ref=5] actions: click\n"
+                + "      - push_button [ref=6] actions: click",
                 output);
     }
 
@@ -591,7 +591,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - page_tab_list \"General\"\n"
+                + "  - page_tab_list \"General\" [ref=1] actions: get_selection, set_selection, clear_selection, select_all, get_children_count, get_children\n"
                 + "    - page_tab \"General\" [selected]\n"
                 + "    - page_tab \"Advanced\"",
                 snapshot(panel));
@@ -654,9 +654,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - list\n"
-                + "    - label \"Alpha\" [ref=1] actions: click\n"
-                + "    - label \"Beta\" [ref=2] actions: click",
+                + "  - list [ref=1] actions: get_selection, set_selection, clear_selection, select_all, get_children_count, get_children\n"
+                + "    - label \"Alpha\" [ref=2] actions: click\n"
+                + "    - label \"Beta\" [ref=3] actions: click",
                 snapshot(panel));
     }
 
@@ -699,9 +699,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 "- panel\n"
                 + "  - panel \"Login\"\n"
                 + "    - label \"Username\"\n"
-                + "    - text \"Username\" [ref=1, editable] actions: type\n"
+                + "    - text \"Username\" [ref=1, editable] actions: get_text, set_text\n"
                 + "    - label \"Password\"\n"
-                + "    - password_text \"Password\" [ref=2, editable] actions: type\n"
+                + "    - password_text \"Password\" [ref=2, editable] actions: get_text, set_text\n"
                 + "    - check_box \"Remember me\" [ref=3] actions: click\n"
                 + "    - push_button \"Sign In\" [ref=4] actions: click\n"
                 + "    - push_button \"Cancel\" [ref=5] actions: click",
