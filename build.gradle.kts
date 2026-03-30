@@ -25,7 +25,6 @@ subprojects {
         plugin("maven-publish")
         plugin("java")
         plugin("org.gradle.signing")
-        plugin("idea")
     }
 
     tasks.withType<Test> {
@@ -39,12 +38,6 @@ subprojects {
     java {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-    idea {
-        module {
-            isDownloadSources = true
-            isDownloadJavadoc = true
-        }
     }
     // creates a reusable function which configures proper deployment to Maven Central
     ext["configureMavenCentral"] = { artifactId: String ->
