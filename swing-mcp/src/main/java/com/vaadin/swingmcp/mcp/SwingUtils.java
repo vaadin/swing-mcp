@@ -156,6 +156,29 @@ public final class SwingUtils {
     }
 
     /**
+     * Returns the action index for the increment action on the given accessible,
+     * or {@code -1} if the accessible does not support increment.
+     * <p>
+     * Matches by {@link AccessibleAction#INCREMENT} static constant directly.
+     * {@code JSlider} and {@code JSpinner} use the static field without any
+     * UIManager indirection, so no locale-specific fallback is needed.
+     *
+     * @see <a href="use-case-008-swing-increment.md">UC-008 BR-03</a>
+     */
+    public static int supportsIncrement(Accessible a) {
+        AccessibleContext ac = a.getAccessibleContext();
+        if (ac == null) return -1;
+        AccessibleAction aa = ac.getAccessibleAction();
+        if (aa == null) return -1;
+        for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
+            if (AccessibleAction.INCREMENT.equals(aa.getAccessibleActionDescription(i))) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
      * Returns whether the given accessible is effectively enabled: the
      * accessible itself must have {@link AccessibleState#ENABLED} in its
      * state set, and its parent (if any) must also be effectively enabled.
