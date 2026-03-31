@@ -12,7 +12,9 @@ Implement `TinyMCPServer.addTool()` which accepts the following parameters:
 The function has the following properties:
 
 * The function will always be called with a non-null map, even if there are no parameters defined or passed.
-* The function may return null: in such case produce an empty JSON array.
+* **Verified against the MCP specification (2025-03-26 schema):** `CallToolResult.content` is a required JSON array with no `minItems` constraint — an empty array is valid. The function returns a single `MCPProtocol.Content` which is mapped as follows:
+  * **`null`** → empty content array (`"content": []`) — signals "no result" (e.g. a mutation tool that succeeded with nothing to report).
+  * **non-null** → single-element content array (`"content": [...]`).
 * The function will receive Java types as values: `String` for string, `Integer` for integer, `Double` for number, `Boolean` for boolean. It never receives raw JSON objects.
 * If the function throws, return `isError`=true with text content set to `exception.toString()` (class name + message, no stacktrace).
 
