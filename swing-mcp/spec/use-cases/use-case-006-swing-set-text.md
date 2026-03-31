@@ -14,7 +14,7 @@
 - I first call `swing_snapshot` to obtain refs for the current UI state.
 - I call `swing_set_text` with the `ref` parameter identifying the component and a `text` parameter containing the new text.
 - The tool looks up the component by ref and replaces its entire text content via the accessibility API.
-- The tool returns an empty string on success.
+- The tool returns `null` (empty content array) on success.
 - I call `swing_snapshot` again to get fresh refs reflecting any UI changes.
 
 ---
@@ -25,13 +25,15 @@
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. The `text` parameter is required and must be a string. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | The text is set via `AccessibleContext.getAccessibleEditableText()`. The entire existing text is replaced by first deleting the current content, then inserting the new value. See **Algorithm** section below. |
+| BR-03 | The text is set via `AccessibleEditableText.setTextContents(String)`, which replaces the entire existing text in a single call. See **Algorithm** section below. |
 | BR-04 | If the target does not support `set_text` (i.e. `SwingUtils.supportsSetText(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support set_text. Call swing_snapshot to verify the list of actions". |
 | BR-05 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
 | BR-06 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled and cannot be edited. See also **architecture.md § 6** — Tool execution level. |
-| BR-07 | If the target is not editable (has `AccessibleEditableText` but the `EDITABLE` state is missing from `AccessibleStateSet`), the tool returns an MCP-level error (`isError: true`) with the message "Component is not editable". This covers `JTextComponent.setEditable(false)`. |
+| BR-07 | If the target is not editable (has `AccessibleEditableText` but the `EDITABLE` state is missing from `AccessibleStateSet`), the tool returns an MCP-level error (`isError: true`) with the message "Component is not editable". This covers `JTextComponent.setEditable(false)`. **This check is essential:** `setTextContents()` bypasses the editable flag — it calls `setText()` which operates directly on the `Document` without checking `isEditable()`. Without BR-07, text would be silently set on non-editable fields, violating the architecture principle that the MCP server must only perform actions a real user can perform. |
 | BR-08 | `swing_set_text` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after invocation (even on failure, via `finally`). |
 | BR-09 | Setting an empty string (`text = ""`) is valid — it clears the text content. |
+| BR-10 | No length limit on the `text` parameter — the AI is not expected to send very large text, and Swing text components can handle arbitrary lengths. |
+| BR-11 | `setTextContents()` fires `DocumentListener` events (`insertUpdate`/`removeUpdate`) but does **not** fire `ActionEvent` (like pressing Enter in a `JTextField` would). This is the default behavior of the accessibility API and is accepted as-is. |
 
 ### Algorithm: replacing the text content
 
@@ -64,7 +66,7 @@ Execution order:
 - [ ] Calling `swing_set_text` on a non-editable text component (`setEditable(false)`) returns an MCP error saying the component is not editable.
 - [ ] The ref map is cleared after a successful `swing_set_text` call (mutation tool).
 - [ ] The ref map is cleared even after a failed `swing_set_text` call that passed ref lookup (e.g. disabled component).
-- [ ] The tool returns an empty string on success.
+- [ ] The tool returns `null` (empty content array) on success, consistent with `swing_click`.
 
 ---
 
