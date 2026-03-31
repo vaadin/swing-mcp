@@ -112,13 +112,7 @@ Consider only visible windows:
 
 ## 6. Testing
 
-Testing involves running a Swing app. The `javax.accessibility` API works in
-headless mode. The screenshot capturing functionality probably requires Xvfb,
-and will be tested elsewhere.
-
-In headless mode, tests can't instantiate Window. Therefore,
-the window Selection functionality must be overridable in MCPServer,
-and must be overriden by tests (which provide a list of JPanels instead).
+See [verification](verification.md) for a complete list of testing instructions.
 
 ## 7. Constraints
 

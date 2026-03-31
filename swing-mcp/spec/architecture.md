@@ -358,27 +358,4 @@ Other specs reference this table instead of duplicating detection logic.
 
 ## 7. Testing
 
-There are two test source sets:
-
-### `src/test` — Headless tests (default `test` task)
-
-- Pure JUnit 6 tests living in `src/test/java/`, mirroring the main package structure.
-- Also uses MCP client library to call MCP tasks.
-- Sets `java.awt.headless` to `true` for fast, display-free execution.
-- The `MCPServerTest` test class:
-  - Starts the MCPServer before all tests, stops it afterwards.
-  - A test client is initialized before all tests as well; use the official MCP client with the HTTP Transport and Jackson3.
-  - No tools are tested here: each tool has its own separate test class.
-- For every tool test class:
-  - Remember we are headless.
-  - `SwingUtilities.invokeAndWait()` will fail — needs to go into protected function `MCPServer.runInEDT(block)`; the tests will override and simply run the block right away. It is thread-unsafe; if the tests fail we will revisit and think of some locking mechanism.
-
-### `src/testSwing` — Screen-mode tests (`testSwing` task)
-
-- Runs with `java.awt.headless = false`, so actual Swing rendering works.
-- Requires a real display (Xvfb is used in CI).
-- Registered as the `testSwing` Gradle task in the `verification` group; included in the `check` lifecycle.
-- Reports go to `build/reports/testSwing/` and `build/test-results/testSwing/` (separate from headless test reports).
-- Base class: `AbstractScreenTest`; inherits from it for screen-dependent tool tests.
-- These tests should primarily focus on testing with JFrame/JDialog/Dialog/Window since those Swing components require screen.
-
+See [verification](verification.md) for a complete list of testing instructions.
