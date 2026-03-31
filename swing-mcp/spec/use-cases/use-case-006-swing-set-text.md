@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** set the text content of a UI component by ref **so that** I can fill in text fields, text areas, and other editable text components.
 
-**Status:** Draft
+**Status:** Approved
 **Date:** 2026-03-31
 
 ---
@@ -87,6 +87,7 @@ Execution order:
   - [ ] Setting text on a non-editable `JTextField` (`setEditable(false)`) returns an MCP error with `isError: true` saying the component is not editable.
   - [ ] The ref map is cleared after a successful `swing_set_text` call (verified by attempting to use the same ref again, which should fail).
   - [ ] The ref map is cleared after a failed `swing_set_text` call on a disabled component.
+  - [ ] Setting text on a `JTextField` fires a `DocumentListener` event.
   - [ ] Each component from the component matrix is tested (dedicated test method per component).
 
 ### Component matrix
