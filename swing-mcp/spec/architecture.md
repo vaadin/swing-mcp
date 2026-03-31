@@ -75,9 +75,11 @@ components. The ref system is shared across all tools and follows these rules:
    trusted.
 
 3. **Invalidation.** After any interaction tool call, the existing ref map is
-   cleared. Subsequent attempts to use an old ref must return an MCP-level error
-   (`isError: true`) with a recovery message suggesting the AI call
-   `swing_snapshot` to obtain fresh refs.
+   cleared — even if the tool fails with an exception (use a `finally` block).
+   The component tree may be in a partially modified state after a failure, so
+   stale refs cannot be trusted. Subsequent attempts to use an old ref must
+   return an MCP-level error (`isError: true`) with a recovery message
+   suggesting the AI call `swing_snapshot` to obtain fresh refs.
    `swing_get_children` also replaces the ref map (with a fresh local numbering
    scoped to its output window), even though it is an inspection tool, not an
    interaction tool. Refs from a prior `swing_snapshot` or `swing_get_children`
