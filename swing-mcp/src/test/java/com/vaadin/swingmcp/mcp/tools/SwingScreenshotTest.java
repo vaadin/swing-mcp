@@ -31,7 +31,7 @@ class SwingScreenshotTest extends AbstractHeadlessTest {
 
     private MCPProtocol.Content screenshot(Component... roots) throws Exception {
         context.setConsideredComponents(Arrays.asList(roots));
-        return tool.execute(Map.of(), context);
+        return tool.execute(new Parameters(Map.of()), context);
     }
 
     private BufferedImage decodeImage(MCPProtocol.Content content) throws Exception {

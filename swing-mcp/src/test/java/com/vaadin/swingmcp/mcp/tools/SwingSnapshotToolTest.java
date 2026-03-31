@@ -35,7 +35,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
      */
     private String snapshot(Component... roots) throws Exception {
         context.setConsideredComponents(Arrays.asList(roots));
-        MCPProtocol.Content result = tool.execute(Map.of(), context);
+        MCPProtocol.Content result = tool.execute(new Parameters(Map.of()), context);
         return result.getText();
     }
 

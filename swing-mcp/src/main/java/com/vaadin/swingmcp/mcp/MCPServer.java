@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.swing.SwingUtilities;
 import com.vaadin.swingmcp.mcp.tools.AbstractSwingTool;
+import com.vaadin.swingmcp.mcp.tools.Parameters;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 
 import java.awt.Component;
@@ -67,7 +68,7 @@ public class MCPServer {
                 runInEDT(() -> {
                     context.setConsideredComponents(getConsideredComponents());
                     try {
-                        return tool.execute(params, context);
+                        return tool.execute(new Parameters(params), context);
                     } finally {
                         if (tool.isMutation()) {
                             context.clearRefMap();

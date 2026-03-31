@@ -8,7 +8,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+
 
 /**
  * MCP tool {@code swing_screenshot}: captures a screenshot of the Swing
@@ -45,7 +45,7 @@ public class SwingScreenshotTool extends AbstractSwingTool {
     }
 
     @Override
-    public MCPProtocol.Content execute(Map<String, Object> params,
+    public MCPProtocol.Content execute(Parameters params,
                                        SwingToolContext context) throws Exception {
         // BR-08: filter out zero-size components
         List<Component> renderables = new ArrayList<>();

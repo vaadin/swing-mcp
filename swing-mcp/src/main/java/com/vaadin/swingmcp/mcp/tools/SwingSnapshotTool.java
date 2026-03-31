@@ -176,7 +176,7 @@ public class SwingSnapshotTool extends AbstractSwingTool {
     // ── Execute ────────────────────────────────────────────────────────────────
 
     @Override
-    public MCPProtocol.Content execute(Map<String, Object> params,
+    public MCPProtocol.Content execute(Parameters params,
                                        SwingToolContext context) throws Exception {
         context.clearRefMap();
 
