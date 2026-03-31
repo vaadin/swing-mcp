@@ -222,6 +222,34 @@ boolean supportsClick(Accessible a) {
 
 To invoke the click, call `doAccessibleAction(i)` on the matching index `i`.
 
+### Effectively Enabled Check
+
+Virtual accessible children (e.g. `JList` items, `JTable` cells) may not propagate the
+parent component's disabled state into their own `AccessibleStateSet`. A mutation tool must
+therefore walk the accessible parent chain to determine whether the target is *effectively*
+enabled:
+
+```java
+boolean isEffectivelyEnabled(Accessible a) {
+    AccessibleContext ac = a.getAccessibleContext();
+    if (ac == null) return false;
+    if (!ac.getAccessibleStateSet().contains(AccessibleState.ENABLED)) return false;
+    Accessible parent = ac.getAccessibleParent();
+    return parent == null || isEffectivelyEnabled(parent);
+}
+```
+
+- The accessible itself must have `ENABLED` in its state set.
+- If it has a parent (`getAccessibleParent()` non-null), the parent must also be effectively
+  enabled — recursively up to the root.
+- A `null` parent means the root of the accessible hierarchy has been reached; the chain is
+  considered enabled.
+
+All mutation tools (`swing_click`, `swing_set_text`, `swing_set_value`, etc.) must use
+`isEffectivelyEnabled()` rather than checking only the target's own state set. If the check
+returns `false`, the tool returns an MCP-level error (`isError: true`) explaining that the
+component is disabled.
+
 ---
 
 ## 5. Additional Actions

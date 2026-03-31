@@ -27,7 +27,7 @@
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
 | BR-03 | The click is performed by finding and invoking the component's `AccessibleAction` whose description matches the click action (see algorithm below). |
 | BR-04 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
-| BR-05 | If the target component is disabled (`AccessibleStateSet` does not contain `AccessibleState.ENABLED`), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled and cannot be clicked. See **architecture.md § 6** — Tool execution level. |
+| BR-05 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled and cannot be clicked. See also **architecture.md § 6** — Tool execution level. |
 
 ### Algorithm: detecting and invoking the click action
 
