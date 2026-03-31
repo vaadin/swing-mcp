@@ -16,7 +16,7 @@ will throw an exception on any malformed MCP JSON message. Don't use the
 
 - Uses the `tiny-mcp-server`
 - Gradle (wrapper included)
-- Java
+- Java — **minimum runtime target: Java 17**. Do not use APIs introduced after Java 17 (e.g. `List.getFirst()` is Java 21+). The library is intended to be dropped into existing Swing apps that may run on Java 17.
 - Testing: JUnit 6
 
 ---

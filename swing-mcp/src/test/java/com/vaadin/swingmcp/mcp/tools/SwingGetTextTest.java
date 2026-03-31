@@ -368,7 +368,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
         assertNotEquals(Boolean.TRUE, result.isError(), "get_text should succeed");
         assertFalse(result.content().isEmpty(), "Result should have content");
-        String text = ((McpSchema.TextContent) result.content().getFirst()).text();
+        String text = ((McpSchema.TextContent) result.content().get(0)).text();
         assertEquals("via mcp client", text);
     }
 }
