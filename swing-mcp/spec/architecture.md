@@ -170,8 +170,8 @@ Action display names use lower-case underscore-separated format regardless of th
 ### Detecting Toggle-Popup Support
 
 ```java
-boolean supportsTogglePopup(Component component) {
-    AccessibleContext ac = component.getAccessibleContext();
+boolean supportsTogglePopup(Accessible a) {
+    AccessibleContext ac = a.getAccessibleContext();
     if (ac == null) return false;
     AccessibleAction aa = ac.getAccessibleAction();
     if (aa == null) return false;
@@ -192,13 +192,13 @@ To invoke, call `doAccessibleAction(i)` on the matching index `i`.
 
 ### Detecting Click Support
 
-A component supports the click action if any of its accessible action descriptions matches a
+An `Accessible` supports the click action if any of its accessible action descriptions matches a
 known click string. Because Swing localizes the click description via `UIManager` while AWT
 uses a hardcoded literal, both must be checked:
 
 ```java
-boolean supportsClick(Component component) {
-    AccessibleContext ac = component.getAccessibleContext();
+boolean supportsClick(Accessible a) {
+    AccessibleContext ac = a.getAccessibleContext();
     if (ac == null) return false;
     AccessibleAction aa = ac.getAccessibleAction();
     if (aa == null) return false;
@@ -245,18 +245,18 @@ All action names follow lower-case underscore-separated format.
 ### Detection
 
 ```java
-boolean supportsGetText(Component c) {
-    AccessibleContext ac = c.getAccessibleContext();
+boolean supportsGetText(Accessible a) {
+    AccessibleContext ac = a.getAccessibleContext();
     return ac != null && ac.getAccessibleText() != null;
 }
 
-boolean supportsSetText(Component c) {
-    AccessibleContext ac = c.getAccessibleContext();
+boolean supportsSetText(Accessible a) {
+    AccessibleContext ac = a.getAccessibleContext();
     return ac != null && ac.getAccessibleEditableText() != null;
 }
 
-boolean supportsGetValue(Component c) {
-    AccessibleContext ac = c.getAccessibleContext();
+boolean supportsGetValue(Accessible a) {
+    AccessibleContext ac = a.getAccessibleContext();
     return ac != null && ac.getAccessibleValue() != null;
 }
 
@@ -277,14 +277,14 @@ private static final Set<AccessibleRole> READ_ONLY_VALUE_ROLES = Set.of(
     AccessibleRole.PROGRESS_BAR
 );
 
-boolean supportsSetValue(Component c) {
-    AccessibleContext ac = c.getAccessibleContext();
+boolean supportsSetValue(Accessible a) {
+    AccessibleContext ac = a.getAccessibleContext();
     if (ac == null || ac.getAccessibleValue() == null) return false;
     return !READ_ONLY_VALUE_ROLES.contains(ac.getAccessibleRole());
 }
 
-boolean supportsSelection(Component c) {
-    AccessibleContext ac = c.getAccessibleContext();
+boolean supportsSelection(Accessible a) {
+    AccessibleContext ac = a.getAccessibleContext();
     return ac != null && ac.getAccessibleSelection() != null;
 }
 ```
