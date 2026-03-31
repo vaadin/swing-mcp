@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** increment the value of a UI component by ref **so that** I can increase the value of a spinner or slider one step at a time.
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-03-31
 
 ---
@@ -62,13 +62,13 @@ Execution order:
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_increment` on a `JSpinner` increases its value by one step.
-- [ ] Calling `swing_increment` on a `JSlider` increases its value by one step.
-- [ ] Calling `swing_increment` with an invalid ref returns an MCP error with a recovery message.
-- [ ] Calling `swing_increment` on a component that does not support increment (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [ ] Calling `swing_increment` on a disabled component returns an MCP error explaining the component is disabled.
-- [ ] The tool returns `null` on success.
-- [ ] The ref map is cleared after every `swing_increment` call (mutation tool).
+- [x] Calling `swing_increment` on a `JSpinner` increases its value by one step.
+- [x] Calling `swing_increment` on a `JSlider` increases its value by one step.
+- [x] Calling `swing_increment` with an invalid ref returns an MCP error with a recovery message.
+- [x] Calling `swing_increment` on a component that does not support increment (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
+- [x] Calling `swing_increment` on a disabled component returns an MCP error explaining the component is disabled.
+- [x] The tool returns `null` on success.
+- [x] The ref map is cleared after every `swing_increment` call (mutation tool).
 
 ---
 
@@ -76,25 +76,25 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingIncrementTest` (headless — all happy-path tests can run headless; `HeadlessException` does not occur for increment/decrement)
-  - [ ] Incrementing a `JSpinner` (`SpinnerNumberModel`) increases its value by one step.
-  - [ ] Incrementing a `JSpinner` (`SpinnerListModel`) advances to the next item.
-  - [ ] Incrementing a `JSpinner` (`SpinnerDateModel`) advances by one date unit.
-  - [ ] Incrementing a `JSlider` increases its value by one step.
-  - [ ] Incrementing a `JSpinner` at its maximum returns an MCP error with `isError: true` (BR-07).
-  - [ ] Invalid ref returns an MCP error with `isError: true`.
-  - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
-  - [ ] Component without increment support (e.g. `JButton`) returns an MCP error with `isError: true`.
-  - [ ] Disabled component returns an MCP error with `isError: true` explaining the component is disabled.
-  - [ ] Success returns `null`.
-  - [ ] Ref map is cleared after a successful call.
-  - [ ] MCP client smoke test.
-  - [ ] Each component from the component matrix is tested (dedicated test method per component).
+- [x] `SwingIncrementTest` (headless — all happy-path tests can run headless; `HeadlessException` does not occur for increment/decrement)
+  - [x] Incrementing a `JSpinner` (`SpinnerNumberModel`) increases its value by one step.
+  - [x] Incrementing a `JSpinner` (`SpinnerListModel`) advances to the next item.
+  - [x] Incrementing a `JSpinner` (`SpinnerDateModel`) advances by one date unit.
+  - [x] Incrementing a `JSlider` increases its value by one step.
+  - [x] Incrementing a `JSpinner` at its maximum returns an MCP error with `isError: true` (BR-07).
+  - [x] Invalid ref returns an MCP error with `isError: true`.
+  - [x] The error message suggests calling `swing_snapshot` to refresh refs.
+  - [x] Component without increment support (e.g. `JButton`) returns an MCP error with `isError: true`.
+  - [x] Disabled component returns an MCP error with `isError: true` explaining the component is disabled.
+  - [x] Success returns `null`.
+  - [x] Ref map is cleared after a successful call.
+  - [x] MCP client smoke test.
+  - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [ ] `SwingIncrementScreenTest` (`testSwing` — JFrame/JDialog coverage per `verification.md` matrix; no tests here that cannot run headless)
-  - [ ] Incrementing a `JSpinner` inside `JFrame` increases its value.
-  - [ ] Incrementing a `JSlider` inside `JFrame` increases its value.
-  - [ ] Incrementing a `JSpinner` inside `JDialog` increases its value.
+- [x] `SwingIncrementScreenTest` (`testSwing` — JFrame/JDialog coverage per `verification.md` matrix; no tests here that cannot run headless)
+  - [x] Incrementing a `JSpinner` inside `JFrame` increases its value.
+  - [x] Incrementing a `JSlider` inside `JFrame` increases its value.
+  - [x] Incrementing a `JSpinner` inside `JDialog` increases its value.
 
 ### Component matrix
 
