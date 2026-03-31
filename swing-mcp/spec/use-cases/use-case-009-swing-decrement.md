@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** decrement the value of a UI component by ref **so that** I can decrease the value of a spinner or slider one step at a time.
 
-**Status:** Draft
+**Status:** Approved
 **Date:** 2026-03-31
 
 ---
@@ -29,16 +29,17 @@
 | BR-04 | If the target does not support decrement (i.e. `SwingUtils.supportsDecrement(accessible)` returns `-1`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support decrement. Call swing_snapshot to verify the list of actions". |
 | BR-05 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
 | BR-06 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. |
-| BR-07 | If `doAccessibleAction(i)` returns `false`, the tool returns an MCP-level error (`isError: true`) with the message "The action was not performed, no additional information has been provided". |
+| BR-07 | If `doAccessibleAction(i)` returns `false`, the tool returns an MCP-level error (`isError: true`) with the message "The action was not performed, no additional information has been provided. Probable causes: component hit min value and refused to decrement further". Note: `JSpinner` at its minimum value returns `false` (confirmed for `SpinnerNumberModel`, `SpinnerListModel`, and `SpinnerDateModel`); `JSlider` at minimum returns `true` and silently stays at min. |
 | BR-08 | `swing_decrement` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after invocation (even on failure, via `finally`). |
-| BR-09 | The decrement step size is determined by the component itself (e.g., `JSpinner`'s step size, `JSlider`'s minor tick unit). The tool invokes the action once per call; the AI must call it multiple times to decrement by more than one step. |
+| BR-09 | The step size and boundary behaviour are determined entirely by the component and the accessibility API. The tool invokes the action once per call and accepts whatever the API does. The AI must call `swing_decrement` multiple times to decrement by more than one step. |
+| BR-10 | `doAccessibleAction` for decrement works correctly in headless mode for both `JSpinner` and `JSlider`. All happy-path tests can therefore run headless; `SwingDecrementScreenTest` exists solely for `JFrame`/`JDialog` coverage required by the component matrix. |
 
 ### Algorithm: detecting and invoking the decrement action
 
-`SwingUtils.supportsDecrement(Accessible a)` — scans `AccessibleAction` descriptions for `AccessibleAction.DECREMENT`:
+`SwingUtils.supportsDecrement(Accessible a)` is a utility method on `SwingUtils` (alongside `supportsIncrement`, `supportsClick`, `supportsTogglePopup`, etc.) that scans `AccessibleAction` descriptions for `AccessibleAction.DECREMENT` and returns the action index or `-1`:
 
 ```java
-int supportsDecrement(Accessible a) {
+public static int supportsDecrement(Accessible a) {
     AccessibleContext ac = a.getAccessibleContext();
     if (ac == null) return -1;
     AccessibleAction aa = ac.getAccessibleAction();
@@ -75,9 +76,13 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingDecrementTest`
-  - [ ] Decrementing a `JSpinner` decreases its value by one step.
+- [ ] `SwingDecrementTest` (headless — all happy-path tests can run headless; `HeadlessException` does not occur for decrement)
+  - [ ] Decrementing a `JSpinner` (`SpinnerNumberModel`) decreases its value by one step.
+  - [ ] Decrementing a `JSpinner` (`SpinnerListModel`) moves to the previous item.
+  - [ ] Decrementing a `JSpinner` (`SpinnerDateModel`) moves back by one date unit.
   - [ ] Decrementing a `JSlider` decreases its value by one step.
+  - [ ] Decrementing a `JSpinner` (`SpinnerNumberModel`) at its minimum returns an MCP error with `isError: true` (BR-07).
+  - [ ] Decrementing a `JSpinner` (`SpinnerDateModel`) at its minimum returns an MCP error with `isError: true` (BR-07).
   - [ ] Invalid ref returns an MCP error with `isError: true`.
   - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
   - [ ] Component without decrement support (e.g. `JButton`) returns an MCP error with `isError: true`.
@@ -87,7 +92,7 @@ Execution order:
   - [ ] MCP client smoke test.
   - [ ] Each component from the component matrix is tested (dedicated test method per component).
 
-- [ ] `SwingDecrementScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+- [ ] `SwingDecrementScreenTest` (`testSwing` — JFrame/JDialog coverage per `verification.md` matrix; no tests here that cannot run headless)
   - [ ] Decrementing a `JSpinner` inside `JFrame` decreases its value.
   - [ ] Decrementing a `JSlider` inside `JFrame` decreases its value.
   - [ ] Decrementing a `JSpinner` inside `JDialog` decreases its value.
