@@ -4,8 +4,8 @@
 
 **As an** AI agent, **I want to** click a UI component by ref **so that** I can interact with buttons, checkboxes, and other clickable elements.
 
-**Status:** Draft
-**Date:** 2026-03-26
+**Status:** Approved
+**Date:** 2026-03-31
 
 ---
 
