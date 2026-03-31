@@ -1,5 +1,6 @@
-package com.vaadin.swingmcp.mcp;
+package com.vaadin.swingmcp.mcpscreen;
 
+import com.vaadin.swingmcp.mcp.FakeMCPServer;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;

@@ -1,6 +1,9 @@
-package com.vaadin.swingmcp.mcp.tools;
+package com.vaadin.swingmcp.mcpscreen.tools;
 
-import com.vaadin.swingmcp.mcp.AbstractScreenTest;
+import com.vaadin.swingmcp.mcp.tools.Parameters;
+import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
+import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
+import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;

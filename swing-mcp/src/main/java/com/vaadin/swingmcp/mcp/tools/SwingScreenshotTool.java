@@ -21,7 +21,7 @@ import java.util.List;
  */
 public class SwingScreenshotTool extends AbstractSwingTool {
 
-    static final int WINDOW_GAP = 4;
+    public static final int WINDOW_GAP = 4;
 
     @Override
     public String getName() {

@@ -1,5 +1,6 @@
-package com.vaadin.swingmcp.mcp;
+package com.vaadin.swingmcp.mcpscreen;
 
+import com.vaadin.swingmcp.mcp.SwingUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
