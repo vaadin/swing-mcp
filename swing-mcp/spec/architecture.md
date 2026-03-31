@@ -169,26 +169,28 @@ Action display names use lower-case underscore-separated format regardless of th
 
 ### Detecting Toggle-Popup Support
 
+All `supports*` methods that detect an `AccessibleAction` return the **action index** (≥ 0)
+on success, or **-1** if the action is not found. The caller can pass the returned index
+directly to `doAccessibleAction(i)`, avoiding a second scan.
+
 ```java
-boolean supportsTogglePopup(Accessible a) {
+int supportsTogglePopup(Accessible a) {
     AccessibleContext ac = a.getAccessibleContext();
-    if (ac == null) return false;
+    if (ac == null) return -1;
     AccessibleAction aa = ac.getAccessibleAction();
-    if (aa == null) return false;
+    if (aa == null) return -1;
     for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
         String desc = aa.getAccessibleActionDescription(i);
         if (AccessibleAction.TOGGLE_POPUP.equals(desc) ||
             UIManager.getString("ComboBox.togglePopupText").equals(desc))
-            return true;
+            return i;
     }
-    return false;
+    return -1;
 }
 ```
 
 - `AccessibleAction.TOGGLE_POPUP` (`"toggle popup"`) covers any component that uses the constant directly.
 - `UIManager.getString("ComboBox.togglePopupText")` covers `JComboBox`, which uses a potentially localized lookup.
-
-To invoke, call `doAccessibleAction(i)` on the matching index `i`.
 
 ### Detecting Click Support
 
@@ -197,18 +199,18 @@ known click string. Because Swing localizes the click description via `UIManager
 uses a hardcoded literal, both must be checked:
 
 ```java
-boolean supportsClick(Accessible a) {
+int supportsClick(Accessible a) {
     AccessibleContext ac = a.getAccessibleContext();
-    if (ac == null) return false;
+    if (ac == null) return -1;
     AccessibleAction aa = ac.getAccessibleAction();
-    if (aa == null) return false;
+    if (aa == null) return -1;
     for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
         String desc = aa.getAccessibleActionDescription(i);
         if (AccessibleAction.CLICK.equals(desc) ||
             UIManager.getString("AbstractButton.clickText").equals(desc))
-            return true;
+            return i;
     }
-    return false;
+    return -1;
 }
 ```
 
@@ -219,8 +221,6 @@ boolean supportsClick(Accessible a) {
   same UIManager lookup ensures locale-safe matching.
 - Components with dynamic/algorithm-derived actions (text components, tree nodes, hyperlinks)
   never produce either string and are therefore excluded automatically.
-
-To invoke the click, call `doAccessibleAction(i)` on the matching index `i`.
 
 ### Effectively Enabled Check
 
