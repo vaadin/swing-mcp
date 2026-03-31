@@ -33,6 +33,7 @@
 | BR-09 | The returned text is capped at `MAX_TEXT_LENGTH` characters (static final constant, initially **1000**). If the text is longer, only the first `MAX_TEXT_LENGTH` characters are returned, followed by `"\n... (truncated, N total characters)"`. |
 | BR-10 | No enabled check is performed — reading text is always allowed, even on disabled components. |
 | BR-11 | `JEditorPane` with HTML content returns the rendered text (stripped of HTML tags), not the raw HTML source. This is the default behavior of `AccessibleText` on `AccessibleJEditorPaneHTML`. Accepted as-is; revisit if the AI needs raw HTML in the future. |
+| BR-12 | The tool accepts only `ref` — no `offset`/`length` parameters. The 1000-character cap (BR-09) provides sufficient insight for the migration use case; paging through longer text is not needed. |
 
 ### Algorithm: reading the full text content
 
@@ -45,6 +46,8 @@ Execution order:
 6. Compute the read length: `int readLen = Math.min(len, MAX_TEXT_LENGTH)`.
 7. **Primary path:** try `ac.getAccessibleEditableText()` — if non-null, call `getTextRange(0, readLen)` which returns the text as a single `String`. Available on all `JTextComponent` subclasses (since `AccessibleJTextComponent` implements `AccessibleEditableText`).
 8. **Fallback path:** if `getAccessibleEditableText()` returns `null` (read-only `AccessibleText` without editable support), iterate `at.getAtIndex(AccessibleText.CHARACTER, i)` for `i` in `[0, readLen)` and concatenate. This fallback is expected to be rare — kept as defensive code.
+
+**Design note:** The two-step detection (gate on `getAccessibleText()` in step 2, then try `getAccessibleEditableText()` in step 7) is intentionally kept for spec clarity, even though in practice `getAccessibleEditableText()` alone could serve both detection and retrieval. The implementation may optimize this internally.
 9. **BR-09** — If `len > MAX_TEXT_LENGTH`, append `"\n... (truncated, N total characters)"` to the result.
 
 **Accessibility API methods used:**

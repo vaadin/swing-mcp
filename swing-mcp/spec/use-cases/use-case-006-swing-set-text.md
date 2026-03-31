@@ -84,4 +84,14 @@ Execution order:
   - [ ] Setting text on a non-editable `JTextField` (`setEditable(false)`) returns an MCP error with `isError: true` saying the component is not editable.
   - [ ] The ref map is cleared after a successful `swing_set_text` call (verified by attempting to use the same ref again, which should fail).
   - [ ] The ref map is cleared after a failed `swing_set_text` call on a disabled component.
-  - [ ] Each component from the component matrix is tested.
+  - [ ] Each component from the component matrix is tested (dedicated test method per component).
+
+### Component matrix
+
+Each component from the verification matrix gets a dedicated test method.
+
+**Expected to succeed (`set_text` supported):**
+`JTextField`, `JPasswordField`, `JTextArea`
+
+**Expected to fail with "Component does not support set_text" error:**
+`JButton`, `JCheckBox`, `JRadioButton`, `JComboBox`, `JToggleButton`, `JSpinner`, `JSlider`, `JPanel`, `JScrollPane`, `JTabbedPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`, `JList`
