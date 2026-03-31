@@ -28,6 +28,7 @@ com.vaadin.swingmcp.mcp
   SwingUtils.java   - any Swing-related utilities we may need; a collection of static utility methods
   MCPServer.java    - starts/stops the MCP server with Swing-MCP-specific tools
 com.vaadin.swingmcp.mcp.tools - a package with all offered tools, one class per tool
+  Parameters.java   - typed wrapper around the raw Map<String, Object> from MCP requests
 ```
 
 ### MCPServer
@@ -54,6 +55,39 @@ MCPServer, it must register a wrapper ToolFunction which, upon invocation:
 1. Calls immediately runInEDT() and runs the remainder of the function there.
 2. Retrieves a list of considered components
 3. Calls AbstractSwingTool.
+
+### Parameters
+
+A typed wrapper around the raw `Map<String, Object>` that MCP tool functions receive.
+Lives in `com.vaadin.swingmcp.mcp.tools.Parameters`. All tools use this instead of
+accessing the map directly.
+
+Each getter has a required variant (throws `MCPServerException(INVALID_PARAMS, …)` if
+missing or wrong type) and an optional variant (returns `null` if missing, throws on
+wrong type).
+
+```java
+class Parameters {
+    Parameters(Map<String, Object> raw);
+
+    // Required — throws MCPServerException(INVALID_PARAMS) if key is missing or value is not a String
+    String getString(String key);
+    // Optional — returns null if key is missing; throws if present but not a String
+    String getStringOrNull(String key);
+
+    // Required — throws MCPServerException(INVALID_PARAMS) if key is missing or value is not a Number.
+    // Converts to int via Number.intValue().
+    int getInt(String key);
+    // Optional — returns null if key is missing; throws if present but not a Number
+    Integer getIntOrNull(String key);
+}
+```
+
+Error messages must name the parameter and the expected type, e.g.:
+`"Required parameter 'ref' is missing"`, `"Parameter 'ref' must be an integer"`.
+
+`AbstractSwingTool.execute` receives `Parameters` (constructed by `MCPServer.registerTool`
+from the raw map) instead of `Map<String, Object>`.
 
 ---
 
