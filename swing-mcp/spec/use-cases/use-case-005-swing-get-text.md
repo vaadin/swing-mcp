@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** read the text content of a UI component by ref **so that** I can understand the current value of text fields and other text-bearing components without relying on the snapshot (which omits field values per UC-002 BR-03).
 
-**Status:** Draft
+**Status:** Implemented
 **Date:** 2026-03-31
 
 ---
@@ -61,14 +61,14 @@ Execution order:
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_get_text` with a valid ref for a `JTextField` returns the text field's content.
-- [ ] Calling `swing_get_text` with a valid ref for a `JTextArea` returns the text area's full content (including newlines).
-- [ ] Calling `swing_get_text` with a valid ref for a `JPasswordField` returns echo characters, not the real password.
-- [ ] Calling `swing_get_text` with an invalid ref returns an MCP error with a recovery message.
-- [ ] Calling `swing_get_text` on a component that does not support `get_text` (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [ ] Calling `swing_get_text` on an empty text field returns an empty string (not an error).
+- [x] Calling `swing_get_text` with a valid ref for a `JTextField` returns the text field's content.
+- [x] Calling `swing_get_text` with a valid ref for a `JTextArea` returns the text area's full content (including newlines).
+- [x] Calling `swing_get_text` with a valid ref for a `JPasswordField` returns echo characters, not the real password.
+- [x] Calling `swing_get_text` with an invalid ref returns an MCP error with a recovery message.
+- [x] Calling `swing_get_text` on a component that does not support `get_text` (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
+- [x] Calling `swing_get_text` on an empty text field returns an empty string (not an error).
 - [ ] The ref map is **not** cleared after a `swing_get_text` call (read-only tool).
-- [ ] Calling `swing_get_text` on a disabled but text-readable component succeeds (no enabled check — reading is always allowed).
+- [x] Calling `swing_get_text` on a disabled but text-readable component succeeds (no enabled check — reading is always allowed).
 - [ ] Text longer than `MAX_TEXT_LENGTH` is truncated with a summary indicating total length.
 
 ---
@@ -77,26 +77,26 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingGetTextTest`
-  - [ ] Reading a `JTextField` with content returns the expected text.
-  - [ ] Reading a `JTextArea` with multi-line content returns the full text including newlines.
-  - [ ] Reading a `JPasswordField` returns echo characters, not the actual password.
-  - [ ] Reading an empty `JTextField` returns an empty string.
-  - [ ] Reading with an invalid ref returns an MCP error with `isError: true`.
-  - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
-  - [ ] Reading a component without text support (e.g. `JSlider`) returns an MCP error with `isError: true`.
-  - [ ] The ref map is preserved after a successful `swing_get_text` call (verified by calling `swing_get_text` twice with the same ref).
-  - [ ] Reading a disabled `JTextField` succeeds and returns the text content.
-  - [ ] Text exceeding `MAX_TEXT_LENGTH` is truncated with a `... (truncated, N total characters)` suffix.
-  - [ ] Text exactly at `MAX_TEXT_LENGTH` is returned without truncation.
-  - [ ] Each component from the component matrix is tested (dedicated test method per component).
+- [x] `SwingGetTextTest`
+  - [x] Reading a `JTextField` with content returns the expected text.
+  - [x] Reading a `JTextArea` with multi-line content returns the full text including newlines.
+  - [x] Reading a `JPasswordField` returns echo characters, not the actual password.
+  - [x] Reading an empty `JTextField` returns an empty string.
+  - [x] Reading with an invalid ref returns an MCP error with `isError: true`.
+  - [x] The error message suggests calling `swing_snapshot` to refresh refs.
+  - [x] Reading a component without text support (e.g. `JSlider`) returns an MCP error with `isError: true`.
+  - [x] The ref map is preserved after a successful `swing_get_text` call (verified by calling `swing_get_text` twice with the same ref).
+  - [x] Reading a disabled `JTextField` succeeds and returns the text content.
+  - [x] Text exceeding `MAX_TEXT_LENGTH` is truncated with a `... (truncated, N total characters)` suffix.
+  - [x] Text exactly at `MAX_TEXT_LENGTH` is returned without truncation.
+  - [x] Each component from the component matrix is tested (dedicated test method per component).
 
 ### Component matrix
 
 Each component from the verification matrix gets a dedicated test method.
 
 **Expected to succeed (`get_text` supported):**
-`JTextField`, `JPasswordField`, `JTextArea`
+`JTextField`, `JPasswordField`, `JTextArea`, `JSpinner` (delegates to its inner `JFormattedTextField` editor via `AccessibleJSpinner`)
 
 **Expected to fail with "Component does not support get_text" error:**
-`JButton`, `JCheckBox`, `JRadioButton`, `JComboBox`, `JToggleButton`, `JSpinner`, `JSlider`, `JPanel`, `JScrollPane`, `JTabbedPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`, `JList`
+`JButton`, `JCheckBox`, `JRadioButton`, `JComboBox`, `JToggleButton`, `JSlider`, `JPanel`, `JScrollPane`, `JTabbedPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`, `JList`
