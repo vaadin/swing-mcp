@@ -1,5 +1,6 @@
 package com.vaadin.swingmcp.mcp.tools;
 
+import com.vaadin.swingmcp.mcp.SwingUtils;
 import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
@@ -40,44 +41,6 @@ public class SwingSnapshotTool extends AbstractSwingTool {
             AccessibleAction.INCREMENT, "increment",
             AccessibleAction.DECREMENT, "decrement",
             AccessibleAction.TOGGLE_EXPAND, "toggle_expand"
-    );
-
-    // ── Roles where AccessibleValue is not user-meaningful ──────────────────
-    // AbstractButton subclasses (buttons, menus) expose AccessibleValue for
-    // their selected/pressed state (0 = off, 1 = on), but this is already
-    // communicated via CHECKED/SELECTED states in the snapshot. Exposing
-    // get_value/set_value on these would be noise — a user clicks a button,
-    // not "sets its value". Both get_value and set_value are suppressed.
-    private static final Set<AccessibleRole> SUPPRESSED_VALUE_ROLES = Set.of(
-            AccessibleRole.PUSH_BUTTON,
-            AccessibleRole.TOGGLE_BUTTON,
-            AccessibleRole.CHECK_BOX,
-            AccessibleRole.RADIO_BUTTON,
-            AccessibleRole.MENU,
-            AccessibleRole.MENU_ITEM,
-            AccessibleRole.PAGE_TAB
-    );
-
-    // ── Roles whose AccessibleValue is read-only ─────────────────────────────
-    // Membership criterion: the component displays a value via AccessibleValue
-    // (non-null), but a real user fundamentally cannot edit that value.
-    // Components that return null from getAccessibleValue() are excluded
-    // automatically by the null-check in supportsGetValue — they never reach
-    // this set.
-    //
-    // Explicitly NOT in this set (intentional):
-    //   - SCROLL_BAR (JScrollBar): a user can drag the scrollbar, so set_value
-    //     is a legitimate action even when the scrollbar is inside a JScrollPane.
-    private static final Set<AccessibleRole> READ_ONLY_VALUE_ROLES = Set.of(
-            AccessibleRole.PROGRESS_BAR
-    );
-
-    // ── Roles where AccessibleSelection is internal, not user-facing ─────────
-    // Menu bars and menus manage selection internally (which menu/item is active),
-    // but the user interacts with individual items via click, not by "selecting".
-    private static final Set<AccessibleRole> SUPPRESSED_SELECTION_ROLES = Set.of(
-            AccessibleRole.MENU_BAR,
-            AccessibleRole.MENU
     );
 
     // ── States shown in the snapshot ──────────────────────────────────────────
@@ -362,7 +325,7 @@ public class SwingSnapshotTool extends AbstractSwingTool {
         }
 
         // AI-3: has at least one action (BR-06 algorithm)
-        if (hasAnyAction(ctx)) {
+        if (hasAnyAction(accessible)) {
             return true;
         }
 
@@ -437,8 +400,7 @@ public class SwingSnapshotTool extends AbstractSwingTool {
      * @return the next free ref value after processing this subtree
      */
     private int assignRefs(SnapshotNode node, int nextRef, SwingToolContext context) {
-        AccessibleContext ctx = node.accessible.getAccessibleContext();
-        if (hasAnyAction(ctx)) {
+        if (hasAnyAction(node.accessible)) {
             node.ref = nextRef;
             context.putRef(nextRef, node.accessible);
             nextRef++;
@@ -495,7 +457,7 @@ public class SwingSnapshotTool extends AbstractSwingTool {
         }
 
         // Actions
-        List<String> actions = resolveActions(ctx);
+        List<String> actions = resolveActions(node.accessible);
         if (!actions.isEmpty()) {
             sb.append(" actions: ").append(String.join(", ", actions));
         }
@@ -518,7 +480,8 @@ public class SwingSnapshotTool extends AbstractSwingTool {
      * Resolves the action labels to show for a node, using the six-step
      * Action Label Algorithm from BR-06.
      */
-    private List<String> resolveActions(AccessibleContext ctx) {
+    private List<String> resolveActions(Accessible accessible) {
+        AccessibleContext ctx = accessible.getAccessibleContext();
         if (ctx == null) {
             return Collections.emptyList();
         }
@@ -526,12 +489,12 @@ public class SwingSnapshotTool extends AbstractSwingTool {
         List<String> actions = new ArrayList<>();
 
         // Step 1: click
-        if (supportsClick(ctx)) {
+        if (SwingUtils.supportsClick(accessible) >= 0) {
             actions.add("click");
         }
 
         // Step 2: toggle_popup
-        if (supportsTogglePopup(ctx)) {
+        if (SwingUtils.supportsTogglePopup(accessible) >= 0) {
             actions.add("toggle_popup");
         }
 
@@ -548,23 +511,23 @@ public class SwingSnapshotTool extends AbstractSwingTool {
         }
 
         // Step 4: text
-        if (supportsSetText(ctx)) {
+        if (SwingUtils.supportsSetText(accessible)) {
             actions.add("get_text");
             actions.add("set_text");
-        } else if (supportsGetText(ctx)) {
+        } else if (SwingUtils.supportsGetText(accessible)) {
             actions.add("get_text");
         }
 
         // Step 5: value
-        if (supportsGetValue(ctx)) {
+        if (SwingUtils.supportsGetValue(accessible)) {
             actions.add("get_value");
-            if (supportsSetValue(ctx)) {
+            if (SwingUtils.supportsSetValue(accessible)) {
                 actions.add("set_value");
             }
         }
 
         // Step 6: selection
-        if (supportsSelection(ctx)) {
+        if (SwingUtils.supportsSelection(accessible)) {
             actions.add("get_selection");
             actions.add("set_selection");
             actions.add("clear_selection");
@@ -584,14 +547,15 @@ public class SwingSnapshotTool extends AbstractSwingTool {
      * Returns true if the node has at least one action under the BR-06 algorithm
      * (BR-07 ref-assignment gate).
      */
-    private static boolean hasAnyAction(AccessibleContext ctx) {
+    private static boolean hasAnyAction(Accessible accessible) {
+        AccessibleContext ctx = accessible.getAccessibleContext();
         if (ctx == null) return false;
-        return supportsClick(ctx)
-                || supportsTogglePopup(ctx)
+        return SwingUtils.supportsClick(accessible) >= 0
+                || SwingUtils.supportsTogglePopup(accessible) >= 0
                 || hasKnownActionConstant(ctx)
-                || supportsGetText(ctx)
-                || supportsGetValue(ctx)
-                || supportsSelection(ctx);
+                || SwingUtils.supportsGetText(accessible)
+                || SwingUtils.supportsGetValue(accessible)
+                || SwingUtils.supportsSelection(accessible);
     }
 
     private static boolean hasKnownActionConstant(AccessibleContext ctx) {
@@ -603,58 +567,5 @@ public class SwingSnapshotTool extends AbstractSwingTool {
             }
         }
         return false;
-    }
-
-    private static boolean supportsClick(AccessibleContext ctx) {
-        AccessibleAction aa = ctx.getAccessibleAction();
-        if (aa == null) return false;
-        String clickText = UIManager.getString("AbstractButton.clickText");
-        for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
-            String desc = aa.getAccessibleActionDescription(i);
-            if (AccessibleAction.CLICK.equals(desc)
-                    || (clickText != null && clickText.equals(desc))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean supportsTogglePopup(AccessibleContext ctx) {
-        AccessibleAction aa = ctx.getAccessibleAction();
-        if (aa == null) return false;
-        String togglePopupText = UIManager.getString("ComboBox.togglePopupText");
-        for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
-            String desc = aa.getAccessibleActionDescription(i);
-            if (AccessibleAction.TOGGLE_POPUP.equals(desc)
-                    || (togglePopupText != null && togglePopupText.equals(desc))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean supportsGetText(AccessibleContext ctx) {
-        return ctx.getAccessibleText() != null;
-    }
-
-    private static boolean supportsSetText(AccessibleContext ctx) {
-        return ctx.getAccessibleEditableText() != null;
-    }
-
-    private static boolean supportsGetValue(AccessibleContext ctx) {
-        if (ctx.getAccessibleValue() == null) return false;
-        return !SUPPRESSED_VALUE_ROLES.contains(ctx.getAccessibleRole());
-    }
-
-    private static boolean supportsSetValue(AccessibleContext ctx) {
-        if (ctx.getAccessibleValue() == null) return false;
-        AccessibleRole role = ctx.getAccessibleRole();
-        return !SUPPRESSED_VALUE_ROLES.contains(role)
-                && !READ_ONLY_VALUE_ROLES.contains(role);
-    }
-
-    private static boolean supportsSelection(AccessibleContext ctx) {
-        if (ctx.getAccessibleSelection() == null) return false;
-        return !SUPPRESSED_SELECTION_ROLES.contains(ctx.getAccessibleRole());
     }
 }

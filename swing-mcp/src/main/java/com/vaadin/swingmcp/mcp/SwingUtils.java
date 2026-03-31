@@ -1,13 +1,11 @@
 package com.vaadin.swingmcp.mcp;
 
-import javax.accessibility.Accessible;
-import javax.accessibility.AccessibleAction;
-import javax.accessibility.AccessibleContext;
-import javax.accessibility.AccessibleState;
+import javax.accessibility.*;
 import javax.swing.UIManager;
 import java.awt.Dialog;
 import java.awt.KeyboardFocusManager;
 import java.awt.Window;
+import java.util.Set;
 
 /**
  * A collection of static utility methods for Swing-related operations.
@@ -16,6 +14,32 @@ public final class SwingUtils {
 
     private SwingUtils() {
     }
+
+    // ── Roles where AccessibleValue is not user-meaningful ──────────────────
+    // AbstractButton subclasses (buttons, menus) expose AccessibleValue for
+    // their selected/pressed state (0 = off, 1 = on), but this is already
+    // communicated via CHECKED/SELECTED states in the snapshot. Both
+    // get_value and set_value are suppressed.
+    static final Set<AccessibleRole> SUPPRESSED_VALUE_ROLES = Set.of(
+            AccessibleRole.PUSH_BUTTON,
+            AccessibleRole.TOGGLE_BUTTON,
+            AccessibleRole.CHECK_BOX,
+            AccessibleRole.RADIO_BUTTON,
+            AccessibleRole.MENU,
+            AccessibleRole.MENU_ITEM,
+            AccessibleRole.PAGE_TAB
+    );
+
+    // ── Roles whose AccessibleValue is read-only ─────────────────────────────
+    static final Set<AccessibleRole> READ_ONLY_VALUE_ROLES = Set.of(
+            AccessibleRole.PROGRESS_BAR
+    );
+
+    // ── Roles where AccessibleSelection is internal, not user-facing ─────────
+    static final Set<AccessibleRole> SUPPRESSED_SELECTION_ROLES = Set.of(
+            AccessibleRole.MENU_BAR,
+            AccessibleRole.MENU
+    );
 
     /**
      * Returns the action index for the click action on the given accessible,
@@ -41,6 +65,94 @@ public final class SwingUtils {
             }
         }
         return -1;
+    }
+
+    /**
+     * Returns the action index for the toggle-popup action on the given
+     * accessible, or {@code -1} if the accessible does not support it.
+     * <p>
+     * Checks both {@link AccessibleAction#TOGGLE_POPUP} (AWT literal) and
+     * {@link UIManager#getString(Object)} for {@code "ComboBox.togglePopupText"}
+     * (Swing UIManager) to handle locale-safe matching.
+     */
+    public static int supportsTogglePopup(Accessible a) {
+        AccessibleContext ac = a.getAccessibleContext();
+        if (ac == null) return -1;
+        AccessibleAction aa = ac.getAccessibleAction();
+        if (aa == null) return -1;
+        String togglePopupText = UIManager.getString("ComboBox.togglePopupText");
+        for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
+            String desc = aa.getAccessibleActionDescription(i);
+            if (AccessibleAction.TOGGLE_POPUP.equals(desc)
+                    || (togglePopupText != null && togglePopupText.equals(desc))) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Returns {@code true} if the accessible exposes {@link AccessibleText}
+     * (i.e. its text content can be read).
+     */
+    public static boolean supportsGetText(Accessible a) {
+        AccessibleContext ac = a.getAccessibleContext();
+        if (ac == null) return false;
+        return ac.getAccessibleText() != null;
+    }
+
+    /**
+     * Returns {@code true} if the accessible exposes {@link AccessibleEditableText}
+     * (i.e. its text content can be written).
+     */
+    public static boolean supportsSetText(Accessible a) {
+        AccessibleContext ac = a.getAccessibleContext();
+        if (ac == null) return false;
+        return ac.getAccessibleEditableText() != null;
+    }
+
+    /**
+     * Returns {@code true} if the accessible exposes a user-meaningful
+     * {@link AccessibleValue} that can be read.
+     * <p>
+     * Roles whose AccessibleValue is not user-meaningful (e.g. buttons
+     * exposing selected/pressed state) are suppressed.
+     */
+    public static boolean supportsGetValue(Accessible a) {
+        AccessibleContext ac = a.getAccessibleContext();
+        if (ac == null) return false;
+        if (ac.getAccessibleValue() == null) return false;
+        return !SUPPRESSED_VALUE_ROLES.contains(ac.getAccessibleRole());
+    }
+
+    /**
+     * Returns {@code true} if the accessible exposes a user-meaningful
+     * {@link AccessibleValue} that can be both read and written.
+     * <p>
+     * In addition to the suppression rules of {@link #supportsGetValue},
+     * read-only value roles (e.g. progress bars) are excluded.
+     */
+    public static boolean supportsSetValue(Accessible a) {
+        AccessibleContext ac = a.getAccessibleContext();
+        if (ac == null) return false;
+        if (ac.getAccessibleValue() == null) return false;
+        AccessibleRole role = ac.getAccessibleRole();
+        return !SUPPRESSED_VALUE_ROLES.contains(role)
+                && !READ_ONLY_VALUE_ROLES.contains(role);
+    }
+
+    /**
+     * Returns {@code true} if the accessible exposes user-facing
+     * {@link AccessibleSelection}.
+     * <p>
+     * Roles whose AccessibleSelection is internal (e.g. menu bars, menus)
+     * are suppressed.
+     */
+    public static boolean supportsSelection(Accessible a) {
+        AccessibleContext ac = a.getAccessibleContext();
+        if (ac == null) return false;
+        if (ac.getAccessibleSelection() == null) return false;
+        return !SUPPRESSED_SELECTION_ROLES.contains(ac.getAccessibleRole());
     }
 
     /**

@@ -181,4 +181,98 @@ class SwingUtilsTest extends AbstractScreenTest {
         dialog.setEnabled(false);
         assertFalse(SwingUtils.isEffectivelyEnabled(dialog));
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // supportsTogglePopup — top-level windows (JFrame, JDialog)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jFrame_doesNotSupportTogglePopup() {
+        JFrame frame = new JFrame("Test");
+        createdWindows.add(frame);
+        assertEquals(-1, SwingUtils.supportsTogglePopup(frame));
+    }
+
+    @Test
+    void jDialog_doesNotSupportTogglePopup() {
+        JDialog dialog = newNonModalDialog();
+        assertEquals(-1, SwingUtils.supportsTogglePopup(dialog));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // supportsGetText / supportsSetText — top-level windows (JFrame, JDialog)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jFrame_doesNotSupportGetText() {
+        JFrame frame = new JFrame("Test");
+        createdWindows.add(frame);
+        assertFalse(SwingUtils.supportsGetText(frame));
+    }
+
+    @Test
+    void jFrame_doesNotSupportSetText() {
+        JFrame frame = new JFrame("Test");
+        createdWindows.add(frame);
+        assertFalse(SwingUtils.supportsSetText(frame));
+    }
+
+    @Test
+    void jDialog_doesNotSupportGetText() {
+        JDialog dialog = newNonModalDialog();
+        assertFalse(SwingUtils.supportsGetText(dialog));
+    }
+
+    @Test
+    void jDialog_doesNotSupportSetText() {
+        JDialog dialog = newNonModalDialog();
+        assertFalse(SwingUtils.supportsSetText(dialog));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // supportsGetValue / supportsSetValue — top-level windows (JFrame, JDialog)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jFrame_doesNotSupportGetValue() {
+        JFrame frame = new JFrame("Test");
+        createdWindows.add(frame);
+        assertFalse(SwingUtils.supportsGetValue(frame));
+    }
+
+    @Test
+    void jFrame_doesNotSupportSetValue() {
+        JFrame frame = new JFrame("Test");
+        createdWindows.add(frame);
+        assertFalse(SwingUtils.supportsSetValue(frame));
+    }
+
+    @Test
+    void jDialog_doesNotSupportGetValue() {
+        JDialog dialog = newNonModalDialog();
+        assertFalse(SwingUtils.supportsGetValue(dialog));
+    }
+
+    @Test
+    void jDialog_doesNotSupportSetValue() {
+        JDialog dialog = newNonModalDialog();
+        assertFalse(SwingUtils.supportsSetValue(dialog));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // supportsSelection — top-level windows (JFrame, JDialog)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jFrame_doesNotSupportSelection() {
+        JFrame frame = new JFrame("Test");
+        createdWindows.add(frame);
+        assertFalse(SwingUtils.supportsSelection(frame));
+    }
+
+    @Test
+    void jDialog_doesNotSupportSelection() {
+        JDialog dialog = newNonModalDialog();
+        assertFalse(SwingUtils.supportsSelection(dialog));
+    }
 }
