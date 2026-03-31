@@ -29,7 +29,7 @@
 | BR-05 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
 | BR-06 | On `JPasswordField`, the tool returns the echo characters (the masked representation), **not** the actual password. This is the default behavior of `AccessibleText` on `JPasswordField` — `AccessibleJPasswordField` overrides `getTextRange()`, `getAtIndex()`, and all related methods to replace every character with the echo char. No special handling is needed. |
 | BR-07 | `swing_get_text` is a read-only tool: `isMutation()` returns `false` and the ref map is **not** cleared after invocation. |
-| BR-08 | If the text content is empty (zero characters), the tool returns an empty string (not an error). |
+| BR-08 | If the text content is empty (zero characters), the tool returns `MCPProtocol.Content.text("")` — an explicit empty-string text result, not `null`. A `null` return would produce an empty content array (`"content": []`), which signals "no result"; an empty string signals "the field exists and is empty". |
 | BR-09 | The returned text is capped at `MAX_TEXT_LENGTH` characters (static final constant, initially **1000**). If the text is longer, only the first `MAX_TEXT_LENGTH` characters are returned, followed by `"\n... (truncated, N total characters)"`. |
 | BR-10 | No enabled check is performed — reading text is always allowed, even on disabled components. |
 | BR-11 | `JEditorPane` with HTML content returns the rendered text (stripped of HTML tags), not the raw HTML source. This is the default behavior of `AccessibleText` on `AccessibleJEditorPaneHTML`. Accepted as-is; revisit if the AI needs raw HTML in the future. |

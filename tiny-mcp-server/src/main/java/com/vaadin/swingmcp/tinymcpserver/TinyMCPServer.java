@@ -42,8 +42,12 @@ public class TinyMCPServer {
      * and {@code Boolean} for boolean parameters. Optional parameters absent from the call
      * are not included in the map.
      *
-     * <p>Returning {@code null} produces an empty content array in the response.
-     * Throwing {@link MCPErrorResponseException} produces {@code isError=true} with
+     * <p>The MCP specification defines {@code CallToolResult.content} as a required
+     * JSON array with no minimum size. Returning {@code null} produces an empty
+     * content array ({@code []}); returning a non-null {@link MCPProtocol.Content}
+     * produces a single-element array.
+     *
+     * <p>Throwing {@link MCPErrorResponseException} produces {@code isError=true} with
      * the exception's message as the text content (no Java class name prefix).
      * Throwing any other exception also produces {@code isError=true} but uses
      * {@link Throwable#toString()} as the text content.
@@ -55,7 +59,8 @@ public class TinyMCPServer {
          * Invokes the tool.
          *
          * @param params the parameter values, never null
-         * @return the result content, or {@code null} for an empty result
+         * @return the result content (wrapped in a single-element array),
+         *         or {@code null} for an empty result (produces {@code "content": []})
          * @throws MCPErrorResponseException to return {@code isError=true} with a clean message
          * @throws MCPServerException to return a JSON-RPC protocol error
          * @throws Exception if tool execution fails unexpectedly
