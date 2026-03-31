@@ -54,4 +54,27 @@ public class SwingToolContext {
         }
         return result;
     }
+
+    /**
+     * Returns the ref assigned to the given component. For test use only.
+     * <p>
+     * Casts the component to {@link Accessible} and performs a reverse lookup
+     * in the ref map. Throws {@link IllegalStateException} if the component
+     * has no ref assigned (e.g. snapshot was not called, or the component has
+     * no actions).
+     *
+     * @param component the component to look up
+     * @return the ref number (always positive)
+     * @throws IllegalStateException if no ref is assigned to this component
+     */
+    public int getRefOf(Component component) {
+        Accessible accessible = (Accessible) component;
+        for (var entry : componentRefs.entrySet()) {
+            if (entry.getValue() == accessible) {
+                return entry.getKey();
+            }
+        }
+        throw new IllegalStateException("No ref assigned to " + component.getClass().getSimpleName()
+                + ". Was swing_snapshot called? Does the component have actions?");
+    }
 }

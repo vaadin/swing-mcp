@@ -1,5 +1,10 @@
 package com.vaadin.swingmcp.mcp;
 
+import javax.accessibility.Accessible;
+import javax.accessibility.AccessibleAction;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleState;
+import javax.swing.UIManager;
 import java.awt.Dialog;
 import java.awt.KeyboardFocusManager;
 import java.awt.Window;
@@ -10,6 +15,51 @@ import java.awt.Window;
 public final class SwingUtils {
 
     private SwingUtils() {
+    }
+
+    /**
+     * Returns the action index for the click action on the given accessible,
+     * or {@code -1} if the accessible does not support click.
+     * <p>
+     * Checks both {@link AccessibleAction#CLICK} (AWT literal) and
+     * {@link UIManager#getString(Object)} for {@code "AbstractButton.clickText"}
+     * (Swing UIManager) to handle locale-safe matching.
+     *
+     * @see <a href="architecture.md">architecture.md § 4 — Detecting Click Support</a>
+     */
+    public static int supportsClick(Accessible a) {
+        AccessibleContext ac = a.getAccessibleContext();
+        if (ac == null) return -1;
+        AccessibleAction aa = ac.getAccessibleAction();
+        if (aa == null) return -1;
+        String clickText = UIManager.getString("AbstractButton.clickText");
+        for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
+            String desc = aa.getAccessibleActionDescription(i);
+            if (AccessibleAction.CLICK.equals(desc)
+                    || (clickText != null && clickText.equals(desc))) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Returns whether the given accessible is effectively enabled: the
+     * accessible itself must have {@link AccessibleState#ENABLED} in its
+     * state set, and its parent (if any) must also be effectively enabled.
+     * <p>
+     * Virtual accessible children (e.g. JList items, JTable cells) may not
+     * propagate the parent component's disabled state, so this method walks
+     * the entire parent chain.
+     *
+     * @see <a href="architecture.md">architecture.md § 4 — Effectively Enabled Check</a>
+     */
+    public static boolean isEffectivelyEnabled(Accessible a) {
+        AccessibleContext ac = a.getAccessibleContext();
+        if (ac == null) return false;
+        if (!ac.getAccessibleStateSet().contains(AccessibleState.ENABLED)) return false;
+        Accessible parent = ac.getAccessibleParent();
+        return parent == null || isEffectivelyEnabled(parent);
     }
 
     /**
