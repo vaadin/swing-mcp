@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** set the text content of a UI component by ref **so that** I can fill in text fields, text areas, and other editable text components.
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-03-31
 
 ---
@@ -58,16 +58,16 @@ Execution order:
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_set_text` with a valid ref for a `JTextField` and a `text` parameter replaces the field's text.
-- [ ] Calling `swing_set_text` with a valid ref for a `JTextArea` and a multi-line `text` parameter sets the full content.
-- [ ] Calling `swing_set_text` with `text = ""` clears the text content.
-- [ ] Calling `swing_set_text` with an invalid ref returns an MCP error with a recovery message.
-- [ ] Calling `swing_set_text` on a component that does not support `set_text` (e.g. `JLabel`) returns an MCP error suggesting to call `swing_snapshot`.
-- [ ] Calling `swing_set_text` on a disabled component returns an MCP error explaining the component is disabled.
-- [ ] Calling `swing_set_text` on a non-editable text component (`setEditable(false)`) returns an MCP error saying the component is not editable.
-- [ ] The ref map is cleared after a successful `swing_set_text` call (mutation tool).
-- [ ] The ref map is cleared even after a failed `swing_set_text` call that passed ref lookup (e.g. disabled component).
-- [ ] The tool returns `null` (empty content array) on success, consistent with `swing_click`.
+- [x] Calling `swing_set_text` with a valid ref for a `JTextField` and a `text` parameter replaces the field's text.
+- [x] Calling `swing_set_text` with a valid ref for a `JTextArea` and a multi-line `text` parameter sets the full content.
+- [x] Calling `swing_set_text` with `text = ""` clears the text content.
+- [x] Calling `swing_set_text` with an invalid ref returns an MCP error with a recovery message.
+- [x] Calling `swing_set_text` on a component that does not support `set_text` (e.g. `JLabel`) returns an MCP error suggesting to call `swing_snapshot`.
+- [x] Calling `swing_set_text` on a disabled component returns an MCP error explaining the component is disabled.
+- [x] Calling `swing_set_text` on a non-editable text component (`setEditable(false)`) returns an MCP error saying the component is not editable.
+- [x] The ref map is cleared after a successful `swing_set_text` call (mutation tool).
+- [x] The ref map is cleared even after a failed `swing_set_text` call that passed ref lookup (e.g. disabled component).
+- [x] The tool returns `null` (empty content array) on success, consistent with `swing_click`.
 
 ---
 
@@ -75,20 +75,20 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingSetTextTest`
-  - [ ] Setting text on a `JTextField` replaces its content.
-  - [ ] Setting text on a `JTextArea` with multi-line content works correctly.
-  - [ ] Setting text on a `JPasswordField` updates the password.
-  - [ ] Setting an empty string clears the text field.
-  - [ ] Setting text with an invalid ref returns an MCP error with `isError: true`.
-  - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
-  - [ ] Setting text on a component without `set_text` support (e.g. `JSlider`) returns an MCP error with `isError: true`.
-  - [ ] Setting text on a disabled `JTextField` returns an MCP error with `isError: true` explaining the component is disabled.
-  - [ ] Setting text on a non-editable `JTextField` (`setEditable(false)`) returns an MCP error with `isError: true` saying the component is not editable.
-  - [ ] The ref map is cleared after a successful `swing_set_text` call (verified by attempting to use the same ref again, which should fail).
-  - [ ] The ref map is cleared after a failed `swing_set_text` call on a disabled component.
-  - [ ] Setting text on a `JTextField` fires a `DocumentListener` event.
-  - [ ] Each component from the component matrix is tested (dedicated test method per component).
+- [x] `SwingSetTextTest`
+  - [x] Setting text on a `JTextField` replaces its content.
+  - [x] Setting text on a `JTextArea` with multi-line content works correctly.
+  - [x] Setting text on a `JPasswordField` updates the password.
+  - [x] Setting an empty string clears the text field.
+  - [x] Setting text with an invalid ref returns an MCP error with `isError: true`.
+  - [x] The error message suggests calling `swing_snapshot` to refresh refs.
+  - [x] Setting text on a component without `set_text` support (e.g. `JSlider`) returns an MCP error with `isError: true`.
+  - [x] Setting text on a disabled `JTextField` returns an MCP error with `isError: true` explaining the component is disabled.
+  - [x] Setting text on a non-editable `JTextField` (`setEditable(false)`) returns an MCP error with `isError: true` saying the component is not editable.
+  - [x] The ref map is cleared after a successful `swing_set_text` call (verified by attempting to use the same ref again, which should fail).
+  - [x] The ref map is cleared after a failed `swing_set_text` call on a disabled component.
+  - [x] Setting text on a `JTextField` fires a `DocumentListener` event.
+  - [x] Each component from the component matrix is tested (dedicated test method per component).
 
 ### Component matrix
 
