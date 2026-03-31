@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** open or close the popup of a UI component by ref **so that** I can expand a combo box to reveal its items or collapse it after selection.
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-03-31
 
 ---
@@ -49,13 +49,13 @@ Execution order:
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_toggle_popup` with a valid ref for a `JComboBox` opens the popup (requires display — verified in `SwingTogglePopupScreenTest`).
-- [ ] Calling `swing_toggle_popup` again on the same `JComboBox` closes the popup (requires display — verified in `SwingTogglePopupScreenTest`).
-- [ ] Calling `swing_toggle_popup` with an invalid ref returns an MCP error with a recovery message.
-- [ ] Calling `swing_toggle_popup` on a component that does not support toggle-popup (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [ ] Calling `swing_toggle_popup` on a disabled `JComboBox` returns an MCP error explaining the component is disabled.
-- [ ] The tool returns `null` on success.
-- [ ] The ref map is cleared after every `swing_toggle_popup` call (mutation tool).
+- [x] Calling `swing_toggle_popup` with a valid ref for a `JComboBox` opens the popup (requires display — verified in `SwingTogglePopupScreenTest`).
+- [x] Calling `swing_toggle_popup` again on the same `JComboBox` closes the popup (requires display — verified in `SwingTogglePopupScreenTest`).
+- [x] Calling `swing_toggle_popup` with an invalid ref returns an MCP error with a recovery message.
+- [x] Calling `swing_toggle_popup` on a component that does not support toggle-popup (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
+- [x] Calling `swing_toggle_popup` on a disabled `JComboBox` returns an MCP error explaining the component is disabled.
+- [x] The tool returns `null` on success.
+- [x] The ref map is cleared after every `swing_toggle_popup` call (mutation tool).
 
 ---
 
@@ -63,21 +63,21 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingTogglePopupTest` (headless — error cases only; see BR-10)
-  - [ ] Invalid ref returns an MCP error with `isError: true`.
-  - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
-  - [ ] Component without toggle-popup support (e.g. `JButton`) returns an MCP error with `isError: true`.
-  - [ ] Disabled `JComboBox` returns an MCP error with `isError: true` explaining the component is disabled.
-  - [ ] Each component from the component matrix is tested (dedicated test method per component).
+- [x] `SwingTogglePopupTest` (headless — error cases only; see BR-10)
+  - [x] Invalid ref returns an MCP error with `isError: true`.
+  - [x] The error message suggests calling `swing_snapshot` to refresh refs.
+  - [x] Component without toggle-popup support (e.g. `JButton`) returns an MCP error with `isError: true`.
+  - [x] Disabled `JComboBox` returns an MCP error with `isError: true` explaining the component is disabled.
+  - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [ ] `SwingTogglePopupScreenTest` (`testSwing` — requires display; happy-path tests live here per BR-10)
-  - [ ] Toggling popup on a non-editable `JComboBox` inside `JFrame` opens it (verified via `isPopupVisible()`).
-  - [ ] Toggling popup again closes it.
-  - [ ] Toggling popup on an editable `JComboBox` inside `JFrame` opens it (BR-11).
-  - [ ] Toggling popup on a `JComboBox` inside `JDialog` opens it.
-  - [ ] Success returns `null`.
-  - [ ] Ref map is cleared after a successful call.
-  - [ ] MCP client smoke test.
+- [x] `SwingTogglePopupScreenTest` (`testSwing` — requires display; happy-path tests live here per BR-10)
+  - [x] Toggling popup on a non-editable `JComboBox` inside `JFrame` opens it (verified via `isPopupVisible()`).
+  - [x] Toggling popup again closes it.
+  - [x] Toggling popup on an editable `JComboBox` inside `JFrame` opens it (BR-11).
+  - [x] Toggling popup on a `JComboBox` inside `JDialog` opens it.
+  - [x] Success returns `null`.
+  - [x] Ref map is cleared after a successful call.
+  - [x] MCP client smoke test.
 
 ### Component matrix
 

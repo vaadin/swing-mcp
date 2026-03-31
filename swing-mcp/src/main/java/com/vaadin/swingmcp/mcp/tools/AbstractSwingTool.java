@@ -18,6 +18,7 @@ public abstract class AbstractSwingTool {
     public static final String TOOL_SWING_SNAPSHOT = "swing_snapshot";
     public static final String TOOL_SWING_SCREENSHOT = "swing_screenshot";
     public static final String TOOL_SWING_CLICK = "swing_click";
+    public static final String TOOL_SWING_TOGGLE_POPUP = "swing_toggle_popup";
     public static final String TOOL_SWING_GET_TEXT = "swing_get_text";
     public static final String TOOL_SWING_SET_TEXT = "swing_set_text";
     public static final String TOOL_SWING_SET_VALUE = "swing_set_value";
