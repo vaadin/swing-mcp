@@ -64,6 +64,7 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
             snapshot(frame);
             MCPProtocol.Content result = togglePopup(context.getRefOf(combo));
             assertNull(result, "Success should return null");
+            SwingUtilities.invokeAndWait(() -> {}); // flush EDT
             assertTrue(combo.isPopupVisible(), "Popup should be open after toggle");
         } finally {
             frame.dispose();
