@@ -166,12 +166,30 @@ public final class SwingUtils {
      * @see <a href="use-case-008-swing-increment.md">UC-008 BR-03</a>
      */
     public static int supportsIncrement(Accessible a) {
+        return supportsAction(a, AccessibleAction.INCREMENT);
+    }
+
+    /**
+     * Returns the action index for the decrement action on the given accessible,
+     * or {@code -1} if the accessible does not support decrement.
+     * <p>
+     * Matches by {@link AccessibleAction#DECREMENT} static constant directly.
+     * {@code JSlider} and {@code JSpinner} use the static field without any
+     * UIManager indirection, so no locale-specific fallback is needed.
+     *
+     * @see <a href="use-case-009-swing-decrement.md">UC-009 BR-03</a>
+     */
+    public static int supportsDecrement(Accessible a) {
+        return supportsAction(a, AccessibleAction.DECREMENT);
+    }
+
+    private static int supportsAction(Accessible a, String actionName) {
         AccessibleContext ac = a.getAccessibleContext();
         if (ac == null) return -1;
         AccessibleAction aa = ac.getAccessibleAction();
         if (aa == null) return -1;
         for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
-            if (AccessibleAction.INCREMENT.equals(aa.getAccessibleActionDescription(i))) {
+            if (actionName.equals(aa.getAccessibleActionDescription(i))) {
                 return i;
             }
         }
