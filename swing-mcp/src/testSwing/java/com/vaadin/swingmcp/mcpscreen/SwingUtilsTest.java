@@ -11,6 +11,12 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Screen-mode tests for {@link SwingUtils}.
+ * Covers getTopmostModalDialog, plus supportsClick and isEffectivelyEnabled
+ * for top-level window components (JFrame, JDialog) that require a display.
+ */
+
 class SwingUtilsTest extends AbstractScreenTest {
 
     private final List<Window> createdWindows = new ArrayList<>();
@@ -125,5 +131,54 @@ class SwingUtilsTest extends AbstractScreenTest {
         setVisible(modal, true);
 
         assertSame(modal, SwingUtils.getTopmostModalDialog());
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // supportsClick — top-level windows (JFrame, JDialog)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jFrame_doesNotSupportClick() {
+        JFrame frame = new JFrame("Test");
+        createdWindows.add(frame);
+        assertEquals(-1, SwingUtils.supportsClick(frame));
+    }
+
+    @Test
+    void jDialog_doesNotSupportClick() {
+        JDialog dialog = newNonModalDialog();
+        assertEquals(-1, SwingUtils.supportsClick(dialog));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // isEffectivelyEnabled — top-level windows (JFrame, JDialog)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jFrame_enabledByDefault() {
+        JFrame frame = new JFrame("Test");
+        createdWindows.add(frame);
+        assertTrue(SwingUtils.isEffectivelyEnabled(frame));
+    }
+
+    @Test
+    void jFrame_disabled() {
+        JFrame frame = new JFrame("Test");
+        createdWindows.add(frame);
+        frame.setEnabled(false);
+        assertFalse(SwingUtils.isEffectivelyEnabled(frame));
+    }
+
+    @Test
+    void jDialog_enabledByDefault() {
+        JDialog dialog = newNonModalDialog();
+        assertTrue(SwingUtils.isEffectivelyEnabled(dialog));
+    }
+
+    @Test
+    void jDialog_disabled() {
+        JDialog dialog = newNonModalDialog();
+        dialog.setEnabled(false);
+        assertFalse(SwingUtils.isEffectivelyEnabled(dialog));
     }
 }
