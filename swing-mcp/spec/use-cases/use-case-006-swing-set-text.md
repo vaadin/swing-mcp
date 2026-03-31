@@ -90,6 +90,16 @@ Execution order:
   - [x] Setting text on a `JTextField` fires a `DocumentListener` event.
   - [x] Each component from the component matrix is tested (dedicated test method per component).
 
+- [x] `SwingSetTextScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+  - [x] Setting text on a `JTextField` inside `JFrame` replaces its content.
+  - [x] Setting text on a `JPasswordField` inside `JFrame` updates the password.
+  - [x] Setting text on a `JTextArea` inside `JFrame` sets multi-line content.
+  - [x] Setting text on a disabled field inside `JFrame` returns an MCP error.
+  - [x] Setting text on a non-editable field inside `JFrame` returns an MCP error.
+  - [x] Setting text on a `JTextField` inside `JDialog` replaces its content.
+  - [x] Setting text on a `JPasswordField` inside `JDialog` updates the password.
+  - [x] Clearing a `JTextField` inside `JDialog` with empty string succeeds.
+
 ### Component matrix
 
 Each component from the verification matrix gets a dedicated test method.

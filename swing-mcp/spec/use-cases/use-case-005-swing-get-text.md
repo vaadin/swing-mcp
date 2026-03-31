@@ -91,6 +91,14 @@ Execution order:
   - [x] Text exactly at `MAX_TEXT_LENGTH` is returned without truncation.
   - [x] Each component from the component matrix is tested (dedicated test method per component).
 
+- [x] `SwingGetTextScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+  - [x] Reading a `JTextField` inside `JFrame` returns its content.
+  - [x] Reading a `JPasswordField` inside `JFrame` returns echo characters.
+  - [x] Reading a `JTextArea` inside `JFrame` returns multi-line content.
+  - [x] Reading a `JTextField` inside `JDialog` returns its content.
+  - [x] Reading a `JPasswordField` inside `JDialog` returns echo characters.
+  - [x] Reading an empty `JTextField` inside `JDialog` returns an empty string.
+
 ### Component matrix
 
 Each component from the verification matrix gets a dedicated test method.

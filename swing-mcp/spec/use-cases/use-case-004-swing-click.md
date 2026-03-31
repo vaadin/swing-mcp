@@ -67,3 +67,11 @@ Execution order:
   - [ ] Clicking a component without click support (e.g. `JSlider`) returns an MCP error with `isError: true`.
   - [ ] Each component from the component matrix is tested.
 
+- [x] `SwingClickScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+  - [x] Clicking a button inside `JFrame` triggers its action listener.
+  - [x] Clicking a checkbox inside `JFrame` toggles its state.
+  - [x] Clicking a disabled button inside `JFrame` returns an MCP error.
+  - [x] Clicking a button inside `JDialog` triggers its action listener.
+  - [x] Clicking a checkbox inside `JDialog` toggles its state.
+  - [x] Clicking a disabled button inside `JDialog` returns an MCP error.
+

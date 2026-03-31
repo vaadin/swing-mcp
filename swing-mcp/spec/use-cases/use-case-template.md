@@ -46,6 +46,10 @@
 
 > Write UI tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] [Test class name — e.g., `BrowseMoviesTest`]
-- [ ] [What each test covers — map to acceptance criteria and business rules]
+- [ ] `[FeatureName]Test` (headless)
+  - [ ] [What each test covers — map to acceptance criteria and business rules]
+
+- [ ] `[FeatureName]ScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+  - [ ] Happy-path operation on a component inside `JFrame`.
+  - [ ] Happy-path operation on a component inside `JDialog`.
 

@@ -1,0 +1,88 @@
+# UC-007: swing_toggle_popup
+
+---
+
+**As an** AI agent, **I want to** open or close the popup of a UI component by ref **so that** I can expand a combo box to reveal its items or collapse it after selection.
+
+**Status:** Draft
+**Date:** 2026-03-31
+
+---
+
+## Main Flow
+
+- I first call `swing_snapshot` to obtain refs for the current UI state.
+- I call `swing_toggle_popup` with the `ref` parameter identifying the component.
+- The tool looks up the component by ref and invokes the toggle-popup `AccessibleAction`.
+- The tool returns `null` (empty content array) on success.
+- I call `swing_snapshot` again to get fresh refs reflecting any UI changes (e.g. new items visible after popup opens).
+
+---
+
+## Business Rules
+
+| ID | Rule |
+|----|------|
+| BR-01 | The `ref` parameter is required and must be an integer. |
+| BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
+| BR-03 | The toggle-popup action is invoked by finding and calling `doAccessibleAction(i)` where `i` is the index returned by `SwingUtils.supportsTogglePopup(accessible)`. See **architecture.md § 4 — Detecting Toggle-Popup Support** for the full detection algorithm. |
+| BR-04 | If the target does not support toggle-popup (i.e. `SwingUtils.supportsTogglePopup(accessible)` returns `-1`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support toggle_popup. Call swing_snapshot to verify the list of actions". |
+| BR-05 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
+| BR-06 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. |
+| BR-07 | If `doAccessibleAction(i)` returns `false`, the tool returns an MCP-level error (`isError: true`) with the message "The action was not performed, no additional information has been provided". |
+| BR-08 | `swing_toggle_popup` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after invocation (even on failure, via `finally`). |
+| BR-09 | The tool toggles the popup regardless of its current open/closed state. If the popup is already open, calling this tool closes it; if closed, it opens it. The AI can infer the current state from the snapshot. |
+
+### Algorithm: detecting and invoking the toggle-popup action
+
+See **architecture.md § 4 — Detecting Toggle-Popup Support** for the full algorithm.
+
+Execution order:
+1. **BR-02** — ref lookup (fail fast if ref is invalid).
+2. **BR-04** — `int i = SwingUtils.supportsTogglePopup(accessible)` — if `i < 0`, fail before walking the parent chain.
+3. **BR-06** — `SwingUtils.isEffectivelyEnabled(accessible)` — only checked when the action exists.
+4. **BR-07** — `doAccessibleAction(i)` — if it returns `false`, report failure.
+
+---
+
+## Acceptance Criteria
+
+- [ ] Calling `swing_toggle_popup` with a valid ref for a `JComboBox` opens the popup.
+- [ ] Calling `swing_toggle_popup` again on the same `JComboBox` closes the popup.
+- [ ] Calling `swing_toggle_popup` with an invalid ref returns an MCP error with a recovery message.
+- [ ] Calling `swing_toggle_popup` on a component that does not support toggle-popup (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
+- [ ] Calling `swing_toggle_popup` on a disabled `JComboBox` returns an MCP error explaining the component is disabled.
+- [ ] The tool returns `null` on success.
+- [ ] The ref map is cleared after every `swing_toggle_popup` call (mutation tool).
+
+---
+
+## Tests
+
+> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+
+- [ ] `SwingTogglePopupTest`
+  - [ ] Toggling popup on a `JComboBox` opens it (verified via `isPopupVisible()`).
+  - [ ] Toggling popup again on the same `JComboBox` closes it.
+  - [ ] Invalid ref returns an MCP error with `isError: true`.
+  - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
+  - [ ] Component without toggle-popup support (e.g. `JButton`) returns an MCP error with `isError: true`.
+  - [ ] Disabled `JComboBox` returns an MCP error with `isError: true` explaining the component is disabled.
+  - [ ] Success returns `null`.
+  - [ ] Ref map is cleared after a successful call.
+  - [ ] MCP client smoke test.
+  - [ ] Each component from the component matrix is tested (dedicated test method per component).
+
+- [ ] `SwingTogglePopupScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+  - [ ] Toggling popup on a `JComboBox` inside `JFrame` opens it.
+  - [ ] Toggling popup on a `JComboBox` inside `JDialog` opens it.
+
+### Component matrix
+
+Each component from the verification matrix gets a dedicated test method.
+
+**Expected to succeed (`toggle_popup` supported):**
+`JComboBox`
+
+**Expected to fail with "Component does not support toggle_popup" error:**
+`JButton`, `JTextField`, `JPasswordField`, `JTextArea`, `JCheckBox`, `JRadioButton`, `JToggleButton`, `JSpinner`, `JSlider`, `JPanel`, `JScrollPane`, `JTabbedPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`, `JList`
