@@ -27,10 +27,11 @@
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
 | BR-03 | The click is performed by finding and invoking the component's `AccessibleAction` whose description matches the click action (see algorithm below). |
 | BR-04 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
+| BR-05 | If the target component is disabled (`AccessibleStateSet` does not contain `AccessibleState.ENABLED`), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled and cannot be clicked. See **architecture.md § 6** — Tool execution level. |
 
 ### Algorithm: detecting and invoking the click action
 
-See **architecture.md § 4 — Detecting Click Support** for the full algorithm and rationale.
+See **architecture.md § 4 — Detecting Click Support** for the full algorithm and rationale, and **architecture.md § 6 — Action Detection Summary** for the authoritative action-to-tool mapping.
 
 To invoke the click, call `doAccessibleAction(i)` on the matching index `i`.
 
@@ -41,6 +42,7 @@ To invoke the click, call `doAccessibleAction(i)` on the matching index `i`.
 - [ ] Calling `swing_click` with a valid ref for a button triggers the button's action.
 - [ ] Calling `swing_click` with a valid ref for a checkbox toggles its state.
 - [ ] Calling `swing_click` with an invalid ref returns an MCP error with a recovery message.
+- [ ] Calling `swing_click` on a disabled component returns an MCP error explaining the component is disabled.
 - [ ] The tool returns an empty string on success.
 
 ---
@@ -54,5 +56,6 @@ To invoke the click, call `doAccessibleAction(i)` on the matching index `i`.
   - [ ] Clicking a checkbox ref toggles its selected state.
   - [ ] Clicking an invalid ref returns an MCP error with `isError: true`.
   - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
+  - [ ] Clicking a disabled button returns an MCP error with `isError: true` explaining the component is disabled.
   - [ ] Each component from the component matrix is tested.
 
