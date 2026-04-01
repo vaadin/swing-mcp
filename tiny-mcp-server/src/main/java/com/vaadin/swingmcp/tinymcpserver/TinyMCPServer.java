@@ -153,7 +153,16 @@ public class TinyMCPServer {
             return t;
         }));
         httpServer.createContext(contextPath, this::handleRequest);
-        httpServer.start();
+        // Start from a daemon thread so that HTTP-Dispatcher inherits daemon status,
+        // preventing it from keeping the JVM alive after the Swing app closes.
+        Thread starter = new Thread(httpServer::start, "mcp-server-starter");
+        starter.setDaemon(true);
+        starter.start();
+        try {
+            starter.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         LOG.info("TinyMCPServer started on " + getUrl());
     }
 
