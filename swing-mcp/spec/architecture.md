@@ -53,11 +53,11 @@ Every Swing tool must extend that class. When swing tool is registered to
 MCPServer, it must register a wrapper ToolFunction which, upon invocation:
 
 1. Acquires the MCPServer-level lock (see **Concurrency** below).
-2. Calls `runInEDT()` to run the tool on the EDT.
-3. Retrieves a list of considered components.
-4. Calls `AbstractSwingTool.execute()`.
-5. If `isMutation()` is true, clears the ref map in a `finally` block (even on exception).
-6. Returns the result.
+2. Calls `runInEDT()` with a block that (all on the EDT):
+   a. Retrieves a list of considered components.
+   b. Calls `AbstractSwingTool.execute()`.
+   c. If `isMutation()` is true, clears the ref map in a `finally` block (even on exception).
+3. Returns the result.
 
 **Mutation tools use fire-and-forget dispatch** (see **Fire-and-Forget Mutation Dispatch** below):
 `execute()` performs validation on the EDT, then posts the action via `SwingUtilities.invokeLater()` and returns `null` immediately.

@@ -48,7 +48,6 @@ Execution order:
 - [ ] Calling `swing_click` with an invalid ref returns an MCP error with a recovery message.
 - [ ] Calling `swing_click` on a disabled component returns an MCP error explaining the component is disabled.
 - [ ] Calling `swing_click` on a component that does not support click returns an MCP error suggesting to call `swing_snapshot`.
-- [ ] The tool returns `null` on success.
 
 ---
 
