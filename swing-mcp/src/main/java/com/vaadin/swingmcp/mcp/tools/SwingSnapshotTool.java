@@ -536,6 +536,11 @@ public class SwingSnapshotTool extends AbstractSwingTool {
             actions.add("get_children");
         }
 
+        // Step 7: close (synthetic, for windows only)
+        if (SwingUtils.supportsClose(accessible)) {
+            actions.add("close");
+        }
+
         return actions;
     }
 
@@ -555,7 +560,8 @@ public class SwingSnapshotTool extends AbstractSwingTool {
                 || hasKnownActionConstant(ctx)
                 || SwingUtils.supportsGetText(accessible)
                 || SwingUtils.supportsGetValue(accessible)
-                || SwingUtils.supportsSelection(accessible);
+                || SwingUtils.supportsSelection(accessible)
+                || SwingUtils.supportsClose(accessible);
     }
 
     private static boolean hasKnownActionConstant(AccessibleContext ctx) {

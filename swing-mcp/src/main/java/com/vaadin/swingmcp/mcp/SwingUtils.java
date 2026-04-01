@@ -1,8 +1,11 @@
 package com.vaadin.swingmcp.mcp;
 
 import javax.accessibility.*;
+import javax.swing.JFrame;
 import javax.swing.UIManager;
+import javax.swing.WindowConstants;
 import java.awt.Dialog;
+import java.awt.Frame;
 import java.awt.KeyboardFocusManager;
 import java.awt.Window;
 import java.util.Set;
@@ -208,6 +211,25 @@ public final class SwingUtils {
             }
         }
         return -1;
+    }
+
+    /**
+     * Returns {@code true} if the accessible supports the synthetic {@code close} action.
+     * <p>
+     * Close is available for top-level windows (JFrame, JDialog) that are showing,
+     * have OS decorations, and will not terminate the JVM on close.
+     *
+     * @see <a href="architecture.md">architecture.md § 4 — Detecting Close Support</a>
+     */
+    public static boolean supportsClose(Accessible a) {
+        if (!(a instanceof Window)) return false;
+        Window window = (Window) a;
+        if (!window.isShowing()) return false;
+        if (window instanceof Frame && ((Frame) window).isUndecorated()) return false;
+        if (window instanceof Dialog && ((Dialog) window).isUndecorated()) return false;
+        if (window instanceof JFrame &&
+                ((JFrame) window).getDefaultCloseOperation() == WindowConstants.EXIT_ON_CLOSE) return false;
+        return true;
     }
 
     /**

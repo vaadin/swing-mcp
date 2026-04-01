@@ -59,6 +59,7 @@ public class MCPServer {
         registerTool(new com.vaadin.swingmcp.mcp.tools.SwingGetTextTool());
         registerTool(new com.vaadin.swingmcp.mcp.tools.SwingSetTextTool());
         registerTool(new com.vaadin.swingmcp.mcp.tools.SwingToggleExpandTool());
+        registerTool(new com.vaadin.swingmcp.mcp.tools.SwingCloseTool());
     }
 
     private final SwingToolContext context = new SwingToolContext();
