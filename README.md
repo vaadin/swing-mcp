@@ -15,21 +15,15 @@ Two subprojects:
 
 ### Blocking modal dialogs
 
-Swing-MCP assumes the target Swing app **does not use blocking modal dialogs**
-(e.g., `JOptionPane.showMessageDialog()`, `JOptionPane.showConfirmDialog()`,
-`JFileChooser.showOpenDialog()`, and similar calls that block the EDT).
+Swing-MCP handles apps that open blocking modal dialogs (e.g.
+`JOptionPane.showMessageDialog()`) from action listeners. Mutation tools
+dispatch their action via `SwingUtilities.invokeLater()` and return
+immediately, so the HTTP response is sent before the action runs on the EDT.
+The AI client observes the result on the next `swing_snapshot` or
+`swing_screenshot` call.
 
-**Why:** Swing-MCP marshals all UI access onto the EDT via
-`SwingUtilities.invokeAndWait()`. If the EDT is blocked by a modal dialog,
-the MCP HTTP request will deadlock until the dialog is dismissed manually.
-
-**What to do:** Before using Swing-MCP, replace blocking dialog calls in the
-Swing app with non-blocking alternatives. This preparation step is also
-beneficial for the Vaadin migration itself, since blocking dialogs similarly
-prevent the Vaadin web UI from rendering.
-
-If a blocking dialog is detected at runtime, Swing-MCP logs an error.
-The server will remain unresponsive until the dialog is dismissed.
+If the EDT becomes unresponsive for any other reason, Swing-MCP will time out
+after 10 seconds and return an error that includes the EDT stack trace.
 
 ### Single session
 
