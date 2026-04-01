@@ -403,7 +403,7 @@ All action names follow lower-case underscore-separated format.
 |---|---|---|
 | `getAccessibleText()` | Text is readable | `get_text` |
 | `getAccessibleEditableText()` | Text is readable **and** writable (`AccessibleEditableText` extends `AccessibleText`) | `get_text`, `set_text` |
-| `getAccessibleValue()` | Numeric value is readable; writable only if the component is not a known read-only role (see `supportsSetValue()`) | `get_value`; `set_value` only when `supportsSetValue()` |
+| `getAccessibleValue()` | Numeric value is readable; writable only if the component is not a known read-only role (see `supportsSetValue()`). **Note:** `getAccessibleValue()` non-null is necessary but not sufficient — `getCurrentAccessibleValue()` must also return non-null (see JSpinner false-positive in § 5). | `get_value`; `set_value` only when `supportsSetValue()` |
 | `getAccessibleSelection()` | Selection is readable and writable (no read-only variant in the API) | `get_selection`, `set_selection`, `clear_selection`, `select_all`, `get_children_count`, `get_children` |
 
 ### Detection
@@ -419,9 +419,18 @@ boolean supportsSetText(Accessible a) {
     return ac != null && ac.getAccessibleEditableText() != null;
 }
 
+// JSpinner exposes AccessibleValue.getAccessibleValue() == non-null for ALL model types
+// (SpinnerNumberModel, SpinnerDateModel, SpinnerListModel), because AccessibleJSpinner
+// always returns `this`. However, getCurrentAccessibleValue() returns null when the
+// model's current value is not a Number (e.g. Date, String). The extra null-check below
+// suppresses get_value / set_value for non-number spinners.
 boolean supportsGetValue(Accessible a) {
     AccessibleContext ac = a.getAccessibleContext();
-    return ac != null && ac.getAccessibleValue() != null;
+    if (ac == null) return false;
+    AccessibleValue av = ac.getAccessibleValue();
+    if (av == null) return false;
+    if (SUPPRESSED_VALUE_ROLES.contains(ac.getAccessibleRole())) return false;
+    return av.getCurrentAccessibleValue() != null;
 }
 
 // Roles whose AccessibleValue is read-only (value changes programmatically, not by the user).
@@ -437,14 +446,24 @@ boolean supportsGetValue(Accessible a) {
 // Explicitly NOT in this set (intentional):
 //   - SCROLL_BAR (JScrollBar): a user can drag the scrollbar, so set_value is a legitimate
 //     action even when the scrollbar is inside a JScrollPane.
+//
+// Note: JProgressBar.setCurrentAccessibleValue() actually returns true and mutates the bar
+// (confirmed by test). It is still in READ_ONLY_VALUE_ROLES because the bar represents
+// progress controlled by the application, not a value a user can edit. Allowing set_value
+// here would risk putting the app into an inconsistent state.
 private static final Set<AccessibleRole> READ_ONLY_VALUE_ROLES = Set.of(
     AccessibleRole.PROGRESS_BAR
 );
 
 boolean supportsSetValue(Accessible a) {
     AccessibleContext ac = a.getAccessibleContext();
-    if (ac == null || ac.getAccessibleValue() == null) return false;
-    return !READ_ONLY_VALUE_ROLES.contains(ac.getAccessibleRole());
+    if (ac == null) return false;
+    AccessibleValue av = ac.getAccessibleValue();
+    if (av == null) return false;
+    AccessibleRole role = ac.getAccessibleRole();
+    if (SUPPRESSED_VALUE_ROLES.contains(role)) return false;
+    if (READ_ONLY_VALUE_ROLES.contains(role)) return false;
+    return av.getCurrentAccessibleValue() != null;
 }
 
 boolean supportsSelection(Accessible a) {
@@ -456,6 +475,95 @@ boolean supportsSelection(Accessible a) {
 Note: `supportsSetText` implies `supportsGetText` (since `AccessibleEditableText` extends
 `AccessibleText`), so only one check is needed — check editable first, then fall back to
 read-only.
+
+### AccessibleValue — Component Behaviour
+
+Empirically verified on Java 21 OpenJDK (all results reproduced by tests in
+`AccessibleValueTypeResearchTest` and `JSpinnerAccessibleResearchTest`).
+
+#### `getCurrentAccessibleValue()` return types
+
+| Component | Return type | Notes |
+|---|---|---|
+| `JSlider` | `Integer` | Always; mirrors the int-based model |
+| `JSpinner(SpinnerNumberModel)` | Mirrors model value type | `Integer`, `Double`, `Long`, etc. — whatever type was passed to the `SpinnerNumberModel` constructor |
+| `JSpinner(SpinnerDateModel)` | `null` | Model value is a `Date`, not a `Number` |
+| `JSpinner(SpinnerListModel)` | `null` *or* current element | Returns `null` unless the current list element happens to be a `Number`; unreliable — do not treat as a number spinner |
+| `JSplitPane` | `Integer` | Divider location |
+| `JProgressBar` | `Integer` | Always |
+
+`getMinimumAccessibleValue()` / `getMaximumAccessibleValue()` return the same type as
+`getCurrentAccessibleValue()`.
+
+#### `setCurrentAccessibleValue(Number n)` behaviour
+
+| Component | Behaviour |
+|---|---|
+| `JSlider` | Calls `n.intValue()` — **truncates** to int. `Double(33.7)` → 33, `Float(20.5f)` → 20. Out-of-range values are **clamped** to `[min, max]`. |
+| `JSplitPane` | Same — calls `n.intValue()`, truncates. `Double(100.9)` → 100. |
+| `JProgressBar` | Returns `true` and mutates the bar (not blocked by the JDK). Suppressed at the tool level via `READ_ONLY_VALUE_ROLES`. |
+| `JSpinner(SpinnerNumberModel)` | Calls `model.setValue(n)` — **stores the Number AS-IS** with no type conversion. Passing `Double(7.9)` to an int-typed model stores a `Double`, not an `Integer`. This can corrupt the model. See JSpinner section below. |
+| `JSpinner(SpinnerDateModel)` | Returns `false` — `SpinnerDateModel.setValue()` rejects non-Date values with `IllegalArgumentException`. Safe. |
+| `JSpinner(SpinnerListModel)` | Returns `false` — same rejection. Safe. |
+
+#### JSpinner — special handling required
+
+`JSpinner.AccessibleJSpinner` always returns `this` from `getAccessibleValue()`, so a
+naive non-null check says every spinner supports `get_value` / `set_value`. The actual
+capability depends on the model:
+
+| Model | `get_value` | `set_value` | Method |
+|---|---|---|---|
+| `SpinnerNumberModel` | Yes | Yes — with care (see below) | `setCurrentAccessibleValue(Number)` |
+| `SpinnerDateModel` | No | No | — |
+| `SpinnerListModel` | No | No | — |
+
+**`SpinnerNumberModel` — type-safety risk with `setCurrentAccessibleValue`:**
+The JDK's `JSpinner.AccessibleJSpinner.setCurrentAccessibleValue(n)` delegates directly
+to `SpinnerModel.setValue(n)`. `SpinnerNumberModel.setValue()` accepts any `Number`
+without type-checking — it stores the value as-is. If the caller passes a `Double` to a
+spinner whose model was constructed with `int` literals (`SpinnerNumberModel(5, 0, 10, 1)`),
+the model will hold a `Double` from that point on. The spinner's own increment/decrement
+logic may then break because it compares the stored `Double` against `Integer` bounds.
+
+**Safe alternative — text path via `DefaultEditor.getTextField()`:**
+Each standard spinner editor (`NumberEditor`, `DateEditor`, `ListEditor`) extends
+`JSpinner.DefaultEditor` and wraps a `JFormattedTextField`. This text field's
+`AccessibleContext` returns a non-null `AccessibleEditableText` (`JTextField.AccessibleJTextField`).
+Writing a string value and then committing it causes the text field's own formatter to
+parse the string and call `SpinnerModel.setValue()` with the correctly typed result:
+
+```java
+// Only works for DefaultEditor-based spinners (all standard models)
+JFormattedTextField tf = ((JSpinner.DefaultEditor) spinner.getEditor()).getTextField();
+AccessibleEditableText aet = tf.getAccessibleContext().getAccessibleEditableText();
+aet.setTextContents(valueAsString);   // sets display text only
+tf.commitEdit();                       // parses and commits to the model — may throw ParseException
+```
+
+`commitEdit()` throws `java.text.ParseException` if the string cannot be parsed by the
+formatter (e.g. locale-mismatched date string for a `SpinnerDateModel`). Callers must
+handle this.
+
+**`setTextContents` alone is NOT enough** — it changes the display without touching the
+model. `commitEdit()` must be called explicitly.
+
+**`getAccessibleEditableText()` factory returns null:** `AccessibleJSpinner` implements
+the `AccessibleEditableText` *interface* but does not override the
+`AccessibleContext.getAccessibleEditableText()` factory method. As a result the factory
+returns `null`, and using `ac.getAccessibleEditableText()` as the entry point silently
+fails. The workaround is either:
+- Cast `ac.getAccessibleText()` to `AccessibleEditableText` (works because the same
+  `AccessibleJSpinner` instance implements both interfaces).
+- Or go directly to the inner text field as shown above (preferred — type-safe).
+
+#### What each model type supports for `set_value`
+
+| Model | Recommended approach | Notes |
+|---|---|---|
+| `SpinnerNumberModel` | Text path: `setTextContents(str)` + `commitEdit()` | Type-safe; uses the model's own formatter. The formatter validates the range and preserves the model's original `Number` subtype. |
+| `SpinnerListModel` | Text path: `setTextContents(str)` + `commitEdit()` | Works only when `str` exactly matches an item in the list. `commitEdit()` rejects non-matching strings via `ParseException`. |
+| `SpinnerDateModel` | **Not supported** | `setCurrentAccessibleValue` is rejected; text path fails because the format string is locale-dependent and cannot be reliably constructed by the tool. Use `increment`/`decrement` instead. |
 
 ---
 
@@ -481,8 +589,8 @@ Other specs reference this table instead of duplicating detection logic.
 | `toggle_expand` | Raw `AccessibleAction` description compare | `AccessibleAction.TOGGLE_EXPAND` static constant | `swing_toggle_expand` | Toggles expanded/collapsed; AI can infer current state from `EXPANDED`/`COLLAPSED` in snapshot. **Known limitation:** The standard JTree implementation uses the constant directly, but it has not been verified that every Look-and-Feel (Nimbus, GTK, Windows, etc.) upholds this. If a L&F localizes the description, detection silently fails and the node loses its ref and action. This is an accepted risk: the algorithm stays deterministic and correct for the standard L&F rather than introducing a non-deterministic fallback for non-standard ones. |
 | `get_text` | `supportsGetText()` | `getAccessibleText()` non-null | `swing_get_text` | On `JPasswordField`, returns echo characters (masked), **not** the actual password |
 | `set_text` | `supportsSetText()` | `getAccessibleEditableText()` non-null | `swing_set_text` | `supportsSetText()` implies `supportsGetText()` (`AccessibleEditableText extends AccessibleText`) |
-| `get_value` | `supportsGetValue()` | `getAccessibleValue()` non-null | `swing_get_value` | All components with `AccessibleValue` expose `get_value`, including read-only ones like `JProgressBar`. |
-| `set_value` | `supportsSetValue()` | `getAccessibleValue()` non-null AND role not in `READ_ONLY_VALUE_ROLES` | `swing_set_value` | Only exposed for components a user can actually modify. `JProgressBar` is explicitly excluded. Add other read-only value roles to `READ_ONLY_VALUE_ROLES` as discovered. |
+| `get_value` | `supportsGetValue()` | `getAccessibleValue()` non-null **and** `getCurrentAccessibleValue()` non-null | `swing_get_value` | All value-capable components expose `get_value`, including read-only ones like `JProgressBar`. `JSpinner` with `SpinnerDateModel`/`SpinnerListModel` is excluded because `getCurrentAccessibleValue()` returns `null` for non-Number models. See § 5 "AccessibleValue — Component Behaviour". |
+| `set_value` | `supportsSetValue()` | `getAccessibleValue()` non-null AND `getCurrentAccessibleValue()` non-null AND role not in `READ_ONLY_VALUE_ROLES` | `swing_set_value` | Only exposed for components a user can actually modify. `JProgressBar` is explicitly excluded (writable at the JDK level, suppressed by policy). `JSpinner` with non-Number model is excluded by the `getCurrentAccessibleValue()` null-check. For `JSpinner(SpinnerNumberModel)`, prefer the text-path over `setCurrentAccessibleValue` to avoid type corruption — see § 5 "JSpinner — special handling required". |
 | `get_selection` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_get_selection` | Returns a list of integer indices of currently selected children. |
 | `set_selection` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_set_selection` | Accepts a list of integer indices of children to select. Replaces the current selection. |
 | `clear_selection` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_clear_selection` | Clears the current selection. Equivalent to `set_selection` with an empty list. |
