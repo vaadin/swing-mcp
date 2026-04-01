@@ -100,9 +100,6 @@ it returns an MCP-level error with the EDT's stack trace, making the root cause 
 visible. This protects read-only tools, which do not use fire-and-forget and could
 theoretically still encounter a blocked EDT.
 
-If a blocking dialog is detected, the server should log an error. The EDT will
-remain blocked (and Swing-MCP effectively deadlocked) until the dialog is
-dismissed manually.
 
 ## 5. Window Selection
 
@@ -123,5 +120,5 @@ See [verification](verification.md) for a complete list of testing instructions.
 ## 7. Constraints
 
 - All Swing access on EDT
-- No blocking modal dialogs (documented limitation)
+- Blocking modal dialogs are handled via fire-and-forget dispatch
 - Depends on `tiny-mcp-server` for MCP protocol handling
