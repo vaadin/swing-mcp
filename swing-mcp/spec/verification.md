@@ -64,7 +64,7 @@ outcomes are valuable test data.
 `JMenuBar`, `JMenu`, `JMenuItem`
 
 **Other:**
-`JToolBar`, `JList` (simple single-selection)
+`JToolBar`, `JList` (simple single-selection), `JTree`
 
 **Top-level windows (screen required — `testSwing` sources):**
 `JFrame`, `JDialog`
