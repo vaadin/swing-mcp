@@ -43,7 +43,9 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
 
     private MCPProtocol.Content togglePopup(int ref) throws Exception {
         try {
-            return executeOnEDT(() -> togglePopupTool.execute(new Parameters(Map.of("ref", ref)), context));
+            MCPProtocol.Content result = executeOnEDT(() -> togglePopupTool.execute(new Parameters(Map.of("ref", ref)), context));
+            executeOnEDT(() -> null); // drain EDT so fire-and-forget action has run
+            return result;
         } finally {
             context.clearRefMap();
         }
@@ -83,10 +85,12 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
 
             // Open — call execute directly (no ref-clearing) to keep the ref for the close call
             executeOnEDT(() -> togglePopupTool.execute(new Parameters(Map.of("ref", ref)), context));
+            executeOnEDT(() -> null); // drain EDT so fire-and-forget action has run
             assertTrue(combo.isPopupVisible(), "Popup should be open");
 
             // Close — same ref, still valid (ref-clearing is tested separately)
             executeOnEDT(() -> togglePopupTool.execute(new Parameters(Map.of("ref", ref)), context));
+            executeOnEDT(() -> null); // drain EDT so fire-and-forget action has run
             assertFalse(combo.isPopupVisible(), "Popup should be closed after second toggle");
         } finally {
             frame.dispose();
@@ -209,6 +213,7 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
             int comboRef = Integer.parseInt(m.group(1));
             McpSchema.CallToolResult result = mcpClient.callTool(
                     new McpSchema.CallToolRequest("swing_toggle_popup", Map.of("ref", comboRef)));
+            executeOnEDT(() -> null); // drain EDT so fire-and-forget action has run
 
             assertNotEquals(Boolean.TRUE, result.isError(), "toggle_popup should succeed");
             assertTrue(combo.isPopupVisible(), "Popup should be open via MCP client");

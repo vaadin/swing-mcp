@@ -9,6 +9,7 @@ import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleEditableText;
 import javax.accessibility.AccessibleState;
+import javax.swing.SwingUtilities;
 
 /**
  * MCP tool {@code swing_set_text}: replaces the full text content of a UI component by ref.
@@ -66,10 +67,9 @@ public class SwingSetTextTool extends AbstractSwingTool {
             throw new MCPErrorResponseException("Component is not editable");
         }
 
-        // BR-03: replace entire text via accessibility API
+        // BR-03: fire the text replacement asynchronously (fire-and-forget)
         AccessibleEditableText aet = ac.getAccessibleEditableText();
-        aet.setTextContents(text);
-
+        SwingUtilities.invokeLater(() -> aet.setTextContents(text));
         return null;
     }
 

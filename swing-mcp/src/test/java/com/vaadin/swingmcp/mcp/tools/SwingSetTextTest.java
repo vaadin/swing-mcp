@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.*;
+import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
@@ -40,6 +41,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
     private void setText(int ref, String text) throws Exception {
         try {
             setTextTool.execute(new Parameters(Map.of("ref", ref, "text", text)), context);
+            SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
         } finally {
             context.clearRefMap();
         }
@@ -381,7 +383,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void swingSetTextViaMcpClient() {
+    void swingSetTextViaMcpClient() throws Exception {
         JTextField field = new JTextField("old");
         mcpServer.setConsideredComponents(List.of(field));
 
@@ -389,6 +391,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
 
         McpSchema.CallToolResult result = mcpClient.callTool(
                 new McpSchema.CallToolRequest("swing_set_text", Map.of("ref", 1, "text", "via mcp")));
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
 
         assertNotEquals(Boolean.TRUE, result.isError(), "set_text should succeed");
         assertEquals("via mcp", field.getText());

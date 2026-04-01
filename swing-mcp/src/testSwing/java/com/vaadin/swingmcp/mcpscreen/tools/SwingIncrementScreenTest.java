@@ -40,7 +40,9 @@ class SwingIncrementScreenTest extends AbstractScreenTest {
 
     private MCPProtocol.Content increment(int ref) throws Exception {
         try {
-            return executeOnEDT(() -> incrementTool.execute(new Parameters(Map.of("ref", ref)), context));
+            MCPProtocol.Content result = executeOnEDT(() -> incrementTool.execute(new Parameters(Map.of("ref", ref)), context));
+            executeOnEDT(() -> null); // drain EDT so fire-and-forget action has run
+            return result;
         } finally {
             context.clearRefMap();
         }

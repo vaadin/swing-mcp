@@ -7,6 +7,7 @@ import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleAction;
+import javax.swing.SwingUtilities;
 
 /**
  * MCP tool {@code swing_toggle_expand}: expands or collapses a JTree node by ref.
@@ -56,14 +57,9 @@ public class SwingToggleExpandTool extends AbstractSwingTool {
                     "Component does not support toggle_expand. Call swing_snapshot to verify the list of actions");
         }
 
-        // BR-07: invoke the action
+        // BR-03: fire the action asynchronously (fire-and-forget)
         AccessibleAction aa = accessible.getAccessibleContext().getAccessibleAction();
-        boolean performed = aa.doAccessibleAction(actionIndex);
-        if (!performed) {
-            throw new MCPErrorResponseException(
-                    "The action was not performed, no additional information has been provided");
-        }
-
+        SwingUtilities.invokeLater(() -> aa.doAccessibleAction(actionIndex));
         return null;
     }
 

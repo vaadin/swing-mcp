@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.accessibility.Accessible;
 import javax.swing.*;
+import javax.swing.SwingUtilities;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import java.awt.*;
@@ -44,7 +45,9 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
 
     private MCPProtocol.Content toggleExpand(int ref) throws Exception {
         try {
-            return toggleExpandTool.execute(new Parameters(Map.of("ref", ref)), context);
+            MCPProtocol.Content result = toggleExpandTool.execute(new Parameters(Map.of("ref", ref)), context);
+            SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
+            return result;
         } finally {
             context.clearRefMap();
         }
@@ -189,6 +192,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
         mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
         McpSchema.CallToolResult result = mcpClient.callTool(
                 new McpSchema.CallToolRequest("swing_toggle_expand", Map.of("ref", 2)));
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
 
         assertNotEquals(Boolean.TRUE, result.isError(), "swing_toggle_expand should succeed");
         assertTrue(tree.isExpanded(new TreePath(root)), "Root should be expanded via MCP client");

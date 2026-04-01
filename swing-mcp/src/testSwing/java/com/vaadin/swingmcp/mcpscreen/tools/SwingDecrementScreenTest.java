@@ -40,7 +40,9 @@ class SwingDecrementScreenTest extends AbstractScreenTest {
 
     private MCPProtocol.Content decrement(int ref) throws Exception {
         try {
-            return executeOnEDT(() -> decrementTool.execute(new Parameters(Map.of("ref", ref)), context));
+            MCPProtocol.Content result = executeOnEDT(() -> decrementTool.execute(new Parameters(Map.of("ref", ref)), context));
+            executeOnEDT(() -> null); // drain EDT so fire-and-forget action has run
+            return result;
         } finally {
             context.clearRefMap();
         }

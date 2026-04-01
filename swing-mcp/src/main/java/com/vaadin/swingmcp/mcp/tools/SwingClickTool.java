@@ -8,6 +8,7 @@ import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleAction;
 import javax.accessibility.AccessibleContext;
+import javax.swing.SwingUtilities;
 
 /**
  * MCP tool {@code swing_click}: clicks a UI component identified by ref.
@@ -58,16 +59,10 @@ public class SwingClickTool extends AbstractSwingTool {
                     "Component is disabled and cannot be clicked");
         }
 
-        // BR-03 + BR-07: invoke the click action
+        // BR-03: fire the click action asynchronously (fire-and-forget)
         AccessibleContext ac = accessible.getAccessibleContext();
         AccessibleAction aa = ac.getAccessibleAction();
-        boolean performed = aa.doAccessibleAction(actionIndex);
-        if (!performed) {
-            throw new MCPErrorResponseException(
-                    "The action was not performed, no additional information has been provided");
-        }
-
-        // Success: return empty string
+        SwingUtilities.invokeLater(() -> aa.doAccessibleAction(actionIndex));
         return null;
     }
 

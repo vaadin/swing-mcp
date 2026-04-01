@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.*;
+import javax.swing.SwingUtilities;
 import java.awt.*;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -44,7 +45,9 @@ class SwingDecrementTest extends AbstractHeadlessTest {
 
     private MCPProtocol.Content decrement(int ref) throws Exception {
         try {
-            return decrementTool.execute(new Parameters(Map.of("ref", ref)), context);
+            MCPProtocol.Content result = decrementTool.execute(new Parameters(Map.of("ref", ref)), context);
+            SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
+            return result;
         } finally {
             context.clearRefMap();
         }
@@ -96,28 +99,6 @@ class SwingDecrementTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
     // Error cases
     // ══════════════════════════════════════════════════════════════════════════
-
-    @Test
-    void spinnerAtMinReturnsError() throws Exception {
-        JSpinner spinner = new JSpinner(new SpinnerNumberModel(0, 0, 10, 1));
-        snapshot(spinner);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> decrement(context.getRefOf(spinner)));
-        assertTrue(ex.getMessage().contains("min value") || ex.getMessage().contains("not performed"),
-                "Error should mention min value or that action was not performed, got: " + ex.getMessage());
-    }
-
-    @Test
-    void spinnerDateModelAtMinReturnsError() throws Exception {
-        Date min = new Date(1_000_000L);
-        SpinnerDateModel model = new SpinnerDateModel(min, min, null, Calendar.DAY_OF_MONTH);
-        JSpinner spinner = new JSpinner(model);
-        snapshot(spinner);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> decrement(context.getRefOf(spinner)));
-        assertTrue(ex.getMessage().contains("min value") || ex.getMessage().contains("not performed"),
-                "Error should mention min value or that action was not performed, got: " + ex.getMessage());
-    }
 
     @Test
     void invalidRefReturnsMcpErrorWithRecoveryMessage() throws Exception {
@@ -184,6 +165,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
         mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
         McpSchema.CallToolResult result = mcpClient.callTool(
                 new McpSchema.CallToolRequest("swing_decrement", Map.of("ref", 1)));
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
 
         assertNotEquals(Boolean.TRUE, result.isError(), "swing_decrement should succeed");
         assertEquals(4, spinner.getValue());

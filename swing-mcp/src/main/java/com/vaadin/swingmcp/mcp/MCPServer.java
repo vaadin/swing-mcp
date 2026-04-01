@@ -87,8 +87,7 @@ public class MCPServer {
         server.addTool(tool.getName(), tool.getDescription(), tool.getInputSchema(), params -> {
             toolLock.lock();
             try {
-                tool.postVerification = null;
-                MCPProtocol.Content edtResult = runInEDT(() -> {
+                return runInEDT(() -> {
                     context.setConsideredComponents(getConsideredComponents());
                     try {
                         return tool.execute(new Parameters(params), context);
@@ -98,17 +97,6 @@ public class MCPServer {
                         }
                     }
                 });
-                AbstractSwingTool.PostVerification pv = tool.postVerification;
-                tool.postVerification = null;
-                if (pv != null) {
-                    for (int delay : pv.delayScheduleMs) {
-                        Thread.sleep(delay);
-                        boolean done = runInEDT(pv.isDone);
-                        if (done) return null;
-                    }
-                    return MCPProtocol.Content.text(pv.pendingMessage);
-                }
-                return edtResult;
             } finally {
                 toolLock.unlock();
             }

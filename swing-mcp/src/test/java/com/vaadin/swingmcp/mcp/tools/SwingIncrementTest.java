@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.*;
+import javax.swing.SwingUtilities;
 import java.awt.*;
 import java.util.Arrays;
 import java.util.Date;
@@ -43,7 +44,9 @@ class SwingIncrementTest extends AbstractHeadlessTest {
 
     private MCPProtocol.Content increment(int ref) throws Exception {
         try {
-            return incrementTool.execute(new Parameters(Map.of("ref", ref)), context);
+            MCPProtocol.Content result = incrementTool.execute(new Parameters(Map.of("ref", ref)), context);
+            SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
+            return result;
         } finally {
             context.clearRefMap();
         }
@@ -94,16 +97,6 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
     // Error cases
     // ══════════════════════════════════════════════════════════════════════════
-
-    @Test
-    void spinnerAtMaxReturnsError() throws Exception {
-        JSpinner spinner = new JSpinner(new SpinnerNumberModel(10, 0, 10, 1));
-        snapshot(spinner);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> increment(context.getRefOf(spinner)));
-        assertTrue(ex.getMessage().contains("max value") || ex.getMessage().contains("not performed"),
-                "Error should mention max value or that action was not performed, got: " + ex.getMessage());
-    }
 
     @Test
     void invalidRefReturnsMcpErrorWithRecoveryMessage() throws Exception {
@@ -170,6 +163,7 @@ class SwingIncrementTest extends AbstractHeadlessTest {
         mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
         McpSchema.CallToolResult result = mcpClient.callTool(
                 new McpSchema.CallToolRequest("swing_increment", Map.of("ref", 1)));
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
 
         assertNotEquals(Boolean.TRUE, result.isError(), "swing_increment should succeed");
         assertEquals(6, spinner.getValue());

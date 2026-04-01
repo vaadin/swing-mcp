@@ -7,6 +7,7 @@ import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleAction;
+import javax.swing.SwingUtilities;
 
 /**
  * MCP tool {@code swing_decrement}: decrements the value of a UI component by ref.
@@ -56,14 +57,9 @@ public class SwingDecrementTool extends AbstractSwingTool {
                     "Component is disabled and cannot be interacted with");
         }
 
-        // BR-07: invoke the action
+        // BR-03: fire the action asynchronously (fire-and-forget)
         AccessibleAction aa = accessible.getAccessibleContext().getAccessibleAction();
-        boolean performed = aa.doAccessibleAction(actionIndex);
-        if (!performed) {
-            throw new MCPErrorResponseException(
-                    "The action was not performed, no additional information has been provided. Probable causes: component hit min value and refused to decrement further");
-        }
-
+        SwingUtilities.invokeLater(() -> aa.doAccessibleAction(actionIndex));
         return null;
     }
 

@@ -6,20 +6,17 @@ import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import javax.accessibility.Accessible;
-import javax.swing.JDialog;
-import javax.swing.JFrame;
-import javax.swing.WindowConstants;
+import javax.swing.SwingUtilities;
 import java.awt.Window;
 import java.awt.event.WindowEvent;
 
 /**
  * MCP tool {@code swing_close}: closes a window or dialog identified by ref.
  *
- * <p>Dispatches {@link WindowEvent#WINDOW_CLOSING} to the window, respecting the
- * application's {@link java.awt.event.WindowListener}s and
- * {@code defaultCloseOperation}. For windows with {@code DO_NOTHING_ON_CLOSE},
- * the event is still dispatched (custom listeners may still close the window),
- * but no PostVerification polling is performed.</p>
+ * <p>Validates the ref and close support, then posts {@link WindowEvent#WINDOW_CLOSING}
+ * via {@code SwingUtilities.invokeLater()} (fire-and-forget). The event respects the
+ * application's {@link java.awt.event.WindowListener}s and {@code defaultCloseOperation}.
+ * The client observes the result via {@code swing_snapshot}.</p>
  *
  * @see <a href="use-case-011-swing-close.md">UC-011</a>
  */
@@ -56,36 +53,10 @@ public class SwingCloseTool extends AbstractSwingTool {
                     "Component does not support close. Call swing_snapshot to verify the list of actions");
         }
 
+        // BR-03: fire the close event asynchronously (fire-and-forget)
         Window window = (Window) accessible;
-
-        // BR-10: DO_NOTHING_ON_CLOSE — dispatch + synchronous isShowing() check, no PostVerification
-        if (isDoNothingOnClose(window)) {
-            window.dispatchEvent(new WindowEvent(window, WindowEvent.WINDOW_CLOSING));
-            if (!window.isShowing()) {
-                return null;
-            }
-            return MCPProtocol.Content.text(
-                    "Window close was requested but the window is still showing — it has DO_NOTHING_ON_CLOSE set or a WindowListener vetoed the close.");
-        }
-
-        // BR-03/BR-07: dispatch and set PostVerification polling
-        window.dispatchEvent(new WindowEvent(window, WindowEvent.WINDOW_CLOSING));
-        postVerification = new PostVerification(
-                new int[]{100, 200, 700},
-                () -> !window.isShowing(),
-                "Window close was requested but the window is still showing — a WindowListener may have vetoed the close, or the window is still closing."
-        );
+        SwingUtilities.invokeLater(() -> window.dispatchEvent(new WindowEvent(window, WindowEvent.WINDOW_CLOSING)));
         return null;
-    }
-
-    private boolean isDoNothingOnClose(Window window) {
-        if (window instanceof JFrame) {
-            return ((JFrame) window).getDefaultCloseOperation() == WindowConstants.DO_NOTHING_ON_CLOSE;
-        }
-        if (window instanceof JDialog) {
-            return ((JDialog) window).getDefaultCloseOperation() == WindowConstants.DO_NOTHING_ON_CLOSE;
-        }
-        return false;
     }
 
     @Override

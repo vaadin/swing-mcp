@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.*;
+import javax.swing.SwingUtilities;
 import java.awt.*;
 import java.util.Arrays;
 import java.util.List;
@@ -47,6 +48,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
     private void click(int ref) throws Exception {
         try {
             clickTool.execute(new Parameters(Map.of("ref", ref)), context);
+            SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
         } finally {
             context.clearRefMap();
         }
@@ -139,7 +141,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void swingClickViaMcpClient() {
+    void swingClickViaMcpClient() throws Exception {
         JButton button = new JButton("OK");
         AtomicBoolean clicked = new AtomicBoolean(false);
         button.addActionListener(e -> clicked.set(true));
@@ -151,6 +153,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         // Then click ref 1
         McpSchema.CallToolResult result = mcpClient.callTool(
                 new McpSchema.CallToolRequest("swing_click", Map.of("ref", 1)));
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
 
         assertNotEquals(Boolean.TRUE, result.isError(), "Click should succeed");
         assertTrue(clicked.get(), "Action listener should have been triggered via MCP client");
