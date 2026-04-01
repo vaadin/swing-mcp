@@ -371,6 +371,11 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         assertSetTextNotSupported(new JList<>(new String[]{"A", "B", "C"}));
     }
 
+    @Test
+    void componentMatrix_JTree() throws Exception {
+        assertSetTextNotSupported(new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root")));
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // MCP client smoke test
     // ══════════════════════════════════════════════════════════════════════════

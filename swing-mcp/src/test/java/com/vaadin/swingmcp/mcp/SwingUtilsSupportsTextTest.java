@@ -152,6 +152,12 @@ class SwingUtilsSupportsTextTest {
         assertFalse(SwingUtils.supportsGetText(new JList<>(new String[]{"A", "B"})));
     }
 
+    @Test
+    void jTree_doesNotSupportGetText() {
+        JTree tree = new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root"));
+        assertFalse(SwingUtils.supportsGetText(tree));
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // Interactive / Form inputs — setText
     // ══════════════════════════════════════════════════════════════════════════
@@ -280,6 +286,12 @@ class SwingUtilsSupportsTextTest {
     @Test
     void jList_doesNotSupportSetText() {
         assertFalse(SwingUtils.supportsSetText(new JList<>(new String[]{"A", "B"})));
+    }
+
+    @Test
+    void jTree_doesNotSupportSetText() {
+        JTree tree = new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root"));
+        assertFalse(SwingUtils.supportsSetText(tree));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

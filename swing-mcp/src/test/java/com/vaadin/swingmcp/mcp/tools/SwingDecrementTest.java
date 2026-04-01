@@ -366,4 +366,9 @@ class SwingDecrementTest extends AbstractHeadlessTest {
     void componentMatrix_JList() throws Exception {
         assertDecrementNotSupported(new JList<>(new String[]{"A", "B", "C"}));
     }
+
+    @Test
+    void componentMatrix_JTree() throws Exception {
+        assertDecrementNotSupported(new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root")));
+    }
 }

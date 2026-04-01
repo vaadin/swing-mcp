@@ -415,6 +415,17 @@ class SwingClickToolTest extends AbstractHeadlessTest {
     }
 
     @Test
+    void componentMatrix_JTree() throws Exception {
+        JTree tree = new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root"));
+
+        snapshot(tree);
+        // JTree itself has selection but no click support
+        int ref = context.getRefOf(tree);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
+        assertTrue(ex.getMessage().contains("does not support click"));
+    }
+
+    @Test
     void componentMatrix_JList() throws Exception {
         JList<String> list = new JList<>(new String[]{"A", "B", "C"});
 

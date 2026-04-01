@@ -158,6 +158,12 @@ class SwingUtilsSupportsValueTest {
         assertFalse(SwingUtils.supportsGetValue(new JList<>(new String[]{"A", "B"})));
     }
 
+    @Test
+    void jTree_doesNotSupportGetValue() {
+        JTree tree = new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root"));
+        assertFalse(SwingUtils.supportsGetValue(tree));
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // Interactive / Form inputs — setValue
     // ══════════════════════════════════════════════════════════════════════════

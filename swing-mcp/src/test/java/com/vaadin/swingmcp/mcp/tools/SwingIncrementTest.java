@@ -352,4 +352,9 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     void componentMatrix_JList() throws Exception {
         assertIncrementNotSupported(new JList<>(new String[]{"A", "B", "C"}));
     }
+
+    @Test
+    void componentMatrix_JTree() throws Exception {
+        assertIncrementNotSupported(new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root")));
+    }
 }

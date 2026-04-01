@@ -648,6 +648,29 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     @Test
+    void jTreeAppearsAsTree() throws Exception {
+        JPanel panel = new JPanel();
+        javax.swing.tree.DefaultMutableTreeNode root = new javax.swing.tree.DefaultMutableTreeNode("Root");
+        root.add(new javax.swing.tree.DefaultMutableTreeNode("A"));
+        root.add(new javax.swing.tree.DefaultMutableTreeNode("B"));
+        JTree tree = new JTree(root);
+        panel.add(tree);
+
+        String output = snapshot(panel);
+        // JTree nodes use AccessibleRole.LABEL (OpenJDK implementation).
+        // The root "Root" is expanded and has toggle_expand + selection actions.
+        // Leaf nodes "A" and "B" are kept because they have accessible names,
+        // but they have no actions so carry no ref.
+        assertEquals(
+                "- panel\n"
+                + "  - tree [ref=1] actions: get_selection, set_selection, clear_selection, select_all, get_children_count, get_children\n"
+                + "    - label \"Root\" [ref=2, expanded] actions: toggle_expand, get_selection, set_selection, clear_selection, select_all, get_children_count, get_children\n"
+                + "      - label \"A\" [collapsed]\n"
+                + "      - label \"B\" [collapsed]",
+                output);
+    }
+
+    @Test
     void jListAppearsAsList() throws Exception {
         JPanel panel = new JPanel();
         panel.add(new JList<>(new String[]{"Alpha", "Beta"}));

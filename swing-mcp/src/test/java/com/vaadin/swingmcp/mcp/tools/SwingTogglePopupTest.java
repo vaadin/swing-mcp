@@ -243,4 +243,9 @@ class SwingTogglePopupTest extends AbstractHeadlessTest {
     void componentMatrix_JList() throws Exception {
         assertTogglePopupNotSupported(new JList<>(new String[]{"A", "B", "C"}));
     }
+
+    @Test
+    void componentMatrix_JTree() throws Exception {
+        assertTogglePopupNotSupported(new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root")));
+    }
 }

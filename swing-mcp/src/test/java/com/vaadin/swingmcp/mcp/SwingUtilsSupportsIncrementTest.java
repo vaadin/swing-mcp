@@ -152,6 +152,12 @@ class SwingUtilsSupportsIncrementTest {
         assertEquals(-1, SwingUtils.supportsIncrement(new JList<>(new String[]{"A", "B"})));
     }
 
+    @Test
+    void jTree_doesNotSupportIncrement() {
+        JTree tree = new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root"));
+        assertEquals(-1, SwingUtils.supportsIncrement(tree));
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // Edge cases
     // ══════════════════════════════════════════════════════════════════════════

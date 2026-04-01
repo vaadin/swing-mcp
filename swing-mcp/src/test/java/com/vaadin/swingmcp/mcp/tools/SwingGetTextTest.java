@@ -352,6 +352,16 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         assertTrue(ex.getMessage().contains("does not support get_text"));
     }
 
+    @Test
+    void componentMatrix_JTree() throws Exception {
+        JTree tree = new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root"));
+        snapshot(tree);
+        int ref = context.getRefOf(tree);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getText(ref));
+        assertTrue(ex.getMessage().contains("does not support get_text"));
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // MCP client smoke test
     // ══════════════════════════════════════════════════════════════════════════

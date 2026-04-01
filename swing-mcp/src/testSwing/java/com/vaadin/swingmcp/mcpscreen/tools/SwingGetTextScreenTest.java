@@ -118,4 +118,25 @@ class SwingGetTextScreenTest extends AbstractScreenTest {
         assertNotNull(result);
         assertEquals("", result.getText());
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Component matrix — JFrame and JDialog themselves (not their children)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void componentMatrix_JFrame() throws Exception {
+        JFrame frame = new JFrame("Test");
+        snapshot(frame);
+        // JFrame itself has no get_text action — it has no ref
+        assertThrows(IllegalStateException.class, () -> context.getRefOf(frame));
+    }
+
+    @Test
+    void componentMatrix_JDialog() throws Exception {
+        JDialog dialog = new JDialog();
+        dialog.setTitle("Test");
+        snapshot(dialog);
+        // JDialog itself has no get_text action — it has no ref
+        assertThrows(IllegalStateException.class, () -> context.getRefOf(dialog));
+    }
 }

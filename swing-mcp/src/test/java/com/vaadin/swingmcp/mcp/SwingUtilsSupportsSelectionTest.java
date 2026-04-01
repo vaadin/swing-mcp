@@ -157,6 +157,12 @@ class SwingUtilsSupportsSelectionTest {
         assertTrue(SwingUtils.supportsSelection(list));
     }
 
+    @Test
+    void jTree_supportsSelection() {
+        JTree tree = new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root"));
+        assertTrue(SwingUtils.supportsSelection(tree));
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // Edge cases
     // ══════════════════════════════════════════════════════════════════════════

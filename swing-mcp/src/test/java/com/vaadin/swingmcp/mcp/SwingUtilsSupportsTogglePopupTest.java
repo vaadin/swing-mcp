@@ -149,6 +149,12 @@ class SwingUtilsSupportsTogglePopupTest {
         assertEquals(-1, SwingUtils.supportsTogglePopup(new JList<>(new String[]{"A", "B"})));
     }
 
+    @Test
+    void jTree_doesNotSupportTogglePopup() {
+        JTree tree = new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root"));
+        assertEquals(-1, SwingUtils.supportsTogglePopup(tree));
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // Edge cases
     // ══════════════════════════════════════════════════════════════════════════

@@ -172,6 +172,12 @@ class SwingUtilsSupportsClickTest {
     }
 
     @Test
+    void jTree_doesNotSupportClick() {
+        JTree tree = new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root"));
+        assertEquals(-1, SwingUtils.supportsClick(tree));
+    }
+
+    @Test
     void jList_childAccessible_supportsClick() {
         JList<String> list = new JList<>(new String[]{"A", "B", "C"});
         AccessibleContext ac = list.getAccessibleContext();
