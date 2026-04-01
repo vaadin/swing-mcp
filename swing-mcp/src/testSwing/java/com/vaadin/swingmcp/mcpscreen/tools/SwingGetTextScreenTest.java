@@ -139,4 +139,16 @@ class SwingGetTextScreenTest extends AbstractScreenTest {
         // JDialog itself has no get_text action — it has no ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(dialog));
     }
+
+    @Test
+    void componentMatrix_JOptionPane() throws Exception {
+        JDialog dialog = new JDialog();
+        JOptionPane optionPane = new JOptionPane(
+                "Test", JOptionPane.PLAIN_MESSAGE, JOptionPane.DEFAULT_OPTION,
+                null, new Object[]{"OK"}, "OK");
+        dialog.setContentPane(optionPane);
+        snapshot(dialog);
+        // JOptionPane itself has no get_text action — it has no ref
+        assertThrows(IllegalStateException.class, () -> context.getRefOf(optionPane));
+    }
 }

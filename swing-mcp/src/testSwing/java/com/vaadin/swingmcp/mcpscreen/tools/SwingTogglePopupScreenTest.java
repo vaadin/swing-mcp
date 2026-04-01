@@ -176,6 +176,18 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
         assertThrows(IllegalStateException.class, () -> context.getRefOf(dialog));
     }
 
+    @Test
+    void componentMatrix_JOptionPane() throws Exception {
+        JDialog dialog = new JDialog();
+        JOptionPane optionPane = new JOptionPane(
+                "Test", JOptionPane.PLAIN_MESSAGE, JOptionPane.DEFAULT_OPTION,
+                null, new Object[]{"OK"}, "OK");
+        dialog.setContentPane(optionPane);
+        snapshot(dialog);
+        // JOptionPane itself has no toggle_popup action — it has no ref
+        assertThrows(IllegalStateException.class, () -> context.getRefOf(optionPane));
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // MCP client smoke test
     // ══════════════════════════════════════════════════════════════════════════

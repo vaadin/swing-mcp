@@ -150,6 +150,30 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    // JOptionPane tests
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jOptionPaneAppearsAsOptionPane() throws Exception {
+        JDialog dialog = new JDialog();
+        JOptionPane optionPane = new JOptionPane(
+                "Test message",
+                JOptionPane.PLAIN_MESSAGE,
+                JOptionPane.DEFAULT_OPTION,
+                null,
+                new Object[]{"OK"},
+                "OK");
+        dialog.setContentPane(optionPane);
+
+        assertEquals(
+                "- dialog\n"
+                + "  - option_pane\n"
+                + "    - label \"Test message\"\n"
+                + "    - push_button \"OK\" [ref=1] actions: click",
+                snapshot(dialog));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // Multiple windows as separate roots
     // ══════════════════════════════════════════════════════════════════════════
 
