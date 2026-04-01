@@ -52,10 +52,26 @@ For upcoming Swing Tools, we create an utility class AbstractSwingTool which:
 Every Swing tool must extend that class. When swing tool is registered to
 MCPServer, it must register a wrapper ToolFunction which, upon invocation:
 
-1. Calls immediately runInEDT() and runs the remainder of the function there.
-2. Retrieves a list of considered components
-3. Calls AbstractSwingTool.
-4. After runInEDT() returns, checks whether the tool produced a `PostVerification` (see below). If so, runs the polling loop on the HTTP thread.
+1. Acquires the MCPServer-level lock (see **Concurrency** below).
+2. Calls immediately runInEDT() and runs the remainder of the function there.
+3. Retrieves a list of considered components
+4. Calls AbstractSwingTool.
+5. After runInEDT() returns, checks whether the tool produced a `PostVerification` (see below). If so, runs the polling loop on the HTTP thread.
+
+### Concurrency
+
+**Concurrent tool calls are not supported.** Two clients controlling the same Swing app
+simultaneously would produce unpredictable, interleaved UI state.
+
+The wrapper function registered by `MCPServer.registerTool` is `synchronized (this)`,
+serialising all tool calls end-to-end — EDT phase and any PostVerification polling phase
+both run inside the lock.
+
+**Why synchronising `runInEDT` alone is insufficient:** the EDT is inherently serialised
+already. The problem is the *HTTP-thread* gaps between `invokeAndWait` calls — for example,
+`swing_close` sleeps between `isShowing()` polls. If `runInEDT` were the only lock, a second
+tool call could slip in during those sleeps, replace the ref map, or mutate the UI.
+The wrapper-level `synchronized (this)` closes that gap.
 
 ### PostVerification
 
