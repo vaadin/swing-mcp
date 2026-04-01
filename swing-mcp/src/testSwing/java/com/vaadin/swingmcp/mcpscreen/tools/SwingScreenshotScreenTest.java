@@ -73,12 +73,17 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         JFrame frame = showFrame(400, 300);
         mcpServer.setConsideredComponents(List.of(frame));
 
+        // Read dimensions before calling the tool: the OS may apply window decorations
+        // asynchronously, so reading after the call can yield different values.
+        int expectedWidth = frame.getWidth();
+        int expectedHeight = frame.getHeight();
+
         McpSchema.CallToolResult result = mcpClient.callTool(
                 new McpSchema.CallToolRequest("swing_screenshot", Map.of()));
         BufferedImage image = decodeResult(result);
 
-        assertEquals(frame.getWidth(), image.getWidth());
-        assertEquals(frame.getHeight(), image.getHeight());
+        assertEquals(expectedWidth, image.getWidth());
+        assertEquals(expectedHeight, image.getHeight());
     }
 
     @Test
@@ -125,12 +130,17 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         JFrame frame = showFrame(200, 100);
         mcpServer.setConsideredComponents(List.of(frame));
 
+        // Read dimensions before calling the tool: the OS may apply window decorations
+        // asynchronously, so reading after the call can yield different values.
+        int expectedWidth = frame.getWidth();
+        int expectedHeight = frame.getHeight();
+
         McpSchema.CallToolResult result = mcpClient.callTool(
                 new McpSchema.CallToolRequest("swing_screenshot", Map.of()));
         BufferedImage image = decodeResult(result);
 
-        assertEquals(200, image.getWidth());
-        assertEquals(100, image.getHeight());
+        assertEquals(expectedWidth, image.getWidth());
+        assertEquals(expectedHeight, image.getHeight());
     }
 
     @Test
@@ -139,11 +149,16 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         JDialog dialog = showDialog(owner, 200, 100);
         mcpServer.setConsideredComponents(List.of(dialog));
 
+        // Read dimensions before calling the tool: the OS may apply window decorations
+        // asynchronously, so reading after the call can yield different values.
+        int expectedWidth = dialog.getWidth();
+        int expectedHeight = dialog.getHeight();
+
         McpSchema.CallToolResult result = mcpClient.callTool(
                 new McpSchema.CallToolRequest("swing_screenshot", Map.of()));
         BufferedImage image = decodeResult(result);
 
-        assertEquals(200, image.getWidth());
-        assertEquals(100, image.getHeight());
+        assertEquals(expectedWidth, image.getWidth());
+        assertEquals(expectedHeight, image.getHeight());
     }
 }
