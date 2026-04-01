@@ -202,9 +202,13 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
         try {
             mcpServer.setConsideredComponents(List.of(frame));
 
-            mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
+            McpSchema.CallToolResult snapshotResult = mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
+            String snapshotText = ((McpSchema.TextContent) snapshotResult.content().get(0)).text();
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("ref=(\\d+)[^\\n]*toggle_popup").matcher(snapshotText);
+            assertTrue(m.find(), "Snapshot should contain a toggle_popup component");
+            int comboRef = Integer.parseInt(m.group(1));
             McpSchema.CallToolResult result = mcpClient.callTool(
-                    new McpSchema.CallToolRequest("swing_toggle_popup", Map.of("ref", 1)));
+                    new McpSchema.CallToolRequest("swing_toggle_popup", Map.of("ref", comboRef)));
 
             assertNotEquals(Boolean.TRUE, result.isError(), "toggle_popup should succeed");
             assertTrue(combo.isPopupVisible(), "Popup should be open via MCP client");
