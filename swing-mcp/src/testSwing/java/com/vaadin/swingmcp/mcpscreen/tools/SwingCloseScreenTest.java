@@ -207,4 +207,67 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         assertThrows(IllegalStateException.class, () -> context.getRefOf(frame),
                 "EXIT_ON_CLOSE frame should have no ref");
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // EXIT_ON_CLOSE — stale ref returns MCP error
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jframeWithExitOnCloseViaStaleRefReturnsMcpError() throws Exception {
+        JFrame frame = new JFrame("Exit");
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        currentWindow = frame;
+        executeOnEDT(() -> { frame.setSize(200, 100); frame.setVisible(true); return null; });
+
+        // Manually force a ref to simulate a stale ref pointing at an EXIT_ON_CLOSE frame
+        context.putRef(99, (Accessible) frame);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // BR-07 — polling budget exhausted returns informational message (not error)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void windowStillShowingAfterBudgetReturnsInformationalMessage() throws Exception {
+        // Override dispose() to be a no-op so the window stays showing after WINDOW_CLOSING
+        JFrame frame = new JFrame("Stubborn") {
+            @Override
+            public void dispose() { /* no-op — simulates slow/vetoed close */ }
+        };
+        frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        currentWindow = frame;
+        executeOnEDT(() -> { frame.setSize(200, 100); frame.setVisible(true); return null; });
+
+        snapshot(frame);
+        String result = close(context.getRefOf(frame));
+
+        assertNotEquals("", result, "should return informational message when window remains showing after budget");
+        assertFalse(result.isEmpty());
+        assertTrue(frame.isShowing(), "frame should still be showing");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Component matrix — JOptionPane (screen test; no ref by default)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void componentMatrix_JOptionPane() throws Exception {
+        JDialog dialog = new JDialog();
+        JOptionPane optionPane = new JOptionPane(
+                "Test", JOptionPane.PLAIN_MESSAGE, JOptionPane.DEFAULT_OPTION,
+                null, new Object[]{"OK"}, "OK");
+        dialog.setContentPane(optionPane);
+        currentWindow = dialog;
+        executeOnEDT(() -> { dialog.setSize(200, 100); dialog.setVisible(true); return null; });
+
+        snapshot(dialog);
+        // JOptionPane has no close action and no ref — force a ref to test error path
+        context.putRef(99, (Accessible) optionPane);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
 }

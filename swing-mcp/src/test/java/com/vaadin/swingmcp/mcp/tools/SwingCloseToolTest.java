@@ -139,4 +139,131 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
                 () -> close(context.getRefOf(sp)));
         assertTrue(ex.getMessage().contains("does not support close"));
     }
+
+    @Test
+    void componentMatrix_JPasswordField() throws Exception {
+        JPasswordField field = new JPasswordField("secret");
+        snapshot(field);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> close(context.getRefOf(field)));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
+
+    @Test
+    void componentMatrix_JRadioButton() throws Exception {
+        JRadioButton rb = new JRadioButton("Option A");
+        snapshot(rb);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> close(context.getRefOf(rb)));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
+
+    @Test
+    void componentMatrix_JToggleButton() throws Exception {
+        JToggleButton tb = new JToggleButton("Toggle");
+        snapshot(tb);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> close(context.getRefOf(tb)));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
+
+    @Test
+    void componentMatrix_JPanel() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JLabel("inside"));
+        // JPanel has no actions → no ref in snapshot; force one to test error path
+        context.putRef(99, (javax.accessibility.Accessible) panel);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
+
+    @Test
+    void componentMatrix_JScrollPane() throws Exception {
+        JScrollPane sp = new JScrollPane(new JTextArea("text"));
+        // JScrollPane has no actions → no ref in snapshot; force one to test error path
+        context.putRef(99, (javax.accessibility.Accessible) sp);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
+
+    @Test
+    void componentMatrix_JTabbedPane() throws Exception {
+        JTabbedPane tp = new JTabbedPane();
+        tp.addTab("Tab1", new JPanel());
+        snapshot(tp);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> close(context.getRefOf(tp)));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
+
+    @Test
+    void componentMatrix_JLabel() throws Exception {
+        JLabel label = new JLabel("Hello");
+        // JLabel has no actions → no ref in snapshot; force one to test error path
+        context.putRef(99, (javax.accessibility.Accessible) label);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
+
+    @Test
+    void componentMatrix_JMenuBar() throws Exception {
+        JMenuBar mb = new JMenuBar();
+        mb.add(new JMenu("File"));
+        // JMenuBar has no actions → no ref in snapshot; force one to test error path
+        context.putRef(99, (javax.accessibility.Accessible) mb);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
+
+    @Test
+    void componentMatrix_JMenu() throws Exception {
+        JMenu menu = new JMenu("File");
+        menu.add(new JMenuItem("Open"));
+        snapshot(menu);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> close(context.getRefOf(menu)));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
+
+    @Test
+    void componentMatrix_JMenuItem() throws Exception {
+        JMenuItem item = new JMenuItem("Open");
+        snapshot(item);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> close(context.getRefOf(item)));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
+
+    @Test
+    void componentMatrix_JToolBar() throws Exception {
+        JToolBar tb = new JToolBar();
+        tb.add(new JButton("B"));
+        // JToolBar has no actions → no ref in snapshot; force one to test error path
+        context.putRef(99, (javax.accessibility.Accessible) tb);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
+
+    @Test
+    void componentMatrix_JList() throws Exception {
+        JList<String> list = new JList<>(new String[]{"A", "B", "C"});
+        snapshot(list);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> close(context.getRefOf(list)));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
+
+    @Test
+    void componentMatrix_JTree() throws Exception {
+        JTree tree = new JTree();
+        snapshot(tree);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> close(context.getRefOf(tree)));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
 }
