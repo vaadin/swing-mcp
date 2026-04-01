@@ -48,6 +48,10 @@ subprojects {
 
         tasks.withType<Javadoc> {
             isFailOnError = false
+            (options as StandardJavadocDocletOptions).apply {
+                addStringOption("Xdoclint:none", "-quiet")
+                quiet()
+            }
         }
 
         tasks.withType<JavaCompile> {
