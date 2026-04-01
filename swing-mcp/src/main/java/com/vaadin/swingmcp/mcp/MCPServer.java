@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -159,10 +161,19 @@ public class MCPServer {
         return server.getContextPath();
     }
 
+    /** Timeout for EDT tasks; exceeding it triggers deadlock detection. */
+    static final long EDT_TIMEOUT_MS = 10_000;
+
     /**
      * Executes the given block on the Event Dispatch Thread, waits for it
      * to complete, and returns its result. Tools must use this method for
      * all Swing interactions.
+     * <p>
+     * If the EDT does not complete the block within {@link #EDT_TIMEOUT_MS}
+     * milliseconds, an {@link com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException}
+     * is thrown with the EDT's current stack trace. This detects the common
+     * deadlock where an action listener shows a modal dialog (entering a
+     * secondary event loop), preventing the EDT task from ever returning.
      * <p>
      * Tests override this to run the block directly on the calling thread,
      * since headless mode does not have a functioning EDT.
@@ -175,13 +186,36 @@ public class MCPServer {
     protected <T> T runInEDT(Callable<T> block) throws Exception {
         AtomicReference<T> result = new AtomicReference<>();
         AtomicReference<Exception> error = new AtomicReference<>();
-        SwingUtilities.invokeAndWait(() -> {
+        AtomicReference<Thread> edtThreadRef = new AtomicReference<>();
+        CountDownLatch done = new CountDownLatch(1);
+
+        SwingUtilities.invokeLater(() -> {
+            edtThreadRef.set(Thread.currentThread());
             try {
                 result.set(block.call());
             } catch (Exception e) {
                 error.set(e);
+            } finally {
+                done.countDown();
             }
         });
+
+        if (!done.await(EDT_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+            Thread edt = edtThreadRef.get();
+            StringBuilder msg = new StringBuilder();
+            msg.append("EDT did not complete within ").append(EDT_TIMEOUT_MS).append(" ms — ")
+               .append("possible deadlock (e.g. an action listener opened a modal dialog).\n");
+            if (edt != null) {
+                msg.append("EDT stack trace:\n");
+                for (StackTraceElement frame : edt.getStackTrace()) {
+                    msg.append("  at ").append(frame).append('\n');
+                }
+            } else {
+                msg.append("EDT thread not yet started.\n");
+            }
+            throw new com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException(msg.toString());
+        }
+
         if (error.get() != null) {
             throw error.get();
         }
