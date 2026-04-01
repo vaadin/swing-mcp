@@ -18,6 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Executors;
 
 /**
  * A minimal in-process MCP server using Java's built-in HttpServer.
@@ -146,6 +147,11 @@ public class TinyMCPServer {
         started = true;
         httpServer = HttpServer.create(
                 new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port), 0);
+        httpServer.setExecutor(Executors.newCachedThreadPool(r -> {
+            Thread t = new Thread(r);
+            t.setDaemon(true);
+            return t;
+        }));
         httpServer.createContext(contextPath, this::handleRequest);
         httpServer.start();
         LOG.info("TinyMCPServer started on " + getUrl());
