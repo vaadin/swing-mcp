@@ -55,6 +55,46 @@ MCPServer, it must register a wrapper ToolFunction which, upon invocation:
 1. Calls immediately runInEDT() and runs the remainder of the function there.
 2. Retrieves a list of considered components
 3. Calls AbstractSwingTool.
+4. After runInEDT() returns, checks whether the tool produced a `PostVerification` (see below). If so, runs the polling loop on the HTTP thread.
+
+### PostVerification
+
+Some tools need to verify a side-effect that may complete asynchronously after the EDT
+phase returns (e.g. `swing_close` checking whether the window actually disappeared).
+Because sleeping on the EDT would deadlock, the polling must happen on the HTTP thread —
+but each individual check must still run on the EDT via `runInEDT()`.
+
+`AbstractSwingTool` exposes:
+
+```java
+// Set by the tool during execute(), if post-EDT verification is needed.
+// Null by default — most tools leave this unset.
+protected PostVerification postVerification;
+
+class PostVerification {
+    int[]            delayScheduleMs; // sleep durations between checks, e.g. {100, 200, 700}
+    Callable<Boolean> isDone;         // checked on EDT; true = side-effect has completed
+    String           pendingMessage;  // appended to the result if still pending after all delays
+}
+```
+
+The MCPServer wrapper runs the polling loop on the HTTP thread after `runInEDT()` returns:
+
+```java
+PostVerification v = tool.postVerification;
+if (v != null) {
+    for (int delay : v.delayScheduleMs) {
+        Thread.sleep(delay);              // HTTP thread sleeps; EDT is free to process tasks
+        if (runInEDT(v.isDone)) return success;
+    }
+    return success + "\n" + v.pendingMessage;
+}
+```
+
+`runInEDT()` is the same protected method that tests override to run blocks directly without
+`SwingUtilities.invokeAndWait()`. Headless tests therefore work correctly: the tool sets
+`postVerification` only when a `Window` is actually being closed, a path that is never reached
+in headless tests (no `Window` instances exist, so `supportsClose()` returns false).
 
 ### Parameters
 
@@ -289,35 +329,36 @@ component is disabled.
 ### Detecting Close Support
 
 `supportsClose` is a **synthetic** action — it is not derived from `AccessibleAction` or any
-`AccessibleContext` interface. It is exposed for top-level windows (JFrame, JDialog) and for
-JOptionPane components embedded in a dialog. The close is performed by dispatching
-`WindowEvent.WINDOW_CLOSING` to the window, which mirrors exactly what the OS close button
-does and allows the app's `WindowListener`s and `defaultCloseOperation` to handle the event
-normally. The tool does **not** bypass `DO_NOTHING_ON_CLOSE` — if the app ignores the event,
-the window stays open.
+`AccessibleContext` interface. It is exposed for top-level windows (JFrame, JDialog) only.
+The close is performed by dispatching `WindowEvent.WINDOW_CLOSING` to the window, which mirrors
+exactly what the OS close button does and allows the app's `WindowListener`s and
+`defaultCloseOperation` to handle the event normally. The tool does **not** bypass
+`DO_NOTHING_ON_CLOSE` — if the app ignores the event, the window stays open.
+
+`JOptionPane` is intentionally excluded: it is a `JComponent`, not a window. Its containing
+`JDialog` is itself a `Window` and will already expose `close` directly, so the AI can always
+dismiss the dialog via the `dialog` node ref.
 
 ```java
 boolean supportsClose(Accessible a) {
-    Window window = null;
-    if (a instanceof Window) {
-        window = (Window) a;
-    } else if (a instanceof JOptionPane) {
-        window = SwingUtilities.windowForComponent((JOptionPane) a);
-    }
-    if (window == null || !window.isShowing()) return false;
+    if (!(a instanceof Window window)) return false;
+    if (!window.isShowing()) return false;
     if (window instanceof Frame f && f.isUndecorated()) return false;
     if (window instanceof Dialog d && d.isUndecorated()) return false;
+    if (window instanceof JFrame jf &&
+            jf.getDefaultCloseOperation() == WindowConstants.EXIT_ON_CLOSE) return false;
     return true;
 }
 ```
 
-- Returns `true` for JFrame/JDialog when the window is showing and has decorations (i.e. has
-  a visible close button in its title bar).
-- Returns `true` for JOptionPane when its containing window is showing and has decorations.
-  Dispatching `WINDOW_CLOSING` to the containing window is what actually closes it.
-- Returns `false` for all other component types.
+- Returns `true` for JFrame/JDialog when the window is showing, has decorations, and will not
+  terminate the JVM on close.
+- Returns `false` for all other component types, including `JOptionPane`.
 - Undecorated windows (`setUndecorated(true)`) have no visible close button, so the user
   cannot close them through the normal UI — `supportsClose` returns `false` for those.
+- `JFrame` with `EXIT_ON_CLOSE` is explicitly excluded: dispatching `WINDOW_CLOSING` would
+  terminate the JVM, taking the swing-mcp server down with it and dropping the AI client
+  connection with no explanation. The `close` action is never advertised for such frames.
 
 ---
 
@@ -422,7 +463,7 @@ Other specs reference this table instead of duplicating detection logic.
 | `select_all` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_select_all` | Selects all children. |
 | `get_children_count` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_get_children_count` | Returns the number of accessible children that can potentially be selected. |
 | `get_children` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_get_children` | Returns a paged accessibility tree dump of the component's accessible children. Parameters: `ref` (integer), `offset` (integer, 0-based), `length` (integer, max children to return). The output format mirrors `swing_snapshot` — the same indented text tree — but rooted at the requested children rather than the full UI. Each child entry explicitly shows its zero-based index so the AI can pass it directly to `set_selection`. **Serves two purposes:** (1) **Selection browsing** — discover which index to pass to `set_selection`; (2) **Content discovery** — find actionable children (e.g. an "Edit" button inside a JTable row). For purpose 2, `get_children` assigns a fresh local ref numbering and **replaces the MCPServer ref map** with only the refs in its output window. This is analogous to scrolling a JTable: children outside the `offset`/`length` window are not interactable. The AI must call `swing_snapshot` again to return to the full-tree ref map. |
-| `close` | `supportsClose()` | Synthetic — dispatches `WindowEvent.WINDOW_CLOSING` to the window | `swing_close` | Not from `AccessibleAction`. Exposed for JFrame, JDialog (directly), and JOptionPane (via its containing window). Respects the app's `WindowListener`s and `defaultCloseOperation`; does **not** bypass `DO_NOTHING_ON_CLOSE`. `isEffectivelyEnabled()` is **not** checked — closing is a window-level action, not a component-level one. |
+| `close` | `supportsClose()` | Synthetic — dispatches `WindowEvent.WINDOW_CLOSING` to the window | `swing_close` | Not from `AccessibleAction`. Exposed for `Window` instances (JFrame, JDialog) only — `JOptionPane` is excluded because its containing JDialog already exposes `close`. Respects the app's `WindowListener`s and `defaultCloseOperation`; does **not** bypass `DO_NOTHING_ON_CLOSE`. `isEffectivelyEnabled()` is **not** checked — closing is a window-level action, not a component-level one. |
 
 ---
 
