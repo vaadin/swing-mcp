@@ -286,6 +286,39 @@ All mutation tools (`swing_click`, `swing_set_text`, `swing_set_value`, etc.) mu
 returns `false`, the tool returns an MCP-level error (`isError: true`) explaining that the
 component is disabled.
 
+### Detecting Close Support
+
+`supportsClose` is a **synthetic** action — it is not derived from `AccessibleAction` or any
+`AccessibleContext` interface. It is exposed for top-level windows (JFrame, JDialog) and for
+JOptionPane components embedded in a dialog. The close is performed by dispatching
+`WindowEvent.WINDOW_CLOSING` to the window, which mirrors exactly what the OS close button
+does and allows the app's `WindowListener`s and `defaultCloseOperation` to handle the event
+normally. The tool does **not** bypass `DO_NOTHING_ON_CLOSE` — if the app ignores the event,
+the window stays open.
+
+```java
+boolean supportsClose(Accessible a) {
+    Window window = null;
+    if (a instanceof Window) {
+        window = (Window) a;
+    } else if (a instanceof JOptionPane) {
+        window = SwingUtilities.windowForComponent((JOptionPane) a);
+    }
+    if (window == null || !window.isShowing()) return false;
+    if (window instanceof Frame f && f.isUndecorated()) return false;
+    if (window instanceof Dialog d && d.isUndecorated()) return false;
+    return true;
+}
+```
+
+- Returns `true` for JFrame/JDialog when the window is showing and has decorations (i.e. has
+  a visible close button in its title bar).
+- Returns `true` for JOptionPane when its containing window is showing and has decorations.
+  Dispatching `WINDOW_CLOSING` to the containing window is what actually closes it.
+- Returns `false` for all other component types.
+- Undecorated windows (`setUndecorated(true)`) have no visible close button, so the user
+  cannot close them through the normal UI — `supportsClose` returns `false` for those.
+
 ---
 
 ## 5. Additional Actions
@@ -389,6 +422,7 @@ Other specs reference this table instead of duplicating detection logic.
 | `select_all` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_select_all` | Selects all children. |
 | `get_children_count` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_get_children_count` | Returns the number of accessible children that can potentially be selected. |
 | `get_children` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_get_children` | Returns a paged accessibility tree dump of the component's accessible children. Parameters: `ref` (integer), `offset` (integer, 0-based), `length` (integer, max children to return). The output format mirrors `swing_snapshot` — the same indented text tree — but rooted at the requested children rather than the full UI. Each child entry explicitly shows its zero-based index so the AI can pass it directly to `set_selection`. **Serves two purposes:** (1) **Selection browsing** — discover which index to pass to `set_selection`; (2) **Content discovery** — find actionable children (e.g. an "Edit" button inside a JTable row). For purpose 2, `get_children` assigns a fresh local ref numbering and **replaces the MCPServer ref map** with only the refs in its output window. This is analogous to scrolling a JTable: children outside the `offset`/`length` window are not interactable. The AI must call `swing_snapshot` again to return to the full-tree ref map. |
+| `close` | `supportsClose()` | Synthetic — dispatches `WindowEvent.WINDOW_CLOSING` to the window | `swing_close` | Not from `AccessibleAction`. Exposed for JFrame, JDialog (directly), and JOptionPane (via its containing window). Respects the app's `WindowListener`s and `defaultCloseOperation`; does **not** bypass `DO_NOTHING_ON_CLOSE`. `isEffectivelyEnabled()` is **not** checked — closing is a window-level action, not a component-level one. |
 
 ---
 

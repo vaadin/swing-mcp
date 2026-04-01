@@ -67,9 +67,11 @@ outcomes are valuable test data.
 `JToolBar`, `JList` (simple single-selection), `JTree`
 
 **Top-level windows (screen required — `testSwing` sources):**
-`JFrame`, `JDialog`
-(note: test on the JFrame component itself, not on a component nested in JFrame. For example,
-we want to check that the swing_toggle_expand tool fails cleanly on JFrame since it's not a JTree node).
+`JFrame`, `JDialog`, `JOptionPane`
+(note: test on the JFrame/JDialog/JOptionPane component itself, not on a component nested in them. For example,
+we want to check that the swing_toggle_expand tool fails cleanly on JFrame since it's not a JTree node.
+For JOptionPane, create a JOptionPane instance and add it to a JDialog's content pane — do **not** use
+`JOptionPane.showXxxDialog()` in tests, as it blocks the calling thread).
 
 Each tool test class should include a test method per component from this list,
 verifying the tool's behavior (successful operation or appropriate error).
