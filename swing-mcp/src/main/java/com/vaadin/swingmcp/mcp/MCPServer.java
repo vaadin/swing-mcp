@@ -63,16 +63,20 @@ public class MCPServer {
      * Registers a Swing tool with the underlying MCP server. The tool is
      * wrapped so that every invocation:
      * <ol>
+     *   <li>Acquires the MCPServer-level lock, serialising all tool calls</li>
      *   <li>Marshals onto the EDT via {@link #runInEDT(Callable)}</li>
      *   <li>Retrieves the current considered components</li>
      *   <li>Delegates to {@link AbstractSwingTool#execute}</li>
+     *   <li>Runs any {@link AbstractSwingTool.PostVerification} polling on the HTTP thread</li>
      * </ol>
      *
      * @param tool the Swing tool to register
      */
     protected void registerTool(AbstractSwingTool tool) {
-        server.addTool(tool.getName(), tool.getDescription(), tool.getInputSchema(), params ->
-                runInEDT(() -> {
+        server.addTool(tool.getName(), tool.getDescription(), tool.getInputSchema(), params -> {
+            synchronized (this) {
+                tool.postVerification = null;
+                MCPProtocol.Content edtResult = runInEDT(() -> {
                     context.setConsideredComponents(getConsideredComponents());
                     try {
                         return tool.execute(new Parameters(params), context);
@@ -81,8 +85,20 @@ public class MCPServer {
                             context.clearRefMap();
                         }
                     }
-                })
-        );
+                });
+                AbstractSwingTool.PostVerification pv = tool.postVerification;
+                tool.postVerification = null;
+                if (pv != null) {
+                    for (int delay : pv.delayScheduleMs) {
+                        Thread.sleep(delay);
+                        boolean done = runInEDT(pv.isDone);
+                        if (done) return null;
+                    }
+                    return MCPProtocol.Content.text(pv.pendingMessage);
+                }
+                return edtResult;
+            }
+        });
     }
 
     /**
