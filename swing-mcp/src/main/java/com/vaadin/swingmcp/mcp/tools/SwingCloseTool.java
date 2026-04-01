@@ -32,7 +32,9 @@ public class SwingCloseTool extends AbstractSwingTool {
 
     @Override
     public String getDescription() {
-        return "Close a window or dialog by ref. Call swing_snapshot first to obtain refs.";
+        return "Close a window or dialog by ref. Call swing_snapshot first to obtain refs. Note: Closing a window may terminate the app; since\n" +
+                "  Swing-MCP runs as a part of that app it will be killed too, and the client will see a dropped HTTP connection. If this\n" +
+                "  happens, the only way to recover is to re-run the Swing app";
     }
 
     @Override
