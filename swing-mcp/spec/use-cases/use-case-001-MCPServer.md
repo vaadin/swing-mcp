@@ -29,7 +29,7 @@ For thread safety, wrap given List in CopyOnWriteArrayList and store into a vola
 - [x] MCPServer has all necessary functionality
 - [x] `SwingUtils.getTopmostModalDialog()` returns the topmost visible modal dialog (or null)
 - [x] `MCPServer.getConsideredComponents()` delegates modal detection to `SwingUtils.getTopmostModalDialog()`
-- [x] `MCPServer.runInEDT(Callable<T>)` dispatches to EDT via `SwingUtilities.invokeAndWait()` and returns the result; protected so tests can override to run directly
+- [x] `MCPServer.runInEDT(Callable<T>)` dispatches to EDT via `SwingUtilities.invokeLater()` + `CountDownLatch`, waits up to `EDT_TIMEOUT_MS` (10 s), and throws `MCPErrorResponseException` with the EDT stack trace if the EDT does not respond in time; protected so tests can override to run directly
 - [x] Tests are written and pass
 
 ---

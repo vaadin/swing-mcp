@@ -53,10 +53,18 @@ Every Swing tool must extend that class. When swing tool is registered to
 MCPServer, it must register a wrapper ToolFunction which, upon invocation:
 
 1. Acquires the MCPServer-level lock (see **Concurrency** below).
-2. Calls immediately runInEDT() and runs the remainder of the function there.
-3. Retrieves a list of considered components
-4. Calls AbstractSwingTool.
-5. After runInEDT() returns, checks whether the tool produced a `PostVerification` (see below). If so, runs the polling loop on the HTTP thread.
+2. Calls `runInEDT()` to run the tool on the EDT.
+3. Retrieves a list of considered components.
+4. Calls `AbstractSwingTool.execute()`.
+5. If `isMutation()` is true, clears the ref map in a `finally` block (even on exception).
+6. Returns the result.
+
+**Mutation tools use fire-and-forget dispatch** (see **Fire-and-Forget Mutation Dispatch** below):
+`execute()` performs validation on the EDT, then posts the action via `SwingUtilities.invokeLater()` and returns `null` immediately.
+The action executes on the EDT after `runInEDT()` returns and the HTTP response has been sent.
+The client observes the outcome via `swing_snapshot` or `swing_screenshot`.
+
+**Read-only tools** perform their full work inside `runInEDT()` and return the result synchronously.
 
 ### Concurrency
 
@@ -65,54 +73,54 @@ simultaneously would produce unpredictable, interleaved UI state.
 
 The wrapper function registered by `MCPServer.registerTool` acquires a `ReentrantLock`
 (`toolLock` field on `MCPServer`) for the entire duration of the tool call —
-EDT phase and any PostVerification polling both run inside `toolLock.lock()` / `toolLock.unlock()`.
+from lock acquisition through the `runInEDT()` call and the `invokeLater()` dispatch (for
+mutations). Both run inside `toolLock.lock()` / `toolLock.unlock()`.
 An explicit `Lock` is used rather than `synchronized` to avoid ambiguity about which monitor
 is held inside a lambda closure.
 
 **Why locking `runInEDT` alone is insufficient:** the EDT is inherently serialised already.
-The problem is the *HTTP-thread* gaps between `invokeAndWait` calls — for example,
-`swing_close` sleeps between `isShowing()` polls. If `runInEDT` were the only lock, a second
-tool call could slip in during those sleeps, replace the ref map, or mutate the UI.
+The problem is the *HTTP-thread* gap between the `runInEDT()` return and the `invokeLater()`
+call. If `runInEDT` were the only lock, a second tool call could slip in during that gap,
+replace the ref map, or mutate the UI before the first tool's action has been posted.
 The wrapper-level `toolLock` closes that gap.
 
-### PostVerification
+### Fire-and-Forget Mutation Dispatch
 
-Some tools need to verify a side-effect that may complete asynchronously after the EDT
-phase returns (e.g. `swing_close` checking whether the window actually disappeared).
-Because sleeping on the EDT would deadlock, the polling must happen on the HTTP thread —
-but each individual check must still run on the EDT via `runInEDT()`.
+Mutation tools (those where `isMutation()` returns `true`) use a **fire-and-forget** dispatch
+model that mirrors how a real user interacts with a Swing app: the user clicks a button but is
+not "glued" to it waiting for the EDT to finish painting.
 
-`AbstractSwingTool` exposes:
+**Why this matters:** if a mutation's action listener opens a modal dialog, the EDT enters a
+secondary event loop (`WaitDispatchSupport`). Because the secondary loop still processes
+`invokeLater` tasks, the MCP server continues to respond to subsequent tool calls. However,
+if the action were dispatched via `invokeAndWait`, the HTTP thread would block indefinitely
+waiting for the EDT task to return — a deadlock.
 
-```java
-// Set by the tool during execute(), if post-EDT verification is needed.
-// Null by default — most tools leave this unset.
-protected PostVerification postVerification;
+**Dispatch model:**
 
-class PostVerification {
-    int[]            delayScheduleMs; // sleep durations between checks, e.g. {100, 200, 700}
-    Callable<Boolean> isDone;         // checked on EDT; true = side-effect has completed
-    String           pendingMessage;  // appended to the result if still pending after all delays
-}
-```
+1. `execute()` runs on the EDT (inside `runInEDT()`).
+2. It performs all **validation**: ref lookup, capability check, enabled check.
+3. If validation passes it calls `SwingUtilities.invokeLater(action)` from the EDT,
+   queuing the action for the next EDT turn, and returns `null` immediately.
+4. `runInEDT()` completes; the HTTP thread returns the response to the client.
+5. The EDT picks up the `invokeLater` action and executes it.
 
-The MCPServer wrapper runs the polling loop on the HTTP thread after `runInEDT()` returns:
+The client observes the outcome — new dialog appeared, field changed, window closed — by
+calling `swing_snapshot` or `swing_screenshot` after the mutation tool returns.
 
-```java
-PostVerification v = tool.postVerification;
-if (v != null) {
-    for (int delay : v.delayScheduleMs) {
-        Thread.sleep(delay);              // HTTP thread sleeps; EDT is free to process tasks
-        if (runInEDT(v.isDone)) return "";
-    }
-    return v.pendingMessage;
-}
-```
+**Feedback loss vs. benefit:** `doAccessibleAction()` returns a boolean indicating whether
+the action was performed. Under fire-and-forget this return value is discarded; the client
+uses observation instead. This trade-off is acceptable because:
+- Pre-condition errors (unknown ref, disabled component, unsupported action) are still
+  caught synchronously in the validation phase and returned as MCP errors.
+- The fire-and-forget model is robust against any blocking EDT operation triggered by the
+  action, which `invokeAndWait` would deadlock on.
 
-`runInEDT()` is the same protected method that tests override to run blocks directly without
-`SwingUtilities.invokeAndWait()`. Headless tests therefore work correctly: the tool sets
-`postVerification` only when a `Window` is actually being closed, a path that is never reached
-in headless tests (no `Window` instances exist, so `supportsClose()` returns false).
+**Deadlock detection:** `runInEDT()` uses `SwingUtilities.invokeLater()` + `CountDownLatch`
+rather than `SwingUtilities.invokeAndWait()`. If the EDT does not complete the task within
+`EDT_TIMEOUT_MS` (10 seconds), an `MCPErrorResponseException` is thrown with the EDT's
+current stack trace. This detects the residual deadlock risk in read-only tools (which do not
+use fire-and-forget) and provides a diagnostic for unexpected EDT blockages.
 
 ### Parameters
 

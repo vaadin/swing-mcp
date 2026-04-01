@@ -21,7 +21,7 @@ There are two test source sets:
     - No tools are tested here: each tool has its own separate test class.
 - For every tool test class:
     - Remember we are headless.
-    - `SwingUtilities.invokeAndWait()` will fail — needs to go into protected function `MCPServer.runInEDT(block)`; the tests will override and simply run the block right away. It is thread-unsafe; if the tests fail we will revisit and think of some locking mechanism.
+    - `MCPServer.runInEDT(block)` uses `invokeLater` + `CountDownLatch` and would hang waiting for the EDT in headless mode. Tests override `runInEDT` in `FakeMCPServer` to run the block directly on the calling thread instead.
 
 ### `src/testSwing` — Screen-mode tests (`testSwing` task)
 

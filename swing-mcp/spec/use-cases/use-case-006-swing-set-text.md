@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** set the text content of a UI component by ref **so that** I can fill in text fields, text areas, and other editable text components.
 
-**Status:** Implemented
+**Status:** Approved
 **Date:** 2026-03-31
 
 ---
@@ -13,8 +13,7 @@
 
 - I first call `swing_snapshot` to obtain refs for the current UI state.
 - I call `swing_set_text` with the `ref` parameter identifying the component and a `text` parameter containing the new text.
-- The tool looks up the component by ref and replaces its entire text content via the accessibility API.
-- The tool returns `null` (empty content array) on success.
+- The tool validates the ref and component, then fires `setTextContents()` asynchronously and returns `null` immediately.
 - I call `swing_snapshot` again to get fresh refs reflecting any UI changes.
 
 ---
@@ -25,9 +24,9 @@
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. The `text` parameter is required and must be a string. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | The text is set via `AccessibleEditableText.setTextContents(String)`, which replaces the entire existing text in a single call. See **Algorithm** section below. |
+| BR-03 | The text is set via `AccessibleEditableText.setTextContents(String)`, posted via `SwingUtilities.invokeLater()` (fire-and-forget — see **architecture.md § 2 — Fire-and-Forget Mutation Dispatch**). The `AccessibleEditableText` reference is captured during the validation phase on the EDT. |
 | BR-04 | If the target does not support `set_text` (i.e. `SwingUtils.supportsSetText(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support set_text. Call swing_snapshot to verify the list of actions". |
-| BR-05 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
+| BR-05 | All validation runs on the EDT inside `runInEDT()`. The `setTextContents()` call is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
 | BR-06 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled and cannot be edited. See also **architecture.md § 6** — Tool execution level. The enabled check runs before the editable check (BR-07); a disabled non-editable field always reports "disabled". This ordering is intentional: disabled is a runtime state that takes full precedence. |
 | BR-07 | If the target is not editable (has `AccessibleEditableText` but the `EDITABLE` state is missing from `AccessibleStateSet`), the tool returns an MCP-level error (`isError: true`) with the message "Component is not editable". This covers `JTextComponent.setEditable(false)`. **This check is essential:** `setTextContents()` bypasses the editable flag — it calls `setText()` which operates directly on the `Document` without checking `isEditable()`. Without BR-07, text would be silently set on non-editable fields, violating the architecture principle that the MCP server must only perform actions a real user can perform. |
 | BR-08 | `swing_set_text` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after invocation (even on failure, via `finally`). This includes parameter validation failures (BR-01) and invalid ref failures (BR-02): the client is expected to call `swing_snapshot` before retrying. The slight cost of an extra snapshot call on a client mistake is acceptable. |
@@ -45,7 +44,7 @@ Execution order:
 4. **BR-06** — `SwingUtils.isEffectivelyEnabled(accessible)` — if `false`, fail with "disabled" error.
 5. **BR-07** — Check `AccessibleStateSet` contains `AccessibleState.EDITABLE` — if not, fail with "not editable" error.
 6. Obtain `AccessibleEditableText aet = ac.getAccessibleEditableText()`.
-7. Replace the entire text: `aet.setTextContents(text)`.
+7. `SwingUtilities.invokeLater(() -> aet.setTextContents(text))` — fire-and-forget; return `null`.
 
 **Accessibility API methods used:**
 - `AccessibleContext.getAccessibleEditableText()` — detection (returns `AccessibleEditableText` or `null`)

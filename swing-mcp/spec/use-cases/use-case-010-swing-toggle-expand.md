@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** expand or collapse a tree node by ref **so that** I can navigate a `JTree` hierarchy to find and interact with nested items.
 
-**Status:** Implemented
+**Status:** Approved
 **Date:** 2026-04-01
 
 ---
@@ -13,8 +13,7 @@
 
 - I first call `swing_snapshot` to obtain refs for the current UI state.
 - I call `swing_toggle_expand` with the `ref` parameter identifying the tree node.
-- The tool looks up the node by ref and invokes the toggle-expand `AccessibleAction`.
-- The tool returns `null` (empty content array) on success.
+- The tool validates the ref and node, then fires the toggle-expand action asynchronously and returns `null` immediately.
 - I call `swing_snapshot` again to get fresh refs reflecting the updated tree (newly visible children will appear with refs).
 
 ---
@@ -25,11 +24,10 @@
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | The toggle-expand action is invoked by scanning the node's `AccessibleAction` descriptions for `AccessibleAction.TOGGLE_EXPAND` (`"toggleexpand"`) and calling `doAccessibleAction(i)`. No UIManager lookup is needed — the standard `JTree` implementation uses the static constant directly. |
+| BR-03 | The toggle-expand action is fired by scanning the node's `AccessibleAction` descriptions for `AccessibleAction.TOGGLE_EXPAND` (`"toggleexpand"`) to get action index `i`, then posting `doAccessibleAction(i)` via `SwingUtilities.invokeLater()`. No UIManager lookup is needed — the standard `JTree` implementation uses the static constant directly. See **architecture.md § 2 — Fire-and-Forget Mutation Dispatch**. |
 | BR-04 | If the target does not support toggle-expand (i.e. `SwingUtils.supportsToggleExpand(accessible)` returns `-1`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support toggle_expand. Call swing_snapshot to verify the list of actions". This covers leaf nodes (which do not receive the `TOGGLE_EXPAND` action) and all non-tree components. |
-| BR-05 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
+| BR-05 | All validation runs on the EDT inside `runInEDT()`. The action is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
 | BR-06 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. |
-| BR-07 | If `doAccessibleAction(i)` returns `false`, the tool returns an MCP-level error (`isError: true`) with the message "The action was not performed, no additional information has been provided". |
 | BR-08 | `swing_toggle_expand` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after invocation (even on failure, via `finally`). |
 | BR-09 | The tool toggles the node regardless of its current expanded/collapsed state. If the node is already expanded, calling this tool collapses it; if collapsed, it expands it. The AI can infer the current state from the `EXPANDED` or `COLLAPSED` state in the snapshot. |
 | BR-10 | **Verified:** Metal, GTK (SynthTreeUI), and Nimbus all return the static `AccessibleAction.TOGGLE_EXPAND` constant directly from `JTree.AccessibleJTreeNode.getAccessibleActionDescription()`. No JDK L&F overrides `AccessibleJTreeNode`. A third-party L&F could theoretically subclass it, but this is an accepted risk. See **architecture.md § 4 — Action Types Summary**. |
@@ -56,7 +54,7 @@ Execution order:
 1. **BR-02** — ref lookup (fail fast if ref is invalid).
 2. **BR-06** — `SwingUtils.isEffectivelyEnabled(accessible)` — fail early if disabled, so the AI gets "disabled" rather than a misleading "unsupported" error (a disabled node may strip its actions).
 3. **BR-04** — `int i = SwingUtils.supportsToggleExpand(accessible)` — if `i < 0`, fail.
-4. **BR-07** — `doAccessibleAction(i)` — if it returns `false`, report failure.
+4. `SwingUtilities.invokeLater(() -> aa.doAccessibleAction(i))` — fire-and-forget; return `null`.
 
 ---
 

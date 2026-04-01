@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** open or close the popup of a UI component by ref **so that** I can expand a combo box to reveal its items or collapse it after selection.
 
-**Status:** Implemented
+**Status:** Approved
 **Date:** 2026-03-31
 
 ---
@@ -13,8 +13,7 @@
 
 - I first call `swing_snapshot` to obtain refs for the current UI state.
 - I call `swing_toggle_popup` with the `ref` parameter identifying the component.
-- The tool looks up the component by ref and invokes the toggle-popup `AccessibleAction`.
-- The tool returns `null` (empty content array) on success.
+- The tool validates the ref and component, then fires the toggle-popup action asynchronously and returns `null` immediately.
 - I call `swing_snapshot` again to get fresh refs reflecting any UI changes (e.g. new items visible after popup opens).
 
 ---
@@ -25,11 +24,10 @@
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | The toggle-popup action is invoked by finding and calling `doAccessibleAction(i)` where `i` is the index returned by `SwingUtils.supportsTogglePopup(accessible)`. See **architecture.md § 4 — Detecting Toggle-Popup Support** for the full detection algorithm. |
+| BR-03 | The toggle-popup action is invoked by posting `doAccessibleAction(i)` via `SwingUtilities.invokeLater()`, where `i` is the index returned by `SwingUtils.supportsTogglePopup(accessible)` during validation. See **architecture.md § 4 — Detecting Toggle-Popup Support** and **architecture.md § 2 — Fire-and-Forget Mutation Dispatch**. |
 | BR-04 | If the target does not support toggle-popup (i.e. `SwingUtils.supportsTogglePopup(accessible)` returns `-1`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support toggle_popup. Call swing_snapshot to verify the list of actions". |
-| BR-05 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
+| BR-05 | All validation runs on the EDT inside `runInEDT()`. The action is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
 | BR-06 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. |
-| BR-07 | If `doAccessibleAction(i)` returns `false`, the tool returns an MCP-level error (`isError: true`) with the message "The action was not performed, no additional information has been provided". |
 | BR-08 | `swing_toggle_popup` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after invocation (even on failure, via `finally`). The AI must call `swing_snapshot` after every `swing_toggle_popup` call to obtain fresh refs. This may be relaxed in the future. |
 | BR-09 | The tool toggles the popup regardless of its current open/closed state. If the popup is already open, calling this tool closes it; if closed, it opens it. The AI can infer the current state from the snapshot. |
 | BR-10 | `doAccessibleAction` on `JComboBox` throws `java.awt.HeadlessException` in headless mode (popup display requires `getScreenSize()`). This is not a concern in production — the MCP server only runs inside a real Swing app with a display. As a consequence, the happy-path test (successful toggle) cannot run headless and must live in `SwingTogglePopupScreenTest`. |
@@ -43,7 +41,7 @@ Execution order:
 1. **BR-02** — ref lookup (fail fast if ref is invalid).
 2. **BR-04** — `int i = SwingUtils.supportsTogglePopup(accessible)` — if `i < 0`, fail before walking the parent chain.
 3. **BR-06** — `SwingUtils.isEffectivelyEnabled(accessible)` — only checked when the action exists.
-4. **BR-07** — `doAccessibleAction(i)` — if it returns `false`, report failure.
+4. `SwingUtilities.invokeLater(() -> aa.doAccessibleAction(i))` — fire-and-forget; return `null`.
 
 ---
 

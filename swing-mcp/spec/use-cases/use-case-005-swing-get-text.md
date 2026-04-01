@@ -26,7 +26,7 @@
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
 | BR-03 | The text is read via the accessibility API. Primary path: `AccessibleEditableText.getTextRange(0, charCount)` for efficient bulk retrieval. Fallback (when only `AccessibleText` is available): character-by-character via `AccessibleText.getAtIndex(CHARACTER, i)`. See **Algorithm** section below. |
 | BR-04 | If the target does not support `get_text` (i.e. `SwingUtils.supportsGetText(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support get_text. Call swing_snapshot to verify the list of actions". |
-| BR-05 | All Swing component access happens on the EDT via `SwingUtilities.invokeAndWait()`. |
+| BR-05 | All Swing component access happens on the EDT via `runInEDT()`. |
 | BR-06 | On `JPasswordField`, the tool returns the echo characters (the masked representation), **not** the actual password. This is the default behavior of `AccessibleText` on `JPasswordField` — `AccessibleJPasswordField` overrides `getTextRange()`, `getAtIndex()`, and all related methods to replace every character with the echo char. No special handling is needed. |
 | BR-07 | `swing_get_text` is a read-only tool: `isMutation()` returns `false` and the ref map is **not** cleared after invocation. |
 | BR-08 | If the text content is empty (zero characters), the tool returns `MCPProtocol.Content.text("")` — an explicit empty-string text result, not `null`. A `null` return would produce an empty content array (`"content": []`), which signals "no result"; an empty string signals "the field exists and is empty". |

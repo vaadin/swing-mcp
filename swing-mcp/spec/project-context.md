@@ -81,18 +81,24 @@ Additional interaction tools may be added as needed (e.g., `swing_select`,
 
 All Swing component access must happen on the EDT (Event Dispatch Thread).
 The MCP HTTP handler runs on `HttpServer`'s thread pool, so every tool call
-must marshal onto the EDT via `SwingUtilities.invokeAndWait()`.
+marshals onto the EDT via `MCPServer.runInEDT()`, which uses
+`SwingUtilities.invokeLater()` + a `CountDownLatch` with a timeout.
 
-### Modal / blocking dialog limitation
+### Mutation tools and blocking dialogs
 
-**Assumption:** The Swing app has no blocking modal dialogs
-(`JOptionPane.showXxxDialog()` and similar). Blocking dialogs block the EDT,
-which in turn blocks `invokeAndWait()`, which deadlocks the HTTP request.
+Mutation tools (click, set_text, close, etc.) use a **fire-and-forget** dispatch model:
+validation runs on the EDT synchronously, then the action is posted via
+`SwingUtilities.invokeLater()` and the HTTP response is returned immediately.
+This means a mutation can open a modal dialog without deadlocking the server —
+subsequent read calls (`swing_snapshot`, `swing_screenshot`) are processed by
+the secondary event loop that the modal dialog creates.
 
-This is an intentional limitation: blocking dialogs are also problematic for
-the Vaadin migration itself (they block the web UI from rendering). The Swing
-app is expected to undergo a preparation phase replacing blocking dialogs with
-non-blocking alternatives before using Swing-MCP.
+### Deadlock detection
+
+`runInEDT()` enforces a 10-second timeout. If the EDT does not complete a task in time,
+it returns an MCP-level error with the EDT's stack trace, making the root cause immediately
+visible. This protects read-only tools, which do not use fire-and-forget and could
+theoretically still encounter a blocked EDT.
 
 If a blocking dialog is detected, the server should log an error. The EDT will
 remain blocked (and Swing-MCP effectively deadlocked) until the dialog is
