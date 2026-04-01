@@ -96,7 +96,14 @@ public class TinyMCPServer {
 
     public TinyMCPServer(int port, String contextPath) {
         this.port = port;
+       if (!contextPath.startsWith("/")) {
+           throw new IllegalArgumentException("Parameter contextPath: invalid value " + contextPath + ": must start with a slash");
+       }
         this.contextPath = contextPath;
+    }
+
+    public String getUrl() {
+        return "http://127.0.0.1:" + port + contextPath;
     }
 
     /**
@@ -141,7 +148,7 @@ public class TinyMCPServer {
                 new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port), 0);
         httpServer.createContext(contextPath, this::handleRequest);
         httpServer.start();
-        LOG.info("TinyMCPServer started on 127.0.0.1:{}{}", port, contextPath);
+        LOG.info("TinyMCPServer started on " + getUrl());
     }
 
     public void stop() {

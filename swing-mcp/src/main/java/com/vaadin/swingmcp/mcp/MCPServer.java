@@ -49,6 +49,10 @@ public class MCPServer {
         this(TinyMCPServer.DEFAULT_PORT, TinyMCPServer.DEFAULT_CONTEXT_PATH);
     }
 
+    public String getUrl() {
+        return server.getUrl();
+    }
+
     private void registerTools() {
         registerTool(new com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool());
         registerTool(new com.vaadin.swingmcp.mcp.tools.SwingScreenshotTool());
