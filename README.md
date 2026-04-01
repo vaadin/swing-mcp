@@ -43,6 +43,15 @@ The developer is responsible for local machine security.
 ./gradlew test                 # run all tests
 ```
 
-TODO: documentation on how to integrate into a customer Swing app and
-how to connect from Claude Code.
+## Using in Swing Apps
 
+Simply start the `MCPServer`; it will run by default at `http://127.0.0.1:18088/mcp`:
+
+```
+public class Application {
+    public static void main(String[] args) throws IOException {
+        new MCPServer().startAndAutoStop();
+        SwingUtilities.invokeLater(() -> runApp());
+    }
+}
+```
