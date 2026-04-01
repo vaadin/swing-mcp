@@ -266,4 +266,14 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
                 () -> close(context.getRefOf(tree)));
         assertTrue(ex.getMessage().contains("does not support close"));
     }
+
+    @Test
+    void componentMatrix_JOptionPane() throws Exception {
+        JOptionPane optionPane = new JOptionPane("Test");
+        // JOptionPane has no close action — force a ref to test the error path
+        context.putRef(99, (javax.accessibility.Accessible) optionPane);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
 }
