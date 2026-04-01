@@ -1,5 +1,6 @@
 include(
 	"tiny-mcp-server",
-	"swing-mcp"
+	"swing-mcp",
+    "test-apps"
 )
 
