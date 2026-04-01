@@ -85,9 +85,9 @@ PostVerification v = tool.postVerification;
 if (v != null) {
     for (int delay : v.delayScheduleMs) {
         Thread.sleep(delay);              // HTTP thread sleeps; EDT is free to process tasks
-        if (runInEDT(v.isDone)) return success;
+        if (runInEDT(v.isDone)) return "";
     }
-    return success + "\n" + v.pendingMessage;
+    return v.pendingMessage;
 }
 ```
 
