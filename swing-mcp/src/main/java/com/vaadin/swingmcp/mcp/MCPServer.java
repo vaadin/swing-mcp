@@ -19,6 +19,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * MCP server providing Swing-specific tools for UI inspection and interaction.
@@ -35,6 +37,8 @@ public class MCPServer {
 
     private final TinyMCPServer server;
     private volatile Thread shutdownHook;
+    /** Serialises all tool calls end-to-end (EDT phase + PostVerification polling). */
+    private final Lock toolLock = new ReentrantLock();
 
     public MCPServer(int port, String contextPath) {
         this.server = new TinyMCPServer(port, contextPath);
@@ -74,7 +78,8 @@ public class MCPServer {
      */
     protected void registerTool(AbstractSwingTool tool) {
         server.addTool(tool.getName(), tool.getDescription(), tool.getInputSchema(), params -> {
-            synchronized (this) {
+            toolLock.lock();
+            try {
                 tool.postVerification = null;
                 MCPProtocol.Content edtResult = runInEDT(() -> {
                     context.setConsideredComponents(getConsideredComponents());
@@ -97,6 +102,8 @@ public class MCPServer {
                     return MCPProtocol.Content.text(pv.pendingMessage);
                 }
                 return edtResult;
+            } finally {
+                toolLock.unlock();
             }
         });
     }

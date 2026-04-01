@@ -63,15 +63,17 @@ MCPServer, it must register a wrapper ToolFunction which, upon invocation:
 **Concurrent tool calls are not supported.** Two clients controlling the same Swing app
 simultaneously would produce unpredictable, interleaved UI state.
 
-The wrapper function registered by `MCPServer.registerTool` is `synchronized (this)`,
-serialising all tool calls end-to-end — EDT phase and any PostVerification polling phase
-both run inside the lock.
+The wrapper function registered by `MCPServer.registerTool` acquires a `ReentrantLock`
+(`toolLock` field on `MCPServer`) for the entire duration of the tool call —
+EDT phase and any PostVerification polling both run inside `toolLock.lock()` / `toolLock.unlock()`.
+An explicit `Lock` is used rather than `synchronized` to avoid ambiguity about which monitor
+is held inside a lambda closure.
 
-**Why synchronising `runInEDT` alone is insufficient:** the EDT is inherently serialised
-already. The problem is the *HTTP-thread* gaps between `invokeAndWait` calls — for example,
+**Why locking `runInEDT` alone is insufficient:** the EDT is inherently serialised already.
+The problem is the *HTTP-thread* gaps between `invokeAndWait` calls — for example,
 `swing_close` sleeps between `isShowing()` polls. If `runInEDT` were the only lock, a second
 tool call could slip in during those sleeps, replace the ref map, or mutate the UI.
-The wrapper-level `synchronized (this)` closes that gap.
+The wrapper-level `toolLock` closes that gap.
 
 ### PostVerification
 
