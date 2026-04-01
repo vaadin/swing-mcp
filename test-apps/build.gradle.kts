@@ -46,3 +46,6 @@ tasks.named("check") {
 tasks.named<Test>("test") {
     systemProperty("java.awt.headless", "true")
 }
+application {
+    mainClass = "testapp.ApplicationKt"
+}
