@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** expand or collapse a tree node by ref **so that** I can navigate a `JTree` hierarchy to find and interact with nested items.
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-04-01
 
 ---
@@ -62,14 +62,14 @@ Execution order:
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_toggle_expand` on a collapsed `JTree` non-leaf node expands it.
-- [ ] Calling `swing_toggle_expand` on an expanded `JTree` non-leaf node collapses it.
-- [ ] Calling `swing_toggle_expand` with an invalid ref returns an MCP error with a recovery message.
-- [ ] Calling `swing_toggle_expand` on a `JTree` leaf node returns an MCP error suggesting to call `swing_snapshot`.
-- [ ] Calling `swing_toggle_expand` on a component that does not support toggle-expand (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [ ] Calling `swing_toggle_expand` on a disabled `JTree` node returns an MCP error explaining the component is disabled.
-- [ ] The tool returns `null` on success.
-- [ ] The ref map is cleared after every `swing_toggle_expand` call (mutation tool).
+- [x] Calling `swing_toggle_expand` on a collapsed `JTree` non-leaf node expands it.
+- [x] Calling `swing_toggle_expand` on an expanded `JTree` non-leaf node collapses it.
+- [x] Calling `swing_toggle_expand` with an invalid ref returns an MCP error with a recovery message.
+- [x] Calling `swing_toggle_expand` on a `JTree` leaf node returns an MCP error suggesting to call `swing_snapshot`.
+- [x] Calling `swing_toggle_expand` on a component that does not support toggle-expand (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
+- [x] Calling `swing_toggle_expand` on a disabled `JTree` node returns an MCP error explaining the component is disabled.
+- [x] The tool returns `null` on success.
+- [x] The ref map is cleared after every `swing_toggle_expand` call (mutation tool).
 
 ---
 
@@ -77,22 +77,22 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingToggleExpandTest`
-  - [ ] Toggling a collapsed non-leaf node expands it (verified via `JTree.isExpanded()`).
-  - [ ] Toggling an expanded non-leaf node collapses it.
-  - [ ] Invalid ref returns an MCP error with `isError: true`.
-  - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
-  - [ ] Leaf node returns an MCP error with `isError: true`.
-  - [ ] Component without toggle-expand support (e.g. `JButton`) returns an MCP error with `isError: true`.
-  - [ ] Disabled `JTree` node returns an MCP error with `isError: true` explaining the component is disabled.
-  - [ ] Success returns `null`.
-  - [ ] Ref map is cleared after a successful call.
-  - [ ] MCP client smoke test.
-  - [ ] Each component from the component matrix is tested (dedicated test method per component).
+- [x] `SwingToggleExpandTest`
+  - [x] Toggling a collapsed non-leaf node expands it (verified via `JTree.isExpanded()`).
+  - [x] Toggling an expanded non-leaf node collapses it.
+  - [x] Invalid ref returns an MCP error with `isError: true`.
+  - [x] The error message suggests calling `swing_snapshot` to refresh refs.
+  - [x] Leaf node returns an MCP error with `isError: true`.
+  - [x] Component without toggle-expand support (e.g. `JButton`) returns an MCP error with `isError: true`.
+  - [x] Disabled `JTree` node returns an MCP error with `isError: true` explaining the component is disabled.
+  - [x] Success returns `null`.
+  - [x] Ref map is cleared after a successful call.
+  - [x] MCP client smoke test.
+  - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [ ] `SwingToggleExpandScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
-  - [ ] `swing_toggle_expand` fails on `JFrame` itself (not a tree node).
-  - [ ] `swing_toggle_expand` fails on `JDialog` itself (not a tree node).
+- [x] `SwingToggleExpandScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+  - [x] `swing_toggle_expand` fails on `JFrame` itself (not a tree node).
+  - [x] `swing_toggle_expand` fails on `JDialog` itself (not a tree node).
 
 ### Component matrix
 

@@ -183,6 +183,20 @@ public final class SwingUtils {
         return supportsAction(a, AccessibleAction.DECREMENT);
     }
 
+    /**
+     * Returns the action index for the toggle-expand action on the given accessible,
+     * or {@code -1} if the accessible does not support it.
+     * <p>
+     * Matches by {@link AccessibleAction#TOGGLE_EXPAND} static constant directly.
+     * The standard {@code JTree} implementation uses the static field without any
+     * UIManager indirection, so no locale-specific fallback is needed.
+     *
+     * @see <a href="use-case-010-swing-toggle-expand.md">UC-010 BR-03</a>
+     */
+    public static int supportsToggleExpand(Accessible a) {
+        return supportsAction(a, AccessibleAction.TOGGLE_EXPAND);
+    }
+
     private static int supportsAction(Accessible a, String actionName) {
         AccessibleContext ac = a.getAccessibleContext();
         if (ac == null) return -1;
