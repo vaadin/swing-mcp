@@ -68,6 +68,8 @@ outcomes are valuable test data.
 
 **Top-level windows (screen required — `testSwing` sources):**
 `JFrame`, `JDialog`
+(note: test on the JFrame component itself, not on a component nested in JFrame. For example,
+we want to check that the swing_toggle_expand tool fails cleanly on JFrame since it's not a JTree node).
 
 Each tool test class should include a test method per component from this list,
 verifying the tool's behavior (successful operation or appropriate error).
