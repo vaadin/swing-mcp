@@ -4,8 +4,8 @@
 
 **As an** AI agent, **I want to** expand or collapse a tree node by ref **so that** I can navigate a `JTree` hierarchy to find and interact with nested items.
 
-**Status:** Draft
-**Date:** 2026-03-31
+**Status:** Approved
+**Date:** 2026-04-01
 
 ---
 
@@ -32,7 +32,7 @@
 | BR-07 | If `doAccessibleAction(i)` returns `false`, the tool returns an MCP-level error (`isError: true`) with the message "The action was not performed, no additional information has been provided". |
 | BR-08 | `swing_toggle_expand` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after invocation (even on failure, via `finally`). |
 | BR-09 | The tool toggles the node regardless of its current expanded/collapsed state. If the node is already expanded, calling this tool collapses it; if collapsed, it expands it. The AI can infer the current state from the `EXPANDED` or `COLLAPSED` state in the snapshot. |
-| BR-10 | **Known limitation:** The standard `JTree` implementation uses `AccessibleAction.TOGGLE_EXPAND` directly, but it has not been verified that every Look-and-Feel (Nimbus, GTK, Windows, etc.) upholds this. If a L&F localizes the description, detection silently fails and the node loses its ref and `toggle_expand` action. This is an accepted risk; the algorithm stays deterministic and correct for the standard L&F. See **architecture.md § 4 — Action Types Summary**. |
+| BR-10 | **Verified:** Metal, GTK (SynthTreeUI), and Nimbus all return the static `AccessibleAction.TOGGLE_EXPAND` constant directly from `JTree.AccessibleJTreeNode.getAccessibleActionDescription()`. No JDK L&F overrides `AccessibleJTreeNode`. A third-party L&F could theoretically subclass it, but this is an accepted risk. See **architecture.md § 4 — Action Types Summary**. |
 
 ### Algorithm: detecting and invoking the toggle-expand action
 
@@ -54,8 +54,8 @@ int supportsToggleExpand(Accessible a) {
 
 Execution order:
 1. **BR-02** — ref lookup (fail fast if ref is invalid).
-2. **BR-04** — `int i = SwingUtils.supportsToggleExpand(accessible)` — if `i < 0`, fail before walking the parent chain.
-3. **BR-06** — `SwingUtils.isEffectivelyEnabled(accessible)` — only checked when the action exists.
+2. **BR-06** — `SwingUtils.isEffectivelyEnabled(accessible)` — fail early if disabled, so the AI gets "disabled" rather than a misleading "unsupported" error (a disabled node may strip its actions).
+3. **BR-04** — `int i = SwingUtils.supportsToggleExpand(accessible)` — if `i < 0`, fail.
 4. **BR-07** — `doAccessibleAction(i)` — if it returns `false`, report failure.
 
 ---
@@ -91,8 +91,8 @@ Execution order:
   - [ ] Each component from the component matrix is tested (dedicated test method per component).
 
 - [ ] `SwingToggleExpandScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
-  - [ ] Expanding a collapsed `JTree` non-leaf node inside `JFrame` works.
-  - [ ] Expanding a collapsed `JTree` non-leaf node inside `JDialog` works.
+  - [ ] `swing_toggle_expand` fails on `JFrame` itself (not a tree node).
+  - [ ] `swing_toggle_expand` fails on `JDialog` itself (not a tree node).
 
 ### Component matrix
 
