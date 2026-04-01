@@ -32,12 +32,12 @@ class SwingClickScreenTest extends AbstractScreenTest {
 
     private void snapshot(Component... roots) throws Exception {
         context.setConsideredComponents(Arrays.asList(roots));
-        snapshotTool.execute(new Parameters(Map.of()), context);
+        executeOnEDT(() -> snapshotTool.execute(new Parameters(Map.of()), context));
     }
 
     private void click(int ref) throws Exception {
         try {
-            clickTool.execute(new Parameters(Map.of("ref", ref)), context);
+            executeOnEDT(() -> clickTool.execute(new Parameters(Map.of("ref", ref)), context));
         } finally {
             context.clearRefMap();
         }

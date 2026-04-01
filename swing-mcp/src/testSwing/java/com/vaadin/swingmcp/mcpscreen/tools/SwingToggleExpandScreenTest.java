@@ -38,7 +38,7 @@ class SwingToggleExpandScreenTest extends AbstractScreenTest {
                 Arrays.stream(roots)
                         .map(r -> (java.awt.Component) r)
                         .collect(java.util.stream.Collectors.toList()));
-        snapshotTool.execute(new Parameters(Map.of()), context);
+        executeOnEDT(() -> snapshotTool.execute(new Parameters(Map.of()), context));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

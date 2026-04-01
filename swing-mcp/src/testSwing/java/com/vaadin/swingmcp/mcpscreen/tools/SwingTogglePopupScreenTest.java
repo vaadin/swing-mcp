@@ -38,12 +38,12 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
 
     private void snapshot(Component... roots) throws Exception {
         context.setConsideredComponents(Arrays.asList(roots));
-        snapshotTool.execute(new Parameters(Map.of()), context);
+        executeOnEDT(() -> snapshotTool.execute(new Parameters(Map.of()), context));
     }
 
     private MCPProtocol.Content togglePopup(int ref) throws Exception {
         try {
-            return togglePopupTool.execute(new Parameters(Map.of("ref", ref)), context);
+            return executeOnEDT(() -> togglePopupTool.execute(new Parameters(Map.of("ref", ref)), context));
         } finally {
             context.clearRefMap();
         }
@@ -64,7 +64,6 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
             snapshot(frame);
             MCPProtocol.Content result = togglePopup(context.getRefOf(combo));
             assertNull(result, "Success should return null");
-            SwingUtilities.invokeAndWait(() -> {}); // flush EDT
             assertTrue(combo.isPopupVisible(), "Popup should be open after toggle");
         } finally {
             frame.dispose();
@@ -83,13 +82,11 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
             int ref = context.getRefOf(combo);
 
             // Open — call execute directly (no ref-clearing) to keep the ref for the close call
-            togglePopupTool.execute(new Parameters(Map.of("ref", ref)), context);
-            SwingUtilities.invokeAndWait(() -> {}); // flush EDT
+            executeOnEDT(() -> togglePopupTool.execute(new Parameters(Map.of("ref", ref)), context));
             assertTrue(combo.isPopupVisible(), "Popup should be open");
 
             // Close — same ref, still valid (ref-clearing is tested separately)
-            togglePopupTool.execute(new Parameters(Map.of("ref", ref)), context);
-            SwingUtilities.invokeAndWait(() -> {}); // flush EDT
+            executeOnEDT(() -> togglePopupTool.execute(new Parameters(Map.of("ref", ref)), context));
             assertFalse(combo.isPopupVisible(), "Popup should be closed after second toggle");
         } finally {
             frame.dispose();

@@ -32,11 +32,11 @@ class SwingGetTextScreenTest extends AbstractScreenTest {
 
     private void snapshot(Component... roots) throws Exception {
         context.setConsideredComponents(Arrays.asList(roots));
-        snapshotTool.execute(new Parameters(Map.of()), context);
+        executeOnEDT(() -> snapshotTool.execute(new Parameters(Map.of()), context));
     }
 
     private String getText(int ref) throws Exception {
-        MCPProtocol.Content result = getTextTool.execute(new Parameters(Map.of("ref", ref)), context);
+        MCPProtocol.Content result = executeOnEDT(() -> getTextTool.execute(new Parameters(Map.of("ref", ref)), context));
         return result == null ? null : result.getText();
     }
 
@@ -113,8 +113,8 @@ class SwingGetTextScreenTest extends AbstractScreenTest {
         dialog.getContentPane().add(field);
 
         snapshot(dialog);
-        MCPProtocol.Content result = getTextTool.execute(
-                new Parameters(Map.of("ref", context.getRefOf(field))), context);
+        MCPProtocol.Content result = executeOnEDT(() -> getTextTool.execute(
+                new Parameters(Map.of("ref", context.getRefOf(field))), context));
         assertNotNull(result);
         assertEquals("", result.getText());
     }

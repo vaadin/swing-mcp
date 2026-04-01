@@ -35,12 +35,12 @@ class SwingIncrementScreenTest extends AbstractScreenTest {
 
     private void snapshot(Component... roots) throws Exception {
         context.setConsideredComponents(Arrays.asList(roots));
-        snapshotTool.execute(new Parameters(Map.of()), context);
+        executeOnEDT(() -> snapshotTool.execute(new Parameters(Map.of()), context));
     }
 
     private MCPProtocol.Content increment(int ref) throws Exception {
         try {
-            return incrementTool.execute(new Parameters(Map.of("ref", ref)), context);
+            return executeOnEDT(() -> incrementTool.execute(new Parameters(Map.of("ref", ref)), context));
         } finally {
             context.clearRefMap();
         }

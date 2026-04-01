@@ -35,7 +35,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
      */
     private String snapshot(Component... roots) throws Exception {
         context.setConsideredComponents(Arrays.asList(roots));
-        MCPProtocol.Content result = tool.execute(new Parameters(Map.of()), context);
+        MCPProtocol.Content result = executeOnEDT(() -> tool.execute(new Parameters(Map.of()), context));
         return result.getText();
     }
 

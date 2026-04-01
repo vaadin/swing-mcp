@@ -6,22 +6,33 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Test double for {@link MCPServer} that works in headless mode.
+ * Test double for {@link MCPServer} that allows tests to supply their own component
+ * hierarchies via {@link #setConsideredComponents(List)}.
  * <p>
- * Overrides {@link #runInEDT(Callable)} to call the block directly (no EDT
- * dispatch) and allows tests to supply their own component hierarchies via
- * {@link #setConsideredComponents(List)}.
+ * The {@code useEDT} constructor flag controls {@link #runInEDT(Callable)} behaviour:
+ * <ul>
+ *   <li>{@code false} — block is called directly on the calling thread; use this for
+ *       headless tests where no real EDT is running.</li>
+ *   <li>{@code true} — delegates to {@code super.runInEDT}, which marshals the block
+ *       onto the EDT via {@link javax.swing.SwingUtilities#invokeAndWait}; use this for
+ *       screen-mode tests where a real EDT is running.</li>
+ * </ul>
  */
 public class FakeMCPServer extends MCPServer {
 
+    private final boolean useEDT;
     private volatile List<Component> consideredComponents = new CopyOnWriteArrayList<>();
 
-    public FakeMCPServer(int port, String contextPath) {
+    public FakeMCPServer(int port, String contextPath, boolean useEDT) {
         super(port, contextPath);
+        this.useEDT = useEDT;
     }
 
     @Override
     protected synchronized <T> T runInEDT(Callable<T> block) throws Exception {
+        if (useEDT) {
+            return super.runInEDT(block);
+        }
         return block.call();
     }
 

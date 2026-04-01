@@ -35,12 +35,12 @@ class SwingDecrementScreenTest extends AbstractScreenTest {
 
     private void snapshot(Component... roots) throws Exception {
         context.setConsideredComponents(Arrays.asList(roots));
-        snapshotTool.execute(new Parameters(Map.of()), context);
+        executeOnEDT(() -> snapshotTool.execute(new Parameters(Map.of()), context));
     }
 
     private MCPProtocol.Content decrement(int ref) throws Exception {
         try {
-            return decrementTool.execute(new Parameters(Map.of("ref", ref)), context);
+            return executeOnEDT(() -> decrementTool.execute(new Parameters(Map.of("ref", ref)), context));
         } finally {
             context.clearRefMap();
         }

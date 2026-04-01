@@ -22,7 +22,7 @@ public abstract class AbstractHeadlessTest {
 
     @BeforeAll
     static void startMcpServer() throws Exception {
-        mcpServer = new FakeMCPServer(MCP_PORT, "/mcp");
+        mcpServer = new FakeMCPServer(MCP_PORT, "/mcp", false);
         mcpServer.start();
 
         Duration timeout = Duration.ofSeconds(5);

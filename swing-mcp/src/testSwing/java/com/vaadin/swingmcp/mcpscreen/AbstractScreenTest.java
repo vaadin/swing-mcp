@@ -8,8 +8,9 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 
 import javax.swing.*;
-
 import java.time.Duration;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -26,7 +27,7 @@ public abstract class AbstractScreenTest {
 
     @BeforeAll
     static void startMcpServer() throws Exception {
-        mcpServer = new FakeMCPServer(MCP_PORT, "/mcp");
+        mcpServer = new FakeMCPServer(MCP_PORT, "/mcp", true);
         mcpServer.start();
 
         Duration timeout = Duration.ofSeconds(5);
@@ -49,5 +50,26 @@ public abstract class AbstractScreenTest {
         if (mcpServer != null) {
             mcpServer.stop();
         }
+    }
+
+    /**
+     * Runs {@code block} on the EDT via {@link SwingUtilities#invokeAndWait} and returns
+     * its result. Use this in place of direct {@code tool.execute()} calls so that Swing
+     * state mutations happen on the correct thread, matching production behaviour.
+     */
+    protected static <T> T executeOnEDT(Callable<T> block) throws Exception {
+        AtomicReference<T> result = new AtomicReference<>();
+        AtomicReference<Exception> error = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(() -> {
+            try {
+                result.set(block.call());
+            } catch (Exception e) {
+                error.set(e);
+            }
+        });
+        if (error.get() != null) {
+            throw error.get();
+        }
+        return result.get();
     }
 }

@@ -32,12 +32,12 @@ class SwingSetTextScreenTest extends AbstractScreenTest {
 
     private void snapshot(Component... roots) throws Exception {
         context.setConsideredComponents(Arrays.asList(roots));
-        snapshotTool.execute(new Parameters(Map.of()), context);
+        executeOnEDT(() -> snapshotTool.execute(new Parameters(Map.of()), context));
     }
 
     private void setText(int ref, String text) throws Exception {
         try {
-            setTextTool.execute(new Parameters(Map.of("ref", ref, "text", text)), context);
+            executeOnEDT(() -> setTextTool.execute(new Parameters(Map.of("ref", ref, "text", text)), context));
         } finally {
             context.clearRefMap();
         }
