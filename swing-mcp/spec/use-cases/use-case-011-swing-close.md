@@ -65,14 +65,14 @@ and ends with a longer wait (slow or animated close transitions), for a total bu
 
 - [ ] Calling `swing_close` on a JFrame with `DISPOSE_ON_CLOSE` dismisses the frame.
 - [ ] Calling `swing_close` on a JDialog ref dismisses the dialog.
-- [ ] Calling `swing_close` on a window with `DO_NOTHING_ON_CLOSE` returns an empty string (not an error) with the informational note from BR-10.
+- [ ] Calling `swing_close` on a window with `DO_NOTHING_ON_CLOSE` returns the informational message from BR-10 (not an MCP error).
 - [ ] Calling `swing_close` on an undecorated window returns an MCP error (`isError: true`).
 - [ ] A JFrame with `EXIT_ON_CLOSE` does not receive a `close` action in the snapshot and has no ref assigned for it.
 - [ ] Calling `swing_close` on a JFrame with `EXIT_ON_CLOSE` (via a stale ref) returns an MCP error (`isError: true`).
 - [ ] Calling `swing_close` with an invalid ref returns an MCP error with a recovery message suggesting to call `swing_snapshot`.
 - [ ] Calling `swing_close` on a component that does not support close (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [ ] The tool returns an empty string when the window is no longer showing after dispatch.
-- [ ] If the window is still showing after the polling budget is exhausted, the tool returns an empty string (not an error) with the informational note from BR-07.
+- [ ] The tool returns `""` when the window is no longer showing after dispatch.
+- [ ] If the window is still showing after the polling budget is exhausted, the tool returns the informational message from BR-07 (not an MCP error).
 
 ---
 
