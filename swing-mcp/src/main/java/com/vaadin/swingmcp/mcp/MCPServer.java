@@ -78,7 +78,6 @@ public class MCPServer {
      *   <li>Marshals onto the EDT via {@link #runInEDT(Callable)}</li>
      *   <li>Retrieves the current considered components</li>
      *   <li>Delegates to {@link AbstractSwingTool#execute}</li>
-     *   <li>Runs any {@link AbstractSwingTool.PostVerification} polling on the HTTP thread</li>
      * </ol>
      *
      * @param tool the Swing tool to register
