@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** open or close the popup of a UI component by ref **so that** I can expand a combo box to reveal its items or collapse it after selection.
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-03-31
 
 ---

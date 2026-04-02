@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** decrement the value of a UI component by ref **so that** I can decrease the value of a spinner or slider one step at a time.
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-03-31
 
 ---
@@ -60,14 +60,14 @@ Execution order:
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_decrement` on a `JSpinner` fires the decrement action; the value decreases (verified after EDT drains).
-- [ ] Calling `swing_decrement` on a `JSlider` fires the decrement action; the value decreases (verified after EDT drains).
-- [ ] Calling `swing_decrement` with an invalid ref returns an MCP error with a recovery message.
-- [ ] Calling `swing_decrement` on a component that does not support decrement (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [ ] Calling `swing_decrement` on a disabled component returns an MCP error explaining the component is disabled.
-- [ ] The tool returns `null` on success.
-- [ ] The ref map is cleared after every `swing_decrement` call (mutation tool).
-- [ ] Calling `swing_decrement` on a `JSpinner` at its minimum silently does nothing (no MCP error — the client observes the unchanged value via `swing_snapshot`).
+- [x] Calling `swing_decrement` on a `JSpinner` fires the decrement action; the value decreases (verified after EDT drains).
+- [x] Calling `swing_decrement` on a `JSlider` fires the decrement action; the value decreases (verified after EDT drains).
+- [x] Calling `swing_decrement` with an invalid ref returns an MCP error with a recovery message.
+- [x] Calling `swing_decrement` on a component that does not support decrement (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
+- [x] Calling `swing_decrement` on a disabled component returns an MCP error explaining the component is disabled.
+- [x] The tool returns `null` on success.
+- [x] The ref map is cleared after every `swing_decrement` call (mutation tool).
+- [x] Calling `swing_decrement` on a `JSpinner` at its minimum silently does nothing (no MCP error — the client observes the unchanged value via `swing_snapshot`).
 
 ---
 
@@ -75,26 +75,26 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingDecrementTest` (headless — all happy-path tests can run headless; `HeadlessException` does not occur for decrement)
-  - [ ] Decrementing a `JSpinner` (`SpinnerNumberModel`) fires the action; value decreases (verified after EDT drains).
-  - [ ] Decrementing a `JSpinner` (`SpinnerListModel`) fires the action; moves to previous item (verified after EDT drains).
-  - [ ] Decrementing a `JSpinner` (`SpinnerDateModel`) fires the action; moves back by one date unit (verified after EDT drains).
-  - [ ] Decrementing a `JSlider` fires the action; value decreases (verified after EDT drains).
-  - [ ] Decrementing a `JSpinner` (`SpinnerNumberModel`) at its minimum returns `null` (fire-and-forget — no MCP error; value stays at min).
-  - [ ] Decrementing a `JSpinner` (`SpinnerDateModel`) at its minimum returns `null` (fire-and-forget — no MCP error).
-  - [ ] Invalid ref returns an MCP error with `isError: true`.
-  - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
-  - [ ] Component without decrement support (e.g. `JButton`) returns an MCP error with `isError: true`.
-  - [ ] Disabled component returns an MCP error with `isError: true` explaining the component is disabled.
-  - [ ] Success returns `null`.
-  - [ ] Ref map is cleared after a successful call.
-  - [ ] MCP client smoke test.
-  - [ ] Each component from the component matrix is tested (dedicated test method per component).
+- [x] `SwingDecrementTest` (headless — all happy-path tests can run headless; `HeadlessException` does not occur for decrement)
+  - [x] Decrementing a `JSpinner` (`SpinnerNumberModel`) fires the action; value decreases (verified after EDT drains).
+  - [x] Decrementing a `JSpinner` (`SpinnerListModel`) fires the action; moves to previous item (verified after EDT drains).
+  - [x] Decrementing a `JSpinner` (`SpinnerDateModel`) fires the action; moves back by one date unit (verified after EDT drains).
+  - [x] Decrementing a `JSlider` fires the action; value decreases (verified after EDT drains).
+  - [x] Decrementing a `JSpinner` (`SpinnerNumberModel`) at its minimum returns `null` (fire-and-forget — no MCP error; value stays at min).
+  - [x] Decrementing a `JSpinner` (`SpinnerDateModel`) at its minimum returns `null` (fire-and-forget — no MCP error).
+  - [x] Invalid ref returns an MCP error with `isError: true`.
+  - [x] The error message suggests calling `swing_snapshot` to refresh refs.
+  - [x] Component without decrement support (e.g. `JButton`) returns an MCP error with `isError: true`.
+  - [x] Disabled component returns an MCP error with `isError: true` explaining the component is disabled.
+  - [x] Success returns `null`.
+  - [x] Ref map is cleared after a successful call.
+  - [x] MCP client smoke test.
+  - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [ ] `SwingDecrementScreenTest` (`testSwing` — JFrame/JDialog coverage per `verification.md` matrix; no tests here that cannot run headless)
-  - [ ] Decrementing a `JSpinner` inside `JFrame` decreases its value (verified after EDT drains).
-  - [ ] Decrementing a `JSlider` inside `JFrame` decreases its value (verified after EDT drains).
-  - [ ] Decrementing a `JSpinner` inside `JDialog` decreases its value (verified after EDT drains).
+- [x] `SwingDecrementScreenTest` (`testSwing` — JFrame/JDialog coverage per `verification.md` matrix; no tests here that cannot run headless)
+  - [x] Decrementing a `JSpinner` inside `JFrame` decreases its value (verified after EDT drains).
+  - [x] Decrementing a `JSlider` inside `JFrame` decreases its value (verified after EDT drains).
+  - [x] Decrementing a `JSpinner` inside `JDialog` decreases its value (verified after EDT drains).
 
 ### Component matrix
 

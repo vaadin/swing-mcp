@@ -67,9 +67,9 @@ Execution order:
 - [x] Calling `swing_get_text` with an invalid ref returns an MCP error with a recovery message.
 - [x] Calling `swing_get_text` on a component that does not support `get_text` (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
 - [x] Calling `swing_get_text` on an empty text field returns an empty string (not an error).
-- [ ] The ref map is **not** cleared after a `swing_get_text` call (read-only tool).
+- [x] The ref map is **not** cleared after a `swing_get_text` call (read-only tool).
 - [x] Calling `swing_get_text` on a disabled but text-readable component succeeds (no enabled check — reading is always allowed).
-- [ ] Text longer than `MAX_TEXT_LENGTH` is truncated with a summary indicating total length.
+- [x] Text longer than `MAX_TEXT_LENGTH` is truncated with a summary indicating total length.
 
 ---
 

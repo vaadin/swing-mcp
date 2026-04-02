@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** close a window or dialog by ref **so that** I can dismiss dialogs and frames that I've finished with.
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-04-01
 
 ---
@@ -55,15 +55,15 @@ sees it in the snapshot and can decide how to proceed.
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_close` on a JFrame with `DISPOSE_ON_CLOSE` fires the close event; the frame is dismissed (verified via snapshot after EDT drains).
-- [ ] Calling `swing_close` on a JDialog fires the close event; the dialog is dismissed (verified via snapshot after EDT drains).
-- [ ] Calling `swing_close` on a window with `DO_NOTHING_ON_CLOSE` fires the close event and returns `null`; the window remains visible (verified via snapshot — no MCP error).
-- [ ] Calling `swing_close` on an undecorated window returns an MCP error (`isError: true`).
-- [ ] A JFrame with `EXIT_ON_CLOSE` does not receive a `close` action in the snapshot and has no ref assigned for it.
-- [ ] Calling `swing_close` on a JFrame with `EXIT_ON_CLOSE` (via a stale ref) returns an MCP error (`isError: true`).
-- [ ] Calling `swing_close` with an invalid ref returns an MCP error with a recovery message suggesting to call `swing_snapshot`.
-- [ ] Calling `swing_close` on a component that does not support close (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [ ] The tool returns `null` on success (fire-and-forget).
+- [x] Calling `swing_close` on a JFrame with `DISPOSE_ON_CLOSE` fires the close event; the frame is dismissed (verified via snapshot after EDT drains).
+- [x] Calling `swing_close` on a JDialog fires the close event; the dialog is dismissed (verified via snapshot after EDT drains).
+- [x] Calling `swing_close` on a window with `DO_NOTHING_ON_CLOSE` fires the close event and returns `null`; the window remains visible (verified via snapshot — no MCP error).
+- [x] Calling `swing_close` on an undecorated window returns an MCP error (`isError: true`).
+- [x] A JFrame with `EXIT_ON_CLOSE` does not receive a `close` action in the snapshot and has no ref assigned for it.
+- [x] Calling `swing_close` on a JFrame with `EXIT_ON_CLOSE` (via a stale ref) returns an MCP error (`isError: true`).
+- [x] Calling `swing_close` with an invalid ref returns an MCP error with a recovery message suggesting to call `swing_snapshot`.
+- [x] Calling `swing_close` on a component that does not support close (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
+- [x] The tool returns `null` on success (fire-and-forget).
 
 ---
 
@@ -71,18 +71,18 @@ sees it in the snapshot and can decide how to proceed.
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingCloseTest` (headless)
-  - [ ] Each non-window component from the component matrix returns an MCP error (`isError: true`) when `swing_close` is called on it.
-  - [ ] Calling `swing_close` with an invalid ref returns an MCP error with `isError: true` and a recovery message.
+- [x] `SwingCloseTest` (headless)
+  - [x] Each non-window component from the component matrix returns an MCP error (`isError: true`) when `swing_close` is called on it.
+  - [x] Calling `swing_close` with an invalid ref returns an MCP error with `isError: true` and a recovery message.
 
-- [ ] `SwingCloseScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
-  - [ ] Calling `swing_close` on a JFrame ref (with `DISPOSE_ON_CLOSE`) fires the close event; frame is dismissed (verified after EDT drains).
-  - [ ] Calling `swing_close` on a JDialog ref fires the close event; dialog is dismissed (verified after EDT drains).
-  - [ ] Calling `swing_close` on a JFrame with `DO_NOTHING_ON_CLOSE` returns `null`; window is still showing (verified via `isShowing()` after EDT drains).
-  - [ ] Calling `swing_close` on a JDialog with `DO_NOTHING_ON_CLOSE` returns `null`; dialog is still showing (verified via `isShowing()` after EDT drains).
-  - [ ] Calling `swing_close` on an undecorated JFrame returns an MCP error with `isError: true`.
-  - [ ] A JFrame with `EXIT_ON_CLOSE` does not appear with a `close` action in the snapshot.
-  - [ ] Calling `swing_close` on a JFrame with `EXIT_ON_CLOSE` via a stale ref returns an MCP error with `isError: true`.
-  - [ ] `JOptionPane` component matrix: `swing_close` returns an MCP error with `isError: true`.
-  - [ ] Snapshot of a JFrame with `DISPOSE_ON_CLOSE` shows `close` in its actions and assigns it a ref.
-  - [ ] Snapshot of a visible JDialog shows `close` in its actions and assigns it a ref.
+- [x] `SwingCloseScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+  - [x] Calling `swing_close` on a JFrame ref (with `DISPOSE_ON_CLOSE`) fires the close event; frame is dismissed (verified after EDT drains).
+  - [x] Calling `swing_close` on a JDialog ref fires the close event; dialog is dismissed (verified after EDT drains).
+  - [x] Calling `swing_close` on a JFrame with `DO_NOTHING_ON_CLOSE` returns `null`; window is still showing (verified via `isShowing()` after EDT drains).
+  - [x] Calling `swing_close` on a JDialog with `DO_NOTHING_ON_CLOSE` returns `null`; dialog is still showing (verified via `isShowing()` after EDT drains).
+  - [x] Calling `swing_close` on an undecorated JFrame returns an MCP error with `isError: true`.
+  - [x] A JFrame with `EXIT_ON_CLOSE` does not appear with a `close` action in the snapshot.
+  - [x] Calling `swing_close` on a JFrame with `EXIT_ON_CLOSE` via a stale ref returns an MCP error with `isError: true`.
+  - [x] `JOptionPane` component matrix: `swing_close` returns an MCP error with `isError: true`.
+  - [x] Snapshot of a JFrame with `DISPOSE_ON_CLOSE` shows `close` in its actions and assigns it a ref.
+  - [x] Snapshot of a visible JDialog shows `close` in its actions and assigns it a ref.

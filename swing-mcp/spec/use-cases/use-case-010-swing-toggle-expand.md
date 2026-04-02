@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** expand or collapse a tree node by ref **so that** I can navigate a `JTree` hierarchy to find and interact with nested items.
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-04-01
 
 ---

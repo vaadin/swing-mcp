@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** increment the value of a UI component by ref **so that** I can increase the value of a spinner or slider one step at a time.
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-03-31
 
 ---
@@ -60,14 +60,14 @@ Execution order:
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_increment` on a `JSpinner` fires the increment action; the value increases (verified after EDT drains).
-- [ ] Calling `swing_increment` on a `JSlider` fires the increment action; the value increases (verified after EDT drains).
-- [ ] Calling `swing_increment` with an invalid ref returns an MCP error with a recovery message.
-- [ ] Calling `swing_increment` on a component that does not support increment (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [ ] Calling `swing_increment` on a disabled component returns an MCP error explaining the component is disabled.
-- [ ] The tool returns `null` on success.
-- [ ] The ref map is cleared after every `swing_increment` call (mutation tool).
-- [ ] Calling `swing_increment` on a `JSpinner` at its maximum silently does nothing (no MCP error — the client observes the unchanged value via `swing_snapshot`).
+- [x] Calling `swing_increment` on a `JSpinner` fires the increment action; the value increases (verified after EDT drains).
+- [x] Calling `swing_increment` on a `JSlider` fires the increment action; the value increases (verified after EDT drains).
+- [x] Calling `swing_increment` with an invalid ref returns an MCP error with a recovery message.
+- [x] Calling `swing_increment` on a component that does not support increment (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
+- [x] Calling `swing_increment` on a disabled component returns an MCP error explaining the component is disabled.
+- [x] The tool returns `null` on success.
+- [x] The ref map is cleared after every `swing_increment` call (mutation tool).
+- [x] Calling `swing_increment` on a `JSpinner` at its maximum silently does nothing (no MCP error — the client observes the unchanged value via `swing_snapshot`).
 
 ---
 
@@ -75,25 +75,25 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingIncrementTest` (headless — all happy-path tests can run headless; `HeadlessException` does not occur for increment/decrement)
-  - [ ] Incrementing a `JSpinner` (`SpinnerNumberModel`) fires the action; value increases (verified after EDT drains).
-  - [ ] Incrementing a `JSpinner` (`SpinnerListModel`) fires the action; advances to next item (verified after EDT drains).
-  - [ ] Incrementing a `JSpinner` (`SpinnerDateModel`) fires the action; advances by one date unit (verified after EDT drains).
-  - [ ] Incrementing a `JSlider` fires the action; value increases (verified after EDT drains).
-  - [ ] Incrementing a `JSpinner` at its maximum returns `null` (fire-and-forget — no MCP error; value stays at max).
-  - [ ] Invalid ref returns an MCP error with `isError: true`.
-  - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
-  - [ ] Component without increment support (e.g. `JButton`) returns an MCP error with `isError: true`.
-  - [ ] Disabled component returns an MCP error with `isError: true` explaining the component is disabled.
-  - [ ] Success returns `null`.
-  - [ ] Ref map is cleared after a successful call.
-  - [ ] MCP client smoke test.
-  - [ ] Each component from the component matrix is tested (dedicated test method per component).
+- [x] `SwingIncrementTest` (headless — all happy-path tests can run headless; `HeadlessException` does not occur for increment/decrement)
+  - [x] Incrementing a `JSpinner` (`SpinnerNumberModel`) fires the action; value increases (verified after EDT drains).
+  - [x] Incrementing a `JSpinner` (`SpinnerListModel`) fires the action; advances to next item (verified after EDT drains).
+  - [x] Incrementing a `JSpinner` (`SpinnerDateModel`) fires the action; advances by one date unit (verified after EDT drains).
+  - [x] Incrementing a `JSlider` fires the action; value increases (verified after EDT drains).
+  - [x] Incrementing a `JSpinner` at its maximum returns `null` (fire-and-forget — no MCP error; value stays at max).
+  - [x] Invalid ref returns an MCP error with `isError: true`.
+  - [x] The error message suggests calling `swing_snapshot` to refresh refs.
+  - [x] Component without increment support (e.g. `JButton`) returns an MCP error with `isError: true`.
+  - [x] Disabled component returns an MCP error with `isError: true` explaining the component is disabled.
+  - [x] Success returns `null`.
+  - [x] Ref map is cleared after a successful call.
+  - [x] MCP client smoke test.
+  - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [ ] `SwingIncrementScreenTest` (`testSwing` — JFrame/JDialog coverage per `verification.md` matrix; no tests here that cannot run headless)
-  - [ ] Incrementing a `JSpinner` inside `JFrame` increases its value (verified after EDT drains).
-  - [ ] Incrementing a `JSlider` inside `JFrame` increases its value (verified after EDT drains).
-  - [ ] Incrementing a `JSpinner` inside `JDialog` increases its value (verified after EDT drains).
+- [x] `SwingIncrementScreenTest` (`testSwing` — JFrame/JDialog coverage per `verification.md` matrix; no tests here that cannot run headless)
+  - [x] Incrementing a `JSpinner` inside `JFrame` increases its value (verified after EDT drains).
+  - [x] Incrementing a `JSlider` inside `JFrame` increases its value (verified after EDT drains).
+  - [x] Incrementing a `JSpinner` inside `JDialog` increases its value (verified after EDT drains).
 
 ### Component matrix
 

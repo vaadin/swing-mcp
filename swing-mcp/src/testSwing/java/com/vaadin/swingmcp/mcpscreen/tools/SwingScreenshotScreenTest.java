@@ -92,17 +92,21 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         JFrame frame2 = showFrame(300, 200);
         mcpServer.setConsideredComponents(List.of(frame1, frame2));
 
-        // Read dimensions before calling the tool: the OS may apply window decorations
-        // asynchronously, so reading after the call can yield different values.
-        int expectedWidth = Math.max(frame1.getWidth(), frame2.getWidth());
-        int expectedHeight = frame1.getHeight() + frame2.getHeight() + SwingScreenshotTool.WINDOW_GAP;
-
         McpSchema.CallToolResult result = mcpClient.callTool(
                 new McpSchema.CallToolRequest("swing_screenshot", Map.of()));
         BufferedImage image = decodeResult(result);
 
-        assertEquals(expectedWidth, image.getWidth());
-        assertEquals(expectedHeight, image.getHeight());
+        // Read dimensions after the call: by this point the OS has applied any window
+        // decorations and both frames have settled at their final sizes.
+        int[] dims = new int[4];
+        SwingUtilities.invokeAndWait(() -> {
+            dims[0] = frame1.getWidth();
+            dims[1] = frame1.getHeight();
+            dims[2] = frame2.getWidth();
+            dims[3] = frame2.getHeight();
+        });
+        assertEquals(Math.max(dims[0], dims[2]), image.getWidth());
+        assertEquals(dims[1] + dims[3] + SwingScreenshotTool.WINDOW_GAP, image.getHeight());
     }
 
     @Test

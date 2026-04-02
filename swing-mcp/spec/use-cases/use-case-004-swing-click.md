@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** click a UI component by ref **so that** I can interact with buttons, checkboxes, and other clickable elements.
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-03-31
 
 ---
@@ -43,11 +43,11 @@ Execution order:
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_click` with a valid ref for a button fires the click action (fire-and-forget) and returns `null`.
-- [ ] Calling `swing_click` with a valid ref for a checkbox fires the click action (fire-and-forget) and returns `null`.
-- [ ] Calling `swing_click` with an invalid ref returns an MCP error with a recovery message.
-- [ ] Calling `swing_click` on a disabled component returns an MCP error explaining the component is disabled.
-- [ ] Calling `swing_click` on a component that does not support click returns an MCP error suggesting to call `swing_snapshot`.
+- [x] Calling `swing_click` with a valid ref for a button fires the click action (fire-and-forget) and returns `null`.
+- [x] Calling `swing_click` with a valid ref for a checkbox fires the click action (fire-and-forget) and returns `null`.
+- [x] Calling `swing_click` with an invalid ref returns an MCP error with a recovery message.
+- [x] Calling `swing_click` on a disabled component returns an MCP error explaining the component is disabled.
+- [x] Calling `swing_click` on a component that does not support click returns an MCP error suggesting to call `swing_snapshot`.
 
 ---
 
@@ -55,20 +55,20 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingClickTest`
-  - [ ] Clicking a button ref fires the action (verified by observing the button's action listener was called after the EDT drains).
-  - [ ] Clicking a checkbox ref fires the action (verified by observing state change after EDT drains).
-  - [ ] Clicking an invalid ref returns an MCP error with `isError: true`.
-  - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
-  - [ ] Clicking a disabled button returns an MCP error with `isError: true` explaining the component is disabled.
-  - [ ] Clicking a component without click support (e.g. `JSlider`) returns an MCP error with `isError: true`.
-  - [ ] Each component from the component matrix is tested.
+- [x] `SwingClickTest`
+  - [x] Clicking a button ref fires the action (verified by observing the button's action listener was called after the EDT drains).
+  - [x] Clicking a checkbox ref fires the action (verified by observing state change after EDT drains).
+  - [x] Clicking an invalid ref returns an MCP error with `isError: true`.
+  - [x] The error message suggests calling `swing_snapshot` to refresh refs.
+  - [x] Clicking a disabled button returns an MCP error with `isError: true` explaining the component is disabled.
+  - [x] Clicking a component without click support (e.g. `JSlider`) returns an MCP error with `isError: true`.
+  - [x] Each component from the component matrix is tested.
 
-- [ ] `SwingClickScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
-  - [ ] Clicking a button inside `JFrame` fires its action listener (verified after EDT drains).
-  - [ ] Clicking a checkbox inside `JFrame` toggles its state (verified after EDT drains).
-  - [ ] Clicking a disabled button inside `JFrame` returns an MCP error.
-  - [ ] Clicking a button inside `JDialog` fires its action listener.
-  - [ ] Clicking a checkbox inside `JDialog` toggles its state.
-  - [ ] Clicking a disabled button inside `JDialog` returns an MCP error.
+- [x] `SwingClickScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+  - [x] Clicking a button inside `JFrame` fires its action listener (verified after EDT drains).
+  - [x] Clicking a checkbox inside `JFrame` toggles its state (verified after EDT drains).
+  - [x] Clicking a disabled button inside `JFrame` returns an MCP error.
+  - [x] Clicking a button inside `JDialog` fires its action listener.
+  - [x] Clicking a checkbox inside `JDialog` toggles its state.
+  - [x] Clicking a disabled button inside `JDialog` returns an MCP error.
 
