@@ -79,15 +79,23 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
+- [ ] `SwingUtilsSupportsValueTest` updates (headless) — triggered by `supportsGetValue()` fix
+  - [ ] `JSpinner(SpinnerDateModel)` returns `false` for `supportsGetValue()`.
+  - [ ] `JSpinner(SpinnerListModel)` returns `false` for `supportsGetValue()`.
+  - [ ] `JSpinner(SpinnerDateModel)` returns `false` for `supportsSetValue()`.
+  - [ ] `JSpinner(SpinnerListModel)` returns `false` for `supportsSetValue()`.
+
 - [ ] `SwingGetValueTest` (headless)
   - [ ] Reading a `JSlider` returns `current`, `min`, and `max`.
   - [ ] Reading a `JSpinner(SpinnerNumberModel)` returns `current`, `min`, and `max`.
   - [ ] Reading a `JProgressBar` returns `current`, `min`, and `max`.
+  - [ ] Reading an unbounded `JSpinner(SpinnerNumberModel(5, null, null, 1))` returns only `current` — `min` and `max` are absent from the JSON (BR-08).
   - [ ] Reading with an invalid ref returns an MCP error with `isError: true`.
   - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
   - [ ] Reading a component without value support (e.g. `JButton`) returns an MCP error with `isError: true`.
   - [ ] The ref map is preserved after a successful `swing_get_value` call (verified by calling `swing_get_value` twice with the same ref).
   - [ ] Reading a disabled `JSlider` succeeds and returns its value.
+  - [ ] Whole-number values serialize as JSON integers (e.g. `JSlider` at 42 → `"current":42`, not `"current":42.0`) (BR-10).
   - [ ] Each component from the component matrix is tested (dedicated test method per component).
 
 - [ ] `SwingGetValueScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
