@@ -289,4 +289,18 @@ public final class SwingUtils {
         }
         return null;
     }
+
+    /**
+     * Serializes a {@link Number} for AI-readable output: returns a {@code long}
+     * when the value is a whole number, otherwise a {@code double}.
+     *
+     * @see <a href="use-case-012-swing-get-value.md">UC-012 BR-10</a>
+     */
+    public static Number serializeNumber(Number value) {
+        double d = value.doubleValue();
+        if (d % 1 == 0) {
+            return (long) d;
+        }
+        return d;
+    }
 }

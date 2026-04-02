@@ -74,6 +74,26 @@ public class Parameters {
     }
 
     /**
+     * Returns the value of a required numeric parameter as a raw {@link Number}.
+     * Unlike {@link #getInt(String)}, this does not convert to {@code int} —
+     * it preserves the original numeric type (typically {@link Double} from Gson).
+     *
+     * @throws MCPServerException if the key is missing or the value is not a Number
+     */
+    public Number getNumber(String key) {
+        Object value = raw.get(key);
+        if (value == null) {
+            throw new MCPServerException(MCPServerException.INVALID_PARAMS,
+                    "Required parameter '" + key + "' is missing");
+        }
+        if (!(value instanceof Number)) {
+            throw new MCPServerException(MCPServerException.INVALID_PARAMS,
+                    "Parameter '" + key + "' must be a number");
+        }
+        return (Number) value;
+    }
+
+    /**
      * Returns the value of an optional integer parameter, or {@code null} if absent.
      *
      * @throws MCPServerException if the value is present but not a Number

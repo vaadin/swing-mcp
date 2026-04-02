@@ -86,6 +86,32 @@ class ParametersTest {
         assertEquals("Parameter 'ref' must be an integer", ex.getMessage());
     }
 
+    // ── getNumber ────────────────────────────────────────────────────────────
+
+    @Test
+    void getNumberReturnsRawNumber() {
+        var params = new Parameters(Map.of("value", 42.5));
+        Number result = params.getNumber("value");
+        assertInstanceOf(Double.class, result);
+        assertEquals(42.5, result.doubleValue());
+    }
+
+    @Test
+    void getNumberThrowsWhenMissing() {
+        var params = new Parameters(Map.of());
+        var ex = assertThrows(MCPServerException.class, () -> params.getNumber("value"));
+        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        assertEquals("Required parameter 'value' is missing", ex.getMessage());
+    }
+
+    @Test
+    void getNumberThrowsWhenWrongType() {
+        var params = new Parameters(Map.of("value", "notanumber"));
+        var ex = assertThrows(MCPServerException.class, () -> params.getNumber("value"));
+        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        assertEquals("Parameter 'value' must be a number", ex.getMessage());
+    }
+
     // ── getIntOrNull ─────────────────────────────────────────────────────────
 
     @Test

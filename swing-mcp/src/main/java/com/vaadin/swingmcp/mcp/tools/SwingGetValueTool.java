@@ -72,26 +72,15 @@ public class SwingGetValueTool extends AbstractSwingTool {
 
         // Steps 7-8: build JSON via Content.json()
         Map<String, Number> result = new LinkedHashMap<>();
-        result.put("current", serializeNumber(current));
+        result.put("current", SwingUtils.serializeNumber(current));
         if (min != null) {
-            result.put("min", serializeNumber(min));
+            result.put("min", SwingUtils.serializeNumber(min));
         }
         if (max != null) {
-            result.put("max", serializeNumber(max));
+            result.put("max", SwingUtils.serializeNumber(max));
         }
 
         return MCPProtocol.Content.json(result);
-    }
-
-    /**
-     * BR-10: serialize as long when the value is a whole number, otherwise as double.
-     */
-    static Number serializeNumber(Number value) {
-        double d = value.doubleValue();
-        if (d % 1 == 0) {
-            return (long) d;
-        }
-        return d;
     }
 
     @Override

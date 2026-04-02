@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** set the numeric value of a UI component by ref **so that** I can adjust sliders, spinners, and split pane dividers during Swing app migration.
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-04-02
 
 ---
@@ -73,22 +73,22 @@ Execution order:
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_set_value` with a valid ref for a `JSlider` and a value within range changes the slider position.
-- [ ] Calling `swing_set_value` with a valid ref for a `JSpinner(SpinnerNumberModel)` changes the spinner value.
-- [ ] Calling `swing_set_value` with a valid ref for a `JSplitPane` changes the divider location.
-- [ ] Calling `swing_set_value` with an invalid ref returns an MCP error with a recovery message.
-- [ ] Calling `swing_set_value` on a component that does not support `set_value` (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [ ] Calling `swing_set_value` on a `JProgressBar` returns an MCP error (read-only value).
-- [ ] Calling `swing_set_value` on a disabled component returns an MCP error explaining the component is disabled.
-- [ ] Calling `swing_set_value` with a value below the component's minimum returns a range error.
-- [ ] Calling `swing_set_value` with a value above the component's maximum returns a range error.
-- [ ] Calling `swing_set_value` on an unbounded `JSpinner` with any numeric value succeeds (no range error).
-- [ ] The ref map is cleared after a successful `swing_set_value` call (mutation tool).
-- [ ] The ref map is cleared even after a failed `swing_set_value` call that passed ref lookup.
-- [ ] The tool returns `null` (empty content array) on success.
-- [ ] Type preservation: setting a value on a `JSpinner` whose model holds `Integer` passes an `Integer` to the accessibility API.
-- [ ] Type preservation: setting a value on a `JSpinner` whose model holds `BigDecimal` passes a `BigDecimal` to the accessibility API.
-- [ ] Setting a fractional value (e.g. `42.5`) on a component whose model holds `Integer` returns an MCP error saying the component requires a whole number.
+- [x] Calling `swing_set_value` with a valid ref for a `JSlider` and a value within range changes the slider position.
+- [x] Calling `swing_set_value` with a valid ref for a `JSpinner(SpinnerNumberModel)` changes the spinner value.
+- [x] Calling `swing_set_value` with a valid ref for a `JSplitPane` changes the divider location.
+- [x] Calling `swing_set_value` with an invalid ref returns an MCP error with a recovery message.
+- [x] Calling `swing_set_value` on a component that does not support `set_value` (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
+- [x] Calling `swing_set_value` on a `JProgressBar` returns an MCP error (read-only value).
+- [x] Calling `swing_set_value` on a disabled component returns an MCP error explaining the component is disabled.
+- [x] Calling `swing_set_value` with a value below the component's minimum returns a range error.
+- [x] Calling `swing_set_value` with a value above the component's maximum returns a range error.
+- [x] Calling `swing_set_value` on an unbounded `JSpinner` with any numeric value succeeds (no range error).
+- [x] The ref map is cleared after a successful `swing_set_value` call (mutation tool).
+- [x] The ref map is cleared even after a failed `swing_set_value` call that passed ref lookup.
+- [x] The tool returns `null` (empty content array) on success.
+- [x] Type preservation: setting a value on a `JSpinner` whose model holds `Integer` passes an `Integer` to the accessibility API.
+- [x] Type preservation: setting a value on a `JSpinner` whose model holds `BigDecimal` passes a `BigDecimal` to the accessibility API.
+- [x] Setting a fractional value (e.g. `42.5`) on a component whose model holds `Integer` returns an MCP error saying the component requires a whole number.
 
 ---
 
@@ -96,36 +96,36 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `ParametersTest` update
-  - [ ] `getNumber()` returns the raw `Number` for a numeric value.
-  - [ ] `getNumber()` throws `MCPServerException` when key is missing.
-  - [ ] `getNumber()` throws `MCPServerException` when value is not a Number.
+- [x] `ParametersTest` update
+  - [x] `getNumber()` returns the raw `Number` for a numeric value.
+  - [x] `getNumber()` throws `MCPServerException` when key is missing.
+  - [x] `getNumber()` throws `MCPServerException` when value is not a Number.
 
-- [ ] `SwingSetValueTest` (headless)
-  - [ ] Setting a `JSlider` value within range changes the slider position.
-  - [ ] Setting a `JSpinner(SpinnerNumberModel)` value within range changes the spinner value.
-  - [ ] Setting a `JSplitPane` value changes the divider location.
-  - [ ] Setting with an invalid ref returns an MCP error with `isError: true`.
-  - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
-  - [ ] Setting on a component without value support (e.g. `JButton`) returns an MCP error with `isError: true`.
-  - [ ] Setting on a `JProgressBar` returns an MCP error (read-only value via `supportsSetValue`).
-  - [ ] Setting on a disabled `JSlider` returns an MCP error explaining the component is disabled.
-  - [ ] Setting a value below min returns a range error with `isError: true`.
-  - [ ] Setting a value above max returns a range error with `isError: true`.
-  - [ ] Setting a value on an unbounded `JSpinner(SpinnerNumberModel(5, null, null, 1))` succeeds.
-  - [ ] The ref map is cleared after a successful `swing_set_value` call (verified by attempting to use the same ref again).
-  - [ ] The ref map is cleared after a failed call on a disabled component.
-  - [ ] Type preservation: setting a value on a `JSpinner` with `Integer` model preserves `Integer` type (verified by reading back the model's value class).
-  - [ ] Type preservation: setting a value on a `JSpinner` with `Double` model preserves `Double` type.
-  - [ ] Type preservation: setting a value on a `JSpinner` with `BigDecimal` model preserves `BigDecimal` type.
-  - [ ] Setting a fractional value on an `Integer`-model spinner returns an MCP error (BR-11).
-  - [ ] Each component from the component matrix is tested (dedicated test method per component).
+- [x] `SwingSetValueTest` (headless)
+  - [x] Setting a `JSlider` value within range changes the slider position.
+  - [x] Setting a `JSpinner(SpinnerNumberModel)` value within range changes the spinner value.
+  - [x] Setting a `JSplitPane` value changes the divider location.
+  - [x] Setting with an invalid ref returns an MCP error with `isError: true`.
+  - [x] The error message suggests calling `swing_snapshot` to refresh refs.
+  - [x] Setting on a component without value support (e.g. `JButton`) returns an MCP error with `isError: true`.
+  - [x] Setting on a `JProgressBar` returns an MCP error (read-only value via `supportsSetValue`).
+  - [x] Setting on a disabled `JSlider` returns an MCP error explaining the component is disabled.
+  - [x] Setting a value below min returns a range error with `isError: true`.
+  - [x] Setting a value above max returns a range error with `isError: true`.
+  - [x] Setting a value on an unbounded `JSpinner(SpinnerNumberModel(5, null, null, 1))` succeeds.
+  - [x] The ref map is cleared after a successful `swing_set_value` call (verified by attempting to use the same ref again).
+  - [x] The ref map is cleared after a failed call on a disabled component.
+  - [x] Type preservation: setting a value on a `JSpinner` with `Integer` model preserves `Integer` type (verified by reading back the model's value class).
+  - [x] Type preservation: setting a value on a `JSpinner` with `Double` model preserves `Double` type.
+  - [x] Type preservation: setting a value on a `JSpinner` with `BigDecimal` model preserves `BigDecimal` type.
+  - [x] Setting a fractional value on an `Integer`-model spinner returns an MCP error (BR-11).
+  - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [ ] `SwingSetValueScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
-  - [ ] Setting a `JSlider` value inside `JFrame` changes the slider position.
-  - [ ] Setting a `JSpinner(SpinnerNumberModel)` value inside `JFrame` changes the spinner value.
-  - [ ] Setting a `JSlider` value inside `JDialog` changes the slider position.
-  - [ ] Setting on a disabled `JSlider` inside `JFrame` returns an MCP error.
+- [x] `SwingSetValueScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+  - [x] Setting a `JSlider` value inside `JFrame` changes the slider position.
+  - [x] Setting a `JSpinner(SpinnerNumberModel)` value inside `JFrame` changes the spinner value.
+  - [x] Setting a `JSlider` value inside `JDialog` changes the slider position.
+  - [x] Setting on a disabled `JSlider` inside `JFrame` returns an MCP error.
 
 ### Component matrix
 
