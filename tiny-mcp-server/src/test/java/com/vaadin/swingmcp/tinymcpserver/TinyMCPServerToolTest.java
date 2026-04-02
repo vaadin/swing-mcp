@@ -166,6 +166,20 @@ class TinyMCPServerToolTest {
                     return MCPProtocol.Content.text("ok");
                 });
 
+        // Tool: echo_array — accepts a required array param, returns it as JSON content
+        server.addTool("echo_array", "Echoes an array back as JSON",
+                new InputSchemaBuilder()
+                        .requiredArray("items", "The items to echo")
+                        .build(),
+                params -> MCPProtocol.Content.json(params.get("items")));
+
+        // Tool: echo_object — accepts a required object param, returns it as JSON content
+        server.addTool("echo_object", "Echoes an object back as JSON",
+                new InputSchemaBuilder()
+                        .requiredObject("config", "The config to echo")
+                        .build(),
+                params -> MCPProtocol.Content.json(params.get("config")));
+
         server.start();
 
         HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport
@@ -198,7 +212,7 @@ class TinyMCPServerToolTest {
         McpSchema.ListToolsResult result = client.listTools();
         assertNotNull(result);
         List<McpSchema.Tool> tools = result.tools();
-        assertEquals(16, tools.size());
+        assertEquals(18, tools.size());
 
         McpSchema.Tool echoTool = tools.stream()
                 .filter(t -> "echo_text".equals(t.name()))
@@ -465,6 +479,38 @@ class TinyMCPServerToolTest {
         Map<String, Object> args = lastCallArgs.get();
         assertNotNull(args);
         assertEquals("green", args.get("color"));
+    }
+
+    // ===== array and object parameter types =====
+
+    @Test
+    void callToolArrayParamReceivedAsList() {
+        McpSchema.CallToolResult result = client.callTool(
+                new McpSchema.CallToolRequest("echo_array",
+                        Map.of("items", List.of("a", "b", "c"))));
+        assertFalse(Boolean.TRUE.equals(result.isError()));
+        assertEquals(1, result.content().size());
+        McpSchema.TextContent text = (McpSchema.TextContent) result.content().get(0);
+        assertEquals("[\"a\",\"b\",\"c\"]", text.text());
+    }
+
+    @Test
+    void callToolObjectParamReceivedAsMap() {
+        McpSchema.CallToolResult result = client.callTool(
+                new McpSchema.CallToolRequest("echo_object",
+                        Map.of("config", Map.of("key", "value"))));
+        assertFalse(Boolean.TRUE.equals(result.isError()));
+        assertEquals(1, result.content().size());
+        McpSchema.TextContent text = (McpSchema.TextContent) result.content().get(0);
+        assertEquals("{\"key\":\"value\"}", text.text());
+    }
+
+    @Test
+    void callToolMissingRequiredArrayParamReturnsError() {
+        Exception ex = assertThrows(Exception.class, () ->
+                client.callTool(new McpSchema.CallToolRequest("echo_array", Map.of())));
+        McpError mcpError = assertInstanceOf(McpError.class, McpError.findRootCause(ex));
+        assertEquals(-32602, mcpError.getJsonRpcError().code());
     }
 
     // ===== MCPServerException handling =====

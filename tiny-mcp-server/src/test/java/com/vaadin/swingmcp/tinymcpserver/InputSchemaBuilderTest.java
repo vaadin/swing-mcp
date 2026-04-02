@@ -351,4 +351,64 @@ class InputSchemaBuilderTest {
                         .requiredBoolean("_tmp", "temp flag")
                         .toString());
     }
+
+    // --- array and object types ---
+
+    @Test
+    void requiredArrayToString() {
+        assertEquals("tags: array",
+                new InputSchemaBuilder()
+                        .requiredArray("tags", "A list of tags")
+                        .toString());
+    }
+
+    @Test
+    void optionalArrayToString() {
+        assertEquals("tags: array?",
+                new InputSchemaBuilder()
+                        .optionalArray("tags", "A list of tags")
+                        .toString());
+    }
+
+    @Test
+    void requiredObjectToString() {
+        assertEquals("config: object",
+                new InputSchemaBuilder()
+                        .requiredObject("config", "Configuration map")
+                        .toString());
+    }
+
+    @Test
+    void optionalObjectToString() {
+        assertEquals("config: object?",
+                new InputSchemaBuilder()
+                        .optionalObject("config", "Configuration map")
+                        .toString());
+    }
+
+    @Test
+    void arrayAndObjectBuildProducesCorrectTypes() {
+        MCPProtocol.InputSchema schema = new InputSchemaBuilder()
+                .requiredArray("tags", "A list of tags")
+                .optionalObject("config", "Configuration map")
+                .build();
+
+        Map<String, MCPProtocol.PropertySchema> props = schema.getProperties();
+        assertEquals("array", props.get("tags").getType());
+        assertEquals("object", props.get("config").getType());
+        assertEquals(List.of("tags"), schema.getRequired());
+    }
+
+    @Test
+    void allTypesToStringIncludingArrayAndObject() {
+        assertEquals("a: integer, b: string, c: number, d: boolean, e: array, f: object",
+                new InputSchemaBuilder()
+                        .requiredInteger("a", "int")
+                        .requiredString("b", "str")
+                        .requiredNumber("c", "num")
+                        .requiredBoolean("d", "bool")
+                        .requiredArray("e", "arr")
+                        .requiredObject("f", "obj")
+                        .toString());
+    }
 }

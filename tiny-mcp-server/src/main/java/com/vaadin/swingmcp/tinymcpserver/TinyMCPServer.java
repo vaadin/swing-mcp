@@ -40,8 +40,10 @@ public class TinyMCPServer {
      * <p>The parameter map is always non-null, even when no parameters are defined or passed.
      * Values are typed according to their schema: {@code String} for string parameters,
      * {@code Integer} for integer parameters, {@code Double} for number parameters,
-     * and {@code Boolean} for boolean parameters. Optional parameters absent from the call
-     * are not included in the map.
+     * {@code Boolean} for boolean parameters, {@code List<Object>} for array parameters,
+     * and {@code Map<String, Object>} for object parameters. Elements and values inside
+     * arrays and objects follow the same Java type mapping recursively.
+     * Optional parameters absent from the call are not included in the map.
      *
      * <p>The MCP specification defines {@code CallToolResult.content} as a required
      * JSON array with no minimum size. Returning {@code null} produces an empty

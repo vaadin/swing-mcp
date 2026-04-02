@@ -41,7 +41,7 @@ a: integer, b: integer?, ref: string, status: string(active|inactive), page: int
 
 Prerequisite: UC-002 implemented
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-03-26
 
 ---
@@ -49,9 +49,7 @@ Prerequisite: UC-002 implemented
 ## Acceptance Criteria
 
 - [x] InputSchemaBuilder Java class created
-- [x] All methods created (string, integer, number, boolean)
-- [ ] `requiredArray` / `optionalArray` methods added
-- [ ] `requiredObject` / `optionalObject` methods added
+- [x] All methods created (string, integer, number, boolean, array, object)
 - [x] All tests created
 
 ---
@@ -71,6 +69,6 @@ Prerequisite: UC-002 implemented
 - [x] Test that calling `withEnum`/`withMinimum`/`withMaximum` before any parameter throws `IllegalStateException`
 - [x] Test that calling `withEnum`/`withMinimum`/`withMaximum` twice on the same parameter throws `IllegalStateException`
 - [x] Test that constraints apply only to the last-added parameter
-- [ ] Test `requiredArray` and `optionalArray` in `toString()` and `build()`
-- [ ] Test `requiredObject` and `optionalObject` in `toString()` and `build()`
+- [x] Test `requiredArray` and `optionalArray` in `toString()` and `build()`
+- [x] Test `requiredObject` and `optionalObject` in `toString()` and `build()`
 

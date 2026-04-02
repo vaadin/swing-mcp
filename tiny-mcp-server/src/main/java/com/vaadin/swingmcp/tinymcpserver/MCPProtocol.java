@@ -198,6 +198,16 @@ public class MCPProtocol {
         }
 
         /**
+         * Creates a text content item whose text is the JSON serialization of {@code value}.
+         * Useful for returning JSON arrays ({@code List}) or objects ({@code Map}).
+         *
+         * @param value the value to serialize (e.g. a {@code List<Object>} or {@code Map<String,Object>})
+         */
+        public static Content json(Object value) {
+            return text(MCPProtocol.toJson(value));
+        }
+
+        /**
          * Creates an image content item.
          *
          * @param data     base64-encoded image data

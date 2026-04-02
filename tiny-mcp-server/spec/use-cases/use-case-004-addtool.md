@@ -45,7 +45,7 @@ Add convenient factory methods to `MCPProtocol.Content`:
 
 Prerequisite: UC-003 implemented
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-03-26
 
 ---
@@ -68,13 +68,13 @@ Prerequisite: UC-003 implemented
 - [x] Test `tools/list` via MCP client returns all registered tools with correct name, description, and InputSchema
 - [x] Test function invocation, by running the server and calling the function via the MCP client
   - [x] Parameter passing to the function: test empty map, test all supported types (string, integer, number, boolean)
-  - [ ] Parameter passing: test array and object types (handler receives `List<Object>` / `Map<String, Object>`)
+  - [x] Parameter passing: test array and object types (handler receives `List<Object>` / `Map<String, Object>`)
   - [x] Integer coercion: whole-number Double is converted to Integer; fractional Double returns -32602
   - [x] Missing required parameter returns JSON-RPC error -32602
   - [x] Unknown parameters are silently ignored (warning logged)
   - [x] Null parameter value treated as missing (required → -32602, optional → absent from map)
   - [x] Tool not found returns JSON-RPC error -32601
   - [x] Result handling: null content (empty array), text content, image content, audio content, resource content
-  - [ ] Result handling: json content (`Content.json(List)`, `Content.json(Map)`)
+  - [x] Result handling: json content (`Content.json(List)`, `Content.json(Map)`)
   - [x] Exception handling: if the function throws, return isError=true with exception.toString() as text content
 

@@ -54,6 +54,22 @@ public class InputSchemaBuilder {
         return add(name, "boolean", description, false);
     }
 
+    public InputSchemaBuilder requiredArray(String name, String description) {
+        return add(name, "array", description, true);
+    }
+
+    public InputSchemaBuilder optionalArray(String name, String description) {
+        return add(name, "array", description, false);
+    }
+
+    public InputSchemaBuilder requiredObject(String name, String description) {
+        return add(name, "object", description, true);
+    }
+
+    public InputSchemaBuilder optionalObject(String name, String description) {
+        return add(name, "object", description, false);
+    }
+
     private InputSchemaBuilder add(String name, String type, String description, boolean isRequired) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Parameter name must not be null or blank");
