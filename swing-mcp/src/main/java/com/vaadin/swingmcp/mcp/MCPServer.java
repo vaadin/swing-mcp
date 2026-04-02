@@ -39,6 +39,25 @@ public class MCPServer {
 
     private static final String SERVER_NAME = "Swing MCP";
     private static final String SERVER_VERSION = "0.0.1";
+    private static final String INSTRUCTIONS =
+            "This server provides tools to inspect and interact with a running Java Swing application.\n" +
+            "The MCP server runs in-process with the Swing application: if the application exits, this\n" +
+            "server becomes unreachable. To restore the connection, ask the human operator to restart\n" +
+            "the Swing application.\n" +
+            "\n" +
+            "## Workflow\n" +
+            "\n" +
+            "1. Call `swing_snapshot` first to get the current UI state as an accessibility tree. Each component has a `ref` ID used by all interaction tools.\n" +
+            "2. Use the `ref` values from the snapshot to target specific components for interaction (click, set_text, etc.).\n" +
+            "3. After each interaction, call `swing_snapshot` again to verify the UI has updated as expected.\n" +
+            "4. Use `swing_screenshot` only when the accessibility tree alone is ambiguous — it returns a PNG image that may consume many tokens.\n" +
+            "\n" +
+            "## Key behaviors\n" +
+            "\n" +
+            "- `swing_snapshot` and `swing_screenshot` return the current state immediately.\n" +
+            "- Interaction tools (`swing_click`, `swing_set_text`, etc.) dispatch the action to the Swing event thread asynchronously; always follow up with `swing_snapshot` to confirm the effect.\n" +
+            "- `ref` values may change after UI transitions (dialogs opening/closing, navigation). Re-snapshot after significant state changes before using stale refs.\n" +
+            "- `swing_close` on a window with unsaved changes may trigger a confirmation dialog — snapshot afterward to detect it.";
 
     private final TinyMCPServer server;
     private volatile Thread shutdownHook;
@@ -49,7 +68,7 @@ public class MCPServer {
         MCPProtocol.Implementation serverInfo = new MCPProtocol.Implementation();
         serverInfo.setName(SERVER_NAME);
         serverInfo.setVersion(SERVER_VERSION);
-        this.server = new TinyMCPServer(port, contextPath, serverInfo, null);
+        this.server = new TinyMCPServer(port, contextPath, serverInfo, INSTRUCTIONS);
         registerTools();
     }
 
