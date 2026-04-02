@@ -15,7 +15,7 @@ The function has the following properties:
 * **Verified against the MCP specification (2025-03-26 schema):** `CallToolResult.content` is a required JSON array with no `minItems` constraint — an empty array is valid. The function returns a single `MCPProtocol.Content` which is mapped as follows:
   * **`null`** → empty content array (`"content": []`) — signals "no result" (e.g. a mutation tool that succeeded with nothing to report).
   * **non-null** → single-element content array (`"content": [...]`).
-* The function will receive Java types as values: `String` for string, `Integer` for integer, `Double` for number, `Boolean` for boolean. It never receives raw JSON objects.
+* The function will receive Java types as values: `String` for string, `Integer` for integer, `Double` for number, `Boolean` for boolean, `List<Object>` for array, `Map<String, Object>` for object. Elements and values in arrays/objects follow the same Java type mapping recursively. It never receives raw GSON `JsonElement` objects.
 * If the function throws, return `isError`=true with text content set to `exception.toString()` (class name + message, no stacktrace).
 
 `addTool()` constraints:
@@ -38,13 +38,14 @@ The function has the following properties:
 Add convenient factory methods to `MCPProtocol.Content`:
 
 * `Content.text(String text)`
+* `Content.json(Object value)` — serializes `value` (a `List`, `Map`, or any GSON-serializable object) to JSON and wraps it as text content
 * `Content.image(String data, String mimeType)` — `data` is base64-encoded
 * `Content.audio(String data, String mimeType)` — `data` is base64-encoded
 * `Content.resource(ResourceContents resource)`
 
 Prerequisite: UC-003 implemented
 
-**Status:** Implemented
+**Status:** Approved
 **Date:** 2026-03-26
 
 ---
@@ -67,11 +68,13 @@ Prerequisite: UC-003 implemented
 - [x] Test `tools/list` via MCP client returns all registered tools with correct name, description, and InputSchema
 - [x] Test function invocation, by running the server and calling the function via the MCP client
   - [x] Parameter passing to the function: test empty map, test all supported types (string, integer, number, boolean)
+  - [ ] Parameter passing: test array and object types (handler receives `List<Object>` / `Map<String, Object>`)
   - [x] Integer coercion: whole-number Double is converted to Integer; fractional Double returns -32602
   - [x] Missing required parameter returns JSON-RPC error -32602
   - [x] Unknown parameters are silently ignored (warning logged)
   - [x] Null parameter value treated as missing (required → -32602, optional → absent from map)
   - [x] Tool not found returns JSON-RPC error -32601
   - [x] Result handling: null content (empty array), text content, image content, audio content, resource content
+  - [ ] Result handling: json content (`Content.json(List)`, `Content.json(Map)`)
   - [x] Exception handling: if the function throws, return isError=true with exception.toString() as text content
 

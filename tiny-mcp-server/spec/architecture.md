@@ -56,9 +56,11 @@ calling `start()`. The API accepts:
 - **inputSchema** — parameter schema built via a fluent builder (see below)
 - **handler** — a lambda/callback that receives parsed parameters and returns a result
 
-Supported parameter types: `string`, `integer`, `number`, `boolean`.
+Supported parameter types: `string`, `integer`, `number`, `boolean`, `array`, `object`.
 For `integer` parameters, TinyMCPServer accepts a JSON number with no fractional part (e.g. `1.0` is accepted as `1`); a number with a non-zero fractional part is rejected.
-Supported return types: `string` or `PNG image` (as bytes).
+For `array` parameters, the handler receives a `List<Object>` (elements follow the same Java type mapping recursively).
+For `object` parameters, the handler receives a `Map<String, Object>` (values follow the same Java type mapping recursively).
+Supported return types: `string`, `JSON array`, `JSON object`, or `PNG image` (as bytes).
 
 #### Tool parameter schema builder
 
@@ -77,6 +79,8 @@ server.addTool("swing_click", "Click a UI element",
 The builder supports:
 - `.requiredString(name, description)` / `.optionalString(name, description)`
 - `.requiredInteger(name, description)` / `.optionalInteger(name, description)`
+- `.requiredArray(name, description)` / `.optionalArray(name, description)`
+- `.requiredObject(name, description)` / `.optionalObject(name, description)`
 - `.build()` — produces the final schema object
 
 ### MCPProtocol

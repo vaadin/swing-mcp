@@ -10,11 +10,13 @@ InputSchema inputSchema =
         .build();
 ```
 
-The builder supports the following types: `string`, `integer`, `number`, `boolean`.
+The builder supports the following types: `string`, `integer`, `number`, `boolean`, `array`, `object`.
 
 Example methods:
 - `.requiredString(name, description)` / `.optionalString(name, description)`
 - `.requiredInteger(name, description)` / `.optionalInteger(name, description)`
+- `.requiredArray(name, description)` / `.optionalArray(name, description)`
+- `.requiredObject(name, description)` / `.optionalObject(name, description)`
 - `.withEnum(String... values)` — adds `enum` constraint to the last added parameter; throws `IllegalArgumentException` if `values` is empty; throws `IllegalStateException` if called before any parameter is added, or if `enum` is already set for that parameter
 - `.withMinimum(Number min)` / `.withMaximum(Number max)` — adds `minimum`/`maximum` constraint to the last added parameter; throws `IllegalStateException` if called before any parameter is added, or if already set for that parameter
 - `.build()` — produces the final schema object `MCPProtocol.InputSchema`
@@ -30,7 +32,7 @@ will throw `IllegalStateException`.
 
 Builder's `toString()` method will produce the following succinct output:
 ```
-a: integer, b: integer?, ref: string, status: string(active|inactive), page: integer[1,], price: number[0.0,999.99]
+a: integer, b: integer?, ref: string, status: string(active|inactive), page: integer[1,], price: number[0.0,999.99], tags: array, config: object?
 ```
 - Required parameters are shown as `type`, optional as `type?` (Kotlin/TypeScript convention)
 - Enum constraints are shown as `type(val1|val2|...)`
@@ -39,7 +41,7 @@ a: integer, b: integer?, ref: string, status: string(active|inactive), page: int
 
 Prerequisite: UC-002 implemented
 
-**Status:** Implemented
+**Status:** Approved
 **Date:** 2026-03-26
 
 ---
@@ -47,7 +49,9 @@ Prerequisite: UC-002 implemented
 ## Acceptance Criteria
 
 - [x] InputSchemaBuilder Java class created
-- [x] All methods created
+- [x] All methods created (string, integer, number, boolean)
+- [ ] `requiredArray` / `optionalArray` methods added
+- [ ] `requiredObject` / `optionalObject` methods added
 - [x] All tests created
 
 ---
@@ -67,4 +71,6 @@ Prerequisite: UC-002 implemented
 - [x] Test that calling `withEnum`/`withMinimum`/`withMaximum` before any parameter throws `IllegalStateException`
 - [x] Test that calling `withEnum`/`withMinimum`/`withMaximum` twice on the same parameter throws `IllegalStateException`
 - [x] Test that constraints apply only to the last-added parameter
+- [ ] Test `requiredArray` and `optionalArray` in `toString()` and `build()`
+- [ ] Test `requiredObject` and `optionalObject` in `toString()` and `build()`
 
