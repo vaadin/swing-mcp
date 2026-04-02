@@ -27,9 +27,11 @@
 | BR-03 | If the target does not support `get_value` (i.e. `SwingUtils.supportsGetValue(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support get_value. Call swing_snapshot to verify the list of actions". |
 | BR-04 | All Swing component access happens on the EDT via `runInEDT()`. |
 | BR-05 | `swing_get_value` is a read-only tool: `isMutation()` returns `false` and the ref map is **not** cleared after invocation. |
-| BR-06 | The tool returns a JSON object. `current` (from `getCurrentAccessibleValue()`) is always present. `min` (from `getMinimumAccessibleValue()`) and `max` (from `getMaximumAccessibleValue()`) are included only when non-null (see BR-08). All values are JSON numbers. Example full result: `{"current": 42, "min": 0, "max": 100}`. |
+| BR-06 | The tool returns a JSON object via `Content.json()`. `current` (from `getCurrentAccessibleValue()`) is always present. `min` (from `getMinimumAccessibleValue()`) and `max` (from `getMaximumAccessibleValue()`) are included only when non-null (see BR-08). All values are JSON numbers. Example full result: `{"current": 42, "min": 0, "max": 100}`. |
 | BR-07 | No enabled check is performed — reading a value is always allowed, even on disabled components. |
 | BR-08 | `getMinimumAccessibleValue()` or `getMaximumAccessibleValue()` may return `null` for some components. If either is `null`, the corresponding field is omitted from the JSON object entirely — it is not serialised as `null`. Only `current` is guaranteed to be present. |
+| BR-09 | If `getCurrentAccessibleValue()` returns `null` at runtime, treat it as unsupported: return an MCP-level error (`isError: true`) with the same message as BR-03. This should not happen in practice if `supportsGetValue()` is correct, but acts as a defensive fallback. |
+| BR-10 | Number serialization: serialize as an integer (`long`) when the value is a whole number (i.e. `doubleValue() % 1 == 0`), otherwise as a floating-point number. Rationale: brevity for AI readability; and `swing_set_value` must round-trip the Java type (e.g. a `JSpinner` holding `Double(42.0)` must receive `42.0`, not `42`), so the AI can infer the Java type from whether the JSON number has a fractional part. |
 
 ### Algorithm
 
@@ -37,10 +39,11 @@ Execution order:
 1. **BR-02** — ref lookup (fail fast if ref is invalid).
 2. **BR-03** — `SwingUtils.supportsGetValue(accessible)` — if `false`, fail with error.
 3. Obtain `AccessibleValue av = ac.getAccessibleValue()`.
-4. Read `Number current = av.getCurrentAccessibleValue()`.
+4. Read `Number current = av.getCurrentAccessibleValue()`. If `null`, fail with the BR-03 error (**BR-09**).
 5. Read `Number min = av.getMinimumAccessibleValue()` (may be `null`).
 6. Read `Number max = av.getMaximumAccessibleValue()` (may be `null`).
-7. Build and return a JSON object: always include `"current"`, include `"min"` and `"max"` only if non-null (**BR-08**).
+7. Serialize each non-null number per **BR-10**: if `value.doubleValue() % 1 == 0`, emit as `long`; otherwise emit as `double`.
+8. Build and return a JSON object via `Content.json()`: always include `"current"`, include `"min"` and `"max"` only if non-null (**BR-08**).
 
 **Accessibility API methods used:**
 - `AccessibleContext.getAccessibleValue()` — detection and value retrieval
