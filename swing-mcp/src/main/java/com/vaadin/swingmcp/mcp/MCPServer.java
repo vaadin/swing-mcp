@@ -37,13 +37,19 @@ public class MCPServer {
 
     private static final Logger LOG = LoggerFactory.getLogger(MCPServer.class);
 
+    private static final String SERVER_NAME = "Swing MCP";
+    private static final String SERVER_VERSION = "0.0.1";
+
     private final TinyMCPServer server;
     private volatile Thread shutdownHook;
     /** Serialises all tool calls end-to-end (EDT phase + PostVerification polling). */
     private final Lock toolLock = new ReentrantLock();
 
     public MCPServer(int port, String contextPath) {
-        this.server = new TinyMCPServer(port, contextPath);
+        MCPProtocol.Implementation serverInfo = new MCPProtocol.Implementation();
+        serverInfo.setName(SERVER_NAME);
+        serverInfo.setVersion(SERVER_VERSION);
+        this.server = new TinyMCPServer(port, contextPath, serverInfo);
         registerTools();
     }
 

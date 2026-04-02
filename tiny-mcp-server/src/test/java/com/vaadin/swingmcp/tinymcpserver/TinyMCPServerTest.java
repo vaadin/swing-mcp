@@ -21,7 +21,10 @@ class TinyMCPServerTest {
 
     @BeforeAll
     static void startServer() throws Exception {
-        server = new TinyMCPServer(TEST_PORT, "/mcp");
+        MCPProtocol.Implementation serverInfo = new MCPProtocol.Implementation();
+        serverInfo.setName("Test Server");
+        serverInfo.setVersion("1.0");
+        server = new TinyMCPServer(TEST_PORT, "/mcp", serverInfo);
         server.start();
 
         HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport
@@ -49,8 +52,8 @@ class TinyMCPServerTest {
     void initializeAndConnect() {
         McpSchema.InitializeResult result = client.initialize();
         assertNotNull(result);
-        assertEquals("Swing MCP", result.serverInfo().name());
-        assertEquals("0.0.1", result.serverInfo().version());
+        assertEquals("Test Server", result.serverInfo().name());
+        assertEquals("1.0", result.serverInfo().version());
         assertTrue(client.isInitialized());
     }
 

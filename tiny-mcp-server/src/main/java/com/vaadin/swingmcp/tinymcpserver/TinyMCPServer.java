@@ -31,8 +31,6 @@ public class TinyMCPServer {
     public static final int DEFAULT_PORT = 18088;
     public static final String DEFAULT_CONTEXT_PATH = "/mcp";
     private static final String PROTOCOL_VERSION = "2024-11-05";
-    private static final String SERVER_NAME = "Swing MCP";
-    private static final String SERVER_VERSION = "0.0.1";
 
     /**
      * A tool handler function that receives parsed parameters and returns content.
@@ -88,6 +86,7 @@ public class TinyMCPServer {
 
     private final int port;
     private final String contextPath;
+    private final MCPProtocol.Implementation serverInfo;
     private final Map<String, RegisteredTool> tools = new LinkedHashMap<>();
     private volatile boolean started = false;
     private HttpServer httpServer;
@@ -98,11 +97,16 @@ public class TinyMCPServer {
     }
 
     public TinyMCPServer(int port, String contextPath) {
+        this(port, contextPath, new MCPProtocol.Implementation());
+    }
+
+    public TinyMCPServer(int port, String contextPath, MCPProtocol.Implementation serverInfo) {
         this.port = port;
-       if (!contextPath.startsWith("/")) {
-           throw new IllegalArgumentException("Parameter contextPath: invalid value " + contextPath + ": must start with a slash");
-       }
+        if (!contextPath.startsWith("/")) {
+            throw new IllegalArgumentException("Parameter contextPath: invalid value " + contextPath + ": must start with a slash");
+        }
         this.contextPath = contextPath;
+        this.serverInfo = serverInfo != null ? serverInfo : new MCPProtocol.Implementation();
     }
 
     public String getUrl() {
@@ -260,10 +264,7 @@ public class TinyMCPServer {
         MCPProtocol.InitializeResult result = new MCPProtocol.InitializeResult();
         result.setProtocolVersion(PROTOCOL_VERSION);
 
-        MCPProtocol.Implementation serverInfo = new MCPProtocol.Implementation();
-        serverInfo.setName(SERVER_NAME);
-        serverInfo.setVersion(SERVER_VERSION);
-        result.setServerInfo(serverInfo);
+        result.setServerInfo(this.serverInfo);
 
         MCPProtocol.ServerCapabilities capabilities = new MCPProtocol.ServerCapabilities();
         capabilities.setTools(new MCPProtocol.ToolsCapability());
