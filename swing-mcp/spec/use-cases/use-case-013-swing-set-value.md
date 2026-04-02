@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** set the numeric value of a UI component by ref **so that** I can adjust sliders, spinners, and split pane dividers during Swing app migration.
 
-**Status:** Draft
+**Status:** Approved
 **Date:** 2026-04-02
 
 ---
@@ -67,6 +67,7 @@ Execution order:
 - **No editable check** — unlike `swing_set_text` (which checks `EDITABLE` state), value components don't have a separate editable/read-only flag. A slider or spinner is either enabled or disabled. The enabled check (BR-05) is sufficient.
 - **Model type stability** — type preservation (BR-08) reads the current value's class at call time. If the model's type changes between `get_value` and `set_value` (e.g. external code replaces an `Integer` model with a `Double`), `set_value` still picks the correct type because it reads the *current* value, not a cached one. If the model changes dramatically (e.g. from `SpinnerNumberModel` to `SpinnerDateModel`), `supportsSetValue()` will return `false` and the tool fails with "unsupported". This is an accepted risk — apps almost universally stick to one type per component.
 - **`setCurrentAccessibleValue()` return value** — returns `boolean` indicating success. Under fire-and-forget, this return value is discarded. Validation (BR-03, BR-05, BR-07) catches pre-condition errors synchronously; the AI observes outcomes via `swing_snapshot`.
+- **`serializeNumber()`** — the number formatting logic (integer when whole) from UC-012 `SwingGetValueTool` must be moved to `SwingUtils` so both `SwingGetValueTool` and `SwingSetValueTool` can share it.
 
 ---
 
