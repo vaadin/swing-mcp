@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** read the numeric value of a UI component by ref **so that** I can understand the current value of sliders, spinners, progress bars, and split panes without relying on the snapshot (which omits field values per UC-002 BR-03).
 
-**Status:** Draft
+**Status:** Implemented
 **Date:** 2026-04-02
 
 ---
@@ -63,15 +63,15 @@ Execution order:
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_get_value` with a valid ref for a `JSlider` returns the current slider position, min, and max.
-- [ ] Calling `swing_get_value` with a valid ref for a `JSpinner(SpinnerNumberModel)` returns the current spinner value, min, and max.
-- [ ] Calling `swing_get_value` with a valid ref for a `JProgressBar` returns the current progress value, min, and max.
-- [ ] Calling `swing_get_value` with a valid ref for a `JSplitPane` returns the current divider location plus min and max.
-- [ ] Calling `swing_get_value` with an invalid ref returns an MCP error with a recovery message.
-- [ ] Calling `swing_get_value` on a component that does not support `get_value` (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [ ] The ref map is **not** cleared after a `swing_get_value` call (read-only tool).
-- [ ] Calling `swing_get_value` on a disabled but value-readable component succeeds (no enabled check).
-- [ ] If `getMinimumAccessibleValue()` or `getMaximumAccessibleValue()` returns `null`, the corresponding field is absent from the JSON result.
+- [x] Calling `swing_get_value` with a valid ref for a `JSlider` returns the current slider position, min, and max.
+- [x] Calling `swing_get_value` with a valid ref for a `JSpinner(SpinnerNumberModel)` returns the current spinner value, min, and max.
+- [x] Calling `swing_get_value` with a valid ref for a `JProgressBar` returns the current progress value, min, and max.
+- [x] Calling `swing_get_value` with a valid ref for a `JSplitPane` returns the current divider location plus min and max.
+- [x] Calling `swing_get_value` with an invalid ref returns an MCP error with a recovery message.
+- [x] Calling `swing_get_value` on a component that does not support `get_value` (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
+- [x] The ref map is **not** cleared after a `swing_get_value` call (read-only tool).
+- [x] Calling `swing_get_value` on a disabled but value-readable component succeeds (no enabled check).
+- [x] If `getMinimumAccessibleValue()` or `getMaximumAccessibleValue()` returns `null`, the corresponding field is absent from the JSON result.
 
 ---
 
@@ -79,30 +79,30 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingUtilsSupportsValueTest` updates (headless) — triggered by `supportsGetValue()` fix
-  - [ ] `JSpinner(SpinnerDateModel)` returns `false` for `supportsGetValue()`.
-  - [ ] `JSpinner(SpinnerListModel)` returns `false` for `supportsGetValue()`.
-  - [ ] `JSpinner(SpinnerDateModel)` returns `false` for `supportsSetValue()`.
-  - [ ] `JSpinner(SpinnerListModel)` returns `false` for `supportsSetValue()`.
+- [x] `SwingUtilsSupportsValueTest` updates (headless) — triggered by `supportsGetValue()` fix
+  - [x] `JSpinner(SpinnerDateModel)` returns `false` for `supportsGetValue()`.
+  - [x] `JSpinner(SpinnerListModel)` returns `false` for `supportsGetValue()`.
+  - [x] `JSpinner(SpinnerDateModel)` returns `false` for `supportsSetValue()`.
+  - [x] `JSpinner(SpinnerListModel)` returns `false` for `supportsSetValue()`.
 
-- [ ] `SwingGetValueTest` (headless)
-  - [ ] Reading a `JSlider` returns `current`, `min`, and `max`.
-  - [ ] Reading a `JSpinner(SpinnerNumberModel)` returns `current`, `min`, and `max`.
-  - [ ] Reading a `JProgressBar` returns `current`, `min`, and `max`.
-  - [ ] Reading an unbounded `JSpinner(SpinnerNumberModel(5, null, null, 1))` returns only `current` — `min` and `max` are absent from the JSON (BR-08).
-  - [ ] Reading with an invalid ref returns an MCP error with `isError: true`.
-  - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
-  - [ ] Reading a component without value support (e.g. `JButton`) returns an MCP error with `isError: true`.
-  - [ ] The ref map is preserved after a successful `swing_get_value` call (verified by calling `swing_get_value` twice with the same ref).
-  - [ ] Reading a disabled `JSlider` succeeds and returns its value.
-  - [ ] Whole-number values serialize as JSON integers (e.g. `JSlider` at 42 → `"current":42`, not `"current":42.0`) (BR-10).
-  - [ ] Each component from the component matrix is tested (dedicated test method per component).
+- [x] `SwingGetValueTest` (headless)
+  - [x] Reading a `JSlider` returns `current`, `min`, and `max`.
+  - [x] Reading a `JSpinner(SpinnerNumberModel)` returns `current`, `min`, and `max`.
+  - [x] Reading a `JProgressBar` returns `current`, `min`, and `max`.
+  - [x] Reading an unbounded `JSpinner(SpinnerNumberModel(5, null, null, 1))` returns only `current` — `min` and `max` are absent from the JSON (BR-08).
+  - [x] Reading with an invalid ref returns an MCP error with `isError: true`.
+  - [x] The error message suggests calling `swing_snapshot` to refresh refs.
+  - [x] Reading a component without value support (e.g. `JButton`) returns an MCP error with `isError: true`.
+  - [x] The ref map is preserved after a successful `swing_get_value` call (verified by calling `swing_get_value` twice with the same ref).
+  - [x] Reading a disabled `JSlider` succeeds and returns its value.
+  - [x] Whole-number values serialize as JSON integers (e.g. `JSlider` at 42 → `"current":42`, not `"current":42.0`) (BR-10).
+  - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [ ] `SwingGetValueScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
-  - [ ] Reading a `JSlider` inside `JFrame` returns its value.
-  - [ ] Reading a `JSpinner(SpinnerNumberModel)` inside `JFrame` returns its value.
-  - [ ] Reading a `JProgressBar` inside `JFrame` returns its value.
-  - [ ] Reading a `JSlider` inside `JDialog` returns its value.
+- [x] `SwingGetValueScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+  - [x] Reading a `JSlider` inside `JFrame` returns its value.
+  - [x] Reading a `JSpinner(SpinnerNumberModel)` inside `JFrame` returns its value.
+  - [x] Reading a `JProgressBar` inside `JFrame` returns its value.
+  - [x] Reading a `JSlider` inside `JDialog` returns its value.
 
 ### Component matrix
 

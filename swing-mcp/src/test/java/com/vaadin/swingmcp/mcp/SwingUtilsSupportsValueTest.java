@@ -76,6 +76,20 @@ class SwingUtilsSupportsValueTest {
     }
 
     @Test
+    void jSpinnerDateModel_doesNotSupportGetValue() {
+        // SpinnerDateModel exposes non-null AccessibleValue but getCurrentAccessibleValue() returns null
+        JSpinner spinner = new JSpinner(new SpinnerDateModel());
+        assertFalse(SwingUtils.supportsGetValue(spinner));
+    }
+
+    @Test
+    void jSpinnerListModel_doesNotSupportGetValue() {
+        // SpinnerListModel exposes non-null AccessibleValue but getCurrentAccessibleValue() returns null
+        JSpinner spinner = new JSpinner(new SpinnerListModel(new String[]{"A", "B", "C"}));
+        assertFalse(SwingUtils.supportsGetValue(spinner));
+    }
+
+    @Test
     void jSlider_supportsGetValue() {
         assertTrue(SwingUtils.supportsGetValue(new JSlider(0, 100, 50)));
     }
@@ -193,6 +207,16 @@ class SwingUtilsSupportsValueTest {
     @Test
     void jSlider_supportsSetValue() {
         assertTrue(SwingUtils.supportsSetValue(new JSlider(0, 100, 50)));
+    }
+
+    @Test
+    void jSpinnerDateModel_doesNotSupportSetValue() {
+        assertFalse(SwingUtils.supportsSetValue(new JSpinner(new SpinnerDateModel())));
+    }
+
+    @Test
+    void jSpinnerListModel_doesNotSupportSetValue() {
+        assertFalse(SwingUtils.supportsSetValue(new JSpinner(new SpinnerListModel(new String[]{"A", "B", "C"}))));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

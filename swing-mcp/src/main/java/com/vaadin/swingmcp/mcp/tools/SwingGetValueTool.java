@@ -1,0 +1,102 @@
+package com.vaadin.swingmcp.mcp.tools;
+
+import com.vaadin.swingmcp.mcp.SwingUtils;
+import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
+import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
+import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+
+import javax.accessibility.Accessible;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleValue;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+/**
+ * MCP tool {@code swing_get_value}: reads the numeric value of a UI component by ref.
+ *
+ * <p>Looks up the component by ref, verifies it supports the {@code get_value} action,
+ * then reads the value via the accessibility API ({@link AccessibleValue}).</p>
+ *
+ * @see <a href="use-case-012-swing-get-value.md">UC-012</a>
+ */
+public class SwingGetValueTool extends AbstractSwingTool {
+
+    @Override
+    public String getName() {
+        return TOOL_SWING_GET_VALUE;
+    }
+
+    @Override
+    public String getDescription() {
+        return "Read the numeric value of a UI component by ref. Returns JSON with current, min, max. "
+                + "Missing min/max means unbounded. Call swing_snapshot first to obtain refs.";
+    }
+
+    @Override
+    public MCPProtocol.InputSchema getInputSchema() {
+        return new InputSchemaBuilder()
+                .requiredInteger("ref", "The element reference number from swing_snapshot")
+                .build();
+    }
+
+    @Override
+    public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
+        // BR-01: ref is required integer
+        int ref = params.getInt("ref");
+
+        // BR-02: look up the accessible by ref (throws MCPServerException if not found)
+        Accessible accessible = context.getAccessibleByRef(ref);
+
+        // BR-03: check get_value support
+        if (!SwingUtils.supportsGetValue(accessible)) {
+            throw new MCPErrorResponseException(
+                    "Component does not support get_value. Call swing_snapshot to verify the list of actions");
+        }
+
+        // BR-04: all access happens on EDT (guaranteed by MCPServer.registerTool)
+        AccessibleContext ac = accessible.getAccessibleContext();
+        AccessibleValue av = ac.getAccessibleValue();
+
+        // Step 4: read current value
+        Number current = av.getCurrentAccessibleValue();
+
+        // BR-09: defensive fallback — should not happen if supportsGetValue() is correct
+        if (current == null) {
+            throw new MCPErrorResponseException(
+                    "Component does not support get_value. Call swing_snapshot to verify the list of actions");
+        }
+
+        // Steps 5-6: read optional min/max
+        Number min = av.getMinimumAccessibleValue();
+        Number max = av.getMaximumAccessibleValue();
+
+        // Steps 7-8: build JSON via Content.json()
+        Map<String, Number> result = new LinkedHashMap<>();
+        result.put("current", serializeNumber(current));
+        if (min != null) {
+            result.put("min", serializeNumber(min));
+        }
+        if (max != null) {
+            result.put("max", serializeNumber(max));
+        }
+
+        return MCPProtocol.Content.json(result);
+    }
+
+    /**
+     * BR-10: serialize as long when the value is a whole number, otherwise as double.
+     */
+    static Number serializeNumber(Number value) {
+        double d = value.doubleValue();
+        if (d % 1 == 0) {
+            return (long) d;
+        }
+        return d;
+    }
+
+    @Override
+    public boolean isMutation() {
+        // BR-05: read-only tool, ref map is NOT cleared
+        return false;
+    }
+}

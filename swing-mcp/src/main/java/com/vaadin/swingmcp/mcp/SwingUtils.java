@@ -124,8 +124,12 @@ public final class SwingUtils {
     public static boolean supportsGetValue(Accessible a) {
         AccessibleContext ac = a.getAccessibleContext();
         if (ac == null) return false;
-        if (ac.getAccessibleValue() == null) return false;
-        return !SUPPRESSED_VALUE_ROLES.contains(ac.getAccessibleRole());
+        AccessibleValue av = ac.getAccessibleValue();
+        if (av == null) return false;
+        if (SUPPRESSED_VALUE_ROLES.contains(ac.getAccessibleRole())) return false;
+        // Some components (e.g. JSpinner with SpinnerDateModel) expose a non-null
+        // AccessibleValue but return null from getCurrentAccessibleValue().
+        return av.getCurrentAccessibleValue() != null;
     }
 
     /**
@@ -136,12 +140,9 @@ public final class SwingUtils {
      * read-only value roles (e.g. progress bars) are excluded.
      */
     public static boolean supportsSetValue(Accessible a) {
-        AccessibleContext ac = a.getAccessibleContext();
-        if (ac == null) return false;
-        if (ac.getAccessibleValue() == null) return false;
-        AccessibleRole role = ac.getAccessibleRole();
-        return !SUPPRESSED_VALUE_ROLES.contains(role)
-                && !READ_ONLY_VALUE_ROLES.contains(role);
+        if (!supportsGetValue(a)) return false;
+        AccessibleRole role = a.getAccessibleContext().getAccessibleRole();
+        return !READ_ONLY_VALUE_ROLES.contains(role);
     }
 
     /**
