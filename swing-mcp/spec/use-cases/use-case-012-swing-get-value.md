@@ -16,6 +16,8 @@
 - The tool looks up the component by ref and reads its numeric value via the accessibility API (`AccessibleValue`).
 - The tool returns a JSON object containing `current`, `min`, and `max` as numbers.
 
+**Tool description:** "Read the numeric value of a UI component by ref. Returns JSON with current, min, max. Missing min/max means unbounded. Call swing_snapshot first to obtain refs."
+
 ---
 
 ## Business Rules
@@ -24,12 +26,12 @@
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | If the target does not support `get_value` (i.e. `SwingUtils.supportsGetValue(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support get_value. Call swing_snapshot to verify the list of actions". |
+| BR-03 | If the target does not support `get_value` (i.e. `SwingUtils.supportsGetValue(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support get_value. Call swing_snapshot to verify the list of actions". `supportsGetValue()` checks: (1) `getAccessibleValue() != null`, (2) role not in `SUPPRESSED_VALUE_ROLES`, and (3) `getCurrentAccessibleValue() != null` — see design notes. |
 | BR-04 | All Swing component access happens on the EDT via `runInEDT()`. |
 | BR-05 | `swing_get_value` is a read-only tool: `isMutation()` returns `false` and the ref map is **not** cleared after invocation. |
 | BR-06 | The tool returns a JSON object via `Content.json()`. `current` (from `getCurrentAccessibleValue()`) is always present. `min` (from `getMinimumAccessibleValue()`) and `max` (from `getMaximumAccessibleValue()`) are included only when non-null (see BR-08). All values are JSON numbers. Example full result: `{"current": 42, "min": 0, "max": 100}`. |
 | BR-07 | No enabled check is performed — reading a value is always allowed, even on disabled components. |
-| BR-08 | `getMinimumAccessibleValue()` or `getMaximumAccessibleValue()` may return `null` for some components. If either is `null`, the corresponding field is omitted from the JSON object entirely — it is not serialised as `null`. Only `current` is guaranteed to be present. |
+| BR-08 | `getMinimumAccessibleValue()` or `getMaximumAccessibleValue()` may return `null` for some components (e.g. unbounded `SpinnerNumberModel`). If either is `null`, the corresponding field is omitted from the JSON object entirely — it is not serialised as `null`. Only `current` is guaranteed to be present. The tool description should note that a missing `min`/`max` means the value is unbounded in that direction. |
 | BR-09 | If `getCurrentAccessibleValue()` returns `null` at runtime, treat it as unsupported: return an MCP-level error (`isError: true`) with the same message as BR-03. This should not happen in practice if `supportsGetValue()` is correct, but acts as a defensive fallback. |
 | BR-10 | Number serialization: serialize as an integer (`long`) when the value is a whole number (i.e. `doubleValue() % 1 == 0`), otherwise as a floating-point number. Rationale: brevity for AI readability; and `swing_set_value` must round-trip the Java type (e.g. a `JSpinner` holding `Double(42.0)` must receive `42.0`, not `42`), so the AI can infer the Java type from whether the JSON number has a fractional part. |
 
@@ -50,6 +52,12 @@ Execution order:
 - `AccessibleValue.getCurrentAccessibleValue()` — current value
 - `AccessibleValue.getMinimumAccessibleValue()` — lower bound (may be `null`)
 - `AccessibleValue.getMaximumAccessibleValue()` — upper bound (may be `null`)
+
+### Design notes
+
+- **`JSplitPane`** — supported (no explicit exclusion), but considered a corner case: resizing the divider rarely reveals new components. No special handling needed. An un-laid-out `JSplitPane` reports `current: -1` with `min: 0`; the AI should not attempt to set `-1` since min is `0`. The future `swing_set_value` tool will enforce a range check (`min ≤ value ≤ max`), naturally preventing invalid values.
+- **`JTabbedPane`** — `getAccessibleValue()` returns `null` (role `PAGE_TAB_LIST`); verified by probe test. Naturally fails `supportsGetValue()` without needing role suppression.
+- **`JSpinner(SpinnerDateModel)` / `JSpinner(SpinnerListModel)`** — probe test confirmed that `getAccessibleValue()` returns **non-null** but `getCurrentAccessibleValue()` returns **null** for both. Without a fix, `supportsGetValue()` would return a false positive, causing `get_value` to appear in the snapshot and then fail at runtime. **Fix:** `SwingUtils.supportsGetValue()` must additionally check `av.getCurrentAccessibleValue() != null`. This is a general fix (not model-specific), so any future component with the same pattern is automatically handled. Performance cost is negligible — one extra method call per node that already passed the `getAccessibleValue() != null` gate. `supportsSetValue()` must delegate to `supportsGetValue()` as a prerequisite (set implies get), which automatically inherits the `getCurrentAccessibleValue() != null` check.
 
 ---
 
@@ -96,4 +104,4 @@ Each component from the verification matrix gets a dedicated test method.
 `JSlider`, `JSpinner(SpinnerNumberModel)`, `JProgressBar`, `JSplitPane`
 
 **Expected to fail with "Component does not support get_value" error:**
-`JSpinner(SpinnerDateModel)`, `JSpinner(SpinnerListModel)`, `JButton`, `JCheckBox`, `JRadioButton`, `JTextField`, `JTextArea`, `JComboBox`, `JToggleButton`, `JLabel`, `JPanel`, `JScrollPane`, `JTabbedPane`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`, `JList`
+`JSpinner(SpinnerDateModel)`, `JSpinner(SpinnerListModel)`, `JButton`, `JCheckBox`, `JRadioButton`, `JTextField`, `JTextArea`, `JComboBox`, `JToggleButton`, `JLabel`, `JPanel`, `JScrollPane`, `JTabbedPane` (role `PAGE_TAB_LIST` — `getAccessibleValue()` returns `null`; verified by probe test), `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`, `JList`
