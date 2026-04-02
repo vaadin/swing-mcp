@@ -87,6 +87,7 @@ public class TinyMCPServer {
     private final int port;
     private final String contextPath;
     private final MCPProtocol.Implementation serverInfo;
+    private final String instructions;
     private final Map<String, RegisteredTool> tools = new LinkedHashMap<>();
     private volatile boolean started = false;
     private HttpServer httpServer;
@@ -97,16 +98,21 @@ public class TinyMCPServer {
     }
 
     public TinyMCPServer(int port, String contextPath) {
-        this(port, contextPath, new MCPProtocol.Implementation());
+        this(port, contextPath, new MCPProtocol.Implementation(), null);
     }
 
     public TinyMCPServer(int port, String contextPath, MCPProtocol.Implementation serverInfo) {
+        this(port, contextPath, serverInfo, null);
+    }
+
+    public TinyMCPServer(int port, String contextPath, MCPProtocol.Implementation serverInfo, String instructions) {
         this.port = port;
         if (!contextPath.startsWith("/")) {
             throw new IllegalArgumentException("Parameter contextPath: invalid value " + contextPath + ": must start with a slash");
         }
         this.contextPath = contextPath;
         this.serverInfo = serverInfo != null ? serverInfo : new MCPProtocol.Implementation();
+        this.instructions = instructions;
     }
 
     public String getUrl() {
@@ -265,6 +271,7 @@ public class TinyMCPServer {
         result.setProtocolVersion(PROTOCOL_VERSION);
 
         result.setServerInfo(this.serverInfo);
+        result.setInstructions(this.instructions);
 
         MCPProtocol.ServerCapabilities capabilities = new MCPProtocol.ServerCapabilities();
         capabilities.setTools(new MCPProtocol.ToolsCapability());

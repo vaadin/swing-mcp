@@ -49,7 +49,7 @@ public class MCPServer {
         MCPProtocol.Implementation serverInfo = new MCPProtocol.Implementation();
         serverInfo.setName(SERVER_NAME);
         serverInfo.setVersion(SERVER_VERSION);
-        this.server = new TinyMCPServer(port, contextPath, serverInfo);
+        this.server = new TinyMCPServer(port, contextPath, serverInfo, null);
         registerTools();
     }
 
