@@ -31,7 +31,7 @@
 | BR-04 | All validation runs on the EDT inside `runInEDT()`. The selection mutation is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously (fire-and-forget). |
 | BR-05 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. |
 | BR-06 | `swing_set_selection` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after invocation (even on failure, via `finally`). |
-| BR-07 | **Empty indices array.** If `indices` is an empty array `[]`, the tool clears the selection entirely (equivalent to `swing_clear_selection`). This is not an error. |
+| BR-07 | **Empty indices array.** If `indices` is an empty array `[]`, the tool clears the selection via `clearAccessibleSelection()` using fire-and-forget (`invokeLater`). **Exception: `JTabbedPane` with tabs.** If the target is a `JTabbedPane` (`instanceof JTabbedPane`) and `((JTabbedPane) accessible).getTabCount() > 0`, the tool returns an MCP-level error (`isError: true`) with the message *"This component does not allow the selection to be empty."* — because `clearAccessibleSelection()` is a no-op on a non-empty `JTabbedPane` (probe-tested 2026-04-07). An empty `JTabbedPane` (0 tabs) has no selection to clear and succeeds trivially. For all other components (`JList`, `JComboBox`, `JTable`), clearing works and is dispatched asynchronously. |
 | BR-08 | **Single-selection enforcement.** If the component is in single-selection mode (`SwingUtils.supportsSingleSelection(accessible)` returns `true`) and `indices` contains more than one element, the tool returns an MCP-level error (`isError: true`) with the message *"Component is in single-selection mode. Pass exactly one index (or an empty array to clear)."* |
 | BR-09 | The tool returns `null` (empty content array) on success, consistent with other mutation tools (`swing_click`, `swing_set_text`, `swing_set_value`). |
 | BR-10 | **JTable row-to-cell translation.** When the target is a `JTable` in row-selection mode, the `indices` array contains **row indices** (matching the `index` field from `swing_get_selection` BR-11). The tool translates each row index `r` to cell indices by calling `addAccessibleSelection(r * cols + c)` for each column `c` in `[0, cols)`, where `cols = ac.getAccessibleTable().getAccessibleColumnCount()`. |
@@ -48,17 +48,21 @@ Execution order:
 4. **BR-05** — `SwingUtils.isEffectivelyEnabled(accessible)` — if `false`, fail with "disabled" error.
 5. Obtain `AccessibleSelection as = ac.getAccessibleSelection()`.
 6. **BR-13** — deduplicate `indices` (insertion-ordered set).
-7. **BR-08** — if `SwingUtils.supportsSingleSelection(accessible)` and deduplicated indices size > 1, fail with "single-selection mode" error.
-8. **Determine item count** for bounds checking:
+7. **BR-07** — **if deduplicated indices is empty** (clear path):
+   a. If `accessible instanceof JTabbedPane` and `((JTabbedPane) accessible).getTabCount() > 0`, fail with *"This component does not allow the selection to be empty."*
+   b. Dispatch `as.clearAccessibleSelection()` via `SwingUtilities.invokeLater()` (fire-and-forget).
+   c. Return `null` (success).
+8. **BR-08** — if `SwingUtils.supportsSingleSelection(accessible)` and deduplicated indices size > 1, fail with "single-selection mode" error.
+9. **Determine item count** for bounds checking:
    - **JTable:** `itemCount = ac.getAccessibleTable().getAccessibleRowCount()`.
    - **JComboBox:** `itemCount = ((JComboBox<?>) accessible).getItemCount()`. (JComboBox's `getAccessibleChildrenCount()` returns 1 — the popup menu — so it cannot be used.)
    - **All others:** `itemCount = ac.getAccessibleChildrenCount()`. (For JList and JTabbedPane, the accessible children count equals the item count — verified by probe tests.)
-9. **BR-11 / BR-12** — validate all indices are in `[0, itemCount)`. If any index is out of bounds, fail with error naming the first invalid index.
-10. **Fire-and-forget dispatch** via `SwingUtilities.invokeLater()`:
+10. **BR-11 / BR-12** — validate all indices are in `[0, itemCount)`. If any index is out of bounds, fail with error naming the first invalid index.
+11. **Fire-and-forget dispatch** via `SwingUtilities.invokeLater()`:
     a. `as.clearAccessibleSelection()` — clear existing selection.
     b. **If the target is a JTable** — for each row index `r` in the deduplicated set: compute `cols = ac.getAccessibleTable().getAccessibleColumnCount()`, then call `as.addAccessibleSelection(r * cols + c)` for each `c` in `[0, cols)`.
     c. **Otherwise** — for each index `i` in the deduplicated set: call `as.addAccessibleSelection(i)`.
-11. Return `null`.
+12. Return `null`.
 
 **Accessibility API methods used:**
 - `AccessibleContext.getAccessibleSelection()` — detection and selection manipulation
@@ -80,7 +84,7 @@ Execution order:
 - **`JComboBox`** — always single-selection. `addAccessibleSelection(i)` selects the item at index `i` in the popup list. This works even when the popup is closed — the combo box updates its displayed value. Note: `clearAccessibleSelection()` on JComboBox may be a no-op (combo boxes always have a selection unless empty) — this is harmless.
 - **`JTable`** — row-to-cell translation (BR-10) is the inverse of the cell-to-row aggregation in UC-014 BR-11. The tool selects all cells in each requested row by iterating columns, which matches what `JTable.setRowSelectionInterval()` would do at the Swing API level. The accessibility API does not expose a row-level selection method, so cell-by-cell selection is necessary.
 - **`JTree`** — suppressed by `SUPPRESSED_SELECTION_ROLES` in `supportsSelection()`. Same as UC-014.
-- **`clearAccessibleSelection()` behaviour.** Empirically, `clearAccessibleSelection()` works correctly for JList, JTabbedPane, and JTable. For JComboBox, it may be a no-op (the combo box always has a selection) — this is acceptable because the subsequent `addAccessibleSelection()` call will set the desired item.
+- **`clearAccessibleSelection()` behaviour (probe-tested 2026-04-07).** `clearAccessibleSelection()` fully clears the selection on JList (single and multi), JComboBox (`selectedIndex=-1`), and JTable (single and multi row). On JTabbedPane with tabs it is a **no-op** — the selected tab remains unchanged, `selectionCount` stays at 1. BR-07 handles this with an `instanceof JTabbedPane` pre-check rather than a post-clear verification, to stay consistent with the fire-and-forget principle. JComboBox clears to no selection (which is a valid state — the display shows blank).
 - **`Parameters.getIntArray()` prerequisite.** The `Parameters` class must be extended with a `getIntArray(String key)` method that extracts a JSON array of integers from the raw parameter map. Gson deserializes JSON arrays as `List<?>` (with numbers as `Double`). The method must: (1) check that the value is a `List`; (2) convert each element to `int` via `Number.intValue()`; (3) throw `MCPServerException(INVALID_PARAMS)` if the key is missing, the value is not a list, or any element is not a number. Error messages: `"Required parameter 'indices' is missing"`, `"Parameter 'indices' must be an array of integers"`.
 
 ---
@@ -89,7 +93,11 @@ Execution order:
 
 - [ ] Calling `swing_set_selection` with a valid ref for a `JList` and a single index selects that item.
 - [ ] Calling `swing_set_selection` with a valid ref for a `JList` (multi-selection) and multiple indices selects all specified items.
-- [ ] Calling `swing_set_selection` with an empty `indices` array clears the selection.
+- [ ] Calling `swing_set_selection` with an empty `indices` array on a `JList` clears the selection.
+- [ ] Calling `swing_set_selection` with an empty `indices` array on a `JComboBox` clears the selection (`selectedIndex=-1`).
+- [ ] Calling `swing_set_selection` with an empty `indices` array on a `JTable` clears the selection.
+- [ ] Calling `swing_set_selection` with an empty `indices` array on a `JTabbedPane` (with tabs) returns an MCP error: *"This component does not allow the selection to be empty."*
+- [ ] Calling `swing_set_selection` with an empty `indices` array on an empty `JTabbedPane` (0 tabs) succeeds.
 - [ ] Calling `swing_set_selection` with a valid ref for a `JTabbedPane` and one index switches to that tab.
 - [ ] Calling `swing_set_selection` with a valid ref for a `JComboBox` and one index selects that item.
 - [ ] Calling `swing_set_selection` with a valid ref for a `JTable` (row-selection mode) and row indices selects those rows (all cells in each row).
@@ -123,6 +131,10 @@ Execution order:
   - [ ] Setting a `JList` (single-selection) to one index selects that item.
   - [ ] Setting a `JList` (multi-selection) to multiple indices selects all items.
   - [ ] Setting a `JList` with an empty array clears the selection.
+  - [ ] Setting a `JComboBox` with an empty array clears the selection.
+  - [ ] Setting a `JTable` with an empty array clears the selection.
+  - [ ] Setting a `JTabbedPane` (with tabs) with an empty array returns an MCP error about non-empty selection.
+  - [ ] Setting an empty `JTabbedPane` (0 tabs) with an empty array succeeds.
   - [ ] Setting a `JTabbedPane` to one index switches to that tab.
   - [ ] Setting a `JComboBox` to one index selects that item.
   - [ ] Setting a `JTable` (row-selection mode) to one row index selects that row.
