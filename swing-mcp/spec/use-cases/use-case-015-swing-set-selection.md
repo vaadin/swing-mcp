@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** set the selection of a UI component by ref and item indices **so that** I can select items in lists, combo boxes, tables, and tabbed panes during Swing app migration.
 
-**Status:** Draft
+**Status:** Approved
 **Date:** 2026-04-07
 
 ---
