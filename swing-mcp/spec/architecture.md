@@ -647,6 +647,12 @@ This replaces the former TODO-1 and TODO-2. The individual selection actions no 
 
 ### Content Discovery (`get_cells` / `get_cell_count`)
 
+In cases where the `swing_snapshot` tool trims children of large data component, the AI
+may need to enumerate certain cells of a component (e.g. JTable) when it's searching for a particular button
+(e.g. "Edit" button on the 200th line). That's where these tools come handy.
+These tools only operate on large data components - there is no need to support them for e.g. JFrame since
+JFrame children are discovered via the `swing_snapshot` tool.
+
 `get_cells` and `get_cell_count` are **decoupled from selection** — they operate in the accessible children index space, not the selection item index space. They are advertised in the snapshot only when **both** conditions hold:
 
 1. The component is a **large data component** (`isLargeDataComponent`: role is `TABLE`, `LIST`, or `TREE`).
