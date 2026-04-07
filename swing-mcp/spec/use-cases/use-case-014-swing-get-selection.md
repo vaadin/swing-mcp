@@ -139,39 +139,41 @@ Verified empirically on Java 21 OpenJDK in headless mode (`AccessibleSelectionPr
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingUtilsSupportsSelectionTest` update — triggered by `JTree` suppression and `JTable` mode gate
-  - [ ] `JTree` returns `false` for `supportsSelection()`.
-  - [ ] `JTable` (row-selection mode, the default) returns `true` for `supportsSelection()`.
-  - [ ] `JTable` (column-selection mode) returns `false` for `supportsSelection()`.
-  - [ ] `JTable` (cell-selection mode) returns `false` for `supportsSelection()`.
-  - [ ] `JTable` (no selection) returns `false` for `supportsSelection()`.
+- [x] `SwingUtilsSupportsSelectionTest` update — triggered by `JTree` suppression and `JTable` mode gate
+  - [x] `JTree` returns `false` for `supportsSelection()`.
+  - [x] `JTable` (row-selection mode, the default) returns `true` for `supportsSelection()`.
+  - [x] `JTable` (column-selection mode) returns `false` for `supportsSelection()`.
+  - [x] `JTable` (cell-selection mode) returns `false` for `supportsSelection()`.
+  - [x] `JTable` (no selection) returns `false` for `supportsSelection()`.
 
-- [ ] `SwingGetSelectionTest` (headless)
-  - [ ] Reading a `JList` with a single selected item returns `selectedCount: 1` and the correct index and name.
-  - [ ] Reading a `JList` with multiple selected items returns all selected indices and names.
-  - [ ] Reading a `JList` with no selection returns `selectedCount: 0` and an empty array.
-  - [ ] Reading a `JTabbedPane` returns the selected tab's index and title.
-  - [ ] Reading a `JComboBox` returns the selected item's index and name.
-  - [ ] Reading an empty `JComboBox` (`new JComboBox<>()`) returns `selectedCount: 0` and an empty array (or handles gracefully if `getAccessibleSelection(0)` returns null).
-  - [ ] Reading a `JTable` (row-selection mode) with a single row selected returns `selectedCount: 1` with row index and comma-separated cell values as name.
-  - [ ] Reading a `JTable` (row-selection mode) with multiple rows selected returns all rows.
-  - [ ] Reading a `JTable` in column-selection mode returns an MCP error.
-  - [ ] Reading a `JTable` in cell-selection mode returns an MCP error.
-  - [ ] Reading a `JTable` with no selection allowed returns an MCP error.
-  - [ ] Reading with an invalid ref returns an MCP error with `isError: true`.
-  - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
-  - [ ] Reading a component without selection support (e.g. `JButton`) returns an MCP error with `isError: true`.
-  - [ ] The ref map is preserved after a successful `swing_get_selection` call (verified by calling `swing_get_selection` twice with the same ref).
-  - [ ] Reading a disabled `JList` succeeds and returns its selection.
-  - [ ] The `index` values are item indices: `isAccessibleChildSelected(index)` returns `true` and `addAccessibleSelection(index)` selects the same item.
-  - [ ] Each component from the component matrix is tested (dedicated test method per component).
+- [x] `SwingGetSelectionTest` (headless)
+  - [x] Reading a `JList` with a single selected item returns `selectedCount: 1` and the correct index and name.
+  - [x] Reading a `JList` with multiple selected items returns all selected indices and names.
+  - [x] Reading a `JList` with no selection returns `selectedCount: 0` and an empty array.
+  - [x] Reading a `JTabbedPane` returns the selected tab's index and title.
+  - [x] Reading a `JComboBox` returns the selected item's index and name.
+  - [x] Reading an empty `JComboBox` (`new JComboBox<>()`) returns `selectedCount: 0` and an empty array (or handles gracefully if `getAccessibleSelection(0)` returns null).
+  - [x] Reading a `JTable` (row-selection mode) with a single row selected returns `selectedCount: 1` with row index and comma-separated cell values as name.
+  - [x] Reading a `JTable` (row-selection mode) with multiple rows selected returns all rows.
+  - [x] Reading a `JTable` in column-selection mode returns an MCP error.
+  - [x] Reading a `JTable` in cell-selection mode returns an MCP error.
+  - [x] Reading a `JTable` with no selection allowed returns an MCP error.
+  - [x] Reading with an invalid ref returns an MCP error with `isError: true`.
+  - [x] The error message suggests calling `swing_snapshot` to refresh refs.
+  - [x] Reading a component without selection support (e.g. `JButton`) returns an MCP error with `isError: true`.
+  - [x] The ref map is preserved after a successful `swing_get_selection` call (verified by calling `swing_get_selection` twice with the same ref).
+  - [x] Reading a disabled `JList` succeeds and returns its selection.
+  - [x] The `index` values are item indices: `isAccessibleChildSelected(index)` returns `true` and `addAccessibleSelection(index)` selects the same item.
+  - [x] Truncation: selection exceeding `MAX_SELECTION_ITEMS` returns only the first 100 items with `"truncated": true`.
+  - [x] No truncation: selection within limit omits the `truncated` field.
+  - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [ ] `SwingGetSelectionScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
-  - [ ] Reading a `JList` with selection inside `JFrame` returns the selection.
-  - [ ] Reading a `JTabbedPane` inside `JFrame` returns the selected tab.
-  - [ ] Reading a `JComboBox` inside `JFrame` returns the selected item.
-  - [ ] Reading a `JTable` (row-selection mode) inside `JFrame` returns row-level selection.
-  - [ ] Reading a `JList` inside `JDialog` returns the selection.
+- [x] `SwingGetSelectionScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+  - [x] Reading a `JList` with selection inside `JFrame` returns the selection.
+  - [x] Reading a `JTabbedPane` inside `JFrame` returns the selected tab.
+  - [x] Reading a `JComboBox` inside `JFrame` returns the selected item.
+  - [x] Reading a `JTable` (row-selection mode) inside `JFrame` returns row-level selection.
+  - [x] Reading a `JList` inside `JDialog` returns the selection.
 
 ### Component matrix
 
