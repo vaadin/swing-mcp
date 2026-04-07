@@ -32,11 +32,13 @@
 | BR-04 | All Swing component access happens on the EDT via `runInEDT()`. |
 | BR-05 | `swing_get_selection` is a read-only tool: `isMutation()` returns `false` and the ref map is **not** cleared after invocation. |
 | BR-06 | No enabled check is performed — reading the selection is always allowed, even on disabled components. |
-| BR-07 | The tool returns a JSON object via `Content.json()`. The object contains `selectedCount` (integer — the number of selected items) and `selected` (a JSON array of selected-item objects). Each item object has `index` (integer — the zero-based index of the selected child within the parent's accessible children) and `name` (string — the accessible name of the selected child, or `null` if the name is `null`). |
+| BR-07 | The tool returns a JSON object via `Content.json()`. The object contains `selectedCount` (integer — the number of selected items) and `selected` (a JSON array of selected-item objects). Each item object has `index` (integer — the zero-based accessible child index, suitable for passing directly to `swing_set_selection`) and `name` (string — the accessible name of the selected child, or `null` if the name is `null`). For JTable, `index` is the row index instead — see BR-11. |
 | BR-08 | If no items are selected, the tool returns `{"selectedCount": 0, "selected": []}` — an explicit empty result, not an error. |
 | BR-09 | The `selected` array is capped at `MAX_SELECTION_ITEMS` (initially **100**). If the selection contains more items, only the first `MAX_SELECTION_ITEMS` are returned, and an additional `truncated` field is set to `true` in the JSON response. When not truncated, the `truncated` field is omitted. |
 
 ### Algorithm
+
+**Index semantics.** All indices returned by `swing_get_selection` are **accessible child indices** — the same index space used by `getAccessibleChild(i)`, `isAccessibleChildSelected(i)`, and `addAccessibleSelection(i)`. This is critical: `swing_set_selection` must be able to pass these indices directly to `addAccessibleSelection()`. Do **not** use `getAccessibleIndexInParent()` — the accessible child index and the index-in-parent are different index spaces and may diverge (e.g. JComboBox selected items report `indexInParent` relative to the popup list, not the combo box).
 
 Execution order:
 1. **BR-02** — ref lookup (fail fast if ref is invalid).
@@ -44,27 +46,26 @@ Execution order:
 3. Obtain `AccessibleSelection as = ac.getAccessibleSelection()`.
 4. **If the target is a `JTable`** — use the **JTable row aggregation path** (BR-11):
    a. Obtain `AccessibleTable at = ac.getAccessibleTable()` and `int cols = at.getAccessibleColumnCount()`.
-   b. Read `int cellCount = as.getAccessibleSelectionCount()`.
-   c. Iterate selected cells, compute `row = cellIndex / cols` for each, collect unique rows (insertion-ordered).
+   b. Read `int totalChildren = ac.getAccessibleChildrenCount()`.
+   c. Iterate `i` in `[0, totalChildren)`, for each `isAccessibleChildSelected(i)`, compute `row = i / cols`, collect unique rows (insertion-ordered set).
    d. Cap at `MAX_SELECTION_ITEMS` rows. If more, set `truncated = true`.
    e. For each unique row, build `name` by concatenating cell names from `at.getAccessibleAt(row, col)` for `col` in `[0, min(cols, MAX_ROW_NAME_COLUMNS))`, separated by `", "`. Use literal `"null"` for null cells/names.
-   f. Each entry: `{"index": row, "name": "Alice, 30, NY"}`.
+   f. Each entry: `{"index": row, "name": "Alice, 30, NY"}`. Here `index` is the **row index** (not the accessible child index), because `swing_set_selection` for JTable will need to translate rows back to cell indices internally.
    g. `selectedCount` = number of unique rows.
 5. **Otherwise** — use the **generic path**:
-   a. Read `int count = as.getAccessibleSelectionCount()`.
-   b. Build the `selected` array: for `i` in `[0, min(count, MAX_SELECTION_ITEMS))`:
-      - `Accessible child = as.getAccessibleSelection(i)` — returns the i-th *selected* child.
-      - Get the child's `AccessibleContext`, read `getAccessibleName()` → `name`.
-      - Determine the child's **zero-based index** within the parent via `getAccessibleIndexInParent()`.
-      - Add `{"index": indexInParent, "name": name}` to the array.
-   c. If `count > MAX_SELECTION_ITEMS`, include `"truncated": true` in the response (**BR-09**).
+   a. Read `int totalChildren = ac.getAccessibleChildrenCount()`.
+   b. Iterate `i` in `[0, totalChildren)`. For each `i` where `as.isAccessibleChildSelected(i)` returns `true`:
+      - Get the child via `ac.getAccessibleChild(i)`, read `getAccessibleName()` → `name`.
+      - Add `{"index": i, "name": name}` to the array.
+      - If the array reaches `MAX_SELECTION_ITEMS`, set `truncated = true` and stop.
+   c. `selectedCount` = size of the `selected` array.
 6. Build and return the JSON object via `Content.json()`.
 
 **Accessibility API methods used:**
 - `AccessibleContext.getAccessibleSelection()` — detection and selection retrieval
-- `AccessibleSelection.getAccessibleSelectionCount()` — number of selected items
-- `AccessibleSelection.getAccessibleSelection(int i)` — the i-th selected child (returns `Accessible`)
-- `AccessibleContext.getAccessibleIndexInParent()` — position of the selected child within its parent's child list
+- `AccessibleContext.getAccessibleChildrenCount()` — total number of children to iterate
+- `AccessibleSelection.isAccessibleChildSelected(int i)` — check if child at index `i` is selected
+- `AccessibleContext.getAccessibleChild(int i)` — retrieve child at index `i` (for name lookup)
 - `AccessibleContext.getAccessibleName()` — human-readable name of the selected child
 - `AccessibleContext.getAccessibleTable()` — JTable-specific: row/column structure
 - `AccessibleTable.getAccessibleColumnCount()` — JTable-specific: for cell-to-row mapping
@@ -72,7 +73,7 @@ Execution order:
 
 ### Design notes
 
-- **Index semantics.** `AccessibleSelection.getAccessibleSelection(int i)` returns the i-th *selected* item, not the i-th child. The index the AI needs for `swing_set_selection` is the child's position within the parent, obtained via `getAccessibleIndexInParent()`. This distinction is critical.
+- **Index semantics.** The `AccessibleSelection` API has two different index spaces: (1) `getAccessibleSelection(int i)` uses a *selection-relative* index (the i-th selected item); (2) `isAccessibleChildSelected(int i)`, `addAccessibleSelection(int i)`, `getAccessibleChild(int i)` all use the *accessible child* index. This tool uses the accessible child index (via `isAccessibleChildSelected`) so that the returned indices can be passed directly to `swing_set_selection` → `addAccessibleSelection()`. Do **not** use `getAccessibleIndexInParent()` — it is a third, unrelated index space that may diverge (e.g. JComboBox).
 - **`JList`** — supports `AccessibleSelection`. Single and multi-selection modes both work. Selected children have role `label`. `getAccessibleName()` returns the `toString()` of the list element (e.g. `"Alpha"`, `"42"` for an Integer). Null list items produce an empty-string name. Works in headless mode.
 - **`JTable`** — supports `AccessibleSelection`, but the raw API reports **cell-level** selection, not row-level. Selecting row 1 in a 3-column table returns 3 selected cells (one per column). This is too chatty for the AI context window. **Decision: only support row-selection mode.** If `table.getRowSelectionAllowed() && !table.getColumnSelectionAllowed()`, the table is in row-selection mode and `supportsSelection()` returns `true`. In all other modes (column-only, cell, no-selection), `supportsSelection()` returns `false`. The tool aggregates cells into rows: it computes `row = cellIndex / columnCount` via `AccessibleTable`, deduplicates, and returns row indices. For each selected row, `name` is built by concatenating cell values from `AccessibleTable.getAccessibleAt(row, col)` for the first `MAX_ROW_NAME_COLUMNS` (10) columns (e.g. `"Bob, 25, LA"`). Null cells/names use the literal string `"null"`. `getAccessibleSelection()` is non-null even in no-selection mode, so the null-check alone is insufficient — the row-selection mode check is required. Works in headless mode.
 - **`JTabbedPane`** — supports `AccessibleSelection` (role `PAGE_TAB_LIST`). Always single-selection. `getAccessibleName()` returns the tab title. Selected children have role `page tab`. Works in headless mode.
@@ -120,7 +121,7 @@ Verified empirically on Java 21 OpenJDK in headless mode (`AccessibleSelectionPr
 - [ ] Calling `swing_get_selection` on a `JTree` returns an MCP error (suppressed — see design notes).
 - [ ] The ref map is **not** cleared after a `swing_get_selection` call (read-only tool).
 - [ ] Calling `swing_get_selection` on a disabled but selection-readable component succeeds (no enabled check).
-- [ ] The `index` field in each selected item is the zero-based index within the parent's accessible children (suitable for passing to `swing_set_selection`).
+- [ ] The `index` field in each selected item is the zero-based accessible child index (the same index used by `isAccessibleChildSelected(i)` and `addAccessibleSelection(i)`).
 - [ ] When the selection exceeds `MAX_SELECTION_ITEMS`, the response contains only the first 100 items and includes `"truncated": true`.
 
 ---
@@ -152,7 +153,7 @@ Verified empirically on Java 21 OpenJDK in headless mode (`AccessibleSelectionPr
   - [ ] Reading a component without selection support (e.g. `JButton`) returns an MCP error with `isError: true`.
   - [ ] The ref map is preserved after a successful `swing_get_selection` call (verified by calling `swing_get_selection` twice with the same ref).
   - [ ] Reading a disabled `JList` succeeds and returns its selection.
-  - [ ] The `index` values match `getAccessibleIndexInParent()` of the selected children.
+  - [ ] The `index` values match the accessible child index (verified by `isAccessibleChildSelected(index)` returning `true`).
   - [ ] Each component from the component matrix is tested (dedicated test method per component).
 
 - [ ] `SwingGetSelectionScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
