@@ -94,7 +94,7 @@ After pruning:
   - split_pane
     - label "Invoices"
     - scroll_pane
-      - list [ref=2] actions: get_selection, set_selection, clear_selection, select_all, get_children_count, get_children
+      - list [ref=2] actions: multi-selection, get_cell_count, get_cells
     - panel "Details"
       - text "Name" [ref=3] actions: get_text, set_text
     - push_button "Add" [ref=4] actions: click
@@ -108,7 +108,7 @@ After Stages 1 and 2, any surviving node is included. The following criteria ser
 |----|-----------|-----------------|
 | AI-1 | Has a non-structural accessible role | See **semantic roles** list below |
 | AI-2 | Has an accessible name | `getAccessibleName()` non-null and non-empty |
-| AI-3 | Has at least one action | Any action detected by the BR-06 algorithm (click, toggle_popup, increment, decrement, toggle_expand, get_text, set_text, get_value, set_value, get_selection, set_selection, clear_selection, select_all, get_children_count, get_children, close) |
+| AI-3 | Has at least one action | Any action detected by the BR-06 algorithm (click, toggle_popup, increment, decrement, toggle_expand, get_text, set_text, get_value, set_value, single-selection, multi-selection, get_cell_count, get_cells, close) |
 | AI-4 | Has `AccessibleText` with content, or `AccessibleValue` | Component carries meaningful data |
 | AI-5 | Is focused | `AccessibleState.FOCUSED` in state set |
 
@@ -171,7 +171,7 @@ survives pruning, and what it looks like in the snapshot output.
 | `JPanel` (named / titled border) | `PANEL` | No | `- panel "Details"` |
 | `JScrollPane` | `SCROLL_PANE` | No | `- scroll_pane` |
 | `JSplitPane` | `SPLIT_PANE` | No | `- split_pane` |
-| `JTabbedPane` | `PAGE_TAB_LIST` | No | `- page_tab_list` |
+| `JTabbedPane` | `PAGE_TAB_LIST` | No | `- page_tab_list "General" [ref=1] actions: single-selection` |
 | *(tab within JTabbedPane)* | `PAGE_TAB` | No | `- page_tab "General" [selected]` |
 | `JToolBar` | `TOOL_BAR` | No | `- tool_bar "Main"` |
 | `JOptionPane` | `OPTION_PANE` | No | `- option_pane` |
@@ -198,12 +198,12 @@ survives pruning, and what it looks like in the snapshot output.
 
 | Swing Component | `AccessibleRole` | Pruned? | Snapshot Example |
 |---|---|---|---|
-| `JComboBox` | `COMBO_BOX` | No | `- combo_box "Country" [ref=1] actions: toggle_popup` |
-| `JList` | `LIST` | No | `- list [ref=1] actions: get_selection, set_selection, clear_selection, select_all, get_children_count, get_children` |
+| `JComboBox` | `COMBO_BOX` | No | `- combo_box "Country" [ref=1, collapsed] actions: toggle_popup, single-selection` |
+| `JList` | `LIST` | No | `- list [ref=1] actions: multi-selection, get_cell_count, get_cells` |
 | *(child of JList)* | `LABEL` | No | `  - label "Item 1" [ref=2] actions: click` |
-| `JTree` | `TREE` | No | `- tree [ref=1] actions: get_selection, set_selection, clear_selection, select_all, get_children_count, get_children` |
+| `JTree` | `TREE` | No | `- tree [ref=1] actions: get_cell_count, get_cells` |
 | *(non-leaf tree node)* | varies | No | `  - label "Folder" [ref=2] actions: toggle_expand, click` |
-| `JTable` | `TABLE` | No | `- table [ref=1] actions: get_selection, set_selection, clear_selection, select_all, get_children_count, get_children` |
+| `JTable` | `TABLE` | No | `- table [ref=1] actions: multi-selection, get_cell_count, get_cells` |
 
 ### Value Components
 
@@ -309,7 +309,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 | BR-04 | The tree walker walks the `javax.accessibility` tree via `AccessibleContext.getAccessibleChild(i)`, **not** the `Component.getComponents()` component tree. The accessibility tree provides virtual children for complex components (table cells, list items, tree nodes). |
 | BR-05 | Large data components (JTable, JList, JTree) are truncated to `MAX_DATA_CHILDREN` accessible children (static final constant, initially 5). When truncated, a synthetic `... and N more items` node is appended. |
 | BR-06 | Action labels displayed in the snapshot are determined by the **Action Label Algorithm** below. Detection methods, Java mechanisms, and MCP tool names are defined in **architecture.md §6**. All action names use lower-case underscore-separated format. |
-| BR-07 | A node receives a ref if it exposes at least one action under the BR-06 algorithm — i.e. any of: `supportsClick()`, `supportsTogglePopup()`, a known `AccessibleAction` constant, `supportsGetText()`, `supportsSetText()`, `supportsGetValue()`, `supportsSetValue()`, `supportsSelection()`, or `supportsClose()` returns non-null/true. `supportsSelection()` maps to six actions: `get_selection`, `set_selection`, `clear_selection`, `select_all`, `get_children_count`, `get_children`. This supersedes the `AccessibleAction`-only gate in BR-01. |
+| BR-07 | A node receives a ref if it exposes at least one action under the BR-06 algorithm — i.e. any of: `supportsClick()`, `supportsTogglePopup()`, a known `AccessibleAction` constant, `supportsGetText()`, `supportsSetText()`, `supportsGetValue()`, `supportsSetValue()`, `supportsSelection()`, `supportsClose()`, or the `isLargeDataComponent` truncation gate (step 6b) returns non-null/true. `supportsSelection()` maps to one group label (`single-selection` or `multi-selection`). This supersedes the `AccessibleAction`-only gate in BR-01. |
 
 ### Action Label Algorithm (BR-06)
 
@@ -320,18 +320,23 @@ For each node, collect actions by running the following checks in order. All det
 3. Iterate `AccessibleAction` descriptions; for each that equals a known constant (`AccessibleAction.INCREMENT`, `DECREMENT`, `TOGGLE_EXPAND`), normalize to lower-case underscore format and add it (`increment`, `decrement`, `toggle_expand`)
 4. `supportsSetText()` → add `get_text`, `set_text`; else `supportsGetText()` → add `get_text`
 5. `supportsGetValue()` → add `get_value`; additionally `supportsSetValue()` → add `set_value`
-6. `supportsSelection()` → add `get_selection`, `set_selection`, `clear_selection`, `select_all`, `get_children_count`, `get_children`
+6. **Selection group labels:**
+   - `supportsMultiSelection()` → add `multi-selection`
+   - else `supportsSingleSelection()` → add `single-selection`
+   
+   These are **group labels**, not individual actions. The AI learns which individual selection tools are available from the tool descriptions (sent once at MCP session start). `single-selection` means `swing_get_selection`, `swing_set_selection`, `swing_clear_selection`, `swing_get_selectable_items`, `swing_get_selectable_items_count` are callable. `multi-selection` means all of those plus `swing_select_all`. See **architecture.md § 6 "Selection Action Groups"** for detection methods and `SwingUtils` API.
+
+6b. **Content discovery (cells):** If the component is a large data component (`isLargeDataComponent`: role is `TABLE`, `LIST`, or `TREE`) **and** its accessible children count exceeds `MAX_DATA_CHILDREN` (i.e. the snapshot truncated its children) → add `get_cell_count`, `get_cells`. These are independent of selection — they operate in the accessible children index space for discovering content beyond the snapshot cap.
+
 7. `supportsClose()` → add `close`
 
-**Why `get_children_count` and `get_children` are gated on `supportsSelection()` rather than `Accessible`:** Technically, `getAccessibleChildrenCount()` and `getAccessibleChild(i)` are available on any `AccessibleContext`, so these actions could be offered for all components. However, both are only useful in the context of selection: an AI agent needs to page through children to identify items it may want to select. Exposing them universally would cause all components — including purely structural ones — to receive a ref (via BR-07), creating unnecessary noise in the snapshot. Limiting them to selectable components keeps the action set focused on their actual use context.
-
-**`get_children` ref map replacement:** `swing_get_children` serves two purposes: (1) **selection browsing** — each child entry shows its zero-based index explicitly so the AI can pass it directly to `set_selection` without guessing; (2) **content discovery** — find actionable children such as an "Edit" button inside a JTable row. For purpose 2, `swing_get_children` assigns a fresh local ref numbering and replaces the MCPServer ref map with only the refs visible in its output window. This is analogous to scrolling a JTable to a certain offset: children outside the `offset`/`length` window are not interactable. The AI must call `swing_snapshot` again to return to the full-tree ref map.
+**`get_cells` ref map replacement:** `swing_get_cells` assigns a fresh local ref numbering and **replaces the MCPServer ref map** with only the refs visible in its output window. This is analogous to scrolling a JTable to a certain offset: children outside the `offset`/`length` window are not interactable. The AI must call `swing_snapshot` again to return to the full-tree ref map.
 
 `getAccessibleActionDescription()` is **never** used to derive display labels directly — it is only compared against known constants in step 3.
 
 **Why step 3 only matches known constants:** `JTextComponent` subclasses expose dozens of dynamic `AccessibleAction` descriptions derived from `Action.NAME` (e.g. `"cut-to-clipboard"`, `"paste-from-clipboard"`, `"select-all"`). These are deliberately ignored. The primary interaction for any text component is reading and writing its value via `get_text`/`set_text` (step 4). An AI agent filling a form will set field values and move on — it has no need to invoke cut, copy, paste, or select-all via the accessibility API.
 
-> **`JListChild` action note:** `click` is always present on `JListChild` (via `AccessibleAction`) and is always legitimate — a list item can always be clicked. Selection actions (`get_selection`, `set_selection`, etc.) appear on a `JListChild` only when that child's `getAccessibleSelection()` is non-null, which occurs only in unusual cases where the cell renderer itself contains a selectable component (e.g. a nested `JList`). In that case the selection actions are also legitimate. No special-casing of `JListChild` is needed — the Action Label Algorithm handles it correctly.
+> **`JListChild` action note:** `click` is always present on `JListChild` (via `AccessibleAction`) and is always legitimate — a list item can always be clicked. Selection group labels (`single-selection`, `multi-selection`) appear on a `JListChild` only when that child's `getAccessibleSelection()` is non-null, which occurs only in unusual cases where the cell renderer itself contains a selectable component (e.g. a nested `JList`). In that case the selection tools are also legitimate. No special-casing of `JListChild` is needed — the Action Label Algorithm handles it correctly.
 
 ---
 

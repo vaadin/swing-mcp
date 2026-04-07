@@ -591,12 +591,10 @@ Other specs reference this table instead of duplicating detection logic.
 | `set_text` | `supportsSetText()` | `getAccessibleEditableText()` non-null | `swing_set_text` | `supportsSetText()` implies `supportsGetText()` (`AccessibleEditableText extends AccessibleText`) |
 | `get_value` | `supportsGetValue()` | `getAccessibleValue()` non-null **and** `getCurrentAccessibleValue()` non-null | `swing_get_value` | All value-capable components expose `get_value`, including read-only ones like `JProgressBar`. `JSpinner` with `SpinnerDateModel`/`SpinnerListModel` is excluded because `getCurrentAccessibleValue()` returns `null` for non-Number models. See § 5 "AccessibleValue — Component Behaviour". |
 | `set_value` | `supportsSetValue()` | `getAccessibleValue()` non-null AND `getCurrentAccessibleValue()` non-null AND role not in `READ_ONLY_VALUE_ROLES` | `swing_set_value` | Only exposed for components a user can actually modify. `JProgressBar` is explicitly excluded (writable at the JDK level, suppressed by policy). `JSpinner` with non-Number model is excluded by the `getCurrentAccessibleValue()` null-check. For `JSpinner(SpinnerNumberModel)`, prefer the text-path over `setCurrentAccessibleValue` to avoid type corruption — see § 5 "JSpinner — special handling required". |
-| `get_selection` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_get_selection` | Returns JSON describing the currently selected items. See UC-014 for format details. |
-| `set_selection` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_set_selection` | Accepts a list of integer indices of children to select. Replaces the current selection. |
-| `clear_selection` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_clear_selection` | Clears the current selection. Equivalent to `set_selection` with an empty list. |
-| `select_all` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_select_all` | Selects all children. |
-| `get_children_count` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_get_children_count` | Returns the number of accessible children that can potentially be selected. |
-| `get_children` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_get_children` | Returns a paged accessibility tree dump of the component's accessible children. Parameters: `ref` (integer), `offset` (integer, 0-based), `length` (integer, max children to return). The output format mirrors `swing_snapshot` — the same indented text tree — but rooted at the requested children rather than the full UI. Each child entry explicitly shows its zero-based index so the AI can pass it directly to `set_selection`. **Serves two purposes:** (1) **Selection browsing** — discover which index to pass to `set_selection`; (2) **Content discovery** — find actionable children (e.g. an "Edit" button inside a JTable row). For purpose 2, `get_children` assigns a fresh local ref numbering and **replaces the MCPServer ref map** with only the refs in its output window. This is analogous to scrolling a JTable: children outside the `offset`/`length` window are not interactable. The AI must call `swing_snapshot` again to return to the full-tree ref map. |
+| `single-selection` | `supportsSingleSelection()` | `supportsSelection()` AND NOT `isMultiSelectable()` | *(group label)* | Snapshot action group label. Signals that selection tools (`swing_get_selection`, `swing_set_selection`, `swing_clear_selection`, `swing_get_selectable_items`, `swing_get_selectable_items_count`) work on this component, but `swing_select_all` does not. |
+| `multi-selection` | `supportsMultiSelection()` | `supportsSelection()` AND `isMultiSelectable()` | *(group label)* | Snapshot action group label. Signals that all selection tools work on this component, including `swing_select_all`. |
+| `get_cell_count` | `isLargeDataComponent` AND `childCount > MAX_DATA_CHILDREN` | `getAccessibleChildrenCount()` | `swing_get_cell_count` | Returns the total number of accessible children. Only advertised when the snapshot truncated the component's children. |
+| `get_cells` | `isLargeDataComponent` AND `childCount > MAX_DATA_CHILDREN` | `getAccessibleChild(int i)` | `swing_get_cells` | Returns a paged accessibility tree dump of the component's accessible children. Parameters: `ref` (integer), `offset` (integer, 0-based), `length` (integer, max children to return). The output format mirrors `swing_snapshot` — the same indented text tree — but rooted at the requested children rather than the full UI. Each child receives a ref, and `get_cells` **replaces the MCPServer ref map** with only the refs in its output window. This is analogous to scrolling a JTable: children outside the `offset`/`length` window are not interactable. The AI must call `swing_snapshot` again to return to the full-tree ref map. Only advertised when the snapshot truncated the component's children. |
 | `close` | `supportsClose()` | Synthetic — dispatches `WindowEvent.WINDOW_CLOSING` to the window | `swing_close` | Not from `AccessibleAction`. Exposed for `Window` instances (JFrame, JDialog) only — `JOptionPane` is excluded because its containing JDialog already exposes `close`. Respects the app's `WindowListener`s and `defaultCloseOperation`; does **not** bypass `DO_NOTHING_ON_CLOSE`. `isEffectivelyEnabled()` is **not** checked — closing is a window-level action, not a component-level one. |
 
 ### Selection Index Spaces
@@ -629,13 +627,38 @@ mapping: to select row `r`, call `addAccessibleSelection(r * cols + c)` for each
 in `[0, cols)`. This translation is internal to the tool — the AI always works with row
 indices.
 
-### TODOs — Selection Action Decoupling
+### Selection Action Groups
 
-**TODO-1: Decouple `get_children` / `get_children_count` from `supportsSelection()`.**
-Currently, `get_children` and `get_children_count` are gated on `supportsSelection()` in `resolveActions()` step 6. But `get_children` serves a second purpose beyond selection browsing: **content discovery** for large containers (JTable is capped at `MAX_DATA_CHILDREN` rows in the snapshot; JTree nodes may be collapsed). Suppressing `supportsSelection()` for JTree and non-row-mode JTable (UC-014) causes these components to lose content discovery entirely. **Proposed fix:** `get_children` and `get_children_count` should work on any component that has accessible children (not gated on `supportsSelection()`), but should **not** appear in the snapshot action list to avoid context window pollution. Instead, their universal availability should be documented in the `swing_get_children` / `swing_get_children_count` tool descriptions so the AI knows it can call them on any ref.
+The old step 6 listed six individual actions (`get_selection`, `set_selection`, `clear_selection`, `select_all`, `get_children_count`, `get_children`) gated on `supportsSelection()`. This has been replaced by two **group labels** in the snapshot action list:
 
-**TODO-2: Gate `select_all` on multi-select capability.**
-Currently, `select_all` is advertised for all selection-capable components, including single-select ones (JComboBox, JTabbedPane, JList in `SINGLE_SELECTION` mode). It should only appear for components that support multi-selection. Detection: use `AccessibleState.MULTISELECTABLE` in the component's state set, OR (`instanceof JTable` and `getSelectionModel().getSelectionMode() != ListSelectionModel.SINGLE_SELECTION`). The `instanceof JTable` fallback is needed because JTable does not report `MULTISELECTABLE` in its `AccessibleStateSet` even in multi-selection mode (verified by probe test, 2026-04-07). This affects `resolveActions()` step 6 — `select_all` should be conditional within the selection action block.
+- **`single-selection`** — emitted when `supportsSingleSelection()` returns `true`. The AI learns from the tool descriptions that `swing_get_selection`, `swing_set_selection`, `swing_clear_selection`, `swing_get_selectable_items`, and `swing_get_selectable_items_count` are available.
+- **`multi-selection`** — emitted when `supportsMultiSelection()` returns `true`. Same tools as single-selection, plus `swing_select_all`.
+
+This replaces the former TODO-1 and TODO-2. The individual selection actions no longer appear in the snapshot — they are documented in the tool descriptions, which are sent once at session start and persist for the entire MCP session.
+
+**`SwingUtils` methods for selection mode:**
+
+| Method | Logic | Purpose |
+|---|---|---|
+| `supportsSelection(Accessible)` | `getAccessibleSelection()` non-null AND role not in `SUPPRESSED_SELECTION_ROLES` | Base selection capability check (unchanged) |
+| `isMultiSelectable(Accessible)` | `AccessibleState.MULTISELECTABLE` in state set, OR (`instanceof JTable` AND `getSelectionModel().getSelectionMode() != ListSelectionModel.SINGLE_SELECTION`) | Multi-select capability. JTable fallback needed because JTable does not report `MULTISELECTABLE` in its `AccessibleStateSet` even in multi-selection mode (verified by probe test, 2026-04-07). |
+| `supportsSingleSelection(Accessible)` | `supportsSelection()` AND NOT `isMultiSelectable()` | Convenience: single-selection mode |
+| `supportsMultiSelection(Accessible)` | `supportsSelection()` AND `isMultiSelectable()` | Convenience: multi-selection mode |
+
+### Content Discovery (`get_cells` / `get_cell_count`)
+
+`get_cells` and `get_cell_count` are **decoupled from selection** — they operate in the accessible children index space, not the selection item index space. They are advertised in the snapshot only when **both** conditions hold:
+
+1. The component is a **large data component** (`isLargeDataComponent`: role is `TABLE`, `LIST`, or `TREE`).
+2. The component's accessible children count exceeds `MAX_DATA_CHILDREN` (i.e. the snapshot actually truncated its children).
+
+This avoids action list noise for small lists where all children are already visible in the snapshot.
+
+**`get_selectable_items` / `get_selectable_items_count`** operate in the **selection item index space** — the same 0-based index that `addAccessibleSelection(i)` expects. They are not listed as snapshot actions; their availability is documented in the tool descriptions and they are callable on any component marked `single-selection` or `multi-selection`.
+
+### TODOs
+
+**TODO-3: JTree content discovery.** JTree is suppressed from `supportsSelection()` (tree-level `AccessibleSelection` is non-functional — see UC-014 design notes). This means JTree only gets `get_cells`/`get_cell_count` for content discovery when truncated. However, JTree's collapsed nodes hide their children from the accessible tree entirely — `get_cells` only reveals the top-level nodes, not deeply nested ones. A future UC should investigate a JTree-specific content discovery mechanism that walks expanded/collapsed state.
 
 ---
 
