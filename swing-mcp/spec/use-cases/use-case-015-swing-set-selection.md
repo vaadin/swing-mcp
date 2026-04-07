@@ -38,6 +38,7 @@
 | BR-11 | **Index bounds validation.** Before performing the selection, the tool validates that every index in `indices` is within bounds: `0 <= index < itemCount`. For non-JTable components, `itemCount = as.getAccessibleSelectionCount()` is **not** used — instead, use the total number of selectable items. For JList, JTabbedPane, JComboBox, the item count is obtained from the component-specific API (see Algorithm). For JTable, the item count is the row count: `ac.getAccessibleTable().getAccessibleRowCount()`. If any index is out of bounds, the tool returns an MCP-level error (`isError: true`) with the message *"Index N is out of bounds. Valid range is [0, M)."* where N is the first invalid index and M is the item count. The bounds check runs after the single-selection check (BR-08). |
 | BR-12 | **Negative index validation.** If any index in `indices` is negative, the tool returns an MCP-level error (`isError: true`) with the message *"Index N is out of bounds. Valid range is [0, M)."* This is caught by the same bounds check as BR-11. |
 | BR-13 | **Duplicate indices.** Duplicate indices in the array are silently deduplicated (using insertion-ordered set). This is not an error. |
+| BR-14 | **Disabled tab check (JTabbedPane only).** If the target is a `JTabbedPane` (`instanceof JTabbedPane`), the tool checks each requested index against `((JTabbedPane) accessible).isEnabledAt(index)`. If any tab is disabled, the tool returns an MCP-level error (`isError: true`) with the message *"Tab at index N is disabled."* where N is the first disabled index. This mirrors the real-user constraint: a user cannot click a disabled tab. This check runs after bounds validation (BR-11). Only JTabbedPane has per-item disable via the standard API (`setEnabledAt`); JList, JComboBox, and JTable have no equivalent — their `isEffectivelyEnabled` component-level check (BR-05) is sufficient. |
 
 ### Algorithm
 
@@ -58,11 +59,12 @@ Execution order:
    - **JComboBox:** `itemCount = ((JComboBox<?>) accessible).getItemCount()`. (JComboBox's `getAccessibleChildrenCount()` returns 1 — the popup menu — so it cannot be used.)
    - **All others:** `itemCount = ac.getAccessibleChildrenCount()`. (For JList and JTabbedPane, the accessible children count equals the item count — verified by probe tests.)
 10. **BR-11 / BR-12** — validate all indices are in `[0, itemCount)`. If any index is out of bounds, fail with error naming the first invalid index.
-11. **Fire-and-forget dispatch** via `SwingUtilities.invokeLater()`:
+11. **BR-14** — if `accessible instanceof JTabbedPane`, check `isEnabledAt(index)` for each index. If any tab is disabled, fail with *"Tab at index N is disabled."*
+12. **Fire-and-forget dispatch** via `SwingUtilities.invokeLater()`:
     a. `as.clearAccessibleSelection()` — clear existing selection.
     b. **If the target is a JTable** — for each row index `r` in the deduplicated set: compute `cols = ac.getAccessibleTable().getAccessibleColumnCount()`, then call `as.addAccessibleSelection(r * cols + c)` for each `c` in `[0, cols)`.
     c. **Otherwise** — for each index `i` in the deduplicated set: call `as.addAccessibleSelection(i)`.
-12. Return `null`.
+13. Return `null`.
 
 **Accessibility API methods used:**
 - `AccessibleContext.getAccessibleSelection()` — detection and selection manipulation
@@ -85,7 +87,7 @@ Execution order:
 - **`JTable`** — row-to-cell translation (BR-10) is the inverse of the cell-to-row aggregation in UC-014 BR-11. The tool selects all cells in each requested row by iterating columns, which matches what `JTable.setRowSelectionInterval()` would do at the Swing API level. The accessibility API does not expose a row-level selection method, so cell-by-cell selection is necessary.
 - **`JTree`** — suppressed by `SUPPRESSED_SELECTION_ROLES` in `supportsSelection()`. Same as UC-014.
 - **`clearAccessibleSelection()` behaviour (probe-tested 2026-04-07).** `clearAccessibleSelection()` fully clears the selection on JList (single and multi), JComboBox (`selectedIndex=-1`), and JTable (single and multi row). On JTabbedPane with tabs it is a **no-op** — the selected tab remains unchanged, `selectionCount` stays at 1. BR-07 handles this with an `instanceof JTabbedPane` pre-check rather than a post-clear verification, to stay consistent with the fire-and-forget principle. JComboBox clears to no selection (which is a valid state — the display shows blank).
-- **`Parameters.getIntArray()` prerequisite.** The `Parameters` class must be extended with a `getIntArray(String key)` method that extracts a JSON array of integers from the raw parameter map. Gson deserializes JSON arrays as `List<?>` (with numbers as `Double`). The method must: (1) check that the value is a `List`; (2) convert each element to `int` via `Number.intValue()`; (3) throw `MCPServerException(INVALID_PARAMS)` if the key is missing, the value is not a list, or any element is not a number. Error messages: `"Required parameter 'indices' is missing"`, `"Parameter 'indices' must be an array of integers"`.
+- **`Parameters.getIntArray()` prerequisite (implemented).** The `Parameters` class provides a `getIntArray(String key)` method that extracts a JSON array of integers from the raw parameter map. Gson deserializes JSON arrays as `List<?>` (with numbers as `Double`). The method: (1) checks that the value is a `List`; (2) checks each element is a `Number`; (3) validates each number is a whole number (`doubleValue() % 1 != 0` rejects fractionals — e.g. `2.7` is always a bug when the tool expects integers); (4) converts to `int` via `Number.intValue()`. Throws `MCPServerException(INVALID_PARAMS)` if the key is missing, the value is not a list, any element is not a number, or any element is fractional. The fractional error message includes the offending element index and value: `"Parameter 'indices' must be an array of integers, but element at index 1 is 2.7"`.
 
 ---
 
@@ -109,6 +111,7 @@ Execution order:
 - [ ] Calling `swing_set_selection` on a `JTree` returns an MCP error (suppressed).
 - [ ] Calling `swing_set_selection` on a `JTable` in column-selection mode returns an MCP error.
 - [ ] Calling `swing_set_selection` on a disabled component returns an MCP error explaining the component is disabled.
+- [ ] Calling `swing_set_selection` on a `JTabbedPane` with a disabled tab index returns an MCP error: *"Tab at index N is disabled."*
 - [ ] The ref map is cleared after a successful `swing_set_selection` call (mutation tool).
 - [ ] The ref map is cleared even after a failed `swing_set_selection` call that passed ref lookup.
 - [ ] The tool returns `null` (empty content array) on success.
@@ -121,11 +124,14 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `ParametersTest` update
-  - [ ] `getIntArray()` returns a list of integers for a valid JSON array of numbers.
-  - [ ] `getIntArray()` throws `MCPServerException` when key is missing.
-  - [ ] `getIntArray()` throws `MCPServerException` when value is not a list.
-  - [ ] `getIntArray()` throws `MCPServerException` when an element is not a number.
+- [x] `ParametersTest` update (implemented)
+  - [x] `getIntArray()` returns a list of integers for a valid JSON array of whole numbers (from `Double` and `Integer`).
+  - [x] `getIntArray()` returns an empty list for an empty array.
+  - [x] `getIntArray()` throws `MCPServerException` when key is missing.
+  - [x] `getIntArray()` throws `MCPServerException` when value is not a list.
+  - [x] `getIntArray()` throws `MCPServerException` when value is a scalar number (not an array).
+  - [x] `getIntArray()` throws `MCPServerException` when an element is not a number.
+  - [x] `getIntArray()` throws `MCPServerException` when an element is fractional (e.g. `2.7`), with message naming the element index and value.
 
 - [ ] `SwingSetSelectionTest` (headless)
   - [ ] Setting a `JList` (single-selection) to one index selects that item.
@@ -147,6 +153,7 @@ Execution order:
   - [ ] Setting on a `JTable` in cell-selection mode returns an MCP error.
   - [ ] Setting on a `JTable` with no selection allowed returns an MCP error.
   - [ ] Setting on a disabled `JList` returns an MCP error explaining the component is disabled.
+  - [ ] Setting on a `JTabbedPane` with a disabled tab returns an MCP error naming the disabled tab index.
   - [ ] Setting multiple indices on a single-selection `JTabbedPane` returns an MCP error.
   - [ ] Setting multiple indices on a single-selection `JComboBox` returns an MCP error.
   - [ ] Setting an out-of-bounds index (e.g. index 10 on a 3-item JList) returns an MCP error.
