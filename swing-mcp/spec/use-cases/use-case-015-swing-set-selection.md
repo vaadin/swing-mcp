@@ -34,7 +34,7 @@
 | BR-07 | **Empty indices array.** If `indices` is an empty array `[]`, the tool clears the selection via `clearAccessibleSelection()` using fire-and-forget (`invokeLater`). **Exception: `JTabbedPane` with tabs.** If the target is a `JTabbedPane` (`instanceof JTabbedPane`) and `((JTabbedPane) accessible).getTabCount() > 0`, the tool returns an MCP-level error (`isError: true`) with the message *"This component does not allow the selection to be empty."* — because `clearAccessibleSelection()` is a no-op on a non-empty `JTabbedPane` (probe-tested 2026-04-07). An empty `JTabbedPane` (0 tabs) has no selection to clear and succeeds trivially. For all other components (`JList`, `JComboBox`, `JTable`), clearing works and is dispatched asynchronously. |
 | BR-08 | **Single-selection enforcement.** If the component is in single-selection mode (`SwingUtils.supportsSingleSelection(accessible)` returns `true`) and `indices` contains more than one element, the tool returns an MCP-level error (`isError: true`) with the message *"Component is in single-selection mode. Pass exactly one index (or an empty array to clear)."* |
 | BR-09 | The tool returns `null` (empty content array) on success, consistent with other mutation tools (`swing_click`, `swing_set_text`, `swing_set_value`). |
-| BR-10 | **JTable row-to-cell translation.** When the target is a `JTable` in row-selection mode, the `indices` array contains **row indices** (matching the `index` field from `swing_get_selection` BR-11). The tool translates each row index `r` to cell indices by calling `addAccessibleSelection(r * cols + c)` for each column `c` in `[0, cols)`, where `cols = ac.getAccessibleTable().getAccessibleColumnCount()`. |
+| BR-10 | **JTable row selection.** When the target is a `JTable` in row-selection mode, the `indices` array contains **row indices** (matching the `index` field from `swing_get_selection` BR-11). The tool uses `JTable.addRowSelectionInterval(row, row)` directly rather than `AccessibleSelection.addAccessibleSelection()`, because the latter delegates to `changeSelection()` which is unreliable inside `invokeLater()` (selection silently not applied — probe-tested 2026-04-07). |
 | BR-11 | **Index bounds validation.** Before performing the selection, the tool validates that every index in `indices` is within bounds: `0 <= index < itemCount`. The item count is determined per component type: **JTable** uses `ac.getAccessibleTable().getAccessibleRowCount()`; **JComboBox** uses `((JComboBox<?>) accessible).getItemCount()`; **all others** use `ac.getAccessibleChildrenCount()` (see Algorithm). If any index is out of bounds, the tool returns an MCP-level error (`isError: true`) with the message *"Index N is out of bounds. Valid range is [0, M)."* where N is the first invalid index and M is the item count. The bounds check runs after the single-selection check (BR-08). |
 | BR-12 | **Negative index validation.** If any index in `indices` is negative, the tool returns an MCP-level error (`isError: true`) with the message *"Index N is out of bounds. Valid range is [0, M)."* This is caught by the same bounds check as BR-11. |
 | BR-13 | **Duplicate indices.** Duplicate indices in the array are silently deduplicated (using insertion-ordered set). This is not an error. |
@@ -61,18 +61,17 @@ Execution order:
 10. **BR-11 / BR-12** — validate all indices are in `[0, itemCount)`. If any index is out of bounds, fail with error naming the first invalid index.
 11. **BR-14** — if `accessible instanceof JTabbedPane`, check `isEnabledAt(index)` for each index. If any tab is disabled, fail with *"Tab at index N is disabled."*
 12. **Fire-and-forget dispatch** via `SwingUtilities.invokeLater()`:
-    a. `as.clearAccessibleSelection()` — clear existing selection.
-    b. **If the target is a JTable** — for each row index `r` in the deduplicated set: compute `cols = ac.getAccessibleTable().getAccessibleColumnCount()`, then call `as.addAccessibleSelection(r * cols + c)` for each `c` in `[0, cols)`.
-    c. **Otherwise** — for each index `i` in the deduplicated set: call `as.addAccessibleSelection(i)`.
+    a. **If the target is a JTable** — call `table.clearSelection()`, then for each row index `r` in the deduplicated set: call `table.addRowSelectionInterval(r, r)`. Uses the direct JTable API because `AccessibleSelection.addAccessibleSelection()` is unreliable inside `invokeLater()`.
+    b. **Otherwise** — call `as.clearAccessibleSelection()`, then for each index `i` in the deduplicated set: call `as.addAccessibleSelection(i)`.
 13. Return `null`.
 
 **Accessibility API methods used:**
 - `AccessibleContext.getAccessibleSelection()` — detection and selection manipulation
-- `AccessibleSelection.clearAccessibleSelection()` — clear existing selection before setting new one
-- `AccessibleSelection.addAccessibleSelection(int i)` — select an item by index
-- `AccessibleContext.getAccessibleTable()` — JTable-specific: row/column structure
-- `AccessibleTable.getAccessibleRowCount()` — JTable-specific: for bounds validation
-- `AccessibleTable.getAccessibleColumnCount()` — JTable-specific: for row-to-cell translation
+- `AccessibleSelection.clearAccessibleSelection()` — clear existing selection (non-JTable path)
+- `AccessibleSelection.addAccessibleSelection(int i)` — select an item by index (non-JTable path)
+- `AccessibleContext.getAccessibleTable()` — JTable-specific: for bounds validation (`getAccessibleRowCount()`)
+- `JTable.clearSelection()` — JTable-specific: clear existing selection (direct API, used because `AccessibleSelection` is unreliable inside `invokeLater`)
+- `JTable.addRowSelectionInterval(int, int)` — JTable-specific: select a row (direct API)
 - `SwingUtils.isEffectivelyEnabled(Accessible)` — parent-chain enabled check
 - `SwingUtils.supportsSelection(Accessible)` — capability check
 - `SwingUtils.supportsSingleSelection(Accessible)` — single-selection mode check
@@ -84,7 +83,7 @@ Execution order:
 - **`JList`** — `addAccessibleSelection(i)` works correctly for both `SINGLE_SELECTION` and `MULTIPLE_INTERVAL_SELECTION` modes. In single-selection mode, adding a second index silently replaces the first — but BR-08 prevents this scenario by rejecting multi-index calls on single-selection components.
 - **`JTabbedPane`** — always single-selection. `addAccessibleSelection(i)` switches to the tab at index `i`. The tab switch is immediate and fires a `ChangeEvent` on the `JTabbedPane`.
 - **`JComboBox`** — always single-selection. `addAccessibleSelection(i)` selects the item at index `i` in the popup list. This works even when the popup is closed — the combo box updates its displayed value. `clearAccessibleSelection()` sets `selectedIndex=-1` (probe-tested 2026-04-07), leaving the combo box with no selection (blank display). The clear-then-add in the non-empty path is harmless — the add immediately follows.
-- **`JTable`** — row-to-cell translation (BR-10) is the inverse of the cell-to-row aggregation in UC-014 BR-11. The tool selects all cells in each requested row by iterating columns, which matches what `JTable.setRowSelectionInterval()` would do at the Swing API level. The accessibility API does not expose a row-level selection method, so cell-by-cell selection is necessary.
+- **`JTable`** — the tool uses `JTable.clearSelection()` and `JTable.addRowSelectionInterval(row, row)` directly instead of the accessibility API (`addAccessibleSelection`). This is necessary because `AccessibleSelection.addAccessibleSelection()` delegates to `JTable.changeSelection()`, which is unreliable inside `SwingUtilities.invokeLater()` — the selection is silently not applied (verified by probe test, 2026-04-07). The direct JTable API works correctly inside `invokeLater`. The row indices from the AI map directly to `addRowSelectionInterval` — no cell-index translation is needed.
 - **`JTree`** — suppressed by `SUPPRESSED_SELECTION_ROLES` in `supportsSelection()`. Same as UC-014.
 - **`clearAccessibleSelection()` behaviour (probe-tested 2026-04-07).** `clearAccessibleSelection()` fully clears the selection on JList (single and multi), JComboBox (`selectedIndex=-1`), and JTable (single and multi row). On JTabbedPane with tabs it is a **no-op** — the selected tab remains unchanged, `selectionCount` stays at 1. BR-07 handles this with an `instanceof JTabbedPane` pre-check rather than a post-clear verification, to stay consistent with the fire-and-forget principle. JComboBox clears to no selection (which is a valid state — the display shows blank).
 - **`Parameters.getIntArray()` prerequisite (implemented).** The `Parameters` class provides a `getIntArray(String key)` method that extracts a JSON array of integers from the raw parameter map. Gson deserializes JSON arrays as `List<?>` (with numbers as `Double`). The method: (1) checks that the value is a `List`; (2) checks each element is a `Number`; (3) validates each number is a whole number (`doubleValue() % 1 != 0` rejects fractionals — e.g. `2.7` is always a bug when the tool expects integers); (4) converts to `int` via `Number.intValue()`. Throws `MCPServerException(INVALID_PARAMS)` if the key is missing, the value is not a list, any element is not a number, or any element is fractional. The fractional error message includes the offending element index and value: `"Parameter 'indices' must be an array of integers, but element at index 1 is 2.7"`.
@@ -113,6 +112,10 @@ Execution order:
 | `MULTIPLE_INTERVAL_SELECTION` | Yes |
 
 `MULTISELECTABLE` correctly distinguishes single vs. multi, but does not distinguish contiguous-only vs. arbitrary ranges.
+
+#### `addAccessibleSelection()` on JTable inside `invokeLater`
+
+`JTable.AccessibleJTable.addAccessibleSelection(int i)` delegates to `JTable.changeSelection()`. When called synchronously on the EDT, it works correctly. However, when called inside `SwingUtilities.invokeLater()`, the selection is **silently not applied** — `getSelectedRows()` returns an empty array. The direct JTable API (`addRowSelectionInterval`) works correctly inside `invokeLater`. This is a JDK quirk, likely related to `changeSelection()` relying on event dispatch state that is not available inside a `invokeLater` block. The tool uses the direct API for JTable as a workaround.
 
 ---
 
