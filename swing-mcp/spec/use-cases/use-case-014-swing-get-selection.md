@@ -152,6 +152,7 @@ Verified empirically on Java 21 OpenJDK in headless mode (`AccessibleSelectionPr
   - [ ] Reading a `JList` with no selection returns `selectedCount: 0` and an empty array.
   - [ ] Reading a `JTabbedPane` returns the selected tab's index and title.
   - [ ] Reading a `JComboBox` returns the selected item's index and name.
+  - [ ] Reading an empty `JComboBox` (`new JComboBox<>()`) returns `selectedCount: 0` and an empty array (or handles gracefully if `getAccessibleSelection(0)` returns null).
   - [ ] Reading a `JTable` (row-selection mode) with a single row selected returns `selectedCount: 1` with row index and comma-separated cell values as name.
   - [ ] Reading a `JTable` (row-selection mode) with multiple rows selected returns all rows.
   - [ ] Reading a `JTable` in column-selection mode returns an MCP error.

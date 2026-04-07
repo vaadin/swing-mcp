@@ -599,6 +599,36 @@ Other specs reference this table instead of duplicating detection logic.
 | `get_children` | `supportsSelection()` | `getAccessibleSelection()` non-null | `swing_get_children` | Returns a paged accessibility tree dump of the component's accessible children. Parameters: `ref` (integer), `offset` (integer, 0-based), `length` (integer, max children to return). The output format mirrors `swing_snapshot` — the same indented text tree — but rooted at the requested children rather than the full UI. Each child entry explicitly shows its zero-based index so the AI can pass it directly to `set_selection`. **Serves two purposes:** (1) **Selection browsing** — discover which index to pass to `set_selection`; (2) **Content discovery** — find actionable children (e.g. an "Edit" button inside a JTable row). For purpose 2, `get_children` assigns a fresh local ref numbering and **replaces the MCPServer ref map** with only the refs in its output window. This is analogous to scrolling a JTable: children outside the `offset`/`length` window are not interactable. The AI must call `swing_snapshot` again to return to the full-tree ref map. |
 | `close` | `supportsClose()` | Synthetic — dispatches `WindowEvent.WINDOW_CLOSING` to the window | `swing_close` | Not from `AccessibleAction`. Exposed for `Window` instances (JFrame, JDialog) only — `JOptionPane` is excluded because its containing JDialog already exposes `close`. Respects the app's `WindowListener`s and `defaultCloseOperation`; does **not** bypass `DO_NOTHING_ON_CLOSE`. `isEffectivelyEnabled()` is **not** checked — closing is a window-level action, not a component-level one. |
 
+### Selection Index Spaces
+
+The `AccessibleSelection` API mixes three distinct index spaces. All selection tools
+(`swing_get_selection`, `swing_set_selection`) use the **item index space** — the 0-based
+index that `addAccessibleSelection(i)` and `isAccessibleChildSelected(i)` expect.
+
+| Index space | API methods | Description |
+|---|---|---|
+| **Selection-relative** | `getAccessibleSelection(int i)` | The i-th *selected* item. Ranges over `[0, getAccessibleSelectionCount())`. Not usable with `addAccessibleSelection()`. |
+| **Accessible children** | `getAccessibleChild(int i)`, `getAccessibleChildrenCount()` | Structural children of the component. For JComboBox, child 0 is the popup menu (`childrenCount=1`) — completely unrelated to combo items. |
+| **Item index** | `addAccessibleSelection(int i)`, `removeAccessibleSelection(int i)`, `isAccessibleChildSelected(int i)`, `getAccessibleIndexInParent()` on a selected item | The logical item position (0-based). This is the index space used by all selection MCP tools. |
+
+Empirically verified (Java 21 OpenJDK, 2026-04-07): for all supported components,
+`getAccessibleIndexInParent()` on an item returned by `getAccessibleSelection(i)` equals
+the item's index in the `addAccessibleSelection()` space.
+
+| Component | Children index = Item index? | Notes |
+|---|---|---|
+| `JList` | Yes | All three index spaces are identical. |
+| `JTabbedPane` | Yes | All three index spaces are identical. |
+| `JComboBox` | **No** | `getAccessibleChildrenCount()=1` (popup menu). Item index accessed via `indexInParent` on selected items. Selected item's parent is the internal popup `list`, not the combo box. |
+| `JTable` | **No** | Children are cells in row-major order. Item index is the cell index. See below for row aggregation. |
+
+**JTable row index.** `swing_get_selection` returns **row indices** for JTable (not cell
+indices), because reporting every cell in a selected row would be too verbose. The row index
+is computed as `cellIndex / columnCount`. `swing_set_selection` must perform the reverse
+mapping: to select row `r`, call `addAccessibleSelection(r * cols + c)` for each column `c`
+in `[0, cols)`. This translation is internal to the tool — the AI always works with row
+indices.
+
 ### TODOs — Selection Action Decoupling
 
 **TODO-1: Decouple `get_children` / `get_children_count` from `supportsSelection()`.**
