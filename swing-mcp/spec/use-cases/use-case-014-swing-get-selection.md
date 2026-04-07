@@ -141,7 +141,11 @@ Verified empirically on Java 21 OpenJDK in headless mode (`AccessibleSelectionPr
   - [ ] Reading a `JList` with no selection returns `selectedCount: 0` and an empty array.
   - [ ] Reading a `JTabbedPane` returns the selected tab's index and title.
   - [ ] Reading a `JComboBox` returns the selected item's index and name.
-  - [ ] Reading a `JTable` with a row selected returns cell-level selection (2 items for a 2-column table).
+  - [ ] Reading a `JTable` (row-selection mode) with a single row selected returns `selectedCount: 1` with row index and comma-separated cell values as name.
+  - [ ] Reading a `JTable` (row-selection mode) with multiple rows selected returns all rows.
+  - [ ] Reading a `JTable` in column-selection mode returns an MCP error.
+  - [ ] Reading a `JTable` in cell-selection mode returns an MCP error.
+  - [ ] Reading a `JTable` with no selection allowed returns an MCP error.
   - [ ] Reading with an invalid ref returns an MCP error with `isError: true`.
   - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
   - [ ] Reading a component without selection support (e.g. `JButton`) returns an MCP error with `isError: true`.
@@ -154,7 +158,7 @@ Verified empirically on Java 21 OpenJDK in headless mode (`AccessibleSelectionPr
   - [ ] Reading a `JList` with selection inside `JFrame` returns the selection.
   - [ ] Reading a `JTabbedPane` inside `JFrame` returns the selected tab.
   - [ ] Reading a `JComboBox` inside `JFrame` returns the selected item.
-  - [ ] Reading a `JTable` inside `JFrame` returns cell-level selection.
+  - [ ] Reading a `JTable` (row-selection mode) inside `JFrame` returns row-level selection.
   - [ ] Reading a `JList` inside `JDialog` returns the selection.
 
 ### Component matrix
@@ -164,7 +168,7 @@ Validated by probe tests (`AccessibleSelectionProbeTest`, `AccessibleSelectionPr
 `AccessibleSelectionProbeTreeTest`) on 2026-04-07.
 
 **Expected to succeed (`get_selection` supported):**
-`JList`, `JTabbedPane`, `JComboBox`, `JTable`
+`JList`, `JTabbedPane`, `JComboBox`, `JTable` (row-selection mode only — the default)
 
 **Expected to fail with "Component does not support get_selection" error:**
-`JTree` (suppressed — tree-level `AccessibleSelection` is non-functional; see design notes), `JButton`, `JCheckBox`, `JRadioButton`, `JTextField`, `JTextArea`, `JToggleButton`, `JSlider`, `JPanel`, `JScrollPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JSpinner`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`
+`JTree` (suppressed — tree-level `AccessibleSelection` is non-functional; see design notes), `JTable` (column/cell/no-selection modes — suppressed by BR-10), `JButton`, `JCheckBox`, `JRadioButton`, `JTextField`, `JTextArea`, `JToggleButton`, `JSlider`, `JPanel`, `JScrollPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JSpinner`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`
