@@ -238,7 +238,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         assertEquals(
                 "- panel\n"
                 + "  - scroll_pane\n"
-                + "    - list [ref=1] actions: get_selection, set_selection, clear_selection, select_all, get_children_count, get_children\n"
+                + "    - list [ref=1] actions: multi-selection\n"
                 + "      - label \"A\" [ref=2] actions: click\n"
                 + "      - label \"B\" [ref=3] actions: click\n"
                 + "    - scroll_bar [ref=4, vertical] actions: get_value, set_value\n"
@@ -264,7 +264,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - table [ref=1] actions: get_selection, set_selection, clear_selection, select_all, get_children_count, get_children\n"
+                + "  - table [ref=1] actions: multi-selection, get_cell_count, get_cells\n"
                 + "    - label \"row0\"\n"
                 + "    - label \"row1\"\n"
                 + "    - label \"row2\"\n"
@@ -316,7 +316,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - page_tab_list \"Tab1\" [ref=1] actions: get_selection, set_selection, clear_selection, select_all, get_children_count, get_children\n"
+                + "  - page_tab_list \"Tab1\" [ref=1] actions: single-selection\n"
                 + "    - page_tab \"Tab1\" [selected]\n"
                 + "      - push_button \"InTab1\" [ref=2] actions: click\n"
                 + "    - page_tab \"Tab2\"",
@@ -457,7 +457,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - combo_box [ref=1, collapsed] actions: toggle_popup, get_selection, set_selection, clear_selection, select_all, get_children_count, get_children",
+                + "  - combo_box [ref=1, collapsed] actions: toggle_popup, single-selection",
                 snapshot(panel));
     }
 
@@ -591,7 +591,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - page_tab_list \"General\" [ref=1] actions: get_selection, set_selection, clear_selection, select_all, get_children_count, get_children\n"
+                + "  - page_tab_list \"General\" [ref=1] actions: single-selection\n"
                 + "    - page_tab \"General\" [selected]\n"
                 + "    - page_tab \"Advanced\"",
                 snapshot(panel));
@@ -663,8 +663,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         // but they have no actions so carry no ref.
         assertEquals(
                 "- panel\n"
-                + "  - tree [ref=1] actions: get_selection, set_selection, clear_selection, select_all, get_children_count, get_children\n"
-                + "    - label \"Root\" [ref=2, expanded] actions: toggle_expand, get_selection, set_selection, clear_selection, select_all, get_children_count, get_children\n"
+                + "  - tree [ref=1] actions: single-selection\n"
+                + "    - label \"Root\" [ref=2, expanded] actions: toggle_expand, single-selection\n"
                 + "      - label \"A\" [collapsed]\n"
                 + "      - label \"B\" [collapsed]",
                 output);
@@ -677,7 +677,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - list [ref=1] actions: get_selection, set_selection, clear_selection, select_all, get_children_count, get_children\n"
+                + "  - list [ref=1] actions: multi-selection\n"
                 + "    - label \"Alpha\" [ref=2] actions: click\n"
                 + "    - label \"Beta\" [ref=3] actions: click",
                 snapshot(panel));

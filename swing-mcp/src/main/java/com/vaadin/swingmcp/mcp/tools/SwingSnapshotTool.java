@@ -400,7 +400,7 @@ public class SwingSnapshotTool extends AbstractSwingTool {
      * @return the next free ref value after processing this subtree
      */
     private int assignRefs(SnapshotNode node, int nextRef, SwingToolContext context) {
-        if (hasAnyAction(node.accessible)) {
+        if (hasAnyAction(node.accessible) || node.truncated) {
             node.ref = nextRef;
             context.putRef(nextRef, node.accessible);
             nextRef++;
@@ -457,7 +457,7 @@ public class SwingSnapshotTool extends AbstractSwingTool {
         }
 
         // Actions
-        List<String> actions = resolveActions(node.accessible);
+        List<String> actions = resolveActions(node);
         if (!actions.isEmpty()) {
             sb.append(" actions: ").append(String.join(", ", actions));
         }
@@ -480,7 +480,8 @@ public class SwingSnapshotTool extends AbstractSwingTool {
      * Resolves the action labels to show for a node, using the six-step
      * Action Label Algorithm from BR-06.
      */
-    private List<String> resolveActions(Accessible accessible) {
+    private List<String> resolveActions(SnapshotNode node) {
+        Accessible accessible = node.accessible;
         AccessibleContext ctx = accessible.getAccessibleContext();
         if (ctx == null) {
             return Collections.emptyList();
@@ -526,14 +527,17 @@ public class SwingSnapshotTool extends AbstractSwingTool {
             }
         }
 
-        // Step 6: selection
-        if (SwingUtils.supportsSelection(accessible)) {
-            actions.add("get_selection");
-            actions.add("set_selection");
-            actions.add("clear_selection");
-            actions.add("select_all");
-            actions.add("get_children_count");
-            actions.add("get_children");
+        // Step 6: selection group labels
+        if (SwingUtils.supportsMultiSelection(accessible)) {
+            actions.add("multi-selection");
+        } else if (SwingUtils.supportsSingleSelection(accessible)) {
+            actions.add("single-selection");
+        }
+
+        // Step 6b: content discovery for truncated large data components
+        if (node.truncated) {
+            actions.add("get_cell_count");
+            actions.add("get_cells");
         }
 
         // Step 7: close (synthetic, for windows only)
