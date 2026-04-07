@@ -4,6 +4,7 @@ import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -86,6 +87,14 @@ class ParametersTest {
         assertEquals("Parameter 'ref' must be an integer", ex.getMessage());
     }
 
+    @Test
+    void getIntThrowsWhenFractional() {
+        var params = new Parameters(Map.of("ref", 3.7));
+        var ex = assertThrows(MCPServerException.class, () -> params.getInt("ref"));
+        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        assertEquals("Parameter 'ref' must be an integer, got 3.7", ex.getMessage());
+    }
+
     // ── getNumber ────────────────────────────────────────────────────────────
 
     @Test
@@ -138,6 +147,75 @@ class ParametersTest {
         var ex = assertThrows(MCPServerException.class, () -> params.getIntOrNull("offset"));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
         assertEquals("Parameter 'offset' must be an integer", ex.getMessage());
+    }
+
+    @Test
+    void getIntOrNullThrowsWhenFractional() {
+        var params = new Parameters(Map.of("offset", 10.5));
+        var ex = assertThrows(MCPServerException.class, () -> params.getIntOrNull("offset"));
+        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        assertEquals("Parameter 'offset' must be an integer, got 10.5", ex.getMessage());
+    }
+
+    // ── getIntArray ──────────────────────────────────────────────────────────
+
+    @Test
+    void getIntArrayReturnsValuesFromDoubles() {
+        // Gson deserializes JSON [1, 2, 3] as List<Double>
+        var params = new Parameters(Map.of("indices", List.of(1.0, 2.0, 3.0)));
+        assertEquals(List.of(1, 2, 3), params.getIntArray("indices"));
+    }
+
+    @Test
+    void getIntArrayReturnsValuesFromIntegers() {
+        var params = new Parameters(Map.of("indices", List.of(0, 5, 10)));
+        assertEquals(List.of(0, 5, 10), params.getIntArray("indices"));
+    }
+
+    @Test
+    void getIntArrayReturnsEmptyListForEmptyArray() {
+        var params = new Parameters(Map.of("indices", List.of()));
+        assertEquals(List.of(), params.getIntArray("indices"));
+    }
+
+    @Test
+    void getIntArrayThrowsWhenMissing() {
+        var params = new Parameters(Map.of());
+        var ex = assertThrows(MCPServerException.class, () -> params.getIntArray("indices"));
+        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        assertEquals("Required parameter 'indices' is missing", ex.getMessage());
+    }
+
+    @Test
+    void getIntArrayThrowsWhenNotAList() {
+        var params = new Parameters(Map.of("indices", "notalist"));
+        var ex = assertThrows(MCPServerException.class, () -> params.getIntArray("indices"));
+        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        assertEquals("Parameter 'indices' must be an array of integers", ex.getMessage());
+    }
+
+    @Test
+    void getIntArrayThrowsWhenElementNotANumber() {
+        var params = new Parameters(Map.of("indices", List.of(1.0, "two", 3.0)));
+        var ex = assertThrows(MCPServerException.class, () -> params.getIntArray("indices"));
+        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        assertEquals("Parameter 'indices' must be an array of integers", ex.getMessage());
+    }
+
+    @Test
+    void getIntArrayThrowsWhenElementIsFractional() {
+        var params = new Parameters(Map.of("indices", List.of(1.0, 2.7, 3.0)));
+        var ex = assertThrows(MCPServerException.class, () -> params.getIntArray("indices"));
+        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        assertEquals("Parameter 'indices' must be an array of integers, but element at index 1 is 2.7", ex.getMessage());
+    }
+
+    @Test
+    void getIntArrayThrowsWhenScalarNumber() {
+        var params = new Parameters(Map.of("indices", 42));
+        var ex = assertThrows(MCPServerException.class, () -> params.getIntArray("indices"));
+        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        assertEquals("Parameter 'indices' must be an array of integers", ex.getMessage());
     }
 
     // ── null map ─────────────────────────────────────────────────────────────
