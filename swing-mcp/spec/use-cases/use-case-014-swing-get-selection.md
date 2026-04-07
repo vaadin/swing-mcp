@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** read the current selection of a UI component by ref **so that** I can understand which items are selected in lists, combo boxes, tables, and tabbed panes without relying on the snapshot (which omits selection state per UC-002 BR-03).
 
-**Status:** Draft
+**Status:** Approved
 **Date:** 2026-04-07
 
 ---
