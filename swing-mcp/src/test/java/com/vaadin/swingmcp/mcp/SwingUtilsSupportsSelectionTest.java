@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -161,6 +162,140 @@ class SwingUtilsSupportsSelectionTest {
     void jTree_supportsSelection() {
         JTree tree = new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root"));
         assertTrue(SwingUtils.supportsSelection(tree));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Edge cases
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // isMultiSelectable
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jList_defaultSelectionMode_isMultiSelectable() {
+        // Default selection mode is MULTIPLE_INTERVAL_SELECTION
+        JList<String> list = new JList<>(new String[]{"A", "B", "C"});
+        assertTrue(SwingUtils.isMultiSelectable(list));
+    }
+
+    @Test
+    void jList_singleSelectionMode_isNotMultiSelectable() {
+        JList<String> list = new JList<>(new String[]{"A", "B", "C"});
+        list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        assertFalse(SwingUtils.isMultiSelectable(list));
+    }
+
+    @Test
+    void jList_singleIntervalMode_isMultiSelectable() {
+        JList<String> list = new JList<>(new String[]{"A", "B", "C"});
+        list.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
+        assertTrue(SwingUtils.isMultiSelectable(list));
+    }
+
+    @Test
+    void jTabbedPane_isNotMultiSelectable() {
+        JTabbedPane tp = new JTabbedPane();
+        tp.addTab("Tab1", new JPanel());
+        tp.addTab("Tab2", new JPanel());
+        assertFalse(SwingUtils.isMultiSelectable(tp));
+    }
+
+    @Test
+    void jComboBox_isNotMultiSelectable() {
+        JComboBox<String> combo = new JComboBox<>(new String[]{"A", "B"});
+        assertFalse(SwingUtils.isMultiSelectable(combo));
+    }
+
+    @Test
+    void jTable_defaultMode_isMultiSelectable() {
+        // Default JTable has row selection allowed, multiple interval selection
+        JTable table = new JTable(new DefaultTableModel(new Object[][]{{"a"}}, new Object[]{"col"}));
+        assertTrue(SwingUtils.isMultiSelectable(table));
+    }
+
+    @Test
+    void jTable_singleSelectionMode_isNotMultiSelectable() {
+        JTable table = new JTable(new DefaultTableModel(new Object[][]{{"a"}}, new Object[]{"col"}));
+        table.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        assertFalse(SwingUtils.isMultiSelectable(table));
+    }
+
+    @Test
+    void jTable_singleIntervalMode_isMultiSelectable() {
+        JTable table = new JTable(new DefaultTableModel(new Object[][]{{"a"}}, new Object[]{"col"}));
+        table.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
+        assertTrue(SwingUtils.isMultiSelectable(table));
+    }
+
+    @Test
+    void jButton_isNotMultiSelectable() {
+        assertFalse(SwingUtils.isMultiSelectable(new JButton("OK")));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // supportsSingleSelection / supportsMultiSelection
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jList_defaultMode_supportsMultiSelection() {
+        JList<String> list = new JList<>(new String[]{"A", "B", "C"});
+        assertTrue(SwingUtils.supportsMultiSelection(list));
+        assertFalse(SwingUtils.supportsSingleSelection(list));
+    }
+
+    @Test
+    void jList_singleMode_supportsSingleSelection() {
+        JList<String> list = new JList<>(new String[]{"A", "B", "C"});
+        list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        assertTrue(SwingUtils.supportsSingleSelection(list));
+        assertFalse(SwingUtils.supportsMultiSelection(list));
+    }
+
+    @Test
+    void jComboBox_supportsSingleSelection() {
+        JComboBox<String> combo = new JComboBox<>(new String[]{"A", "B"});
+        assertTrue(SwingUtils.supportsSingleSelection(combo));
+        assertFalse(SwingUtils.supportsMultiSelection(combo));
+    }
+
+    @Test
+    void jTabbedPane_supportsSingleSelection() {
+        JTabbedPane tp = new JTabbedPane();
+        tp.addTab("Tab1", new JPanel());
+        assertTrue(SwingUtils.supportsSingleSelection(tp));
+        assertFalse(SwingUtils.supportsMultiSelection(tp));
+    }
+
+    @Test
+    void jTable_defaultMode_supportsMultiSelection() {
+        JTable table = new JTable(new DefaultTableModel(new Object[][]{{"a"}}, new Object[]{"col"}));
+        assertTrue(SwingUtils.supportsMultiSelection(table));
+        assertFalse(SwingUtils.supportsSingleSelection(table));
+    }
+
+    @Test
+    void jTable_singleMode_supportsSingleSelection() {
+        JTable table = new JTable(new DefaultTableModel(new Object[][]{{"a"}}, new Object[]{"col"}));
+        table.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        assertTrue(SwingUtils.supportsSingleSelection(table));
+        assertFalse(SwingUtils.supportsMultiSelection(table));
+    }
+
+    @Test
+    void jButton_supportsNeitherSingleNorMultiSelection() {
+        JButton button = new JButton("OK");
+        assertFalse(SwingUtils.supportsSingleSelection(button));
+        assertFalse(SwingUtils.supportsMultiSelection(button));
+    }
+
+    @Test
+    void jMenuBar_supportsNeitherSingleNorMultiSelection() {
+        // Suppressed from selection entirely
+        JMenuBar mb = new JMenuBar();
+        mb.add(new JMenu("File"));
+        assertFalse(SwingUtils.supportsSingleSelection(mb));
+        assertFalse(SwingUtils.supportsMultiSelection(mb));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

@@ -2,6 +2,8 @@ package com.vaadin.swingmcp.mcp;
 
 import javax.accessibility.*;
 import javax.swing.JFrame;
+import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
 import javax.swing.UIManager;
 import javax.swing.WindowConstants;
 import java.awt.Dialog;
@@ -157,6 +159,57 @@ public final class SwingUtils {
         if (ac == null) return false;
         if (ac.getAccessibleSelection() == null) return false;
         return !SUPPRESSED_SELECTION_ROLES.contains(ac.getAccessibleRole());
+    }
+
+    /**
+     * Returns {@code true} if the accessible supports multi-selection.
+     * <p>
+     * Detection: {@link AccessibleState#MULTISELECTABLE} in the state set,
+     * OR ({@code instanceof JTable} with
+     * {@code getSelectionModel().getSelectionMode() != SINGLE_SELECTION}).
+     * The JTable fallback is needed because JTable does not report
+     * {@code MULTISELECTABLE} in its {@code AccessibleStateSet} even in
+     * multi-selection mode (verified by probe test, 2026-04-07).
+     * <p>
+     * Note: this method does <em>not</em> check {@link #supportsSelection}.
+     * Use {@link #supportsMultiSelection} for a combined check.
+     *
+     * @see <a href="architecture.md">architecture.md § 6 — Selection Action Groups</a>
+     */
+    public static boolean isMultiSelectable(Accessible a) {
+        AccessibleContext ac = a.getAccessibleContext();
+        if (ac == null) return false;
+        if (ac.getAccessibleStateSet().contains(AccessibleState.MULTISELECTABLE)) {
+            return true;
+        }
+        // JTable fallback: JTable does not report MULTISELECTABLE in its state set
+        if (a instanceof JTable) {
+            JTable table = (JTable) a;
+            return table.getSelectionModel().getSelectionMode() != ListSelectionModel.SINGLE_SELECTION;
+        }
+        return false;
+    }
+
+    /**
+     * Returns {@code true} if the accessible supports user-facing selection
+     * and is in single-selection mode.
+     *
+     * @see #supportsSelection
+     * @see #isMultiSelectable
+     */
+    public static boolean supportsSingleSelection(Accessible a) {
+        return supportsSelection(a) && !isMultiSelectable(a);
+    }
+
+    /**
+     * Returns {@code true} if the accessible supports user-facing selection
+     * and is in multi-selection mode.
+     *
+     * @see #supportsSelection
+     * @see #isMultiSelectable
+     */
+    public static boolean supportsMultiSelection(Accessible a) {
+        return supportsSelection(a) && isMultiSelectable(a);
     }
 
     /**
