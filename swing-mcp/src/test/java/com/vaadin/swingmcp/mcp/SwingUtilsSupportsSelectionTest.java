@@ -159,9 +159,48 @@ class SwingUtilsSupportsSelectionTest {
     }
 
     @Test
-    void jTree_supportsSelection() {
+    void jTree_doesNotSupportSelection() {
+        // JTree tree-level AccessibleSelection is non-functional (UC-014)
         JTree tree = new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root"));
-        assertTrue(SwingUtils.supportsSelection(tree));
+        assertFalse(SwingUtils.supportsSelection(tree));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JTable — row-selection gate (UC-014 BR-10)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jTable_rowSelectionMode_supportsSelection() {
+        // Default: rowSelectionAllowed=true, columnSelectionAllowed=false
+        JTable table = new JTable(new DefaultTableModel(
+                new Object[][]{{"a"}}, new Object[]{"col"}));
+        assertTrue(SwingUtils.supportsSelection(table));
+    }
+
+    @Test
+    void jTable_columnSelectionMode_doesNotSupportSelection() {
+        JTable table = new JTable(new DefaultTableModel(
+                new Object[][]{{"a"}}, new Object[]{"col"}));
+        table.setRowSelectionAllowed(false);
+        table.setColumnSelectionAllowed(true);
+        assertFalse(SwingUtils.supportsSelection(table));
+    }
+
+    @Test
+    void jTable_cellSelectionMode_doesNotSupportSelection() {
+        JTable table = new JTable(new DefaultTableModel(
+                new Object[][]{{"a"}}, new Object[]{"col"}));
+        table.setCellSelectionEnabled(true);
+        assertFalse(SwingUtils.supportsSelection(table));
+    }
+
+    @Test
+    void jTable_noSelectionMode_doesNotSupportSelection() {
+        JTable table = new JTable(new DefaultTableModel(
+                new Object[][]{{"a"}}, new Object[]{"col"}));
+        table.setRowSelectionAllowed(false);
+        table.setColumnSelectionAllowed(false);
+        assertFalse(SwingUtils.supportsSelection(table));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

@@ -40,10 +40,15 @@ public final class SwingUtils {
             AccessibleRole.PROGRESS_BAR
     );
 
-    // ── Roles where AccessibleSelection is internal, not user-facing ─────────
+    // ── Roles where AccessibleSelection is internal or non-functional ────────
+    // MENU_BAR / MENU: selection is internal keyboard navigation.
+    // TREE: tree-level AccessibleSelection is non-functional
+    //   (getAccessibleSelectionCount() always returns 0); selection lives on
+    //   tree nodes, not the tree itself. See UC-014 design notes.
     static final Set<AccessibleRole> SUPPRESSED_SELECTION_ROLES = Set.of(
             AccessibleRole.MENU_BAR,
-            AccessibleRole.MENU
+            AccessibleRole.MENU,
+            AccessibleRole.TREE
     );
 
     /**
@@ -151,14 +156,25 @@ public final class SwingUtils {
      * Returns {@code true} if the accessible exposes user-facing
      * {@link AccessibleSelection}.
      * <p>
-     * Roles whose AccessibleSelection is internal (e.g. menu bars, menus)
-     * are suppressed.
+     * Roles whose AccessibleSelection is internal or non-functional
+     * (menu bars, menus, trees) are suppressed. For {@code JTable},
+     * only row-selection mode is supported (BR-10): the table must have
+     * {@code rowSelectionAllowed == true} and
+     * {@code columnSelectionAllowed == false}.
+     *
+     * @see <a href="use-case-014-swing-get-selection.md">UC-014 BR-10</a>
      */
     public static boolean supportsSelection(Accessible a) {
         AccessibleContext ac = a.getAccessibleContext();
         if (ac == null) return false;
         if (ac.getAccessibleSelection() == null) return false;
-        return !SUPPRESSED_SELECTION_ROLES.contains(ac.getAccessibleRole());
+        if (SUPPRESSED_SELECTION_ROLES.contains(ac.getAccessibleRole())) return false;
+        // BR-10: JTable row-selection gate
+        if (a instanceof JTable) {
+            JTable table = (JTable) a;
+            return table.getRowSelectionAllowed() && !table.getColumnSelectionAllowed();
+        }
+        return true;
     }
 
     /**

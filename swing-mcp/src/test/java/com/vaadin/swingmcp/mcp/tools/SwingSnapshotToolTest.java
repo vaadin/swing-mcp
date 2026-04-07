@@ -658,13 +658,15 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot(panel);
         // JTree nodes use AccessibleRole.LABEL (OpenJDK implementation).
+        // The tree itself has no selection (TREE suppressed in UC-014) and is
+        // not truncated, so it has no actions and no ref.
         // The root "Root" is expanded and has toggle_expand + selection actions.
         // Leaf nodes "A" and "B" are kept because they have accessible names,
         // but they have no actions so carry no ref.
         assertEquals(
                 "- panel\n"
-                + "  - tree [ref=1] actions: single-selection\n"
-                + "    - label \"Root\" [ref=2, expanded] actions: toggle_expand, single-selection\n"
+                + "  - tree\n"
+                + "    - label \"Root\" [ref=1, expanded] actions: toggle_expand, single-selection\n"
                 + "      - label \"A\" [collapsed]\n"
                 + "      - label \"B\" [collapsed]",
                 output);

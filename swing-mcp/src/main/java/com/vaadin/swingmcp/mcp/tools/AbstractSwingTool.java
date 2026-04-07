@@ -27,6 +27,7 @@ public abstract class AbstractSwingTool {
     public static final String TOOL_SWING_TOGGLE_EXPAND = "swing_toggle_expand";
     public static final String TOOL_SWING_GET_VALUE = "swing_get_value";
     public static final String TOOL_SWING_CLOSE = "swing_close";
+    public static final String TOOL_SWING_GET_SELECTION = "swing_get_selection";
 
     /**
      * @return the MCP tool name (e.g. {@code "swing_snapshot"})

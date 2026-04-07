@@ -188,10 +188,10 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
 
         mcpServer.setConsideredComponents(List.of(tree));
 
-        // After snapshot: JTree (selection) → ref=1, root node (toggle_expand) → ref=2
+        // After snapshot: JTree has no ref (selection suppressed), root node (toggle_expand) → ref=1
         mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
         McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_toggle_expand", Map.of("ref", 2)));
+                new McpSchema.CallToolRequest("swing_toggle_expand", Map.of("ref", 1)));
         SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
 
         assertNotEquals(Boolean.TRUE, result.isError(), "swing_toggle_expand should succeed");

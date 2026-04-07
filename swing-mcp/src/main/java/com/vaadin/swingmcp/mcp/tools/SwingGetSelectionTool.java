@@ -1,0 +1,164 @@
+package com.vaadin.swingmcp.mcp.tools;
+
+import com.vaadin.swingmcp.mcp.SwingUtils;
+import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
+import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
+import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+
+import javax.accessibility.Accessible;
+import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleSelection;
+import javax.accessibility.AccessibleTable;
+import javax.swing.JTable;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * MCP tool {@code swing_get_selection}: reads the current selection of a UI
+ * component by ref.
+ *
+ * <p>Returns JSON with {@code selectedCount} and {@code selected} items
+ * (0-based index + name). For JTable, index is the row index and name is a
+ * comma-separated summary of cell values.</p>
+ *
+ * @see <a href="use-case-014-swing-get-selection.md">UC-014</a>
+ */
+public class SwingGetSelectionTool extends AbstractSwingTool {
+
+    /** Maximum number of selected items returned before truncation (BR-09). */
+    static final int MAX_SELECTION_ITEMS = 100;
+
+    /** Maximum columns included in a JTable row name summary (BR-11). */
+    static final int MAX_ROW_NAME_COLUMNS = 10;
+
+    @Override
+    public String getName() {
+        return TOOL_SWING_GET_SELECTION;
+    }
+
+    @Override
+    public String getDescription() {
+        return "Read the current selection of a UI component by ref. Returns JSON with "
+                + "selectedCount and selected items (0-based index + name). For JTable, index "
+                + "is the row index (not cell index) and name is a comma-separated summary of "
+                + "cell values. Call swing_snapshot first to obtain refs.";
+    }
+
+    @Override
+    public MCPProtocol.InputSchema getInputSchema() {
+        return new InputSchemaBuilder()
+                .requiredInteger("ref", "The element reference number from swing_snapshot")
+                .build();
+    }
+
+    @Override
+    public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
+        // BR-01: ref is required integer
+        int ref = params.getInt("ref");
+
+        // BR-02: ref lookup (fail fast)
+        Accessible accessible = context.getAccessibleByRef(ref);
+
+        // BR-03: check selection support with JTable-specific error message
+        if (!SwingUtils.supportsSelection(accessible)) {
+            if (accessible instanceof JTable) {
+                throw new MCPErrorResponseException(
+                        "JTable is not in row-selection mode. Only row selection is supported.");
+            }
+            throw new MCPErrorResponseException(
+                    "Component does not support get_selection. Call swing_snapshot to verify the list of actions.");
+        }
+
+        // BR-04: all access on EDT (guaranteed by MCPServer.registerTool)
+        AccessibleContext ac = accessible.getAccessibleContext();
+        AccessibleSelection as = ac.getAccessibleSelection();
+
+        List<Map<String, Object>> selected;
+        boolean truncated;
+
+        // Step 4: JTable row aggregation path (BR-11)
+        if (accessible instanceof JTable) {
+            AccessibleTable at = ac.getAccessibleTable();
+            int cols = at.getAccessibleColumnCount();
+            int selCount = as.getAccessibleSelectionCount();
+
+            // Collect unique row indices (insertion-ordered)
+            Set<Integer> rows = new LinkedHashSet<>();
+            for (int i = 0; i < selCount; i++) {
+                Accessible cell = as.getAccessibleSelection(i);
+                if (cell == null) continue;
+                int cellIndex = cell.getAccessibleContext().getAccessibleIndexInParent();
+                rows.add(cellIndex / cols);
+            }
+
+            truncated = rows.size() > MAX_SELECTION_ITEMS;
+            selected = new ArrayList<>();
+            int count = 0;
+            for (int row : rows) {
+                if (count >= MAX_SELECTION_ITEMS) break;
+                String name = buildRowName(at, row, cols);
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("index", row);
+                item.put("name", name);
+                selected.add(item);
+                count++;
+            }
+        } else {
+            // Step 5: generic path
+            int selCount = as.getAccessibleSelectionCount();
+            truncated = selCount > MAX_SELECTION_ITEMS;
+            int limit = Math.min(selCount, MAX_SELECTION_ITEMS);
+            selected = new ArrayList<>();
+            for (int i = 0; i < limit; i++) {
+                Accessible child = as.getAccessibleSelection(i);
+                if (child == null) continue;
+                AccessibleContext childCtx = child.getAccessibleContext();
+                int itemIndex = childCtx.getAccessibleIndexInParent();
+                String name = childCtx.getAccessibleName();
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("index", itemIndex);
+                item.put("name", name);
+                selected.add(item);
+            }
+        }
+
+        // Step 6: build JSON
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("selectedCount", selected.size());
+        result.put("selected", selected);
+        if (truncated) {
+            result.put("truncated", true);
+        }
+        return MCPProtocol.Content.json(result);
+    }
+
+    /**
+     * Builds a comma-separated name for a JTable row by concatenating cell
+     * accessible names for the first {@link #MAX_ROW_NAME_COLUMNS} columns.
+     */
+    private static String buildRowName(AccessibleTable at, int row, int cols) {
+        int colLimit = Math.min(cols, MAX_ROW_NAME_COLUMNS);
+        StringBuilder sb = new StringBuilder();
+        for (int col = 0; col < colLimit; col++) {
+            if (col > 0) sb.append(", ");
+            Accessible cell = at.getAccessibleAt(row, col);
+            if (cell == null) {
+                sb.append("null");
+            } else {
+                String cellName = cell.getAccessibleContext().getAccessibleName();
+                sb.append(cellName != null ? cellName : "null");
+            }
+        }
+        return sb.toString();
+    }
+
+    @Override
+    public boolean isMutation() {
+        // BR-05: read-only tool, ref map is NOT cleared
+        return false;
+    }
+}

@@ -422,10 +422,8 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         JTree tree = new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root"));
 
         snapshot(tree);
-        // JTree itself has selection but no click support
-        int ref = context.getRefOf(tree);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support click"));
+        // JTree itself has no actions (selection suppressed, not truncated) — no ref
+        assertThrows(IllegalStateException.class, () -> context.getRefOf(tree));
     }
 
     @Test

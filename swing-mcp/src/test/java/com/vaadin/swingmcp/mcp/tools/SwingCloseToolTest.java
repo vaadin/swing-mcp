@@ -262,9 +262,8 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
     void componentMatrix_JTree() throws Exception {
         JTree tree = new JTree();
         snapshot(tree);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> close(context.getRefOf(tree)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        // JTree itself has no actions (selection suppressed, not truncated) — no ref
+        assertThrows(IllegalStateException.class, () -> context.getRefOf(tree));
     }
 
     @Test
