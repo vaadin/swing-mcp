@@ -88,6 +88,31 @@ Execution order:
 - **`JTree`** — suppressed by `SUPPRESSED_SELECTION_ROLES` in `supportsSelection()`. Same as UC-014.
 - **`clearAccessibleSelection()` behaviour (probe-tested 2026-04-07).** `clearAccessibleSelection()` fully clears the selection on JList (single and multi), JComboBox (`selectedIndex=-1`), and JTable (single and multi row). On JTabbedPane with tabs it is a **no-op** — the selected tab remains unchanged, `selectionCount` stays at 1. BR-07 handles this with an `instanceof JTabbedPane` pre-check rather than a post-clear verification, to stay consistent with the fire-and-forget principle. JComboBox clears to no selection (which is a valid state — the display shows blank).
 - **`Parameters.getIntArray()` prerequisite (implemented).** The `Parameters` class provides a `getIntArray(String key)` method that extracts a JSON array of integers from the raw parameter map. Gson deserializes JSON arrays as `List<?>` (with numbers as `Double`). The method: (1) checks that the value is a `List`; (2) checks each element is a `Number`; (3) validates each number is a whole number (`doubleValue() % 1 != 0` rejects fractionals — e.g. `2.7` is always a bug when the tool expects integers); (4) converts to `int` via `Number.intValue()`. Throws `MCPServerException(INVALID_PARAMS)` if the key is missing, the value is not a list, any element is not a number, or any element is fractional. The fractional error message includes the offending element index and value: `"Parameter 'indices' must be an array of integers, but element at index 1 is 2.7"`.
+- **`Parameters.getInt()` / `getIntOrNull()` fix (implemented).** These methods previously silently truncated fractional values (e.g. `3.7` → `3`). Fixed during UC-015 to reject non-whole numbers with the same `doubleValue() % 1 != 0` check, consistent with `getIntArray()`. Error message: `"Parameter 'ref' must be an integer, got 3.7"`.
+- **Per-item disable.** Only `JTabbedPane` has a standard per-item disable API (`setEnabledAt(int, boolean)`). `JList`, `JComboBox`, and `JTable` have no equivalent — disabling individual items requires custom renderers and selection model overrides, which are not part of the standard API. Therefore BR-14 (disabled-item check) is scoped to JTabbedPane only.
+
+### Probe test findings (2026-04-07)
+
+#### `clearAccessibleSelection()` behaviour
+
+| Component | Selection before | Effect of `clearAccessibleSelection()` | `selectionCount` after | Model state after |
+|---|---|---|---|---|
+| `JList` (SINGLE_SELECTION) | index=2 | **Clears** | 0 | `selectedIndex=-1`, `isSelectionEmpty=true` |
+| `JList` (MULTIPLE_INTERVAL_SELECTION) | indices=[0,2,3] | **Clears** | 0 | `selectedIndices=[]`, `isSelectionEmpty=true` |
+| `JTabbedPane` | index=1 | **No-op** — selection unchanged | 1 (unchanged) | `selectedIndex=1` (unchanged) |
+| `JComboBox` | index=2 | **Clears** | 0 | `selectedIndex=-1`, `selectedItem=null` |
+| `JTable` (row-selection, multi) | rows=[1,2] | **Clears** | 0 | `selectedRows=[]`, `selectionEmpty=true` |
+| `JTable` (row-selection, single) | rows=[1] | **Clears** | 0 | `selectedRows=[]`, `selectionEmpty=true` |
+
+#### `AccessibleState.MULTISELECTABLE` on JList
+
+| JList selection mode | `MULTISELECTABLE` in state set? |
+|---|---|
+| `SINGLE_SELECTION` | No |
+| `SINGLE_INTERVAL_SELECTION` | Yes |
+| `MULTIPLE_INTERVAL_SELECTION` | Yes |
+
+`MULTISELECTABLE` correctly distinguishes single vs. multi, but does not distinguish contiguous-only vs. arbitrary ranges.
 
 ---
 
