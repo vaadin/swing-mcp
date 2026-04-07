@@ -8,7 +8,6 @@ import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -268,6 +267,45 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         snapshot(list);
         String json = getSelection(context.getRefOf(list));
         assertEquals("{\"selectedCount\":1,\"selected\":[{\"index\":1,\"name\":\"B\"}]}", json);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Truncation (BR-09)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void truncation_whenSelectionExceedsMax() throws Exception {
+        // Create a JList with more items than MAX_SELECTION_ITEMS and select all
+        int count = SwingGetSelectionTool.MAX_SELECTION_ITEMS + 5;
+        String[] items = new String[count];
+        int[] allIndices = new int[count];
+        for (int i = 0; i < count; i++) {
+            items[i] = "Item" + i;
+            allIndices[i] = i;
+        }
+        JList<String> list = new JList<>(items);
+        list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        list.setSelectedIndices(allIndices);
+        snapshot(list);
+
+        String json = getSelection(context.getRefOf(list));
+        assertTrue(json.contains("\"truncated\":true"),
+                "Response should contain truncated:true, got: " + json);
+        assertTrue(json.contains("\"selectedCount\":" + SwingGetSelectionTool.MAX_SELECTION_ITEMS),
+                "selectedCount should be capped at MAX_SELECTION_ITEMS, got: " + json);
+    }
+
+    @Test
+    void noTruncation_whenSelectionWithinMax() throws Exception {
+        JList<String> list = new JList<>(new String[]{"A", "B", "C"});
+        list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        list.setSelectedIndices(new int[]{0, 1, 2});
+        snapshot(list);
+
+        String json = getSelection(context.getRefOf(list));
+        assertFalse(json.contains("truncated"),
+                "Response should not contain truncated field, got: " + json);
+        assertTrue(json.contains("\"selectedCount\":3"), "selectedCount should be 3");
     }
 
     // ══════════════════════════════════════════════════════════════════════════
