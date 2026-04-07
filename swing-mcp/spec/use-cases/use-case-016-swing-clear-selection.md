@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** clear the selection of a UI component by ref **so that** I can deselect all items in lists, combo boxes, tables, and tabbed panes during Swing app migration.
 
-**Status:** Draft
+**Status:** Implemented
 **Date:** 2026-04-07
 
 ---
@@ -30,6 +30,6 @@ This tool is a convenience wrapper around `swing_set_selection` (UC-015) with `i
 
 > See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingClearSelectionTest` (headless)
-  - [ ] Clearing the selection of a `JList` with a selected item deselects the item (happy path).
-  - [ ] The `swing_clear_selection` tool is registered in the MCP server tool list.
+- [x] `SwingClearSelectionTest` (headless)
+  - [x] Clearing the selection of a `JList` with a selected item deselects the item (happy path).
+  - [x] Calling `swing_clear_selection` via the MCP client clears the selection.

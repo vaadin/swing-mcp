@@ -1,0 +1,72 @@
+package com.vaadin.swingmcp.mcp.tools;
+
+import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
+import io.modelcontextprotocol.spec.McpSchema;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import javax.swing.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class SwingClearSelectionTest extends AbstractHeadlessTest {
+
+    private SwingSnapshotTool snapshotTool;
+    private SwingClearSelectionTool clearSelectionTool;
+    private SwingToolContext context;
+
+    @BeforeEach
+    void setUp() {
+        snapshotTool = new SwingSnapshotTool();
+        clearSelectionTool = new SwingClearSelectionTool();
+        context = new SwingToolContext();
+    }
+
+    private void snapshot(java.awt.Component... roots) throws Exception {
+        context.setConsideredComponents(Arrays.asList(roots));
+        snapshotTool.execute(new Parameters(Map.of()), context);
+    }
+
+    private void clearSelection(int ref) throws Exception {
+        try {
+            clearSelectionTool.execute(
+                    new Parameters(Map.of("ref", ref)), context);
+            SwingUtilities.invokeAndWait(() -> {}); // drain EDT
+        } finally {
+            context.clearRefMap();
+        }
+    }
+
+    @Test
+    void jList_clearSelection_deselectsItem() throws Exception {
+        JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma"});
+        list.setSelectedIndex(1);
+        assertEquals(1, list.getSelectedIndex());
+
+        snapshot(list);
+        int ref = context.getRefOf(list);
+        clearSelection(ref);
+
+        assertEquals(-1, list.getSelectedIndex());
+        assertTrue(list.isSelectionEmpty());
+    }
+
+    @Test
+    void clearSelectionViaMcpClient() throws Exception {
+        JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma"});
+        list.setSelectedIndex(2);
+        mcpServer.setConsideredComponents(List.of(list));
+
+        mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
+
+        McpSchema.CallToolResult result = mcpClient.callTool(
+                new McpSchema.CallToolRequest("swing_clear_selection", Map.of("ref", 1)));
+
+        assertNotEquals(Boolean.TRUE, result.isError(), "clear_selection should succeed");
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT
+        assertEquals(-1, list.getSelectedIndex());
+    }
+}
