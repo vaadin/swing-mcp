@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** read the current selection of a UI component by ref **so that** I can understand which items are selected in lists, combo boxes, tables, and tabbed panes without relying on the snapshot (which omits selection state per UC-002 BR-03).
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-04-07
 
 ---
@@ -115,23 +115,23 @@ Verified empirically on Java 21 OpenJDK in headless mode (`AccessibleSelectionPr
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_get_selection` with a valid ref for a `JList` with items selected returns the selected indices and names.
-- [ ] Calling `swing_get_selection` with a valid ref for a `JList` with no selection returns `{"selectedCount": 0, "selected": []}`.
-- [ ] Calling `swing_get_selection` with a valid ref for a `JList` with multiple items selected returns all selected items.
-- [ ] Calling `swing_get_selection` with a valid ref for a `JTabbedPane` returns the currently selected tab index and name.
-- [ ] Calling `swing_get_selection` with a valid ref for a `JComboBox` returns the currently selected item index and name.
-- [ ] Calling `swing_get_selection` with a valid ref for a `JTable` (row-selection mode) with a row selected returns row-level selection (aggregated from cells, with comma-separated cell values as name).
-- [ ] Calling `swing_get_selection` with a valid ref for a `JTable` (row-selection mode) with multiple rows selected returns all selected rows.
-- [ ] Calling `swing_get_selection` on a `JTable` in column-selection mode returns an MCP error (unsupported).
-- [ ] Calling `swing_get_selection` on a `JTable` in cell-selection mode returns an MCP error (unsupported).
-- [ ] Calling `swing_get_selection` on a `JTable` with no selection allowed returns an MCP error (unsupported).
-- [ ] Calling `swing_get_selection` with an invalid ref returns an MCP error with a recovery message.
-- [ ] Calling `swing_get_selection` on a component that does not support `get_selection` (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [ ] Calling `swing_get_selection` on a `JTree` returns an MCP error (suppressed — see design notes).
-- [ ] The ref map is **not** cleared after a `swing_get_selection` call (read-only tool).
-- [ ] Calling `swing_get_selection` on a disabled but selection-readable component succeeds (no enabled check).
-- [ ] The `index` field in each selected item is the zero-based item index (verified by: `addAccessibleSelection(index)` selects the same item, and `isAccessibleChildSelected(index)` returns `true`).
-- [ ] When the selection exceeds `MAX_SELECTION_ITEMS`, the response contains only the first 100 items and includes `"truncated": true`.
+- [x] Calling `swing_get_selection` with a valid ref for a `JList` with items selected returns the selected indices and names.
+- [x] Calling `swing_get_selection` with a valid ref for a `JList` with no selection returns `{"selectedCount": 0, "selected": []}`.
+- [x] Calling `swing_get_selection` with a valid ref for a `JList` with multiple items selected returns all selected items.
+- [x] Calling `swing_get_selection` with a valid ref for a `JTabbedPane` returns the currently selected tab index and name.
+- [x] Calling `swing_get_selection` with a valid ref for a `JComboBox` returns the currently selected item index and name.
+- [x] Calling `swing_get_selection` with a valid ref for a `JTable` (row-selection mode) with a row selected returns row-level selection (aggregated from cells, with comma-separated cell values as name).
+- [x] Calling `swing_get_selection` with a valid ref for a `JTable` (row-selection mode) with multiple rows selected returns all selected rows.
+- [x] Calling `swing_get_selection` on a `JTable` in column-selection mode returns an MCP error (unsupported).
+- [x] Calling `swing_get_selection` on a `JTable` in cell-selection mode returns an MCP error (unsupported).
+- [x] Calling `swing_get_selection` on a `JTable` with no selection allowed returns an MCP error (unsupported).
+- [x] Calling `swing_get_selection` with an invalid ref returns an MCP error with a recovery message.
+- [x] Calling `swing_get_selection` on a component that does not support `get_selection` (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
+- [x] Calling `swing_get_selection` on a `JTree` returns an MCP error (suppressed — see design notes).
+- [x] The ref map is **not** cleared after a `swing_get_selection` call (read-only tool).
+- [x] Calling `swing_get_selection` on a disabled but selection-readable component succeeds (no enabled check).
+- [x] The `index` field in each selected item is the zero-based item index (verified by: `addAccessibleSelection(index)` selects the same item, and `isAccessibleChildSelected(index)` returns `true`).
+- [x] When the selection exceeds `MAX_SELECTION_ITEMS`, the response contains only the first 100 items and includes `"truncated": true`.
 
 ---
 
