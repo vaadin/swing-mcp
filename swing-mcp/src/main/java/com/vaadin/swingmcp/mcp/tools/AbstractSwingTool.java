@@ -107,6 +107,24 @@ public abstract class AbstractSwingTool {
     }
 
     /**
+     * Validates that the accessible is a large data component (JTable, JList,
+     * JTree), throwing an {@link MCPErrorResponseException} if it is not.
+     *
+     * @param accessible the component to check
+     * @param toolName   the tool name for the error message
+     *                   (e.g. {@code "get_cells"})
+     * @throws MCPErrorResponseException if the component is not a large data component
+     */
+    protected static void requireLargeDataComponent(Accessible accessible, String toolName)
+            throws MCPErrorResponseException {
+        if (!SwingUtils.isLargeDataComponent(accessible)) {
+            throw new MCPErrorResponseException(
+                    "Component does not support " + toolName
+                            + ". Call swing_snapshot or swing_get_cells to verify the list of actions.");
+        }
+    }
+
+    /**
      * Validates that the accessible supports multi-selection, throwing an
      * {@link MCPErrorResponseException} if it does not.
      * <p>

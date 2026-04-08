@@ -1,6 +1,5 @@
 package com.vaadin.swingmcp.mcp.tools;
 
-import com.vaadin.swingmcp.mcp.SwingUtils;
 import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
@@ -78,11 +77,7 @@ public class SwingGetCellsTool extends AbstractSwingTool {
         Accessible accessible = context.getAccessibleByRef(ref);
 
         // Step 3 (BR-03): eligibility check — role only, no child count threshold
-        if (!SwingUtils.isLargeDataComponent(accessible)) {
-            throw new MCPErrorResponseException(
-                    "Component does not support get_cells. "
-                            + "Call swing_snapshot or swing_get_cells to verify the list of actions.");
-        }
+        requireLargeDataComponent(accessible, "get_cells");
 
         AccessibleContext ac = accessible.getAccessibleContext();
 
