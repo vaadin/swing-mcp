@@ -157,12 +157,9 @@ class SnapshotNode {
             return node;
         }
 
-        AccessibleRole role = ctx.getAccessibleRole();
         int totalChildren = ctx.getAccessibleChildrenCount();
 
-        boolean isLargeDataComponent = role == AccessibleRole.TABLE
-                || role == AccessibleRole.LIST
-                || role == AccessibleRole.TREE;
+        boolean isLargeDataComponent = SwingUtils.isLargeDataComponent(accessible);
 
         int limit = isLargeDataComponent
                 ? Math.min(totalChildren, MAX_DATA_CHILDREN)
@@ -547,5 +544,16 @@ class SnapshotNode {
             }
         }
         return false;
+    }
+
+    /**
+     * Strips all trailing newline characters from the given string.
+     */
+    static String stripTrailingNewlines(String s) {
+        int end = s.length();
+        while (end > 0 && s.charAt(end - 1) == '\n') {
+            end--;
+        }
+        return s.substring(0, end);
     }
 }

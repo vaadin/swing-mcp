@@ -426,6 +426,22 @@ public final class SwingUtils {
      *
      * @see <a href="use-case-012-swing-get-value.md">UC-012 BR-10</a>
      */
+    /**
+     * Returns {@code true} if the accessible is a large data component
+     * (JTable, JList, or JTree) — i.e. its accessible role is TABLE, LIST,
+     * or TREE.
+     *
+     * @see <a href="use-case-020-swing-get-cells.md">UC-020 BR-03</a>
+     */
+    public static boolean isLargeDataComponent(Accessible a) {
+        AccessibleContext ac = a.getAccessibleContext();
+        if (ac == null) return false;
+        AccessibleRole role = ac.getAccessibleRole();
+        return role == AccessibleRole.TABLE
+                || role == AccessibleRole.LIST
+                || role == AccessibleRole.TREE;
+    }
+
     public static Number serializeNumber(Number value) {
         double d = value.doubleValue();
         if (d % 1 == 0) {

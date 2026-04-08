@@ -90,11 +90,6 @@ public class SwingSnapshotTool extends AbstractSwingTool {
             roots.get(i).render(0, sb);
         }
 
-        // Strip trailing newline for a clean result
-        String result = sb.toString();
-        while (result.endsWith("\n")) {
-            result = result.substring(0, result.length() - 1);
-        }
-        return MCPProtocol.Content.text(result);
+        return MCPProtocol.Content.text(SnapshotNode.stripTrailingNewlines(sb.toString()));
     }
 }
