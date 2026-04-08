@@ -52,20 +52,20 @@ Execution order:
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_get_selectable_items_count` with a valid ref for a `JList` with 5 items returns `5`.
-- [ ] Calling `swing_get_selectable_items_count` with a valid ref for a `JList` with 200 items returns `200`.
-- [ ] Calling `swing_get_selectable_items_count` with a valid ref for an empty `JList` returns `0`.
-- [ ] Calling `swing_get_selectable_items_count` with a valid ref for a `JTabbedPane` with 3 tabs returns `3`.
-- [ ] Calling `swing_get_selectable_items_count` with a valid ref for a `JComboBox` with 3 items returns `3`.
-- [ ] Calling `swing_get_selectable_items_count` with a valid ref for an empty `JComboBox` returns `0`.
-- [ ] Calling `swing_get_selectable_items_count` with a valid ref for a `JTable` (row-selection mode) with 10 rows returns `10`.
-- [ ] Calling `swing_get_selectable_items_count` on a `JTable` in column-selection mode returns an MCP error.
-- [ ] Calling `swing_get_selectable_items_count` on a `JTree` returns an MCP error (suppressed).
-- [ ] Calling `swing_get_selectable_items_count` with an invalid ref returns an MCP error with a recovery message.
-- [ ] Calling `swing_get_selectable_items_count` on a component that does not support selection (e.g. `JButton`) returns an MCP error.
-- [ ] The ref map is **not** cleared after a `swing_get_selectable_items_count` call (read-only tool).
-- [ ] Calling `swing_get_selectable_items_count` on a disabled component succeeds.
-- [ ] The returned count matches the `totalCount` field from `swing_get_selectable_items` for the same component.
+- [x] Calling `swing_get_selectable_items_count` with a valid ref for a `JList` with 5 items returns `5`.
+- [x] Calling `swing_get_selectable_items_count` with a valid ref for a `JList` with 200 items returns `200`.
+- [x] Calling `swing_get_selectable_items_count` with a valid ref for an empty `JList` returns `0`.
+- [x] Calling `swing_get_selectable_items_count` with a valid ref for a `JTabbedPane` with 3 tabs returns `3`.
+- [x] Calling `swing_get_selectable_items_count` with a valid ref for a `JComboBox` with 3 items returns `3`.
+- [x] Calling `swing_get_selectable_items_count` with a valid ref for an empty `JComboBox` returns `0`.
+- [x] Calling `swing_get_selectable_items_count` with a valid ref for a `JTable` (row-selection mode) with 10 rows returns `10`.
+- [x] Calling `swing_get_selectable_items_count` on a `JTable` in column-selection mode returns an MCP error.
+- [x] Calling `swing_get_selectable_items_count` on a `JTree` returns an MCP error (suppressed).
+- [x] Calling `swing_get_selectable_items_count` with an invalid ref returns an MCP error with a recovery message.
+- [x] Calling `swing_get_selectable_items_count` on a component that does not support selection (e.g. `JButton`) returns an MCP error.
+- [x] The ref map is **not** cleared after a `swing_get_selectable_items_count` call (read-only tool).
+- [x] Calling `swing_get_selectable_items_count` on a disabled component succeeds.
+- [x] The returned count matches the `totalCount` field from `swing_get_selectable_items` for the same component.
 
 ---
 
@@ -73,32 +73,32 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingGetSelectableItemsCountTest` (headless)
-  - [ ] `JList` with 5 items returns `5`.
-  - [ ] `JList` with 200 items returns `200`.
-  - [ ] Empty `JList` returns `0`.
-  - [ ] `JTabbedPane` with 3 tabs returns `3`.
-  - [ ] Empty `JTabbedPane` returns `0`.
-  - [ ] `JComboBox` with 3 items returns `3`.
-  - [ ] Empty `JComboBox` returns `0`.
-  - [ ] `JTable` (row-selection mode) with 10 rows returns `10`.
-  - [ ] `JTable` in column-selection mode returns an MCP error.
-  - [ ] `JTable` in cell-selection mode returns an MCP error.
-  - [ ] `JTable` with no selection allowed returns an MCP error.
-  - [ ] Invalid ref returns an MCP error with `isError: true`.
-  - [ ] `JButton` returns an MCP error.
-  - [ ] `JTree` returns an MCP error (suppressed).
-  - [ ] Ref map is preserved after the call (verified by calling twice with same ref).
-  - [ ] Disabled `JList` succeeds.
-  - [ ] Returned count matches `totalCount` from `swing_get_selectable_items` for same component.
-  - [ ] Each component from the component matrix is tested.
+- [x] `SwingGetSelectableItemsCountTest` (headless)
+  - [x] `JList` with 5 items returns `5`.
+  - [x] `JList` with 200 items returns `200`.
+  - [x] Empty `JList` returns `0`.
+  - [x] `JTabbedPane` with 3 tabs returns `3`.
+  - [x] Empty `JTabbedPane` returns `0`.
+  - [x] `JComboBox` with 3 items returns `3`.
+  - [x] Empty `JComboBox` returns `0`.
+  - [x] `JTable` (row-selection mode) with 10 rows returns `10`.
+  - [x] `JTable` in column-selection mode returns an MCP error.
+  - [x] `JTable` in cell-selection mode returns an MCP error.
+  - [x] `JTable` with no selection allowed returns an MCP error.
+  - [x] Invalid ref returns an MCP error with `isError: true`.
+  - [x] `JButton` returns an MCP error.
+  - [x] `JTree` returns an MCP error (suppressed).
+  - [x] Ref map is preserved after the call (verified by calling twice with same ref).
+  - [x] Disabled `JList` succeeds.
+  - [x] Returned count matches `totalCount` from `swing_get_selectable_items` for same component.
+  - [x] Each component from the component matrix is tested.
 
-- [ ] `SwingGetSelectableItemsCountScreenTest` (`testSwing` — requires display)
-  - [ ] `JList` inside `JFrame` returns correct count.
-  - [ ] `JTabbedPane` inside `JFrame` returns correct count.
-  - [ ] `JComboBox` inside `JFrame` returns correct count.
-  - [ ] `JTable` (row-selection mode) inside `JFrame` returns correct count.
-  - [ ] `JList` inside `JDialog` returns correct count.
+- [x] `SwingGetSelectableItemsCountScreenTest` (`testSwing` — requires display)
+  - [x] `JList` inside `JFrame` returns correct count.
+  - [x] `JTabbedPane` inside `JFrame` returns correct count.
+  - [x] `JComboBox` inside `JFrame` returns correct count.
+  - [x] `JTable` (row-selection mode) inside `JFrame` returns correct count.
+  - [x] `JList` inside `JDialog` returns correct count.
 
 ### Component matrix
 
