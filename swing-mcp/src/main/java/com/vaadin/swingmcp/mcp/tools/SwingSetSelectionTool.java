@@ -8,7 +8,6 @@ import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleSelection;
-import javax.swing.JComboBox;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.SwingUtilities;
@@ -97,14 +96,7 @@ public class SwingSetSelectionTool extends AbstractSwingTool {
         }
 
         // Step 9: determine item count for bounds checking
-        int itemCount;
-        if (accessible instanceof JTable) {
-            itemCount = ac.getAccessibleTable().getAccessibleRowCount();
-        } else if (accessible instanceof JComboBox) {
-            itemCount = ((JComboBox<?>) accessible).getItemCount();
-        } else {
-            itemCount = ac.getAccessibleChildrenCount();
-        }
+        int itemCount = SwingUtils.getSelectableItemsCount(accessible);
 
         // Step 10 (BR-11/BR-12): bounds validation
         for (int index : deduplicated) {

@@ -32,9 +32,6 @@ public class SwingGetSelectionTool extends AbstractSwingTool {
     /** Maximum number of selected items returned before truncation (BR-09). */
     static final int MAX_SELECTION_ITEMS = 100;
 
-    /** Maximum columns included in a JTable row name summary (BR-11). */
-    static final int MAX_ROW_NAME_COLUMNS = 10;
-
     @Override
     public String getName() {
         return TOOL_SWING_GET_SELECTION;
@@ -100,7 +97,7 @@ public class SwingGetSelectionTool extends AbstractSwingTool {
             int count = 0;
             for (int row : rows) {
                 if (count >= MAX_SELECTION_ITEMS) break;
-                String name = buildRowName(at, row, cols);
+                String name = SwingUtils.buildRowName(at, row, cols);
                 Map<String, Object> item = new LinkedHashMap<>();
                 item.put("index", row);
                 item.put("name", name);
@@ -136,25 +133,6 @@ public class SwingGetSelectionTool extends AbstractSwingTool {
         return MCPProtocol.Content.json(result);
     }
 
-    /**
-     * Builds a comma-separated name for a JTable row by concatenating cell
-     * accessible names for the first {@link #MAX_ROW_NAME_COLUMNS} columns.
-     */
-    private static String buildRowName(AccessibleTable at, int row, int cols) {
-        int colLimit = Math.min(cols, MAX_ROW_NAME_COLUMNS);
-        StringBuilder sb = new StringBuilder();
-        for (int col = 0; col < colLimit; col++) {
-            if (col > 0) sb.append(", ");
-            Accessible cell = at.getAccessibleAt(row, col);
-            if (cell == null) {
-                sb.append("null");
-            } else {
-                String cellName = cell.getAccessibleContext().getAccessibleName();
-                sb.append(cellName != null ? cellName : "null");
-            }
-        }
-        return sb.toString();
-    }
 
     @Override
     public boolean isMutation() {
