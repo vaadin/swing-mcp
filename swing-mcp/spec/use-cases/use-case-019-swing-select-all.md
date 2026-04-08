@@ -33,22 +33,24 @@
 | BR-06 | All validation runs on the EDT inside `runInEDT()`. The selection mutation is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously (fire-and-forget). |
 | BR-07 | `swing_select_all` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after invocation (even on failure, via `finally`). |
 | BR-08 | The tool returns `null` (empty content array) on success, consistent with other mutation tools (`swing_click`, `swing_set_text`, `swing_set_value`, `swing_set_selection`). |
-| BR-09 | **JTable select-all.** When the target is a `JTable` in row-selection mode, the tool uses `table.selectAll()` directly rather than `AccessibleSelection.selectAllAccessibleSelection()`, for consistency with UC-015's use of direct JTable API (the accessibility API is unreliable inside `invokeLater()` for JTable — see UC-015 probe test findings). |
+| BR-09 | **JTable select-all.** When the target is a `JTable` in row-selection mode, the tool **must** use `table.selectAll()` directly. `AccessibleSelection.selectAllAccessibleSelection()` is a complete no-op on JTable — it selects nothing (probe-tested 2026-04-08). `table.selectAll()` works correctly: selects all rows, does not flip `columnSelectionAllowed`, and the accessible selection correctly reports all cells (which aggregate back to rows via UC-014 BR-11). |
 | BR-10 | **Non-JTable select-all.** For `JList` (and any other multi-selectable component), the tool dispatches `as.selectAllAccessibleSelection()` via `SwingUtilities.invokeLater()` (fire-and-forget). |
-| BR-11 | **Empty component.** If the component has zero selectable items (`SwingUtils.getSelectableItemsCount(accessible) == 0`), the tool succeeds trivially — dispatch still runs but has no observable effect. This is not an error. |
+| BR-11 | **Empty component.** If the component has zero selectable items (`SwingUtils.getSelectableItemsCount(accessible) == 0`), the tool succeeds trivially — dispatch still runs but has no observable effect. This is not an error. No explicit implementation guard is needed — the behavior falls out naturally from `selectAllAccessibleSelection()` / `table.selectAll()` on empty components (probe-tested 2026-04-08). |
 
 ### Algorithm
 
 Execution order:
 1. **BR-01** — parameter validation (fail fast if `ref` is missing/wrong type).
 2. **BR-02** — ref lookup (fail fast if ref is invalid).
-3. **BR-03** — `SwingUtils.supportsSelection(accessible)` — if `false`, fail with error (check `instanceof JTable` first for specific message).
-4. **BR-04** — if `SwingUtils.supportsSingleSelection(accessible)`, fail with "single-selection mode" error.
-5. **BR-05** — `SwingUtils.isEffectivelyEnabled(accessible)` — if `false`, fail with "disabled" error.
-6. **Fire-and-forget dispatch** via `SwingUtilities.invokeLater()`:
+3. **BR-03 + BR-04** — `requireMultiSelectable(accessible, "select_all")` — checks selection support first (with JTable-specific error), then rejects single-selection. Uses the shared helper from `AbstractSwingTool`.
+4. **BR-05** — `SwingUtils.isEffectivelyEnabled(accessible)` — if `false`, fail with "disabled" error.
+5. **Fire-and-forget dispatch** via `SwingUtilities.invokeLater()`:
+
+**Validation ordering rationale.** Capability checks (steps 3–4) precede the enabled check (step 5). A disabled `JButton` gets "does not support select_all" — the real problem is lack of selection support, not the disabled state. The "disabled" error is only reachable for components that actually support multi-selection (JList, JTable) but happen to be disabled, which is the correct and most actionable error message.
+
    a. **If the target is a JTable** — call `table.selectAll()` (BR-09).
    b. **Otherwise** — obtain `AccessibleSelection as = ac.getAccessibleSelection()`, call `as.selectAllAccessibleSelection()` (BR-10).
-7. Return `null`.
+6. Return `null`.
 
 **Accessibility API methods used:**
 - `AccessibleContext.getAccessibleSelection()` — selection manipulation (non-JTable path)
@@ -69,7 +71,8 @@ Execution order:
 - **`JComboBox`** — always single-selection, so it is rejected by BR-04.
 - **`JTree`** — suppressed by `SUPPRESSED_SELECTION_ROLES` in `supportsSelection()`. Same as UC-014.
 - **Delegation vs standalone.** `swing_clear_selection` delegates to `SwingSetSelectionTool` with empty indices. A similar pattern here (delegate with all indices `[0, itemCount)`) was considered but rejected: some table implementations treat "select all" as a special state (everything selected) rather than holding IDs of all rows; passing in all indices would bypass this optimization and be wasteful for large tables. The standalone calls (`selectAllAccessibleSelection()` / `table.selectAll()`) are simpler and preserve implementation-specific select-all semantics.
-- **Shared validation helpers.** The JTable-check-then-generic-error pattern for selection support is duplicated across `get_selection`, `set_selection`, `get_selectable_items`, `get_selectable_items_count`, and now `select_all`. To reduce duplication, extract helpers into `AbstractSwingTool`: (1) `requireSelectable(Accessible, String toolName)` — throws `MCPErrorResponseException` if `!supportsSelection()`, with JTable-specific message vs generic message (substituting `toolName`); (2) `requireMultiSelectable(Accessible, String toolName)` — calls `requireSelectable` first, then throws if `supportsSingleSelection()` with *"Component is in single-selection mode. select_all requires multi-selection."* These helpers should be retrofitted into the existing selection tools as a refactoring step.
+- **Shared validation helpers (implemented).** The JTable-check-then-generic-error pattern for selection support was duplicated across `get_selection`, `set_selection`, `get_selectable_items`, and `get_selectable_items_count`. Extracted into `AbstractSwingTool` and retrofitted into all four existing tools (commit `d874355`): (1) `requireSelectable(Accessible, String toolName)` — throws `MCPErrorResponseException` if `!supportsSelection()`, with JTable-specific message vs generic message (substituting `toolName`); (2) `requireMultiSelectable(Accessible, String toolName)` — calls `requireSelectable` first, then throws if `supportsSingleSelection()`. `select_all` uses `requireMultiSelectable` directly.
+- **Registration.** Tool registration is explicit in `MCPServer.registerTools()`. Implementation must add `registerTool(new SwingSelectAllTool())` there and `TOOL_SWING_SELECT_ALL` to `AbstractSwingTool` constants.
 
 ### Probe test findings (2026-04-08)
 
