@@ -484,4 +484,94 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         context.putRef(99, pb);
         assertThrows(MCPErrorResponseException.class, () -> selectAll(99));
     }
+
+    @Test
+    void componentMatrix_JPasswordField() throws Exception {
+        JPasswordField pf = new JPasswordField("secret");
+        snapshot(pf);
+        int ref = context.getRefOf(pf);
+        assertThrows(MCPErrorResponseException.class, () -> selectAll(ref));
+    }
+
+    @Test
+    void componentMatrix_JPanel() throws Exception {
+        JPanel panel = new JPanel();
+        snapshot(panel);
+        context.putRef(99, panel);
+        assertThrows(MCPErrorResponseException.class, () -> selectAll(99));
+    }
+
+    @Test
+    void componentMatrix_JScrollPane() throws Exception {
+        JScrollPane sp = new JScrollPane();
+        snapshot(sp);
+        context.putRef(99, sp);
+        assertThrows(MCPErrorResponseException.class, () -> selectAll(99));
+    }
+
+    @Test
+    void componentMatrix_JSplitPane() throws Exception {
+        JSplitPane sp = new JSplitPane();
+        snapshot(sp);
+        context.putRef(99, sp);
+        assertThrows(MCPErrorResponseException.class, () -> selectAll(99));
+    }
+
+    @Test
+    void componentMatrix_JMenuBar() throws Exception {
+        JMenuBar mb = new JMenuBar();
+        JMenu menu = new JMenu("File");
+        mb.add(menu);
+        snapshot(mb);
+        context.putRef(99, mb);
+        assertThrows(MCPErrorResponseException.class, () -> selectAll(99));
+    }
+
+    @Test
+    void componentMatrix_JMenu() throws Exception {
+        JMenu menu = new JMenu("File");
+        menu.add(new JMenuItem("Open"));
+        snapshot(menu);
+        context.putRef(99, menu);
+        assertThrows(MCPErrorResponseException.class, () -> selectAll(99));
+    }
+
+    @Test
+    void componentMatrix_JMenuItem() throws Exception {
+        JMenuItem item = new JMenuItem("Open");
+        snapshot(item);
+        int ref = context.getRefOf(item);
+        assertThrows(MCPErrorResponseException.class, () -> selectAll(ref));
+    }
+
+    @Test
+    void componentMatrix_JToolBar() throws Exception {
+        JToolBar tb = new JToolBar();
+        tb.add(new JButton("Btn"));
+        snapshot(tb);
+        context.putRef(99, tb);
+        assertThrows(MCPErrorResponseException.class, () -> selectAll(99));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // MCP client smoke test
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void selectAllViaMcpClient() throws Exception {
+        JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma"});
+        list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        mcpServer.setConsideredComponents(java.util.List.of(list));
+
+        mcpClient.callTool(new io.modelcontextprotocol.spec.McpSchema.CallToolRequest(
+                "swing_snapshot", Map.of()));
+
+        io.modelcontextprotocol.spec.McpSchema.CallToolResult result = mcpClient.callTool(
+                new io.modelcontextprotocol.spec.McpSchema.CallToolRequest(
+                        "swing_select_all", Map.of("ref", 1)));
+
+        assertNotEquals(Boolean.TRUE, result.isError(), "select_all should succeed");
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT
+        assertArrayEquals(new int[]{0, 1, 2}, list.getSelectedIndices());
+    }
 }

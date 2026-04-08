@@ -6,6 +6,7 @@ import com.vaadin.swingmcp.mcp.tools.SwingSelectAllTool;
 import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
+import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -127,5 +128,49 @@ class SwingSelectAllScreenTest extends AbstractScreenTest {
                         + "{\"index\":2,\"name\":\"Carol, 35\"}"
                         + "]}",
                 json);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Component matrix — top-level windows (screen required)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void componentMatrix_JFrame() throws Exception {
+        JFrame frame = new JFrame("Test");
+        snapshot(frame);
+        context.putRef(99, frame);
+        assertThrows(MCPErrorResponseException.class, () ->
+                executeOnEDT(() -> {
+                    selectAllTool.execute(new Parameters(Map.of("ref", 99)), context);
+                    return null;
+                }));
+    }
+
+    @Test
+    void componentMatrix_JDialog() throws Exception {
+        JDialog dialog = new JDialog();
+        snapshot(dialog);
+        context.putRef(99, dialog);
+        assertThrows(MCPErrorResponseException.class, () ->
+                executeOnEDT(() -> {
+                    selectAllTool.execute(new Parameters(Map.of("ref", 99)), context);
+                    return null;
+                }));
+    }
+
+    @Test
+    void componentMatrix_JOptionPane() throws Exception {
+        JOptionPane optionPane = new JOptionPane(
+                "Test", JOptionPane.PLAIN_MESSAGE, JOptionPane.DEFAULT_OPTION,
+                null, new Object[]{"OK"});
+        JDialog dialog = new JDialog();
+        dialog.getContentPane().add(optionPane);
+        snapshot(dialog);
+        context.putRef(99, optionPane);
+        assertThrows(MCPErrorResponseException.class, () ->
+                executeOnEDT(() -> {
+                    selectAllTool.execute(new Parameters(Map.of("ref", 99)), context);
+                    return null;
+                }));
     }
 }

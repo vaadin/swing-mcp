@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** select all items in a multi-selection UI component by ref **so that** I can quickly select everything in a list or table without enumerating all indices manually.
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-04-08
 
 ---
@@ -107,22 +107,22 @@ Verified empirically on Java 21 OpenJDK in headless mode (`JTableSelectAllProbeT
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_select_all` with a valid ref for a `JList` (multi-selection) selects all items.
-- [ ] Calling `swing_select_all` with a valid ref for a `JTable` (row-selection, multi-selection) selects all rows.
-- [ ] Calling `swing_select_all` on an empty `JList` (0 items) succeeds without error.
-- [ ] Calling `swing_select_all` on an empty `JTable` (0 rows) succeeds without error.
-- [ ] Calling `swing_select_all` on a single-selection `JList` returns an MCP error: *"Component is in single-selection mode. select_all requires multi-selection."*
-- [ ] Calling `swing_select_all` on a `JTabbedPane` returns an MCP error (single-selection).
-- [ ] Calling `swing_select_all` on a `JComboBox` returns an MCP error (single-selection).
-- [ ] Calling `swing_select_all` on a `JTable` in column-selection mode returns an MCP error (unsupported).
-- [ ] Calling `swing_select_all` on a `JTree` returns an MCP error (suppressed).
-- [ ] Calling `swing_select_all` with an invalid ref returns an MCP error with a recovery message.
-- [ ] Calling `swing_select_all` on a component that does not support selection (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [ ] Calling `swing_select_all` on a disabled component returns an MCP error explaining the component is disabled.
-- [ ] The ref map is cleared after a successful `swing_select_all` call (mutation tool).
-- [ ] The ref map is cleared even after a failed `swing_select_all` call that passed ref lookup.
-- [ ] The tool returns `null` (empty content array) on success.
-- [ ] After `swing_select_all`, `swing_get_selection` returns all items as selected (round-trip verification).
+- [x] Calling `swing_select_all` with a valid ref for a `JList` (multi-selection) selects all items.
+- [x] Calling `swing_select_all` with a valid ref for a `JTable` (row-selection, multi-selection) selects all rows.
+- [x] Calling `swing_select_all` on an empty `JList` (0 items) succeeds without error.
+- [x] Calling `swing_select_all` on an empty `JTable` (0 rows) succeeds without error.
+- [x] Calling `swing_select_all` on a single-selection `JList` returns an MCP error: *"Component is in single-selection mode. select_all requires multi-selection."*
+- [x] Calling `swing_select_all` on a `JTabbedPane` returns an MCP error (single-selection).
+- [x] Calling `swing_select_all` on a `JComboBox` returns an MCP error (single-selection).
+- [x] Calling `swing_select_all` on a `JTable` in column-selection mode returns an MCP error (unsupported).
+- [x] Calling `swing_select_all` on a `JTree` returns an MCP error (suppressed).
+- [x] Calling `swing_select_all` with an invalid ref returns an MCP error with a recovery message.
+- [x] Calling `swing_select_all` on a component that does not support selection (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
+- [x] Calling `swing_select_all` on a disabled component returns an MCP error explaining the component is disabled.
+- [x] The ref map is cleared after a successful `swing_select_all` call (mutation tool).
+- [x] The ref map is cleared even after a failed `swing_select_all` call that passed ref lookup.
+- [x] The tool returns `null` (empty content array) on success.
+- [x] After `swing_select_all`, `swing_get_selection` returns all items as selected (round-trip verification).
 
 ---
 
@@ -130,32 +130,32 @@ Verified empirically on Java 21 OpenJDK in headless mode (`JTableSelectAllProbeT
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingSelectAllTest` (headless)
-  - [ ] `JList` (multi-selection) with 5 items: after `select_all`, all 5 items are selected.
-  - [ ] `JList` (multi-selection) with 200 items: after `select_all`, all 200 items are selected (verified via `swing_get_selection` count).
-  - [ ] Empty `JList` (multi-selection, 0 items): succeeds without error.
-  - [ ] `JTable` (row-selection, multi-selection) with 10 rows: returns success (selection verified in screen test).
-  - [ ] Empty `JTable` (0 rows): succeeds without error.
-  - [ ] `JList` (single-selection): returns an MCP error with "single-selection mode" message.
-  - [ ] `JTabbedPane`: returns an MCP error with "single-selection mode" message.
-  - [ ] `JComboBox`: returns an MCP error with "single-selection mode" message.
-  - [ ] `JTable` (single-row-selection mode): returns an MCP error with "single-selection mode" message.
-  - [ ] `JTable` in column-selection mode: returns an MCP error with JTable-specific message.
-  - [ ] `JTable` in cell-selection mode: returns an MCP error.
-  - [ ] `JTable` with no selection allowed: returns an MCP error.
-  - [ ] Invalid ref: returns an MCP error with `isError: true`.
-  - [ ] `JButton`: returns an MCP error.
-  - [ ] `JTree`: returns an MCP error (suppressed).
-  - [ ] Disabled `JList` (multi-selection): returns an MCP error explaining the component is disabled.
-  - [ ] Ref map is cleared after successful call (verified by attempting to use the same ref again).
-  - [ ] Ref map is cleared after a failed call on a disabled component.
-  - [ ] Round-trip: `swing_select_all` followed by `swing_get_selection` on same `JList` returns all items.
-  - [ ] Each component from the component matrix is tested (dedicated test method per component).
+- [x] `SwingSelectAllTest` (headless)
+  - [x] `JList` (multi-selection) with 5 items: after `select_all`, all 5 items are selected.
+  - [x] `JList` (multi-selection) with 200 items: after `select_all`, all 200 items are selected (verified via `swing_get_selection` count).
+  - [x] Empty `JList` (multi-selection, 0 items): succeeds without error.
+  - [x] `JTable` (row-selection, multi-selection) with 10 rows: returns success (selection verified in screen test).
+  - [x] Empty `JTable` (0 rows): succeeds without error.
+  - [x] `JList` (single-selection): returns an MCP error with "single-selection mode" message.
+  - [x] `JTabbedPane`: returns an MCP error with "single-selection mode" message.
+  - [x] `JComboBox`: returns an MCP error with "single-selection mode" message.
+  - [x] `JTable` (single-row-selection mode): returns an MCP error with "single-selection mode" message.
+  - [x] `JTable` in column-selection mode: returns an MCP error with JTable-specific message.
+  - [x] `JTable` in cell-selection mode: returns an MCP error.
+  - [x] `JTable` with no selection allowed: returns an MCP error.
+  - [x] Invalid ref: returns an MCP error with `isError: true`.
+  - [x] `JButton`: returns an MCP error.
+  - [x] `JTree`: returns an MCP error (suppressed).
+  - [x] Disabled `JList` (multi-selection): returns an MCP error explaining the component is disabled.
+  - [x] Ref map is cleared after successful call (verified by attempting to use the same ref again).
+  - [x] Ref map is cleared after a failed call on a disabled component.
+  - [x] Round-trip: `swing_select_all` followed by `swing_get_selection` on same `JList` returns all items.
+  - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [ ] `SwingSelectAllScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
-  - [ ] `JList` (multi-selection) inside `JFrame`: all items selected after `select_all`.
-  - [ ] `JTable` (row-selection, multi-selection) inside `JFrame`: all rows selected after `select_all`.
-  - [ ] `JList` (multi-selection) inside `JDialog`: all items selected after `select_all`.
+- [x] `SwingSelectAllScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+  - [x] `JList` (multi-selection) inside `JFrame`: all items selected after `select_all`.
+  - [x] `JTable` (row-selection, multi-selection) inside `JFrame`: all rows selected after `select_all`.
+  - [x] `JList` (multi-selection) inside `JDialog`: all items selected after `select_all`.
 
 ### Component matrix
 
