@@ -52,7 +52,7 @@ public class SwingSelectAllTool extends AbstractSwingTool {
         Accessible accessible = context.getAccessibleByRef(ref);
 
         // Step 3 (BR-03 + BR-04): selection support + multi-selection check
-        requireMultiSelectable(accessible, "select_all");
+        requireMultiSelectable(accessible, "swing_select_all");
 
         // Step 4 (BR-05): effectively enabled check
         if (!SwingUtils.isEffectivelyEnabled(accessible)) {

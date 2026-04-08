@@ -128,7 +128,7 @@ class SwingGetCellCountTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(button);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getCount(ref));
-        assertTrue(ex.getMessage().contains("does not support get_cell_count"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_cell_count"));
         assertTrue(ex.getMessage().contains("swing_snapshot"));
     }
 
@@ -235,7 +235,7 @@ class SwingGetCellCountTest extends AbstractHeadlessTest {
         }
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getCount(ref));
-        assertTrue(ex.getMessage().contains("does not support get_cell_count"),
+        assertTrue(ex.getMessage().contains("does not support swing_get_cell_count"),
                 "Expected not-supported error for " + component.getClass().getSimpleName()
                         + ", got: " + ex.getMessage());
     }
@@ -277,7 +277,7 @@ class SwingGetCellCountTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(menu);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getCount(ref));
-        assertTrue(ex.getMessage().contains("does not support get_cell_count"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_cell_count"));
     }
 
     @Test
@@ -291,7 +291,7 @@ class SwingGetCellCountTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(item);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getCount(ref));
-        assertTrue(ex.getMessage().contains("does not support get_cell_count"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_cell_count"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

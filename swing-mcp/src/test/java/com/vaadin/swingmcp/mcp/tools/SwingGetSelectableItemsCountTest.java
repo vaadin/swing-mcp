@@ -187,7 +187,7 @@ class SwingGetSelectableItemsCountTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(button);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getCount(ref));
-        assertTrue(ex.getMessage().contains("does not support get_selectable_items_count"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_selectable_items_count"));
         assertTrue(ex.getMessage().contains("swing_snapshot"));
     }
 
@@ -199,7 +199,7 @@ class SwingGetSelectableItemsCountTest extends AbstractHeadlessTest {
         context.putRef(99, tree);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getCount(99));
-        assertTrue(ex.getMessage().contains("does not support get_selectable_items_count"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_selectable_items_count"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -303,7 +303,7 @@ class SwingGetSelectableItemsCountTest extends AbstractHeadlessTest {
         }
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getCount(ref));
-        assertTrue(ex.getMessage().contains("does not support get_selectable_items_count")
+        assertTrue(ex.getMessage().contains("does not support swing_get_selectable_items_count")
                         || ex.getMessage().contains("row-selection mode"),
                 "Expected not-supported error for " + component.getClass().getSimpleName()
                         + ", got: " + ex.getMessage());
@@ -340,7 +340,7 @@ class SwingGetSelectableItemsCountTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(menu);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getCount(ref));
-        assertTrue(ex.getMessage().contains("does not support get_selectable_items_count"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_selectable_items_count"));
     }
 
     @Test
@@ -354,7 +354,7 @@ class SwingGetSelectableItemsCountTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(item);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getCount(ref));
-        assertTrue(ex.getMessage().contains("does not support get_selectable_items_count"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_selectable_items_count"));
     }
 
     @Test
@@ -365,7 +365,7 @@ class SwingGetSelectableItemsCountTest extends AbstractHeadlessTest {
         context.putRef(99, tree);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getCount(99));
-        assertTrue(ex.getMessage().contains("does not support get_selectable_items_count"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_selectable_items_count"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

@@ -246,7 +246,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(button);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> selectAll(ref));
-        assertTrue(ex.getMessage().contains("does not support select_all"),
+        assertTrue(ex.getMessage().contains("does not support swing_select_all"),
                 "Expected generic error, got: " + ex.getMessage());
         assertTrue(ex.getMessage().contains("swing_snapshot"),
                 "Error should suggest swing_snapshot, got: " + ex.getMessage());
@@ -261,7 +261,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         context.putRef(99, tree);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> selectAll(99));
-        assertTrue(ex.getMessage().contains("does not support select_all"));
+        assertTrue(ex.getMessage().contains("does not support swing_select_all"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

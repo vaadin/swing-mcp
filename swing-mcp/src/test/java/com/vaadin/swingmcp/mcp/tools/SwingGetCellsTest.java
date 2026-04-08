@@ -342,7 +342,7 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         snapshot(btn);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getCells(context.getRefOf(btn), 0, 5));
-        assertEquals("Component does not support get_cells. Call swing_snapshot or swing_get_cells to verify the list of actions.",
+        assertEquals("Component does not support swing_get_cells. Call swing_snapshot or swing_get_cells to verify the list of actions.",
                 ex.getMessage());
     }
 
@@ -468,7 +468,7 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(comp);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getCells(ref, 0, 5));
-        assertEquals("Component does not support get_cells. Call swing_snapshot or swing_get_cells to verify the list of actions.",
+        assertEquals("Component does not support swing_get_cells. Call swing_snapshot or swing_get_cells to verify the list of actions.",
                 ex.getMessage());
     }
 

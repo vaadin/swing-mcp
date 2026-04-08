@@ -47,7 +47,7 @@ public class SwingGetCellCountTool extends AbstractSwingTool {
         Accessible accessible = context.getAccessibleByRef(ref);
 
         // Step 3 (BR-03): eligibility check
-        requireLargeDataComponent(accessible, "get_cell_count");
+        requireLargeDataComponent(accessible, "swing_get_cell_count");
 
         // Step 4 (BR-07): compute count
         int totalChildren = accessible.getAccessibleContext().getAccessibleChildrenCount();

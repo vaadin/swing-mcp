@@ -45,7 +45,7 @@ public class SwingGetSelectableItemsCountTool extends AbstractSwingTool {
         Accessible accessible = context.getAccessibleByRef(ref);
 
         // Step 3 (BR-03): selection support check with JTable-specific error
-        requireSelectable(accessible, "get_selectable_items_count");
+        requireSelectable(accessible, "swing_get_selectable_items_count");
 
         // Step 4 (BR-07): compute count
         int totalCount = SwingUtils.getSelectableItemsCount(accessible);

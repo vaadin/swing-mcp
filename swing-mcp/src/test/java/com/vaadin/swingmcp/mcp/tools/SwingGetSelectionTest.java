@@ -222,7 +222,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(button);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getSelection(ref));
-        assertTrue(ex.getMessage().contains("does not support get_selection"),
+        assertTrue(ex.getMessage().contains("does not support swing_get_selection"),
                 "Expected generic error, got: " + ex.getMessage());
         assertTrue(ex.getMessage().contains("swing_snapshot"),
                 "Error should suggest swing_snapshot, got: " + ex.getMessage());
@@ -238,7 +238,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         context.putRef(99, tree);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getSelection(99));
-        assertTrue(ex.getMessage().contains("does not support get_selection"),
+        assertTrue(ex.getMessage().contains("does not support swing_get_selection"),
                 "Expected generic error for JTree, got: " + ex.getMessage());
     }
 
@@ -419,7 +419,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         }
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getSelection(ref));
-        assertTrue(ex.getMessage().contains("does not support get_selection")
+        assertTrue(ex.getMessage().contains("does not support swing_get_selection")
                         || ex.getMessage().contains("row-selection mode"),
                 "Expected not-supported error for " + component.getClass().getSimpleName()
                         + ", got: " + ex.getMessage());
@@ -508,7 +508,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(menu);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getSelection(ref));
-        assertTrue(ex.getMessage().contains("does not support get_selection"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_selection"));
     }
 
     @Test
@@ -522,7 +522,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(item);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getSelection(ref));
-        assertTrue(ex.getMessage().contains("does not support get_selection"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_selection"));
     }
 
     @Test
@@ -534,7 +534,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(btn);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getSelection(ref));
-        assertTrue(ex.getMessage().contains("does not support get_selection"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_selection"));
     }
 
     @Test
@@ -547,7 +547,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         context.putRef(99, tree);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getSelection(99));
-        assertTrue(ex.getMessage().contains("does not support get_selection"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_selection"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

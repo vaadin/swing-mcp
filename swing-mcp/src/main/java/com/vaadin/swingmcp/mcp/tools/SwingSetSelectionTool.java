@@ -57,7 +57,7 @@ public class SwingSetSelectionTool extends AbstractSwingTool {
         Accessible accessible = context.getAccessibleByRef(ref);
 
         // Step 3 (BR-03): selection support check with JTable-specific error
-        requireSelectable(accessible, "set_selection");
+        requireSelectable(accessible, "swing_set_selection");
 
         // Step 4 (BR-05): effectively enabled check
         if (!SwingUtils.isEffectivelyEnabled(accessible)) {

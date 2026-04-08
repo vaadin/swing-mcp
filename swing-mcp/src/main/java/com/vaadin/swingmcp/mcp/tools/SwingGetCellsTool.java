@@ -77,7 +77,7 @@ public class SwingGetCellsTool extends AbstractSwingTool {
         Accessible accessible = context.getAccessibleByRef(ref);
 
         // Step 3 (BR-03): eligibility check — role only, no child count threshold
-        requireLargeDataComponent(accessible, "get_cells");
+        requireLargeDataComponent(accessible, "swing_get_cells");
 
         AccessibleContext ac = accessible.getAccessibleContext();
 
