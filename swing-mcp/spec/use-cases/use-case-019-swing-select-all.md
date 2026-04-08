@@ -63,12 +63,40 @@ Execution order:
 
 - **Thin convenience tool.** `swing_select_all` could be achieved by the AI calling `swing_get_selectable_items_count` then `swing_set_selection` with all indices. However, `select_all` is a common operation and this saves two round-trips. The implementation is also simpler: a single `selectAllAccessibleSelection()` call rather than enumerating indices.
 - **Only multi-selection.** The architecture (§ 6 "Selection Action Groups") specifies that `swing_select_all` is only available under the `multi-selection` group label. Single-selection components are explicitly rejected (BR-04) to prevent confusion — "select all" on a single-selection component has no clear semantics.
-- **`JList`** — `selectAllAccessibleSelection()` selects all items. Works in both `SINGLE_INTERVAL_SELECTION` and `MULTIPLE_INTERVAL_SELECTION` modes (both report `MULTISELECTABLE`).
-- **`JTable`** — uses `JTable.selectAll()` directly for reliability inside `invokeLater()`, consistent with UC-015. `selectAll()` selects all rows when in row-selection mode.
+- **`JList`** — `selectAllAccessibleSelection()` selects all items. Works in both `SINGLE_INTERVAL_SELECTION` and `MULTIPLE_INTERVAL_SELECTION` modes (both report `MULTISELECTABLE`). Probe-tested (2026-04-08): works correctly in headless mode, including empty lists (0 items) and large lists (200 items). No fallback needed.
+- **`JTable`** — uses `JTable.selectAll()` directly because `AccessibleSelection.selectAllAccessibleSelection()` is **broken on JTable** — it's a complete no-op (selects nothing). `table.selectAll()` works correctly in row-selection mode: selects all rows, does not flip `columnSelectionAllowed`, and the accessible selection reports all cells (rows x cols) which aggregate back to rows correctly. Probe-tested (2026-04-08).
 - **`JTabbedPane`** — always single-selection, so it is rejected by BR-04. `selectAllAccessibleSelection()` would be a no-op anyway.
 - **`JComboBox`** — always single-selection, so it is rejected by BR-04.
 - **`JTree`** — suppressed by `SUPPRESSED_SELECTION_ROLES` in `supportsSelection()`. Same as UC-014.
-- **`selectAllAccessibleSelection()` on JList** — needs probe testing to confirm it works correctly in headless mode. If it doesn't work, the fallback is to iterate `[0, childCount)` and call `addAccessibleSelection(i)` for each index (same as `swing_set_selection` with all indices).
+- **Delegation vs standalone.** `swing_clear_selection` delegates to `SwingSetSelectionTool` with empty indices. A similar pattern here (delegate with all indices `[0, itemCount)`) was considered but rejected: it would require building the full index array (wasteful for large tables), the standalone calls (`selectAllAccessibleSelection()` / `table.selectAll()`) are simpler and more efficient, and the validation chain is short enough that duplication is acceptable.
+
+### Probe test findings (2026-04-08)
+
+Verified empirically on Java 21 OpenJDK in headless mode (`JTableSelectAllProbeTest`, `JListSelectAllProbeTest`).
+
+#### `JTable.selectAll()` vs `AccessibleSelection.selectAllAccessibleSelection()` on JTable
+
+| Aspect | `table.selectAll()` | `accSel.selectAllAccessibleSelection()` |
+|--------|---------------------|------------------------------------------|
+| Selected rows (5-row, 3-col table) | 5 (all) | 0 (none — **broken**) |
+| Selected columns | 3 (all) | 0 (none) |
+| Accessible selection count | 15 (all cells = rows x cols) | 0 |
+| Mutates `rowSelectionAllowed`? | No | No |
+| Mutates `columnSelectionAllowed`? | No | No |
+
+**Conclusion:** `selectAllAccessibleSelection()` is a complete no-op on JTable. Must use `table.selectAll()` directly (BR-09).
+
+#### `selectAllAccessibleSelection()` on JList
+
+| Selection mode | Items | Selected after call | `MULTISELECTABLE`? | Notes |
+|---|---|---|---|---|
+| `MULTIPLE_INTERVAL_SELECTION` | 10 | 10 (all) | Yes | Works correctly |
+| `SINGLE_INTERVAL_SELECTION` | 10 | 10 (all) | Yes | "Select all" produces one contiguous range `[0, N-1]`, valid for single-interval |
+| `SINGLE_SELECTION` | 10 | 1 (last item only) | No | Each `addSelectionInterval` replaces previous; last item wins. Academic — BR-04 rejects single-selection before dispatch. |
+| `MULTIPLE_INTERVAL_SELECTION` | 0 | 0 | Yes | Succeeds without error |
+| `MULTIPLE_INTERVAL_SELECTION` | 200 | 200 (all) | Yes | No performance issues |
+
+**Conclusion:** `selectAllAccessibleSelection()` works correctly on JList for all multi-selection modes. No fallback needed (BR-10 confirmed).
 
 ---
 
