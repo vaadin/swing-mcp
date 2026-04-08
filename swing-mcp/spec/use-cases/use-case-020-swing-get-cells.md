@@ -28,7 +28,7 @@
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. `offset` is required and must be a non-negative integer (0 or greater). `length` is required and must be a non-negative integer (0 or greater). No upper cap is enforced on `length` — the AI client is responsible for managing its own context window. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | If the target is not a truncated large data component, the tool returns an MCP-level error (`isError: true`) with the message "Component does not support get_cells. Call swing_snapshot to verify the list of actions." A truncated large data component is one where: (a) the role is `TABLE`, `LIST`, or `TREE` (`isLargeDataComponent`), **and** (b) its accessible children count exceeds `MAX_DATA_CHILDREN`. Both conditions must hold — a JList with 3 items is not eligible even though it is a large data component by role. |
+| BR-03 | If the target is not a large data component, the tool returns an MCP-level error (`isError: true`) with the message "Component does not support get_cells. Call swing_snapshot to verify the list of actions." A large data component is one whose role is `TABLE`, `LIST`, or `TREE` (`isLargeDataComponent`). **No child count threshold is enforced at runtime** — a JList with 3 items is accepted. The snapshot only *advertises* `get_cells` when `childCount > MAX_DATA_CHILDREN` (to reduce action noise), but the tool itself works on any large data component. This avoids confusing errors when the child count drops between the snapshot and the `get_cells` call (e.g. rows deleted from a table model): the AI simply receives fewer cells instead of an error. |
 | BR-04 | All Swing component access happens on the EDT via `runInEDT()`. |
 | BR-05 | `swing_get_cells` **replaces the ref map**. Even though this is a read-only inspection tool (`isMutation()` returns `false`), it manages the ref map itself inside `execute()`. Unlike `swing_snapshot` (which clears at the very start), `get_cells` clears the ref map **after** the ref lookup and eligibility check succeed (steps 1–3 in the algorithm), then populates via `context.putRef()` during ref assignment. This is necessary because the `ref` parameter refers to the *previous* ref map — clearing before lookup would make the lookup fail. The `isMutation() == false` means the `finally` block in `MCPServer.registerTool` does not additionally clear the map, so the assigned refs survive the tool call. Children outside the `offset`/`length` window are not interactable. The AI must call `swing_snapshot` to restore the full-tree ref map. |
 | BR-06 | No enabled check is performed — enumerating children is always allowed, even on disabled components. |
@@ -37,14 +37,14 @@
 | BR-09 | Children are enumerated via `AccessibleContext.getAccessibleChild(i)` for `i` in `[offset, min(offset + length, totalChildren))`. Each child becomes a root for the snapshot pipeline (build → prune → assignRefs → render). Multiple children are rendered consecutively with no separator between them (they are siblings, not independent roots like in `swing_snapshot`). |
 | BR-10 | The output includes a header line indicating the window of children being shown, the total count, and the parent's new ref, e.g. `Showing children 10-19 of 200 for table [ref=1]`. This helps the AI understand paging context and know the parent's ref for follow-up calls. If no children are returned (offset beyond end), the header still shows the total count and parent ref. |
 | BR-11 | The ref assignment is global across all returned children and their subtrees. The parent component gets ref=1 (registered before child enumeration). Child refs start from 2 and increment depth-first across all children in the output window. |
-| BR-12 | The `MAX_DATA_CHILDREN` constant used for the eligibility check (BR-03) is the same constant used by the snapshot tool for truncation (UC-002 BR-05 / SC-3). |
+| BR-12 | The snapshot advertises `get_cells` only when `childCount > MAX_DATA_CHILDREN` (UC-002 step 6b). The tool itself does not enforce this threshold — it accepts any large data component (BR-03). |
 
 ### Algorithm
 
 Execution order:
 1. **BR-01** — parameter validation (fail fast if `ref`, `offset`, or `length` is missing/wrong type; reject negative values).
 2. **BR-02** — ref lookup (fail fast if ref is invalid). Uses the *existing* ref map from a prior `swing_snapshot` or `swing_get_cells` call.
-3. **BR-03** — eligibility check: verify the component is a large data component (`isLargeDataComponent`) **and** `ac.getAccessibleChildrenCount() > MAX_DATA_CHILDREN`. If either condition fails, return error.
+3. **BR-03** — eligibility check: verify the component is a large data component (`isLargeDataComponent` — role is TABLE, LIST, or TREE). If not, return error. No child count threshold is checked.
 4. **Clear the ref map and register the parent** — `context.clearRefMap()` (BR-05). Done after validation so that the `ref` lookup in step 2 succeeds against the previous ref map. Then immediately register the parent: `context.putRef(1, accessible)` (BR-08, BR-11). From this point on, the old refs are gone and the parent is ref=1.
 5. **Compute iteration range:** `int totalChildren = ac.getAccessibleChildrenCount()`. `int end = (int) Math.min((long) offset + length, totalChildren)`. If `offset >= totalChildren`, return empty output with header (BR-07, BR-10).
 6. **Enumerate children:** For each `i` in `[offset, end)`:
@@ -90,7 +90,7 @@ Execution order:
 - [ ] After `swing_get_cells`, calling `swing_click` with a child ref from the output succeeds (e.g. clicking a button inside a table cell).
 - [ ] After `swing_get_cells`, calling `swing_snapshot` replaces the ref map with the full-tree refs again.
 - [ ] The header line shows the parent's new ref (e.g. `table [ref=1]`).
-- [ ] Calling `swing_get_cells` on a non-truncated large data component (e.g. a `JList` with 3 items) returns an MCP error.
+- [ ] Calling `swing_get_cells` on a non-truncated large data component (e.g. a `JList` with 3 items) succeeds — returns those 3 children normally (no child count threshold enforced at runtime).
 - [ ] Calling `swing_get_cells` on a non-large-data component (e.g. `JButton`, `JPanel`) returns an MCP error.
 - [ ] Calling `swing_get_cells` with an invalid ref returns an MCP error with a recovery message.
 - [ ] Calling `swing_get_cells` on a disabled component succeeds (no enabled check).
@@ -119,7 +119,7 @@ Execution order:
   - [ ] After `swing_get_cells`, using a child ref from the output (e.g. `swing_click`) succeeds.
   - [ ] After `swing_get_cells`, old refs from a prior `swing_snapshot` are invalid (MCP error on use).
   - [ ] After `swing_get_cells`, calling `swing_snapshot` restores the full-tree ref map.
-  - [ ] Non-truncated large data component (e.g. `JList` with 3 items) returns an MCP error.
+  - [ ] Non-truncated large data component (e.g. `JList` with 3 items) succeeds — returns those children normally.
   - [ ] Non-large-data component (`JButton`) returns an MCP error.
   - [ ] Invalid ref returns an MCP error with `isError: true`.
   - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
@@ -140,8 +140,8 @@ Execution order:
 
 Each component from the verification matrix gets a dedicated test method.
 
-**Expected to succeed (`get_cells` supported — must be large data component with more than `MAX_DATA_CHILDREN` children):**
-`JTable` (truncated), `JList` (truncated), `JTree` (truncated)
+**Expected to succeed (`get_cells` supported — any large data component regardless of child count):**
+`JTable`, `JList`, `JTree`
 
 **Expected to fail with "Component does not support get_cells" error:**
-`JTable` (not truncated — ≤ `MAX_DATA_CHILDREN` rows), `JList` (not truncated), `JTree` (not truncated), `JButton`, `JCheckBox`, `JRadioButton`, `JTextField`, `JTextArea`, `JComboBox`, `JToggleButton`, `JSlider`, `JPanel`, `JScrollPane`, `JTabbedPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JSpinner`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`
+`JButton`, `JCheckBox`, `JRadioButton`, `JTextField`, `JTextArea`, `JComboBox`, `JToggleButton`, `JSlider`, `JPanel`, `JScrollPane`, `JTabbedPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JSpinner`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`
