@@ -37,6 +37,7 @@ public abstract class AbstractSwingTool {
     public static final String TOOL_SWING_CLEAR_SELECTION = "swing_clear_selection";
     public static final String TOOL_SWING_GET_SELECTABLE_ITEMS = "swing_get_selectable_items";
     public static final String TOOL_SWING_GET_SELECTABLE_ITEMS_COUNT = "swing_get_selectable_items_count";
+    public static final String TOOL_SWING_SELECT_ALL = "swing_select_all";
 
     /**
      * @return the MCP tool name (e.g. {@code "swing_snapshot"})

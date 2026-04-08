@@ -1,0 +1,131 @@
+package com.vaadin.swingmcp.mcpscreen.tools;
+
+import com.vaadin.swingmcp.mcp.tools.Parameters;
+import com.vaadin.swingmcp.mcp.tools.SwingGetSelectionTool;
+import com.vaadin.swingmcp.mcp.tools.SwingSelectAllTool;
+import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
+import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
+import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
+import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.util.Arrays;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class SwingSelectAllScreenTest extends AbstractScreenTest {
+
+    private SwingSnapshotTool snapshotTool;
+    private SwingSelectAllTool selectAllTool;
+    private SwingGetSelectionTool getSelectionTool;
+    private SwingToolContext context;
+
+    @BeforeEach
+    void setUp() {
+        snapshotTool = new SwingSnapshotTool();
+        selectAllTool = new SwingSelectAllTool();
+        getSelectionTool = new SwingGetSelectionTool();
+        context = new SwingToolContext();
+    }
+
+    private void snapshot(Component... roots) throws Exception {
+        context.setConsideredComponents(Arrays.asList(roots));
+        executeOnEDT(() -> snapshotTool.execute(new Parameters(Map.of()), context));
+    }
+
+    private void selectAll(int ref) throws Exception {
+        executeOnEDT(() -> {
+            selectAllTool.execute(new Parameters(Map.of("ref", ref)), context);
+            return null;
+        });
+        // drain EDT so fire-and-forget action has run
+        SwingUtilities.invokeAndWait(() -> {});
+    }
+
+    private String getSelection(int ref) throws Exception {
+        MCPProtocol.Content result = executeOnEDT(
+                () -> getSelectionTool.execute(new Parameters(Map.of("ref", ref)), context));
+        return result == null ? null : result.getText();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JFrame
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void selectAllJListInsideJFrame() throws Exception {
+        JFrame frame = new JFrame("Test");
+        JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma"});
+        list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        frame.getContentPane().add(list);
+
+        snapshot(frame);
+        selectAll(context.getRefOf(list));
+        assertArrayEquals(new int[]{0, 1, 2}, list.getSelectedIndices());
+    }
+
+    @Test
+    void selectAllJTableInsideJFrame() throws Exception {
+        JFrame frame = new JFrame("Test");
+        DefaultTableModel model = new DefaultTableModel(
+                new Object[][]{{"Alice", "30"}, {"Bob", "25"}, {"Carol", "35"}},
+                new Object[]{"Name", "Age"});
+        JTable table = new JTable(model);
+        frame.getContentPane().add(table);
+
+        snapshot(frame);
+        selectAll(context.getRefOf(table));
+        assertArrayEquals(new int[]{0, 1, 2}, table.getSelectedRows());
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JDialog
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void selectAllJListInsideJDialog() throws Exception {
+        JDialog dialog = new JDialog();
+        dialog.setTitle("Test");
+        JList<String> list = new JList<>(new String[]{"X", "Y", "Z"});
+        list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        dialog.getContentPane().add(list);
+
+        snapshot(dialog);
+        selectAll(context.getRefOf(list));
+        assertArrayEquals(new int[]{0, 1, 2}, list.getSelectedIndices());
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Round-trip (JTable — requires screen for accessible selection readback)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void roundTrip_jTable() throws Exception {
+        JFrame frame = new JFrame("Test");
+        DefaultTableModel model = new DefaultTableModel(
+                new Object[][]{{"Alice", "30"}, {"Bob", "25"}, {"Carol", "35"}},
+                new Object[]{"Name", "Age"});
+        JTable table = new JTable(model);
+        frame.getContentPane().add(table);
+
+        snapshot(frame);
+        selectAll(context.getRefOf(table));
+
+        // Re-snapshot to get fresh refs
+        snapshot(frame);
+        String json = getSelection(context.getRefOf(table));
+        assertEquals(
+                "{\"selectedCount\":3,\"selected\":["
+                        + "{\"index\":0,\"name\":\"Alice, 30\"},"
+                        + "{\"index\":1,\"name\":\"Bob, 25\"},"
+                        + "{\"index\":2,\"name\":\"Carol, 35\"}"
+                        + "]}",
+                json);
+    }
+}
