@@ -104,26 +104,26 @@ Execution order:
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_get_selectable_items` with a valid ref for a `JList`, `offset: 0`, `length: 5` returns all 5 items with correct indices and names.
-- [ ] Calling `swing_get_selectable_items` with `offset: 0, length: 50` on a 200-item `JList` returns the first 50 items and `totalCount: 200`.
-- [ ] Calling `swing_get_selectable_items` with `offset: 50, length: 50` on a 200-item `JList` returns items 50–99.
-- [ ] Calling `swing_get_selectable_items` with `offset` beyond `totalCount` returns an empty `items` array (not an error).
-- [ ] Calling `swing_get_selectable_items` with a valid ref for a `JTabbedPane` returns all tabs with indices and names.
-- [ ] A disabled tab in `JTabbedPane` has `"enabled": false` in its item object.
-- [ ] An enabled tab in `JTabbedPane` does **not** have the `enabled` field (absence means enabled).
-- [ ] Calling `swing_get_selectable_items` with a valid ref for a `JComboBox` returns all items with correct indices and names.
-- [ ] Calling `swing_get_selectable_items` with a valid ref for a `JTable` (row-selection mode) returns rows with comma-separated cell values as names.
-- [ ] Calling `swing_get_selectable_items` on a `JTable` in column-selection mode returns an MCP error (unsupported).
-- [ ] Calling `swing_get_selectable_items` on a `JTree` returns an MCP error (suppressed).
-- [ ] Calling `swing_get_selectable_items` with an invalid ref returns an MCP error with a recovery message.
-- [ ] Calling `swing_get_selectable_items` on a component that does not support selection (e.g. `JButton`) returns an MCP error.
-- [ ] The ref map is **not** cleared after a `swing_get_selectable_items` call (read-only tool).
-- [ ] Calling `swing_get_selectable_items` on a disabled component succeeds (no enabled check).
-- [ ] The `index` values are in the selection item index space: passing them to `swing_set_selection` selects the expected item.
-- [ ] Negative `offset` returns an MCP error.
-- [ ] Negative `length` returns an MCP error.
-- [ ] Missing `offset` or `length` returns an MCP error.
-- [ ] The `totalCount` field correctly reflects the total number of selectable items regardless of paging.
+- [x] Calling `swing_get_selectable_items` with a valid ref for a `JList`, `offset: 0`, `length: 5` returns all 5 items with correct indices and names.
+- [x] Calling `swing_get_selectable_items` with `offset: 0, length: 50` on a 200-item `JList` returns the first 50 items and `totalCount: 200`.
+- [x] Calling `swing_get_selectable_items` with `offset: 50, length: 50` on a 200-item `JList` returns items 50–99.
+- [x] Calling `swing_get_selectable_items` with `offset` beyond `totalCount` returns an empty `items` array (not an error).
+- [x] Calling `swing_get_selectable_items` with a valid ref for a `JTabbedPane` returns all tabs with indices and names.
+- [x] A disabled tab in `JTabbedPane` has `"enabled": false` in its item object.
+- [x] An enabled tab in `JTabbedPane` does **not** have the `enabled` field (absence means enabled).
+- [x] Calling `swing_get_selectable_items` with a valid ref for a `JComboBox` returns all items with correct indices and names.
+- [x] Calling `swing_get_selectable_items` with a valid ref for a `JTable` (row-selection mode) returns rows with comma-separated cell values as names.
+- [x] Calling `swing_get_selectable_items` on a `JTable` in column-selection mode returns an MCP error (unsupported).
+- [x] Calling `swing_get_selectable_items` on a `JTree` returns an MCP error (suppressed).
+- [x] Calling `swing_get_selectable_items` with an invalid ref returns an MCP error with a recovery message.
+- [x] Calling `swing_get_selectable_items` on a component that does not support selection (e.g. `JButton`) returns an MCP error.
+- [x] The ref map is **not** cleared after a `swing_get_selectable_items` call (read-only tool).
+- [x] Calling `swing_get_selectable_items` on a disabled component succeeds (no enabled check).
+- [x] The `index` values are in the selection item index space: passing them to `swing_set_selection` selects the expected item.
+- [x] Negative `offset` returns an MCP error.
+- [x] Negative `length` returns an MCP error.
+- [x] Missing `offset` or `length` returns an MCP error.
+- [x] The `totalCount` field correctly reflects the total number of selectable items regardless of paging.
 
 ---
 
@@ -131,37 +131,37 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingGetSelectableItemsTest` (headless)
-  - [ ] Reading a `JList` with 5 items (`offset: 0, length: 5`) returns all 5 items with correct indices and names.
-  - [ ] Reading a `JList` with 200 items (`offset: 0, length: 50`) returns first 50 items with `totalCount: 200`.
-  - [ ] Reading a `JList` with `offset: 50, length: 50` returns items 50–99.
-  - [ ] Reading a `JList` with `offset` beyond item count returns empty `items` array.
-  - [ ] Reading a `JTabbedPane` returns tabs with indices and names.
-  - [ ] A disabled tab has `"enabled": false`; an enabled tab omits the `enabled` field.
-  - [ ] Reading a `JComboBox` returns all items with correct indices and names.
-  - [ ] Reading an empty `JComboBox` returns `totalCount: 0` and empty `items`.
-  - [ ] Reading a `JTable` (row-selection mode) returns rows with comma-separated cell names.
-  - [ ] Reading a `JTable` with `offset` and `length` returns the correct row page.
-  - [ ] Reading a `JTable` in column-selection mode returns an MCP error.
-  - [ ] Reading a `JTable` in cell-selection mode returns an MCP error.
-  - [ ] Reading a `JTable` with no selection allowed returns an MCP error.
-  - [ ] Reading with an invalid ref returns an MCP error with `isError: true`.
-  - [ ] Reading a component without selection support (e.g. `JButton`) returns an MCP error.
-  - [ ] Reading a `JTree` returns an MCP error (suppressed).
-  - [ ] The ref map is preserved after the call (verified by calling twice with the same ref).
-  - [ ] Reading a disabled `JList` succeeds.
-  - [ ] Negative `offset` returns an MCP error.
-  - [ ] Negative `length` returns an MCP error.
-  - [ ] Missing `offset` or `length` returns an MCP error.
-  - [ ] The `index` values round-trip with `swing_set_selection` (select by returned index, then `swing_get_selection` confirms).
-  - [ ] Each component from the component matrix is tested.
+- [x] `SwingGetSelectableItemsTest` (headless)
+  - [x] Reading a `JList` with 5 items (`offset: 0, length: 5`) returns all 5 items with correct indices and names.
+  - [x] Reading a `JList` with 200 items (`offset: 0, length: 50`) returns first 50 items with `totalCount: 200`.
+  - [x] Reading a `JList` with `offset: 50, length: 50` returns items 50–99.
+  - [x] Reading a `JList` with `offset` beyond item count returns empty `items` array.
+  - [x] Reading a `JTabbedPane` returns tabs with indices and names.
+  - [x] A disabled tab has `"enabled": false`; an enabled tab omits the `enabled` field.
+  - [x] Reading a `JComboBox` returns all items with correct indices and names.
+  - [x] Reading an empty `JComboBox` returns `totalCount: 0` and empty `items`.
+  - [x] Reading a `JTable` (row-selection mode) returns rows with comma-separated cell names.
+  - [x] Reading a `JTable` with `offset` and `length` returns the correct row page.
+  - [x] Reading a `JTable` in column-selection mode returns an MCP error.
+  - [x] Reading a `JTable` in cell-selection mode returns an MCP error.
+  - [x] Reading a `JTable` with no selection allowed returns an MCP error.
+  - [x] Reading with an invalid ref returns an MCP error with `isError: true`.
+  - [x] Reading a component without selection support (e.g. `JButton`) returns an MCP error.
+  - [x] Reading a `JTree` returns an MCP error (suppressed).
+  - [x] The ref map is preserved after the call (verified by calling twice with the same ref).
+  - [x] Reading a disabled `JList` succeeds.
+  - [x] Negative `offset` returns an MCP error.
+  - [x] Negative `length` returns an MCP error.
+  - [x] Missing `offset` or `length` returns an MCP error.
+  - [x] The `index` values round-trip with `swing_set_selection` (select by returned index, then `swing_get_selection` confirms).
+  - [x] Each component from the component matrix is tested.
 
-- [ ] `SwingGetSelectableItemsScreenTest` (`testSwing` — requires display)
-  - [ ] Reading a `JList` with items inside `JFrame` returns all items.
-  - [ ] Reading a `JTabbedPane` inside `JFrame` returns tabs (disabled tabs have `"enabled": false`).
-  - [ ] Reading a `JComboBox` inside `JFrame` returns items.
-  - [ ] Reading a `JTable` (row-selection mode) inside `JFrame` returns rows.
-  - [ ] Reading a `JList` inside `JDialog` returns items.
+- [x] `SwingGetSelectableItemsScreenTest` (`testSwing` — requires display)
+  - [x] Reading a `JList` with items inside `JFrame` returns all items.
+  - [x] Reading a `JTabbedPane` inside `JFrame` returns tabs (disabled tabs have `"enabled": false`).
+  - [x] Reading a `JComboBox` inside `JFrame` returns items.
+  - [x] Reading a `JTable` (row-selection mode) inside `JFrame` returns rows.
+  - [x] Reading a `JList` inside `JDialog` returns items.
 
 ### Component matrix
 
