@@ -97,6 +97,7 @@ public class MCPServer {
         registerTool(new com.vaadin.swingmcp.mcp.tools.SwingSetSelectionTool());
         registerTool(new com.vaadin.swingmcp.mcp.tools.SwingClearSelectionTool());
         registerTool(new com.vaadin.swingmcp.mcp.tools.SwingGetSelectableItemsTool());
+        registerTool(new com.vaadin.swingmcp.mcp.tools.SwingGetSelectableItemsCountTool());
     }
 
     private final SwingToolContext context = new SwingToolContext();
