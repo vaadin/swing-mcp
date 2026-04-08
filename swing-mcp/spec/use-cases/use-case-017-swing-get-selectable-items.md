@@ -96,6 +96,7 @@ Execution order:
 - **Not listed in snapshot actions.** Per architecture.md § 6 "Selection Action Groups", `get_selectable_items` is not listed as a snapshot action. Its availability is documented in the tool description and is implied by the `single-selection` / `multi-selection` group labels.
 - **Paging rationale.** `offset`/`length` are required parameters with no upper cap. The AI client is in charge of its own context window — if it wants to request all 10,000 rows at once, that's its choice. The server does not second-guess the client.
 - **`buildRowName()` reuse.** The row name construction logic is identical to UC-014 BR-11. The implementation should share the helper method (already exists in `SwingGetSelectionTool`). Consider extracting it to a shared utility or making it package-visible.
+- **Integer overflow.** When computing the iteration end index (`offset + length`), use `long` arithmetic to avoid overflow: `int end = (int) Math.min((long) offset + length, totalCount);`
 - **JComboBox enumeration.** Using `JComboBox.getItemAt(i)` is the simplest and most reliable approach. The accessibility API path (`getAccessibleChild(0).getAccessibleContext().getAccessibleChild(i)`) navigates through the popup menu, which is fragile and may not work when the popup is closed. The direct `JComboBox` API works regardless of popup state.
 - **JTree** — suppressed by `SUPPRESSED_SELECTION_ROLES` in `supportsSelection()`. Same as UC-014.
 - **`JMenuBar` / `JMenu`** — suppressed by `SUPPRESSED_SELECTION_ROLES`. Same as UC-014.
