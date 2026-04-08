@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** get the total count of selectable items in a UI component by ref **so that** I can decide how to page through `swing_get_selectable_items` without first requesting any items — saving a round-trip when I only need the count.
 
-**Status:** Draft
+**Status:** Approved
 **Date:** 2026-04-08
 
 ---
