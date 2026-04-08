@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** get the total count of accessible children (cells) in a large data component by ref **so that** I can decide how to page through `swing_get_cells` without first requesting any cells — saving a round-trip when I only need the count.
 
-**Status:** Draft
+**Status:** Implemented
 **Date:** 2026-04-08
 
 ---
@@ -53,16 +53,16 @@ Execution order:
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_get_cell_count` with a valid ref for a `JTable` with 10 rows and 5 columns returns `50`.
-- [ ] Calling `swing_get_cell_count` with a valid ref for a `JList` with 200 items returns `200`.
-- [ ] Calling `swing_get_cell_count` with a valid ref for an empty `JList` returns `0`.
-- [ ] Calling `swing_get_cell_count` with a valid ref for a `JTree` returns the top-level visible node count.
-- [ ] Calling `swing_get_cell_count` with a valid ref for a non-truncated `JList` (e.g. 3 items) succeeds — no child count threshold enforced.
-- [ ] Calling `swing_get_cell_count` on a non-large-data component (e.g. `JButton`, `JPanel`) returns an MCP error.
-- [ ] Calling `swing_get_cell_count` with an invalid ref returns an MCP error with a recovery message.
-- [ ] The ref map is **not** cleared after a `swing_get_cell_count` call (read-only tool).
-- [ ] Calling `swing_get_cell_count` on a disabled component succeeds.
-- [ ] The returned count matches the `total` from `swing_get_cells`'s header line for the same component.
+- [x] Calling `swing_get_cell_count` with a valid ref for a `JTable` with 10 rows and 5 columns returns `50`.
+- [x] Calling `swing_get_cell_count` with a valid ref for a `JList` with 200 items returns `200`.
+- [x] Calling `swing_get_cell_count` with a valid ref for an empty `JList` returns `0`.
+- [x] Calling `swing_get_cell_count` with a valid ref for a `JTree` returns the top-level visible node count.
+- [x] Calling `swing_get_cell_count` with a valid ref for a non-truncated `JList` (e.g. 3 items) succeeds — no child count threshold enforced.
+- [x] Calling `swing_get_cell_count` on a non-large-data component (e.g. `JButton`, `JPanel`) returns an MCP error.
+- [x] Calling `swing_get_cell_count` with an invalid ref returns an MCP error with a recovery message.
+- [x] The ref map is **not** cleared after a `swing_get_cell_count` call (read-only tool).
+- [x] Calling `swing_get_cell_count` on a disabled component succeeds.
+- [x] The returned count matches the `total` from `swing_get_cells`'s header line for the same component.
 
 ---
 
@@ -70,24 +70,24 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingGetCellCountTest` (headless)
-  - [ ] `JTable` with 10 rows and 5 columns returns `50`.
-  - [ ] `JList` with 200 items returns `200`.
-  - [ ] Empty `JList` returns `0`.
-  - [ ] `JTree` returns top-level visible node count.
-  - [ ] Non-truncated `JList` (3 items) succeeds.
-  - [ ] `JButton` returns an MCP error.
-  - [ ] Invalid ref returns an MCP error with `isError: true`.
-  - [ ] Error message suggests calling `swing_snapshot` to refresh refs.
-  - [ ] Ref map is preserved after the call (verified by calling twice with same ref).
-  - [ ] Disabled `JList` succeeds.
-  - [ ] Returned count matches `total` from `swing_get_cells` header for same component.
-  - [ ] Each component from the component matrix is tested (dedicated test method per component).
+- [x] `SwingGetCellCountTest` (headless)
+  - [x] `JTable` with 10 rows and 5 columns returns `50`.
+  - [x] `JList` with 200 items returns `200`.
+  - [x] Empty `JList` returns `0`.
+  - [x] `JTree` returns top-level visible node count.
+  - [x] Non-truncated `JList` (3 items) succeeds.
+  - [x] `JButton` returns an MCP error.
+  - [x] Invalid ref returns an MCP error with `isError: true`.
+  - [x] Error message suggests calling `swing_snapshot` to refresh refs.
+  - [x] Ref map is preserved after the call (verified by calling twice with same ref).
+  - [x] Disabled `JList` succeeds.
+  - [x] Returned count matches `total` from `swing_get_cells` header for same component.
+  - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [ ] `SwingGetCellCountScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
-  - [ ] `JTable` inside `JFrame` returns correct count.
-  - [ ] `JList` inside `JFrame` returns correct count.
-  - [ ] `JTable` inside `JDialog` returns correct count.
+- [x] `SwingGetCellCountScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+  - [x] `JTable` inside `JFrame` returns correct count.
+  - [x] `JList` inside `JFrame` returns correct count.
+  - [x] `JTable` inside `JDialog` returns correct count.
 
 ### Component matrix
 
