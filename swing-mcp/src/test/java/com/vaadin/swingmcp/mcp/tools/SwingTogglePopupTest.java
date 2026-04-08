@@ -67,7 +67,7 @@ class SwingTogglePopupTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> togglePopup(context.getRefOf(button)));
         assertEquals(
-                "Component does not support toggle_popup. Call swing_snapshot to verify the list of actions",
+                "Component does not support toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -98,7 +98,7 @@ class SwingTogglePopupTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> togglePopup(ref));
         assertEquals(
-                "Component does not support toggle_popup. Call swing_snapshot to verify the list of actions",
+                "Component does not support toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -197,7 +197,7 @@ class SwingTogglePopupTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> togglePopup(ref));
         assertEquals(
-                "Component does not support toggle_popup. Call swing_snapshot to verify the list of actions",
+                "Component does not support toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -222,7 +222,7 @@ class SwingTogglePopupTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> togglePopup(ref));
         assertEquals(
-                "Component does not support toggle_popup. Call swing_snapshot to verify the list of actions",
+                "Component does not support toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -235,7 +235,7 @@ class SwingTogglePopupTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> togglePopup(ref));
         assertEquals(
-                "Component does not support toggle_popup. Call swing_snapshot to verify the list of actions",
+                "Component does not support toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 

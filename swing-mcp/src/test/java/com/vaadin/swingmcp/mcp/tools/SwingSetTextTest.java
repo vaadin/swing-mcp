@@ -95,7 +95,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setText(context.getRefOf(slider), "value"));
         assertEquals(
-                "Component does not support set_text. Call swing_snapshot to verify the list of actions",
+                "Component does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -219,7 +219,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setText(ref, "value"));
         assertEquals(
-                "Component does not support set_text. Call swing_snapshot to verify the list of actions",
+                "Component does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -285,7 +285,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
             MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                     () -> setText(ref, "value"));
             assertEquals(
-                    "Component does not support set_text. Call swing_snapshot to verify the list of actions",
+                    "Component does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
                     ex.getMessage());
         } catch (IllegalStateException e) {
             // No ref assigned — acceptable
@@ -320,7 +320,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setText(ref, "value"));
         assertEquals(
-                "Component does not support set_text. Call swing_snapshot to verify the list of actions",
+                "Component does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -334,7 +334,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setText(ref, "value"));
         assertEquals(
-                "Component does not support set_text. Call swing_snapshot to verify the list of actions",
+                "Component does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -350,7 +350,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setText(ref, "value"));
         assertEquals(
-                "Component does not support set_text. Call swing_snapshot to verify the list of actions",
+                "Component does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -364,7 +364,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setText(ref, "value"));
         assertEquals(
-                "Component does not support set_text. Call swing_snapshot to verify the list of actions",
+                "Component does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 

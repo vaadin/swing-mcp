@@ -27,7 +27,7 @@
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. The `value` parameter is required and must be a number. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | If the target does not support `set_value` (i.e. `SwingUtils.supportsSetValue(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support set_value. Call swing_snapshot to verify the list of actions". |
+| BR-03 | If the target does not support `set_value` (i.e. `SwingUtils.supportsSetValue(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support set_value. Call swing_snapshot or swing_get_cells to verify the list of actions". |
 | BR-04 | All validation runs on the EDT inside `runInEDT()`. The `setCurrentAccessibleValue()` call is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
 | BR-05 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. The enabled check runs before the range check (BR-07). |
 | BR-06 | `swing_set_value` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after invocation (even on failure, via `finally`). |

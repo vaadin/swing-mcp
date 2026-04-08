@@ -52,7 +52,7 @@ public class SwingSetTextTool extends AbstractSwingTool {
         // BR-04: set_text support check
         if (!SwingUtils.supportsSetText(accessible)) {
             throw new MCPErrorResponseException(
-                    "Component does not support set_text. Call swing_snapshot to verify the list of actions");
+                    "Component does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
         // BR-06: effectively enabled check

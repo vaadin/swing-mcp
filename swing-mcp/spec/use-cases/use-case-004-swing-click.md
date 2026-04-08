@@ -27,7 +27,7 @@
 | BR-03 | The click is performed by finding the component's `AccessibleAction` index whose description matches the click action (see algorithm below), then posting `doAccessibleAction(i)` via `SwingUtilities.invokeLater()` (fire-and-forget — see **architecture.md § 2 — Fire-and-Forget Mutation Dispatch**). |
 | BR-04 | All validation runs on the EDT inside `runInEDT()`. The action itself is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
 | BR-05 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled and cannot be clicked. See also **architecture.md § 6** — Tool execution level. |
-| BR-06 | If the target has no matching click action (i.e. `supportsClick()` returns -1), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support click. Call swing_snapshot to verify the list of actions". |
+| BR-06 | If the target has no matching click action (i.e. `supportsClick()` returns -1), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support click. Call swing_snapshot or swing_get_cells to verify the list of actions". |
 
 ### Algorithm: detecting and invoking the click action
 

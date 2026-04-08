@@ -50,7 +50,7 @@ public class SwingGetValueTool extends AbstractSwingTool {
         // BR-03: check get_value support
         if (!SwingUtils.supportsGetValue(accessible)) {
             throw new MCPErrorResponseException(
-                    "Component does not support get_value. Call swing_snapshot to verify the list of actions");
+                    "Component does not support get_value. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
         // BR-04: all access happens on EDT (guaranteed by MCPServer.registerTool)
@@ -63,7 +63,7 @@ public class SwingGetValueTool extends AbstractSwingTool {
         // BR-09: defensive fallback — should not happen if supportsGetValue() is correct
         if (current == null) {
             throw new MCPErrorResponseException(
-                    "Component does not support get_value. Call swing_snapshot to verify the list of actions");
+                    "Component does not support get_value. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
         // Steps 5-6: read optional min/max

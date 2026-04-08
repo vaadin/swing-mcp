@@ -102,7 +102,7 @@ public abstract class AbstractSwingTool {
             }
             throw new MCPErrorResponseException(
                     "Component does not support " + toolName
-                            + ". Call swing_snapshot to verify the list of actions.");
+                            + ". Call swing_snapshot or swing_get_cells to verify the list of actions.");
         }
     }
 
