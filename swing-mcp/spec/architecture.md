@@ -663,6 +663,40 @@ This avoids action list noise for small lists where all children are already vis
 
 **`get_selectable_items` / `get_selectable_items_count`** operate in the **selection item index space** — the same 0-based index that `addAccessibleSelection(i)` expects. They are not listed as snapshot actions; their availability is documented in the tool descriptions and they are callable on any component marked `single-selection` or `multi-selection`.
 
+### Editable JComboBox
+
+When `JComboBox.setEditable(true)` is set, the combo box exposes its internal editor
+(`JTextField`) as an accessible child alongside the popup menu. The snapshot pipeline
+discovers it automatically — no special-case code is required.
+
+**Accessibility tree (editable JComboBox, Java 21 OpenJDK, verified 2026-04-08):**
+
+| Child index | Role | Class | `AccessibleText` | `AccessibleEditableText` | Notes |
+|---|---|---|---|---|---|
+| 0 | `popup menu` | `BasicComboPopup` | null | null | Pruned from snapshot (no actions, no name) |
+| 1 | `text` | `MetalComboBoxEditor$1` (extends `JTextField`) | Yes | Yes | Kept — has `editable` state, supports `get_text` / `set_text` |
+
+**Snapshot output:**
+
+```
+- combo_box [ref=2, collapsed] actions: toggle_popup, single-selection
+  - text [ref=3, editable] actions: get_text, set_text
+```
+
+The child `text` node receives its own ref and supports the standard `get_text` / `set_text`
+actions. This means the AI client can type filter text into an editable combo box the same
+way it types into any other text field — no combo-specific text handling is needed.
+
+A non-editable JComboBox (`setEditable(false)`, the default) has `getAccessibleChildrenCount()=1`
+(only the popup menu), so no `text` child appears.
+
+**Filtering pattern.** Many Swing apps use editable JComboBox for type-to-filter dropdowns.
+The AI workflow is: `set_text` on the child text ref to enter the filter string, then
+`swing_get_selectable_items` or `swing_get_selection` on the parent combo ref to inspect
+filtered results. No dedicated filtering tool is needed — the existing primitives compose
+naturally. If future evidence shows that AI clients struggle to infer this pattern, we may
+add guidance to the MCP server instructions.
+
 ### TODOs
 
 **TODO-3: JTree content discovery.** JTree is suppressed from `supportsSelection()` (tree-level `AccessibleSelection` is non-functional — see UC-014 design notes). This means JTree only gets `get_cells`/`get_cell_count` for content discovery when truncated. However, JTree's collapsed nodes hide their children from the accessible tree entirely — `get_cells` only reveals the top-level nodes, not deeply nested ones. A future UC should investigate a JTree-specific content discovery mechanism that walks expanded/collapsed state.
