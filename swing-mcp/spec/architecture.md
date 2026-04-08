@@ -654,6 +654,7 @@ These tools only operate on large data components - there is no need to support 
 JFrame children are discovered via the `swing_snapshot` tool.
 
 `get_cells` and `get_cell_count` are **decoupled from selection** — they operate in the accessible children index space, not the selection item index space. They are advertised in the snapshot only when **both** conditions hold:
+This important distinction must be mentioned in tool description, so that the AI client understands the distinction fully.
 
 1. The component is a **large data component** (`isLargeDataComponent`: role is `TABLE`, `LIST`, or `TREE`).
 2. The component's accessible children count exceeds `MAX_DATA_CHILDREN` (i.e. the snapshot actually truncated its children).
