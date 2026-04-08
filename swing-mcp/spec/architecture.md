@@ -701,6 +701,8 @@ add guidance to the MCP server instructions.
 
 **TODO-3: JTree content discovery.** JTree is suppressed from `supportsSelection()` (tree-level `AccessibleSelection` is non-functional — see UC-014 design notes). This means JTree only gets `get_cells`/`get_cell_count` for content discovery when truncated. However, JTree's collapsed nodes hide their children from the accessible tree entirely — `get_cells` only reveals the top-level nodes, not deeply nested ones. A future UC should investigate a JTree-specific content discovery mechanism that walks expanded/collapsed state.
 
+**TODO-4: Cell search tool.** `swing_get_cells` requires the AI to page through children to find a specific row or cell (e.g. "the row containing 'Alice'"). Repeated `get_cells` calls for linear search wastes tokens. A dedicated `swing_search_cells` tool that accepts a search query and returns matching children (with refs) would be more efficient. Should specify: search semantics (substring match on accessible name?), result format (same as `get_cells`?), and whether it also replaces the ref map.
+
 ---
 
 ## 7. Testing
