@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** enumerate all selectable items of a UI component by ref **so that** I can discover the available options in lists, combo boxes, tables, and tabbed panes before making a selection — especially when the snapshot truncated the component's children.
 
-**Status:** Draft
+**Status:** Approved
 **Date:** 2026-04-08
 
 ---
@@ -31,14 +31,13 @@
 | BR-04 | All Swing component access happens on the EDT via `runInEDT()`. |
 | BR-05 | `swing_get_selectable_items` is a read-only tool: `isMutation()` returns `false` and the ref map is **not** cleared after invocation. |
 | BR-06 | No enabled check is performed — listing selectable items is always allowed, even on disabled components. |
-| BR-07 | *(removed — no defaults or caps; offset and length are required with no upper bound)* |
-| BR-08 | If `offset` is greater than or equal to `totalCount`, the `items` array is empty (not an error). This allows the AI to detect end-of-list. |
-| BR-09 | The `items` array contains objects with `index` (integer — the 0-based item index in the selection item index space, suitable for passing directly to `swing_set_selection` / `addAccessibleSelection()`) and `name` (string or `null` — the accessible name of the item). |
-| BR-10 | **JTable row enumeration.** When the target is a `JTable` in row-selection mode, items are **rows**, not cells. `totalCount` is the number of rows (`AccessibleTable.getAccessibleRowCount()`). Each item's `index` is the row index (0-based). Each item's `name` is built by concatenating cell accessible names for the first `MAX_ROW_NAME_COLUMNS` (10) columns, separated by `", "` — same logic as UC-014 BR-11's `buildRowName()`. `offset` and `length` refer to row indices. |
-| BR-11 | **JComboBox item enumeration.** The item count is determined via `((JComboBox<?>) accessible).getItemCount()`, not `getAccessibleChildrenCount()` (which returns 1 — the popup menu). Items are enumerated via the combo box's internal `AccessibleSelection` API: `ac.getAccessibleChild(0)` returns the popup menu; its `getAccessibleChildrenCount()` returns the true item count; `getAccessibleChild(i)` on the popup returns the i-th item. Alternatively, iterate `addAccessibleSelection(i)` / read / `clearAccessibleSelection()` — but this is a mutation and is undesirable for a read-only tool. **Preferred approach:** use `JComboBox.getItemAt(i).toString()` for the name and `i` for the index, since the item index space is simply `[0, itemCount)`. |
-| BR-12 | **Generic enumeration (JList, JTabbedPane).** For these components, `totalCount` is `ac.getAccessibleChildrenCount()`. Each item is obtained via `ac.getAccessibleChild(i)` where `i` ranges over `[offset, min(offset + length, totalCount))`. The item's `index` is `i` (children index = item index for these components — verified by UC-014 probe tests). The item's `name` is `child.getAccessibleContext().getAccessibleName()`. |
-| BR-13 | **Disabled item indicator.** For JTabbedPane, if `((JTabbedPane) accessible).isEnabledAt(index)` returns `false`, the item object includes `"enabled": false`. When the tab is enabled, the `enabled` field is omitted (absence means enabled). For all other components (JList, JComboBox, JTable), the `enabled` field is never emitted — they have no standard per-item disable API, so all items are implicitly enabled. |
-| BR-14 | **Null child.** If `getAccessibleChild(i)` returns `null` (defensive case), the item's `name` is `null`. Do not skip the entry — the index must remain consistent with the item index space. |
+| BR-07 | If `offset` is greater than or equal to `totalCount`, the `items` array is empty (not an error). This allows the AI to detect end-of-list. |
+| BR-08 | The `items` array contains objects with `index` (integer — the 0-based item index in the selection item index space, suitable for passing directly to `swing_set_selection` / `addAccessibleSelection()`) and `name` (string or `null` — the accessible name of the item). |
+| BR-09 | **JTable row enumeration.** When the target is a `JTable` in row-selection mode, items are **rows**, not cells. `totalCount` is the number of rows (`AccessibleTable.getAccessibleRowCount()`). Each item's `index` is the row index (0-based). Each item's `name` is built by concatenating cell accessible names for the first `MAX_ROW_NAME_COLUMNS` (10) columns, separated by `", "` — same logic as UC-014 BR-11's `buildRowName()`. `offset` and `length` refer to row indices. |
+| BR-10 | **JComboBox item enumeration.** The item count is determined via `((JComboBox<?>) accessible).getItemCount()`, not `getAccessibleChildrenCount()` (which returns 1 — the popup menu). Items are enumerated via the combo box's internal `AccessibleSelection` API: `ac.getAccessibleChild(0)` returns the popup menu; its `getAccessibleChildrenCount()` returns the true item count; `getAccessibleChild(i)` on the popup returns the i-th item. Alternatively, iterate `addAccessibleSelection(i)` / read / `clearAccessibleSelection()` — but this is a mutation and is undesirable for a read-only tool. **Preferred approach:** use `JComboBox.getItemAt(i).toString()` for the name and `i` for the index, since the item index space is simply `[0, itemCount)`. |
+| BR-11 | **Generic enumeration (JList, JTabbedPane).** For these components, `totalCount` is `ac.getAccessibleChildrenCount()`. Each item is obtained via `ac.getAccessibleChild(i)` where `i` ranges over `[offset, min(offset + length, totalCount))`. The item's `index` is `i` (children index = item index for these components — verified by UC-014 probe tests). The item's `name` is `child.getAccessibleContext().getAccessibleName()`. |
+| BR-12 | **Disabled item indicator.** For JTabbedPane, if `((JTabbedPane) accessible).isEnabledAt(index)` returns `false`, the item object includes `"enabled": false`. When the tab is enabled, the `enabled` field is omitted (absence means enabled). For all other components (JList, JComboBox, JTable), the `enabled` field is never emitted — they have no standard per-item disable API, so all items are implicitly enabled. |
+| BR-13 | **Null child.** If `getAccessibleChild(i)` returns `null` (defensive case), the item's `name` is `null`. Do not skip the entry — the index must remain consistent with the item index space. |
 
 ### Algorithm
 
@@ -48,26 +47,26 @@ Execution order:
 3. **BR-03** — `SwingUtils.supportsSelection(accessible)` — if `false`, fail with error (check `instanceof JTable` first for specific message).
 4. **Determine totalCount and enumerate items** based on component type:
 
-   a. **If the target is a `JTable`** (BR-10):
+   a. **If the target is a `JTable`** (BR-09):
       - `totalCount = ac.getAccessibleTable().getAccessibleRowCount()`.
       - For each row `r` in `[offset, min(offset + length, totalCount))`:
         - Build `name` via `buildRowName(at, r, cols)` (reuse from UC-014).
         - Add `{"index": r, "name": "Alice, 30, NY"}`.
 
-   b. **If the target is a `JComboBox`** (BR-11):
+   b. **If the target is a `JComboBox`** (BR-10):
       - `totalCount = ((JComboBox<?>) accessible).getItemCount()`.
       - For each `i` in `[offset, min(offset + length, totalCount))`:
         - `Object item = ((JComboBox<?>) accessible).getItemAt(i)`.
         - `name = item != null ? item.toString() : null`.
         - Add `{"index": i, "name": name}`.
 
-   c. **Otherwise (JList, JTabbedPane)** (BR-12):
+   c. **Otherwise (JList, JTabbedPane)** (BR-11):
       - `totalCount = ac.getAccessibleChildrenCount()`.
       - For each `i` in `[offset, min(offset + length, totalCount))`:
         - `Accessible child = ac.getAccessibleChild(i)`.
         - `name = child != null ? child.getAccessibleContext().getAccessibleName() : null`.
         - Add `{"index": i, "name": name}`.
-      - **If `instanceof JTabbedPane`** (BR-13): if `!tabbedPane.isEnabledAt(i)`, add `"enabled": false` to the item. Omit the field when the tab is enabled.
+      - **If `instanceof JTabbedPane`** (BR-12): if `!tabbedPane.isEnabledAt(i)`, add `"enabled": false` to the item. Omit the field when the tab is enabled.
 
 5. Build and return the JSON object via `Content.json()`:
    ```json
@@ -95,7 +94,7 @@ Execution order:
 - **Relationship to `get_cells`.** `get_cells` / `get_cell_count` operate in the **accessible children index space** and are advertised only when the snapshot truncated a large data component. `get_selectable_items` operates in the **selection item index space** and is available on any component with `single-selection` or `multi-selection`. For JList and JTabbedPane, the two index spaces are identical. For JComboBox, they diverge (children index has only 1 child — the popup menu). For JTable, `get_cells` enumerates cells while `get_selectable_items` enumerates rows. The tools serve different purposes: `get_cells` is for content discovery (finding a button in a table), `get_selectable_items` is for selection browsing (seeing what can be selected).
 - **Not listed in snapshot actions.** Per architecture.md § 6 "Selection Action Groups", `get_selectable_items` is not listed as a snapshot action. Its availability is documented in the tool description and is implied by the `single-selection` / `multi-selection` group labels.
 - **Paging rationale.** `offset`/`length` are required parameters with no upper cap. The AI client is in charge of its own context window — if it wants to request all 10,000 rows at once, that's its choice. The server does not second-guess the client.
-- **`buildRowName()` reuse.** The row name construction logic is identical to UC-014 BR-11. The implementation should share the helper method (already exists in `SwingGetSelectionTool`). Consider extracting it to a shared utility or making it package-visible.
+- **`buildRowName()` reuse.** The row name construction logic is identical to UC-014 BR-11. The helper method has been extracted to `SwingUtils.buildRowName()` and is shared by both tools.
 - **Integer overflow.** When computing the iteration end index (`offset + length`), use `long` arithmetic to avoid overflow: `int end = (int) Math.min((long) offset + length, totalCount);`
 - **JComboBox enumeration.** Using `JComboBox.getItemAt(i)` is the simplest and most reliable approach. The accessibility API path (`getAccessibleChild(0).getAccessibleContext().getAccessibleChild(i)`) navigates through the popup menu, which is fragile and may not work when the popup is closed. The direct `JComboBox` API works regardless of popup state.
 - **JTree** — suppressed by `SUPPRESSED_SELECTION_ROLES` in `supportsSelection()`. Same as UC-014.
