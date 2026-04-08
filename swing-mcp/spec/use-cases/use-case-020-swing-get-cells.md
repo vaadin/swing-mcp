@@ -30,29 +30,29 @@
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
 | BR-03 | If the target is not a truncated large data component, the tool returns an MCP-level error (`isError: true`) with the message "Component does not support get_cells. Call swing_snapshot to verify the list of actions." A truncated large data component is one where: (a) the role is `TABLE`, `LIST`, or `TREE` (`isLargeDataComponent`), **and** (b) its accessible children count exceeds `MAX_DATA_CHILDREN`. Both conditions must hold — a JList with 3 items is not eligible even though it is a large data component by role. |
 | BR-04 | All Swing component access happens on the EDT via `runInEDT()`. |
-| BR-05 | `swing_get_cells` **replaces the ref map**. Even though this is a read-only inspection tool (`isMutation()` returns `false`), it manages the ref map itself inside `execute()` — same pattern as `swing_snapshot`: calls `context.clearRefMap()` at the start, then populates via `context.putRef()` during ref assignment. The `isMutation() == false` means the `finally` block in `MCPServer.registerTool` does not additionally clear the map, so the assigned refs survive the tool call. Children outside the `offset`/`length` window are not interactable. The AI must call `swing_snapshot` to restore the full-tree ref map. |
+| BR-05 | `swing_get_cells` **replaces the ref map**. Even though this is a read-only inspection tool (`isMutation()` returns `false`), it manages the ref map itself inside `execute()`. Unlike `swing_snapshot` (which clears at the very start), `get_cells` clears the ref map **after** the ref lookup and eligibility check succeed (steps 1–3 in the algorithm), then populates via `context.putRef()` during ref assignment. This is necessary because the `ref` parameter refers to the *previous* ref map — clearing before lookup would make the lookup fail. The `isMutation() == false` means the `finally` block in `MCPServer.registerTool` does not additionally clear the map, so the assigned refs survive the tool call. Children outside the `offset`/`length` window are not interactable. The AI must call `swing_snapshot` to restore the full-tree ref map. |
 | BR-06 | No enabled check is performed — enumerating children is always allowed, even on disabled components. |
 | BR-07 | If `offset` is greater than or equal to the total accessible children count, the tool returns an empty string (not an error). This allows the AI to detect end-of-list. |
-| BR-08 | The output format mirrors `swing_snapshot`: a compact indented text tree with role, name, states, and actions per node. The same pruning pipeline (Stages 1–3 from UC-002) and action label algorithm (UC-002 BR-06) are applied to each child's subtree. Each actionable node receives a fresh ref starting from 1. |
+| BR-08 | The output format mirrors `swing_snapshot`: a compact indented text tree with role, name, states, and actions per node. The same pruning pipeline (Stages 1–3 from UC-002) and action label algorithm (UC-002 BR-06) are applied to each child's subtree. The **parent component itself** receives ref=1 (always), and child refs start from 2. This allows the AI to call `swing_get_cells` again with the new parent ref to page to a different offset without round-tripping through `swing_snapshot`. The parent is also usable for other tools (e.g. `swing_get_selectable_items`, `swing_get_selection`). |
 | BR-09 | Children are enumerated via `AccessibleContext.getAccessibleChild(i)` for `i` in `[offset, min(offset + length, totalChildren))`. Each child becomes a root for the snapshot pipeline (build → prune → assignRefs → render). Multiple children are rendered consecutively with no separator between them (they are siblings, not independent roots like in `swing_snapshot`). |
-| BR-10 | The output includes a header line indicating the window of children being shown and the total count, e.g. `Showing children 10-19 of 200 for table [ref was 5]`. This helps the AI understand paging context. If no children are returned (offset beyond end), the header still shows the total count. |
-| BR-11 | The ref assignment is global across all returned children and their subtrees — ref numbering starts at 1 and increments depth-first across all children in the output window. |
+| BR-10 | The output includes a header line indicating the window of children being shown, the total count, and the parent's new ref, e.g. `Showing children 10-19 of 200 for table [ref=1]`. This helps the AI understand paging context and know the parent's ref for follow-up calls. If no children are returned (offset beyond end), the header still shows the total count and parent ref. |
+| BR-11 | The ref assignment is global across all returned children and their subtrees. The parent component gets ref=1 (registered before child enumeration). Child refs start from 2 and increment depth-first across all children in the output window. |
 | BR-12 | The `MAX_DATA_CHILDREN` constant used for the eligibility check (BR-03) is the same constant used by the snapshot tool for truncation (UC-002 BR-05 / SC-3). |
 
 ### Algorithm
 
 Execution order:
 1. **BR-01** — parameter validation (fail fast if `ref`, `offset`, or `length` is missing/wrong type; reject negative values).
-2. **BR-02** — ref lookup (fail fast if ref is invalid).
+2. **BR-02** — ref lookup (fail fast if ref is invalid). Uses the *existing* ref map from a prior `swing_snapshot` or `swing_get_cells` call.
 3. **BR-03** — eligibility check: verify the component is a large data component (`isLargeDataComponent`) **and** `ac.getAccessibleChildrenCount() > MAX_DATA_CHILDREN`. If either condition fails, return error.
-4. **Compute iteration range:** `int totalChildren = ac.getAccessibleChildrenCount()`. `int end = (int) Math.min((long) offset + length, totalChildren)`. If `offset >= totalChildren`, return empty output with header (BR-07, BR-10).
-5. **Enumerate children:** For each `i` in `[offset, end)`:
+4. **Clear the ref map and register the parent** — `context.clearRefMap()` (BR-05). Done after validation so that the `ref` lookup in step 2 succeeds against the previous ref map. Then immediately register the parent: `context.putRef(1, accessible)` (BR-08, BR-11). From this point on, the old refs are gone and the parent is ref=1.
+5. **Compute iteration range:** `int totalChildren = ac.getAccessibleChildrenCount()`. `int end = (int) Math.min((long) offset + length, totalChildren)`. If `offset >= totalChildren`, return empty output with header (BR-07, BR-10).
+6. **Enumerate children:** For each `i` in `[offset, end)`:
    a. `Accessible child = ac.getAccessibleChild(i)`.
    b. If `child == null`, skip (defensive).
    c. Build a `SnapshotNode` subtree from `child` using the same `build()` logic as `swing_snapshot` (Phase 1), including SC-3 truncation for nested large data components.
    d. Apply the prune pipeline (Phase 2) to the subtree.
-6. **Assign refs:** Run Phase 3 (`assignRefs`) across all built subtrees sequentially, starting from ref 1. Collect the ref map.
-7. **Replace the MCPServer ref map** with the new ref map (BR-05).
+7. **Assign refs:** Run Phase 3 (`assignRefs`) across all built subtrees sequentially, starting from ref **2** (ref 1 is the parent). Each ref is registered via `context.putRef()`.
 8. **Render:** Run Phase 4 (`render`) across all subtrees. Prepend the header line (BR-10). Return the concatenated text via `Content.text()`.
 
 **Accessibility API methods used:**
@@ -63,7 +63,8 @@ Execution order:
 
 ### Design notes
 
-- **Ref map replacement rationale.** Unlike other read-only tools that preserve the ref map, `get_cells` replaces it because the discovered children (e.g. buttons inside table cells) need refs to be interactable. Keeping both the snapshot refs and the cells refs would create ambiguous numbering. The replacement model is simple: the AI sees only what `get_cells` returned, and must call `swing_snapshot` to "zoom back out".
+- **Ref map replacement rationale.** Unlike other read-only tools that preserve the ref map, `get_cells` replaces it because the discovered children (e.g. buttons inside table cells) need refs to be interactable. Keeping both the snapshot refs and the cells refs would create ambiguous numbering. The replacement model is simple: the AI sees only what `get_cells` returned plus the parent at ref=1, and must call `swing_snapshot` to "zoom back out".
+- **Parent ref=1.** The parent component (the JTable/JList/JTree itself) always gets ref=1 in the new ref map. This allows the AI to: (a) call `swing_get_cells` again with `ref=1` to page to a different offset, (b) call selection tools (`swing_get_selectable_items`, `swing_get_selection`, etc.) on the parent without round-tripping through `swing_snapshot`.
 - **Relationship to `get_selectable_items`.** `get_cells` operates in the **accessible children index space** — the same indices used by `getAccessibleChild(i)`. `get_selectable_items` operates in the **selection item index space** — the same indices used by `addAccessibleSelection(i)`. For JList, the two spaces are identical. For JTable, `get_cells` enumerates individual cell entries (rows × columns worth of accessible children), while `get_selectable_items` enumerates rows. For JTree, `get_cells` enumerates top-level visible nodes; `get_selectable_items` is suppressed.
 - **Reusing the snapshot pipeline.** The implementation should reuse `SwingSnapshotTool`'s build/prune/assignRefs/render pipeline. The main difference is that `get_cells` starts from specific children rather than from the considered windows. The pipeline methods should be factored (if not already) to accept arbitrary root nodes.
 - **Integer overflow.** When computing `offset + length`, use `long` arithmetic: `int end = (int) Math.min((long) offset + length, totalChildren);`.
@@ -81,10 +82,13 @@ Execution order:
 - [ ] Calling `swing_get_cells` on a truncated `JTree` returns the expected top-level tree nodes.
 - [ ] The output format matches `swing_snapshot` — same indented text tree with roles, names, states, and actions.
 - [ ] Pruning rules (Stages 1–3 from UC-002) are applied to each child's subtree.
-- [ ] Actionable nodes in the output receive fresh refs starting from 1.
-- [ ] After `swing_get_cells`, the MCPServer ref map contains only the refs from the output — refs from a prior `swing_snapshot` are no longer valid.
-- [ ] After `swing_get_cells`, calling `swing_click` with a ref from the output succeeds (e.g. clicking a button inside a table cell).
+- [ ] The parent component receives ref=1 in the new ref map. Child refs start from 2.
+- [ ] After `swing_get_cells`, calling `swing_get_cells` again with `ref=1` (the parent) and a different offset works without calling `swing_snapshot` first.
+- [ ] After `swing_get_cells`, calling `swing_get_selectable_items` with `ref=1` (the parent) succeeds.
+- [ ] After `swing_get_cells`, the MCPServer ref map contains only the parent ref and the child refs from the output — refs from a prior `swing_snapshot` are no longer valid.
+- [ ] After `swing_get_cells`, calling `swing_click` with a child ref from the output succeeds (e.g. clicking a button inside a table cell).
 - [ ] After `swing_get_cells`, calling `swing_snapshot` replaces the ref map with the full-tree refs again.
+- [ ] The header line shows the parent's new ref (e.g. `table [ref=1]`).
 - [ ] Calling `swing_get_cells` on a non-truncated large data component (e.g. a `JList` with 3 items) returns an MCP error.
 - [ ] Calling `swing_get_cells` on a non-large-data component (e.g. `JButton`, `JPanel`) returns an MCP error.
 - [ ] Calling `swing_get_cells` with an invalid ref returns an MCP error with a recovery message.
@@ -93,7 +97,6 @@ Execution order:
 - [ ] Negative `offset` returns an MCP error.
 - [ ] Negative `length` returns an MCP error.
 - [ ] Missing `offset` or `length` returns an MCP error.
-- [ ] The header line correctly shows the child range and total count.
 
 ---
 
@@ -109,8 +112,10 @@ Execution order:
   - [ ] Reading a truncated `JTree` returns top-level tree nodes.
   - [ ] Output format matches `swing_snapshot` — indented text tree with roles, names, states, actions.
   - [ ] Pruning rules are applied (e.g. transparent pruning of unnamed panels inside cells).
-  - [ ] Refs start from 1 and increment depth-first across all returned children.
-  - [ ] After `swing_get_cells`, using a ref from the output (e.g. `swing_click`) succeeds.
+  - [ ] Parent component gets ref=1; child refs start from 2 and increment depth-first.
+  - [ ] After `swing_get_cells`, calling `swing_get_cells` again with `ref=1` and a different offset succeeds (no `swing_snapshot` needed).
+  - [ ] After `swing_get_cells`, calling `swing_get_selectable_items` with `ref=1` succeeds.
+  - [ ] After `swing_get_cells`, using a child ref from the output (e.g. `swing_click`) succeeds.
   - [ ] After `swing_get_cells`, old refs from a prior `swing_snapshot` are invalid (MCP error on use).
   - [ ] After `swing_get_cells`, calling `swing_snapshot` restores the full-tree ref map.
   - [ ] Non-truncated large data component (e.g. `JList` with 3 items) returns an MCP error.
