@@ -38,6 +38,7 @@
 | BR-10 | The output includes a header line: `Showing N children from offset O (total T) for ROLE [ref=1]` where N is the number of children actually returned, O is the `offset` parameter, T is the total accessible children count, and ROLE is the component's accessible role name (lowercased). Examples: `Showing 10 children from offset 10 (total 200) for table [ref=1]`, `Showing 0 children from offset 300 (total 200) for table [ref=1]`, `Showing 0 children from offset 0 (total 0) for list [ref=1]`. No singular/plural branching — always "children". The header is always present, even when no children are returned. |
 | BR-11 | The ref assignment is global across all returned children and their subtrees. The parent component gets ref=1 (registered before child enumeration). Child refs start from 2 and increment depth-first across all children in the output window. |
 | BR-12 | The snapshot advertises `get_cells` only when `childCount > MAX_DATA_CHILDREN` (UC-002 step 6b). The tool itself does not enforce this threshold — it accepts any large data component (BR-03). |
+| BR-13 | If `getAccessibleChild(i)` returns `null` (defensive case), a placeholder line `- null` is emitted in the output — no `SnapshotNode` is created and no ref is assigned. The child still counts toward the N in the header line. This keeps the count consistent with the iteration range and avoids confusing gaps. |
 
 ### Algorithm
 
@@ -49,7 +50,7 @@ Execution order:
 5. **Compute iteration range:** `int totalChildren = ac.getAccessibleChildrenCount()`. `int end = (int) Math.min((long) offset + length, totalChildren)`. If `offset >= totalChildren`, return empty output with header (BR-07, BR-10).
 6. **Enumerate children:** For each `i` in `[offset, end)`:
    a. `Accessible child = ac.getAccessibleChild(i)`.
-   b. If `child == null`, skip (defensive).
+   b. If `child == null`, emit a placeholder line `- null` in the output (no `SnapshotNode`, no ref). This keeps the returned count consistent with the iteration range and avoids confusing the AI. This case is expected to be extremely rare.
    c. Build a `SnapshotNode` subtree from `child` using the same `build()` logic as `swing_snapshot` (Phase 1), including SC-3 truncation for nested large data components.
    d. Apply the prune pipeline (Phase 2) to the subtree.
 7. **Assign refs:** Run Phase 3 (`assignRefs`) across all built subtrees sequentially, starting from ref **2** (ref 1 is the parent). Each ref is registered via `context.putRef()`.
