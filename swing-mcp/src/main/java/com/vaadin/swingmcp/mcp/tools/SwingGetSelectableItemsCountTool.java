@@ -2,11 +2,9 @@ package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
 import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
-import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import javax.accessibility.Accessible;
-import javax.swing.JTable;
 
 /**
  * MCP tool {@code swing_get_selectable_items_count}: returns the total number
@@ -47,14 +45,7 @@ public class SwingGetSelectableItemsCountTool extends AbstractSwingTool {
         Accessible accessible = context.getAccessibleByRef(ref);
 
         // Step 3 (BR-03): selection support check with JTable-specific error
-        if (!SwingUtils.supportsSelection(accessible)) {
-            if (accessible instanceof JTable) {
-                throw new MCPErrorResponseException(
-                        "JTable is not in row-selection mode. Only row selection is supported.");
-            }
-            throw new MCPErrorResponseException(
-                    "Component does not support get_selectable_items_count. Call swing_snapshot to verify the list of actions.");
-        }
+        requireSelectable(accessible, "get_selectable_items_count");
 
         // Step 4 (BR-07): compute count
         int totalCount = SwingUtils.getSelectableItemsCount(accessible);

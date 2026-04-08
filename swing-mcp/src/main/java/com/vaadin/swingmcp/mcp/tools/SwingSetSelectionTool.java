@@ -57,14 +57,7 @@ public class SwingSetSelectionTool extends AbstractSwingTool {
         Accessible accessible = context.getAccessibleByRef(ref);
 
         // Step 3 (BR-03): selection support check with JTable-specific error
-        if (!SwingUtils.supportsSelection(accessible)) {
-            if (accessible instanceof JTable) {
-                throw new MCPErrorResponseException(
-                        "JTable is not in row-selection mode. Only row selection is supported.");
-            }
-            throw new MCPErrorResponseException(
-                    "Component does not support set_selection. Call swing_snapshot to verify the list of actions.");
-        }
+        requireSelectable(accessible, "set_selection");
 
         // Step 4 (BR-05): effectively enabled check
         if (!SwingUtils.isEffectivelyEnabled(accessible)) {

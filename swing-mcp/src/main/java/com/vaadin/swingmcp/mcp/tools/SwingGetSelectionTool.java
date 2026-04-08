@@ -2,7 +2,6 @@ package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
 import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
-import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import javax.accessibility.Accessible;
@@ -61,14 +60,7 @@ public class SwingGetSelectionTool extends AbstractSwingTool {
         Accessible accessible = context.getAccessibleByRef(ref);
 
         // BR-03: check selection support with JTable-specific error message
-        if (!SwingUtils.supportsSelection(accessible)) {
-            if (accessible instanceof JTable) {
-                throw new MCPErrorResponseException(
-                        "JTable is not in row-selection mode. Only row selection is supported.");
-            }
-            throw new MCPErrorResponseException(
-                    "Component does not support get_selection. Call swing_snapshot to verify the list of actions.");
-        }
+        requireSelectable(accessible, "get_selection");
 
         // BR-04: all access on EDT (guaranteed by MCPServer.registerTool)
         AccessibleContext ac = accessible.getAccessibleContext();

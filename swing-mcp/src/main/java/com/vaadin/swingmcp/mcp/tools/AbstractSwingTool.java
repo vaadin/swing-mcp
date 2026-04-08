@@ -1,6 +1,11 @@
 package com.vaadin.swingmcp.mcp.tools;
 
+import com.vaadin.swingmcp.mcp.SwingUtils;
+import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+
+import javax.accessibility.Accessible;
+import javax.swing.JTable;
 
 /**
  * Base class for all Swing MCP tools. Subclasses implement
@@ -72,4 +77,51 @@ public abstract class AbstractSwingTool {
      * their action via {@code SwingUtilities.invokeLater()} (fire-and-forget).
      */
     public abstract boolean isMutation();
+
+    /**
+     * Validates that the accessible supports user-facing selection, throwing an
+     * {@link MCPErrorResponseException} if it does not.
+     * <p>
+     * Produces a JTable-specific error message when the table is not in
+     * row-selection mode, and a generic message (including {@code toolName})
+     * otherwise.
+     *
+     * @param accessible the component to check
+     * @param toolName   the tool name for the generic error message
+     *                   (e.g. {@code "get_selection"})
+     * @throws MCPErrorResponseException if the component does not support selection
+     */
+    protected static void requireSelectable(Accessible accessible, String toolName)
+            throws MCPErrorResponseException {
+        if (!SwingUtils.supportsSelection(accessible)) {
+            if (accessible instanceof JTable) {
+                throw new MCPErrorResponseException(
+                        "JTable is not in row-selection mode. Only row selection is supported.");
+            }
+            throw new MCPErrorResponseException(
+                    "Component does not support " + toolName
+                            + ". Call swing_snapshot to verify the list of actions.");
+        }
+    }
+
+    /**
+     * Validates that the accessible supports multi-selection, throwing an
+     * {@link MCPErrorResponseException} if it does not.
+     * <p>
+     * Calls {@link #requireSelectable} first, then rejects single-selection
+     * components.
+     *
+     * @param accessible the component to check
+     * @param toolName   the tool name for the generic error message
+     * @throws MCPErrorResponseException if the component does not support
+     *         multi-selection
+     */
+    protected static void requireMultiSelectable(Accessible accessible, String toolName)
+            throws MCPErrorResponseException {
+        requireSelectable(accessible, toolName);
+        if (SwingUtils.supportsSingleSelection(accessible)) {
+            throw new MCPErrorResponseException(
+                    "Component is in single-selection mode. " + toolName + " requires multi-selection.");
+        }
+    }
 }

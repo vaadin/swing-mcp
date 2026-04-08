@@ -71,14 +71,7 @@ public class SwingGetSelectableItemsTool extends AbstractSwingTool {
         Accessible accessible = context.getAccessibleByRef(ref);
 
         // Step 3 (BR-03): selection support check with JTable-specific error
-        if (!SwingUtils.supportsSelection(accessible)) {
-            if (accessible instanceof JTable) {
-                throw new MCPErrorResponseException(
-                        "JTable is not in row-selection mode. Only row selection is supported.");
-            }
-            throw new MCPErrorResponseException(
-                    "Component does not support get_selectable_items. Call swing_snapshot to verify the list of actions.");
-        }
+        requireSelectable(accessible, "get_selectable_items");
 
         // BR-04: all access on EDT (guaranteed by MCPServer.registerTool)
         AccessibleContext ac = accessible.getAccessibleContext();
