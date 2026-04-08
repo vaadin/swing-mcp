@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** select all items in a multi-selection UI component by ref **so that** I can quickly select everything in a list or table without enumerating all indices manually.
 
-**Status:** Draft
+**Status:** Approved
 **Date:** 2026-04-08
 
 ---
