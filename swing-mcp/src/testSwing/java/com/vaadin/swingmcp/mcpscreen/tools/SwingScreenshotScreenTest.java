@@ -41,6 +41,15 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         return frame;
     }
 
+    private JFrame showUndecoratedFrame(int width, int height) throws Exception {
+        JFrame frame = new JFrame();
+        frame.setUndecorated(true);
+        frame.setSize(width, height);
+        SwingUtilities.invokeAndWait(() -> frame.setVisible(true));
+        createdWindows.add(frame);
+        return frame;
+    }
+
     private JDialog showDialog(Frame owner, int width, int height) throws InterruptedException {
         JDialog dialog = new JDialog(owner, "Dialog", false);
         dialog.setSize(width, height);
@@ -90,25 +99,19 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
 
     @Test
     void multipleVisibleFramesProduceSingleVerticallyStackedImage() throws Exception {
-        JFrame frame1 = showFrame(400, 300);
-        JFrame frame2 = showFrame(300, 200);
+        // Use undecorated frames to avoid WM resizing races — the window manager
+        // can asynchronously adjust decorated frame sizes after setVisible(), making
+        // exact pixel assertions flaky.
+        JFrame frame1 = showUndecoratedFrame(400, 300);
+        JFrame frame2 = showUndecoratedFrame(300, 200);
         mcpServer.setConsideredComponents(List.of(frame1, frame2));
 
         McpSchema.CallToolResult result = mcpClient.callTool(
                 new McpSchema.CallToolRequest("swing_screenshot", Map.of()));
         BufferedImage image = decodeResult(result);
 
-        // Read dimensions after the call: by this point the OS has applied any window
-        // decorations and both frames have settled at their final sizes.
-        int[] dims = new int[4];
-        SwingUtilities.invokeAndWait(() -> {
-            dims[0] = frame1.getWidth();
-            dims[1] = frame1.getHeight();
-            dims[2] = frame2.getWidth();
-            dims[3] = frame2.getHeight();
-        });
-        assertEquals(Math.max(dims[0], dims[2]), image.getWidth());
-        assertEquals(dims[1] + dims[3] + SwingScreenshotTool.WINDOW_GAP, image.getHeight());
+        assertEquals(400, image.getWidth());
+        assertEquals(300 + 200 + SwingScreenshotTool.WINDOW_GAP, image.getHeight());
     }
 
     @Test
