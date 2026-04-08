@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** enumerate the accessible children of a large data component by ref **so that** I can discover content beyond the snapshot's truncation cap — e.g. find a specific button or cell in a JTable row that was not included in the snapshot.
 
-**Status:** Draft
+**Status:** Approved
 **Date:** 2026-04-08
 
 ---
