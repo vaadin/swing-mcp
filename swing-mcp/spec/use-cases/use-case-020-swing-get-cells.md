@@ -35,7 +35,7 @@
 | BR-07 | If `offset` is greater than or equal to the total accessible children count, the tool returns an empty string (not an error). This allows the AI to detect end-of-list. |
 | BR-08 | The output format mirrors `swing_snapshot`: a compact indented text tree with role, name, states, and actions per node. The same pruning pipeline (Stages 1–3 from UC-002) and action label algorithm (UC-002 BR-06) are applied to each child's subtree. The **parent component itself** receives ref=1 (always), and child refs start from 2. This allows the AI to call `swing_get_cells` again with the new parent ref to page to a different offset without round-tripping through `swing_snapshot`. The parent is also usable for other tools (e.g. `swing_get_selectable_items`, `swing_get_selection`). |
 | BR-09 | Children are enumerated via `AccessibleContext.getAccessibleChild(i)` for `i` in `[offset, min(offset + length, totalChildren))`. Each child becomes a root for the snapshot pipeline (build → prune → assignRefs → render). Multiple children are rendered consecutively with no separator between them (they are siblings, not independent roots like in `swing_snapshot`). |
-| BR-10 | The output includes a header line indicating the window of children being shown, the total count, and the parent's new ref, e.g. `Showing children 10-19 of 200 for table [ref=1]`. This helps the AI understand paging context and know the parent's ref for follow-up calls. If no children are returned (offset beyond end), the header still shows the total count and parent ref. |
+| BR-10 | The output includes a header line: `Showing N children from offset O (total T) for ROLE [ref=1]` where N is the number of children actually returned, O is the `offset` parameter, T is the total accessible children count, and ROLE is the component's accessible role name (lowercased). Examples: `Showing 10 children from offset 10 (total 200) for table [ref=1]`, `Showing 0 children from offset 300 (total 200) for table [ref=1]`, `Showing 0 children from offset 0 (total 0) for list [ref=1]`. No singular/plural branching — always "children". The header is always present, even when no children are returned. |
 | BR-11 | The ref assignment is global across all returned children and their subtrees. The parent component gets ref=1 (registered before child enumeration). Child refs start from 2 and increment depth-first across all children in the output window. |
 | BR-12 | The snapshot advertises `get_cells` only when `childCount > MAX_DATA_CHILDREN` (UC-002 step 6b). The tool itself does not enforce this threshold — it accepts any large data component (BR-03). |
 
@@ -91,6 +91,7 @@ Execution order:
 - [ ] After `swing_get_cells`, calling `swing_snapshot` replaces the ref map with the full-tree refs again.
 - [ ] The header line shows the parent's new ref (e.g. `table [ref=1]`).
 - [ ] Calling `swing_get_cells` on a non-truncated large data component (e.g. a `JList` with 3 items) succeeds — returns those 3 children normally (no child count threshold enforced at runtime).
+- [ ] Calling `swing_get_cells` on an empty large data component (e.g. a `JList` with 0 items, `offset: 0, length: 10`) succeeds — returns empty output with header showing total count 0 and parent ref=1.
 - [ ] Calling `swing_get_cells` on a non-large-data component (e.g. `JButton`, `JPanel`) returns an MCP error.
 - [ ] Calling `swing_get_cells` with an invalid ref returns an MCP error with a recovery message.
 - [ ] Calling `swing_get_cells` on a disabled component succeeds (no enabled check).
@@ -120,6 +121,7 @@ Execution order:
   - [ ] After `swing_get_cells`, old refs from a prior `swing_snapshot` are invalid (MCP error on use).
   - [ ] After `swing_get_cells`, calling `swing_snapshot` restores the full-tree ref map.
   - [ ] Non-truncated large data component (e.g. `JList` with 3 items) succeeds — returns those children normally.
+  - [ ] Empty large data component (e.g. empty `JList`, `offset: 0, length: 10`) succeeds — returns empty output with header showing total count 0 and parent ref=1.
   - [ ] Non-large-data component (`JButton`) returns an MCP error.
   - [ ] Invalid ref returns an MCP error with `isError: true`.
   - [ ] The error message suggests calling `swing_snapshot` to refresh refs.
