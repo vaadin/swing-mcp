@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** enumerate all selectable items of a UI component by ref **so that** I can discover the available options in lists, combo boxes, tables, and tabbed panes before making a selection — especially when the snapshot truncated the component's children.
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-04-08
 
 ---
