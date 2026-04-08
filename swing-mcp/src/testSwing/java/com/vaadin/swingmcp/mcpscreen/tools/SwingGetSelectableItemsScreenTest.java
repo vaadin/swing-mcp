@@ -2,9 +2,11 @@ package com.vaadin.swingmcp.mcpscreen.tools;
 
 import com.vaadin.swingmcp.mcp.tools.Parameters;
 import com.vaadin.swingmcp.mcp.tools.SwingGetSelectableItemsTool;
+import com.vaadin.swingmcp.mcp.tools.SwingSetTextTool;
 import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
+import com.vaadin.swingmcp.mcpscreen.JFilterableComboBox;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -22,24 +24,33 @@ class SwingGetSelectableItemsScreenTest extends AbstractScreenTest {
 
     private SwingSnapshotTool snapshotTool;
     private SwingGetSelectableItemsTool tool;
+    private SwingSetTextTool setTextTool;
     private SwingToolContext context;
 
     @BeforeEach
     void setUp() {
         snapshotTool = new SwingSnapshotTool();
         tool = new SwingGetSelectableItemsTool();
+        setTextTool = new SwingSetTextTool();
         context = new SwingToolContext();
     }
 
-    private void snapshot(Component... roots) throws Exception {
+    private String snapshot(Component... roots) throws Exception {
         context.setConsideredComponents(Arrays.asList(roots));
-        executeOnEDT(() -> snapshotTool.execute(new Parameters(Map.of()), context));
+        MCPProtocol.Content result = executeOnEDT(() -> snapshotTool.execute(new Parameters(Map.of()), context));
+        return result.getText();
     }
 
     private String getItems(int ref, int offset, int length) throws Exception {
         MCPProtocol.Content result = executeOnEDT(
                 () -> tool.execute(new Parameters(Map.of("ref", ref, "offset", offset, "length", length)), context));
         return result == null ? null : result.getText();
+    }
+
+    private void setText(int ref, String text) throws Exception {
+        executeOnEDT(() -> setTextTool.execute(new Parameters(Map.of("ref", ref, "text", text)), context));
+        executeOnEDT(() -> null); // drain EDT: setTextContents fires
+        executeOnEDT(() -> null); // drain EDT: deferred filter (invokeLater) fires
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -108,6 +119,112 @@ class SwingGetSelectableItemsScreenTest extends AbstractScreenTest {
                 + "{\"index\":0,\"name\":\"Alice, 30\"},"
                 + "{\"index\":1,\"name\":\"Bob, 25\"}"
                 + "]}", json);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Editable (filterable) JComboBox
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void filterableComboBoxShowsAllItemsBeforeFiltering() throws Exception {
+        JFrame frame = new JFrame("Test");
+        JFilterableComboBox combo = new JFilterableComboBox("Alpha", "Beta", "Gamma", "Alphabet");
+        frame.getContentPane().add(combo);
+        frame.pack();
+        frame.setVisible(true);
+        try {
+            snapshot(frame);
+            String json = getItems(context.getRefOf(combo), 0, 10);
+            assertEquals("{\"totalCount\":4,\"items\":["
+                    + "{\"index\":0,\"name\":\"Alpha\"},"
+                    + "{\"index\":1,\"name\":\"Beta\"},"
+                    + "{\"index\":2,\"name\":\"Gamma\"},"
+                    + "{\"index\":3,\"name\":\"Alphabet\"}"
+                    + "]}", json);
+        } finally {
+            frame.dispose();
+        }
+    }
+
+    @Test
+    void filterableComboBoxFiltersItemsAfterSetText() throws Exception {
+        JFrame frame = new JFrame("Test");
+        JFilterableComboBox combo = new JFilterableComboBox("Alpha", "Beta", "Gamma", "Alphabet");
+        frame.getContentPane().add(combo);
+        frame.pack();
+        frame.setVisible(true);
+        try {
+            // Step 1: snapshot to discover combo and its editor child
+            String snap = snapshot(frame);
+            assertTrue(snap.contains("combo_box"), "snapshot must contain the combo_box");
+            assertTrue(snap.contains("text"), "snapshot must contain the editor text child");
+
+            // Step 2: find the editor text ref and type a filter prefix
+            JTextField editor = (JTextField) combo.getEditor().getEditorComponent();
+            int editorRef = context.getRefOf(editor);
+            setText(editorRef, "Al");
+
+            // Step 3: re-snapshot (refs may have changed after mutation)
+            snapshot(frame);
+
+            // Step 4: verify filtered items via get_selectable_items on the combo ref
+            assertEquals("Al", combo.getFilterText());
+            String json = getItems(context.getRefOf(combo), 0, 10);
+            assertEquals("{\"totalCount\":2,\"items\":["
+                    + "{\"index\":0,\"name\":\"Alpha\"},"
+                    + "{\"index\":1,\"name\":\"Alphabet\"}"
+                    + "]}", json);
+        } finally {
+            frame.dispose();
+        }
+    }
+
+    @Test
+    void filterableComboBoxEmptyFilterRestoresAllItems() throws Exception {
+        JFrame frame = new JFrame("Test");
+        JFilterableComboBox combo = new JFilterableComboBox("Alpha", "Beta", "Gamma");
+        frame.getContentPane().add(combo);
+        frame.pack();
+        frame.setVisible(true);
+        try {
+            // Filter down
+            snapshot(frame);
+            JTextField editor = (JTextField) combo.getEditor().getEditorComponent();
+            setText(context.getRefOf(editor), "B");
+            snapshot(frame);
+            assertEquals("{\"totalCount\":1,\"items\":["
+                    + "{\"index\":0,\"name\":\"Beta\"}"
+                    + "]}", getItems(context.getRefOf(combo), 0, 10));
+
+            // Clear filter — all items should reappear
+            setText(context.getRefOf(editor), "");
+            snapshot(frame);
+            assertEquals("{\"totalCount\":3,\"items\":["
+                    + "{\"index\":0,\"name\":\"Alpha\"},"
+                    + "{\"index\":1,\"name\":\"Beta\"},"
+                    + "{\"index\":2,\"name\":\"Gamma\"}"
+                    + "]}", getItems(context.getRefOf(combo), 0, 10));
+        } finally {
+            frame.dispose();
+        }
+    }
+
+    @Test
+    void filterableComboBoxNoMatchReturnsEmpty() throws Exception {
+        JFrame frame = new JFrame("Test");
+        JFilterableComboBox combo = new JFilterableComboBox("Alpha", "Beta", "Gamma");
+        frame.getContentPane().add(combo);
+        frame.pack();
+        frame.setVisible(true);
+        try {
+            snapshot(frame);
+            JTextField editor = (JTextField) combo.getEditor().getEditorComponent();
+            setText(context.getRefOf(editor), "ZZZ");
+            snapshot(frame);
+            assertEquals("{\"totalCount\":0,\"items\":[]}", getItems(context.getRefOf(combo), 0, 10));
+        } finally {
+            frame.dispose();
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════════

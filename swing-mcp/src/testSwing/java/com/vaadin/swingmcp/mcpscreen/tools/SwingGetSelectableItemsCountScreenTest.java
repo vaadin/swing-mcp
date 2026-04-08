@@ -2,9 +2,11 @@ package com.vaadin.swingmcp.mcpscreen.tools;
 
 import com.vaadin.swingmcp.mcp.tools.Parameters;
 import com.vaadin.swingmcp.mcp.tools.SwingGetSelectableItemsCountTool;
+import com.vaadin.swingmcp.mcp.tools.SwingSetTextTool;
 import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
+import com.vaadin.swingmcp.mcpscreen.JFilterableComboBox;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -22,12 +24,14 @@ class SwingGetSelectableItemsCountScreenTest extends AbstractScreenTest {
 
     private SwingSnapshotTool snapshotTool;
     private SwingGetSelectableItemsCountTool tool;
+    private SwingSetTextTool setTextTool;
     private SwingToolContext context;
 
     @BeforeEach
     void setUp() {
         snapshotTool = new SwingSnapshotTool();
         tool = new SwingGetSelectableItemsCountTool();
+        setTextTool = new SwingSetTextTool();
         context = new SwingToolContext();
     }
 
@@ -40,6 +44,12 @@ class SwingGetSelectableItemsCountScreenTest extends AbstractScreenTest {
         MCPProtocol.Content result = executeOnEDT(
                 () -> tool.execute(new Parameters(Map.of("ref", ref)), context));
         return result == null ? null : result.getText();
+    }
+
+    private void setText(int ref, String text) throws Exception {
+        executeOnEDT(() -> setTextTool.execute(new Parameters(Map.of("ref", ref, "text", text)), context));
+        executeOnEDT(() -> null); // drain EDT: setTextContents fires
+        executeOnEDT(() -> null); // drain EDT: deferred filter (invokeLater) fires
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -89,6 +99,61 @@ class SwingGetSelectableItemsCountScreenTest extends AbstractScreenTest {
 
         snapshot(frame);
         assertEquals("2", getCount(context.getRefOf(table)));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Editable (filterable) JComboBox
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void filterableComboBoxCountBeforeFiltering() throws Exception {
+        JFrame frame = new JFrame("Test");
+        JFilterableComboBox combo = new JFilterableComboBox("Alpha", "Beta", "Gamma", "Alphabet");
+        frame.getContentPane().add(combo);
+        frame.pack();
+        frame.setVisible(true);
+        try {
+            snapshot(frame);
+            assertEquals("4", getCount(context.getRefOf(combo)));
+        } finally {
+            frame.dispose();
+        }
+    }
+
+    @Test
+    void filterableComboBoxCountAfterSetText() throws Exception {
+        JFrame frame = new JFrame("Test");
+        JFilterableComboBox combo = new JFilterableComboBox("Alpha", "Beta", "Gamma", "Alphabet");
+        frame.getContentPane().add(combo);
+        frame.pack();
+        frame.setVisible(true);
+        try {
+            snapshot(frame);
+            JTextField editor = (JTextField) combo.getEditor().getEditorComponent();
+            setText(context.getRefOf(editor), "Al");
+            snapshot(frame);
+            assertEquals("2", getCount(context.getRefOf(combo)));
+        } finally {
+            frame.dispose();
+        }
+    }
+
+    @Test
+    void filterableComboBoxCountNoMatch() throws Exception {
+        JFrame frame = new JFrame("Test");
+        JFilterableComboBox combo = new JFilterableComboBox("Alpha", "Beta", "Gamma");
+        frame.getContentPane().add(combo);
+        frame.pack();
+        frame.setVisible(true);
+        try {
+            snapshot(frame);
+            JTextField editor = (JTextField) combo.getEditor().getEditorComponent();
+            setText(context.getRefOf(editor), "ZZZ");
+            snapshot(frame);
+            assertEquals("0", getCount(context.getRefOf(combo)));
+        } finally {
+            frame.dispose();
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════════
