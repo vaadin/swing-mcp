@@ -26,13 +26,13 @@ public class SwingIncrementTool extends AbstractSwingTool {
 
     @Override
     public String getDescription() {
-        return "Increment the value of a UI component (e.g. JSpinner, JSlider) by one step. Call swing_snapshot first to obtain refs.";
+        return "Increment the value of a UI component (e.g. JSpinner, JSlider) by one step. Requires a ref obtained from swing_snapshot or swing_get_cells.";
     }
 
     @Override
     public MCPProtocol.InputSchema getInputSchema() {
         return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot")
+                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
                 .build();
     }
 

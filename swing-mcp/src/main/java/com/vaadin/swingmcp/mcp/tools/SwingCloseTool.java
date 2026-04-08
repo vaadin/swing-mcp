@@ -29,7 +29,7 @@ public class SwingCloseTool extends AbstractSwingTool {
 
     @Override
     public String getDescription() {
-        return "Close a window or dialog by ref. Call swing_snapshot first to obtain refs. Note: Closing a window may terminate the app; since\n" +
+        return "Close a window or dialog by ref. Requires a ref obtained from swing_snapshot or swing_get_cells. Note: Closing a window may terminate the app; since\n" +
                 "  Swing-MCP runs as a part of that app it will be killed too, and the client will see a dropped HTTP connection. If this\n" +
                 "  happens, the only way to recover is to re-run the Swing app";
     }
@@ -37,7 +37,7 @@ public class SwingCloseTool extends AbstractSwingTool {
     @Override
     public MCPProtocol.InputSchema getInputSchema() {
         return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot")
+                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
                 .build();
     }
 

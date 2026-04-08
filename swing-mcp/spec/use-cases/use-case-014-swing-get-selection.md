@@ -16,7 +16,7 @@
 - The tool looks up the component by ref and reads its selection via the accessibility API (`AccessibleSelection`).
 - The tool returns a JSON object containing `selectedCount` (integer) and `selected` (array of objects, each with `index` and `name`).
 
-**Tool description:** "Read the current selection of a UI component by ref. Returns JSON with selectedCount and selected items (0-based index + name). For JTable, index is the row index (not cell index) and name is a comma-separated summary of cell values. Call swing_snapshot first to obtain refs."
+**Tool description:** "Read the current selection of a UI component by ref. Returns JSON with selectedCount and selected items (0-based index + name). For JTable, index is the row index (not cell index) and name is a comma-separated summary of cell values. Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 

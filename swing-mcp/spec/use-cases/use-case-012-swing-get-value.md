@@ -16,7 +16,7 @@
 - The tool looks up the component by ref and reads its numeric value via the accessibility API (`AccessibleValue`).
 - The tool returns a JSON object containing `current`, `min`, and `max` as numbers.
 
-**Tool description:** "Read the numeric value of a UI component by ref. Returns JSON with current, min, max. Missing min/max means unbounded. Call swing_snapshot first to obtain refs."
+**Tool description:** "Read the numeric value of a UI component by ref. Returns JSON with current, min, max. Missing min/max means unbounded. Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 

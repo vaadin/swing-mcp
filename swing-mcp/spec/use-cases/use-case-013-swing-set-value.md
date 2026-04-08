@@ -17,7 +17,7 @@
 - The tool validates the ref, capability, enabled state, and range, then fires `setCurrentAccessibleValue()` asynchronously and returns `null` immediately.
 - I call `swing_snapshot` again to get fresh refs reflecting any UI changes.
 
-**Tool description:** "Set the numeric value of a UI component by ref. Call swing_get_value first to check the current value and valid range. Call swing_snapshot first to obtain refs."
+**Tool description:** "Set the numeric value of a UI component by ref. Call swing_get_value first to check the current value and valid range. Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 

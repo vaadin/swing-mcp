@@ -17,7 +17,7 @@
 - The tool validates the ref, capability, enabled state, and selection mode compatibility, then clears the current selection and adds the requested indices via `AccessibleSelection` asynchronously. Returns `null` immediately.
 - I call `swing_snapshot` again to get fresh refs reflecting any UI changes.
 
-**Tool description:** "Set the selection of a UI component by ref. Pass 0-based item indices (as returned by swing_get_selection). For single-selection components, pass at most one index. For JTable, pass row indices — the tool translates to cell indices internally. Call swing_snapshot first to obtain refs."
+**Tool description:** "Set the selection of a UI component by ref. Pass 0-based item indices (as returned by swing_get_selection). For single-selection components, pass at most one index. For JTable, pass row indices — the tool translates to cell indices internally. Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 

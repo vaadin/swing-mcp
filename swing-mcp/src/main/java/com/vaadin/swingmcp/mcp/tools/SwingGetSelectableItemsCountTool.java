@@ -26,13 +26,13 @@ public class SwingGetSelectableItemsCountTool extends AbstractSwingTool {
     public String getDescription() {
         return "Get the total number of selectable items of a UI component by ref. "
                 + "Returns the count as a plain integer. For JTable, this is the row count "
-                + "(only row-selection mode is supported). Call swing_snapshot first to obtain refs.";
+                + "(only row-selection mode is supported). Requires a ref obtained from swing_snapshot or swing_get_cells.";
     }
 
     @Override
     public MCPProtocol.InputSchema getInputSchema() {
         return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot")
+                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
                 .build();
     }
 

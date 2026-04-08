@@ -30,13 +30,13 @@ public class SwingSetValueTool extends AbstractSwingTool {
     @Override
     public String getDescription() {
         return "Set the numeric value of a UI component by ref. Call swing_get_value first to check "
-                + "the current value and valid range. Call swing_snapshot first to obtain refs.";
+                + "the current value and valid range. Requires a ref obtained from swing_snapshot or swing_get_cells.";
     }
 
     @Override
     public MCPProtocol.InputSchema getInputSchema() {
         return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot")
+                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
                 .requiredNumber("value", "The numeric value to set")
                 .build();
     }

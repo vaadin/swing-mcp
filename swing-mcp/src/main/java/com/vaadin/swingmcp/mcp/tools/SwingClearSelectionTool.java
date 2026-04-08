@@ -26,13 +26,13 @@ public class SwingClearSelectionTool extends AbstractSwingTool {
         return "Clear the selection of a UI component by ref. "
                 + "Works with multi-select components (list, table) and some single-select "
                 + "components (combo_box). page_tab_list with tabs does not allow an empty "
-                + "selection. Call swing_snapshot first to obtain refs.";
+                + "selection. Requires a ref obtained from swing_snapshot or swing_get_cells.";
     }
 
     @Override
     public MCPProtocol.InputSchema getInputSchema() {
         return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot")
+                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
                 .build();
     }
 

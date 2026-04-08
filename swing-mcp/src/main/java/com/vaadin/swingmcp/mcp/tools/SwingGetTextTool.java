@@ -28,13 +28,13 @@ public class SwingGetTextTool extends AbstractSwingTool {
 
     @Override
     public String getDescription() {
-        return "Read the text content of a UI component by ref. Call swing_snapshot first to obtain refs.";
+        return "Read the text content of a UI component by ref. Requires a ref obtained from swing_snapshot or swing_get_cells.";
     }
 
     @Override
     public MCPProtocol.InputSchema getInputSchema() {
         return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot")
+                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
                 .build();
     }
 

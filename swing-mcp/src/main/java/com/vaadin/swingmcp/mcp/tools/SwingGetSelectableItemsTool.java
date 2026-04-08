@@ -41,14 +41,14 @@ public class SwingGetSelectableItemsTool extends AbstractSwingTool {
                 + "space \u2014 pass them directly to swing_set_selection. For JTable, index is "
                 + "the row index and name is a comma-separated summary of cell values. Requires "
                 + "offset and length parameters for paging. If offset+length is bigger than the "
-                + "amount of data available, fewer items than requested may be returned. Call "
-                + "swing_snapshot first to obtain refs.";
+                + "amount of data available, fewer items than requested may be returned. "
+                + "Requires a ref obtained from swing_snapshot or swing_get_cells.";
     }
 
     @Override
     public MCPProtocol.InputSchema getInputSchema() {
         return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot")
+                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
                 .requiredInteger("offset", "0-based start index for paging").withMinimum(0)
                 .requiredInteger("length", "Number of items to return").withMinimum(0)
                 .build();

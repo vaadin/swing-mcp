@@ -26,13 +26,13 @@ public class SwingToggleExpandTool extends AbstractSwingTool {
 
     @Override
     public String getDescription() {
-        return "Toggles (expand or collapses based on current state) a JTree node by ref. Call swing_snapshot first to obtain refs.";
+        return "Toggles (expand or collapses based on current state) a JTree node by ref. Requires a ref obtained from swing_snapshot or swing_get_cells.";
     }
 
     @Override
     public MCPProtocol.InputSchema getInputSchema() {
         return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot")
+                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
                 .build();
     }
 

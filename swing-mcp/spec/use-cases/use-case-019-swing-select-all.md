@@ -17,7 +17,7 @@
 - The tool validates the ref, capability, enabled state, and multi-selection support, then selects all items via `AccessibleSelection.selectAllAccessibleSelection()` (or JTable direct API) asynchronously. Returns `null` immediately.
 - I call `swing_snapshot` again to get fresh refs reflecting any UI changes.
 
-**Tool description:** "Select all items in a multi-selection UI component by ref. Only works on components marked multi-selection in the snapshot (list, table). Single-selection components are rejected. Call swing_snapshot first to obtain refs."
+**Tool description:** "Select all items in a multi-selection UI component by ref. Only works on components marked multi-selection in the snapshot (list, table). Single-selection components are rejected. Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 

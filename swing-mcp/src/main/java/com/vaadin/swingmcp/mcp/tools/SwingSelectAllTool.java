@@ -33,13 +33,13 @@ public class SwingSelectAllTool extends AbstractSwingTool {
         return "Select all items in a multi-selection UI component by ref. "
                 + "Only works on components marked multi-selection in the snapshot "
                 + "(list, table). Single-selection components are rejected. "
-                + "Call swing_snapshot first to obtain refs.";
+                + "Requires a ref obtained from swing_snapshot or swing_get_cells.";
     }
 
     @Override
     public MCPProtocol.InputSchema getInputSchema() {
         return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot")
+                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
                 .build();
     }
 

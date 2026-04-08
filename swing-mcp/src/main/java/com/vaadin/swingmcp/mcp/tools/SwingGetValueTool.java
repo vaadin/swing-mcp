@@ -29,13 +29,13 @@ public class SwingGetValueTool extends AbstractSwingTool {
     @Override
     public String getDescription() {
         return "Read the numeric value of a UI component by ref. Returns JSON with current, min, max. "
-                + "Missing min/max means unbounded. Call swing_snapshot first to obtain refs.";
+                + "Missing min/max means unbounded. Requires a ref obtained from swing_snapshot or swing_get_cells.";
     }
 
     @Override
     public MCPProtocol.InputSchema getInputSchema() {
         return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot")
+                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
                 .build();
     }
 

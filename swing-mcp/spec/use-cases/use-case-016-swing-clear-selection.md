@@ -16,7 +16,7 @@
 - The tool delegates to `swing_set_selection` with an empty `indices` array `[]`. All validation and behavior is as specified in UC-015.
 - I call `swing_snapshot` again to get fresh refs reflecting any UI changes.
 
-**Tool description:** "Clear the selection of a UI component by ref. Works with multi-select components (list, table) and some single-select components (combo_box). page_tab_list with tabs does not allow an empty selection. Call swing_snapshot first to obtain refs."
+**Tool description:** "Clear the selection of a UI component by ref. Works with multi-select components (list, table) and some single-select components (combo_box). page_tab_list with tabs does not allow an empty selection. Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 

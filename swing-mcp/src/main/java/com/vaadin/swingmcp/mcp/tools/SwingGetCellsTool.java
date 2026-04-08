@@ -42,14 +42,14 @@ public class SwingGetCellsTool extends AbstractSwingTool {
                 + "refs from prior swing_snapshot or swing_get_cells calls become "
                 + "invalid. The parent component gets ref=1 so you can call "
                 + "get_cells again with a different offset. Call swing_snapshot to "
-                + "restore the full-tree ref map. Call swing_snapshot first to "
-                + "obtain the value for the 'ref' parameter.";
+                + "restore the full-tree ref map. Requires a ref obtained from "
+                + "swing_snapshot or swing_get_cells.";
     }
 
     @Override
     public MCPProtocol.InputSchema getInputSchema() {
         return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot")
+                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
                 .requiredInteger("offset", "0-based start index for paging").withMinimum(0)
                 .requiredInteger("length", "Number of children to return").withMinimum(0)
                 .build();
