@@ -372,6 +372,7 @@ For each node, collect actions by running the following checks in order. All det
 - [ ] An unnamed JPanel with an application MouseListener receives the `click` action and a ref (not pruned by TP-5 — AI-3 safety net applies).
 - [ ] An unnamed JPanel with only framework MouseListeners (e.g. ToolTipManager) and no AccessibleAction is pruned normally by TP-5.
 - [ ] A component with both AccessibleAction click and a MouseListener shows `click` (Tier 1 takes precedence — no duplication).
+- [ ] A component with an interactive role and an application MouseListener but no AccessibleAction click does NOT get a `click` action (Tier 2 skipped for interactive roles).
 - [ ] When `filter_substring` is provided, only lines containing the substring (case-insensitive) are returned.
 - [ ] When `filter_substring` matches no lines, a descriptive message is returned instead of empty output.
 - [ ] Filtering does not affect ref assignment — refs remain the same as in the unfiltered snapshot.
@@ -419,6 +420,7 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [ ] An unnamed JPanel with only framework `MouseListener`s (e.g. from setting a tooltip) is pruned as usual.
   - [ ] A JButton (which has AccessibleAction click) with an additional application `MouseListener` shows `click` once (Tier 1 wins).
   - [ ] A disabled component with an application `MouseListener` shows `!click` (mutation action prefix applies).
+  - [ ] A component with an interactive role (e.g. `JSlider`) and an application `MouseListener` but no AccessibleAction click does NOT get a `click` action from Tier 2 (interactive role exclusion).
 
 ### Screen-mode tests (`src/testSwing`) — `SwingSnapshotToolWithScreenTest`
 

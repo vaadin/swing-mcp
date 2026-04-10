@@ -406,6 +406,27 @@ sequence. This goes through the full AWT event pipeline (`processEvent()` →
 `processMouseEvent()` → listeners), faithfully emulating a real mouse click including any
 `processMouseEvent()` overrides and side effects.
 
+**Virtual accessible children:** Objects like `JList` items, `JTable` cells, and `JTree` nodes
+are `Accessible` but not `Component` — they are synthesized by the accessibility API. The
+`a instanceof Component` check in Tier 2 automatically excludes them. This is correct: these
+virtual children do not have their own MouseListeners; the parent component handles mouse
+interaction.
+
+**Third-party look-and-feel libraries** (e.g. FlatLaf, JGoodies) may install their own
+`MouseListener`s on components for L&F behaviour. These would not be filtered by the
+JDK package-prefix check. The interactive role exclusion guards against false positives: a
+`JButton` with a FlatLaf-installed `MouseListener` has role `PUSH_BUTTON`, so Tier 2 is
+skipped entirely. For non-interactive roles (e.g. `PANEL`), a third-party L&F MouseListener
+could cause a false positive — but this is unlikely in practice (L&F libraries rarely add
+MouseListeners to plain panels), and a false-positive `click` action is low-harm (the AI
+clicks it, nothing meaningful happens).
+
+**Known limitation — `processMouseEvent()` overrides:** A component that overrides
+`processMouseEvent()` directly (without calling `addMouseListener()`) would not be detected by
+Tier 2, since `getMouseListeners()` returns an empty array. The `dispatchEvent()` path in the
+`Runnable` would correctly reach the override, but detection fails so the `Runnable` is never
+created. This is an accepted limitation — revisit if seen in the wild.
+
 **Impact on the snapshot:** A component where `supportsClick()` returns non-null receives the
 `click` action in the snapshot and is assigned a ref. This means unnamed panels (TP-5) that
 have an application MouseListener are **not** pruned — the AI-3 safety net ("has at least one

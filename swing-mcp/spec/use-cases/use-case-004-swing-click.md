@@ -66,11 +66,20 @@ Execution order:
   - [x] Clicking a disabled button returns an MCP error with `isError: true` explaining the component is disabled.
   - [x] Clicking a component without click support (e.g. `JSlider`) returns an MCP error with `isError: true`.
   - [x] Each component from the component matrix is tested.
-  - [ ] Clicking a JPanel with an application MouseListener dispatches mousePressed, mouseReleased, mouseClicked (verified by recording events in the MouseListener).
+  - [ ] Clicking a `ClickRecordingPanel` (see below) dispatches the full mouse event sequence and the panel reports `wasClicked() == true`.
   - [ ] The synthetic MouseEvent coordinates are at the center of the component.
   - [ ] The synthetic MouseEvent uses BUTTON1 with click count 1.
-  - [ ] Clicking a disabled JPanel with an application MouseListener returns an MCP error with `isError: true`.
+  - [ ] Clicking a disabled `ClickRecordingPanel` returns an MCP error with `isError: true`.
   - [ ] Clicking a component with no AccessibleAction click and no application MouseListener returns an MCP error with `isError: true`.
+  - [ ] A component with an interactive role (e.g. `JSlider`) and an application MouseListener but no AccessibleAction click is not clickable (Tier 2 skipped for interactive roles).
+
+### `ClickRecordingPanel` — Reusable Test Component
+
+A `JPanel` subclass in `src/test` that registers a `MouseAdapter` on itself and records the
+mouse event sequence. It verifies internally that events arrive in the correct order
+(`MOUSE_PRESSED` → `MOUSE_RELEASED` → `MOUSE_CLICKED`), all with `BUTTON1` and click count 1.
+The test asserts via `wasClicked()` — returns `true` only if the full sequence was received
+correctly. Lives in `src/test` so it is visible to both headless and `testSwing` source sets.
 
 - [x] `SwingClickScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
   - [x] Clicking a button inside `JFrame` fires its action listener (verified after EDT drains).
