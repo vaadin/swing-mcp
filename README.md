@@ -6,10 +6,11 @@ The primary use case is AI-assisted migration of Swing apps to Vaadin.
 
 ## Architecture
 
-Two subprojects:
+Three subprojects:
 
 - **`tiny-mcp-server`** — A generic, minimal MCP HTTP server in pure Java (GSON + built-in HttpServer). No external framework dependencies.
 - **`swing-mcp`** — Swing-specific MCP tools built on top of `tiny-mcp-server`. Provides accessibility tree snapshots, screenshots, and UI interaction tools.
+- **`swing-mcp-agent`** — A Java Instrumentation Agent that starts the MCP server automatically via `-javaagent`. No code changes to the target app required.
 
 ## Known Limitations
 
@@ -145,9 +146,23 @@ How each Swing component appears in `swing_snapshot` output.
 
 ## Using in Swing Apps
 
-Simply start the `MCPServer`; it will run by default at `http://127.0.0.1:18088/mcp`:
+### Option 1: Java Agent (no code changes)
 
+Attach `swing-mcp-agent` as a `-javaagent` when launching your app.
+The MCP server starts automatically before `main()` runs:
+
+```bash
+java -javaagent:swing-mcp-agent-0.0.1-SNAPSHOT.jar -jar your-app.jar
 ```
+
+The agent is a fat jar — it bundles all required dependencies, so no
+additional classpath entries are needed.
+
+### Option 2: Programmatic startup
+
+Add `swing-mcp` as a dependency and start the `MCPServer` from your code:
+
+```java
 public class Application {
     public static void main(String[] args) throws IOException {
         new MCPServer().startAndAutoStop();
@@ -155,3 +170,7 @@ public class Application {
     }
 }
 ```
+
+---
+
+In both cases the MCP server listens at `http://127.0.0.1:18088/mcp` by default.
