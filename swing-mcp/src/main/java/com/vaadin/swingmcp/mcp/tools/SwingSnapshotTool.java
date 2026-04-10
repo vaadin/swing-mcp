@@ -23,14 +23,6 @@ import java.util.List;
  */
 public class SwingSnapshotTool extends AbstractSwingTool {
 
-    /**
-     * Maximum accessible children shown for JTable / JList / JTree.
-     * Delegates to {@link SnapshotNode#MAX_DATA_CHILDREN}.
-     */
-    public static final int MAX_DATA_CHILDREN = SnapshotNode.MAX_DATA_CHILDREN;
-
-    // ── AbstractSwingTool ──────────────────────────────────────────────────────
-
     @Override
     public String getName() {
         return TOOL_SWING_SNAPSHOT;
