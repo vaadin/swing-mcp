@@ -174,3 +174,11 @@ public class Application {
 ---
 
 In both cases the MCP server listens at `http://127.0.0.1:18088/mcp` by default.
+
+### Registering with Claude Code
+
+Once the Swing app is running with swing-mcp, register the MCP server with Claude Code:
+
+```bash
+claude mcp add --transport http swing-mcp http://127.0.0.1:18088/mcp
+```
