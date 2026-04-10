@@ -56,7 +56,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         assertEquals(
                 "- panel\n"
                 + "  - push_button \"Save\" [ref=1] actions: click\n"
-                + "  - text [ref=2, editable] actions: get_text, set_text",
+                + "  - text [ref=2] actions: get_text, set_text",
                 output);
     }
 
@@ -395,7 +395,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - text [ref=1, editable] actions: get_text, set_text",
+                + "  - text [ref=1] actions: get_text, set_text",
                 snapshot(panel));
     }
 
@@ -406,7 +406,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - password_text [ref=1, editable] actions: get_text, set_text",
+                + "  - password_text [ref=1] actions: get_text, set_text",
                 snapshot(panel));
     }
 
@@ -417,7 +417,33 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - text [ref=1, editable, multi_line] actions: get_text, set_text",
+                + "  - text [ref=1, multi_line] actions: get_text, set_text",
+                snapshot(panel));
+    }
+
+    @Test
+    void nonEditableTextFieldShowsReadOnlyWithoutSetText() throws Exception {
+        JPanel panel = new JPanel();
+        JTextField tf = new JTextField();
+        tf.setEditable(false);
+        panel.add(tf);
+
+        assertEquals(
+                "- panel\n"
+                + "  - text [ref=1, read_only] actions: get_text",
+                snapshot(panel));
+    }
+
+    @Test
+    void nonEditableTextAreaShowsReadOnlyWithoutSetText() throws Exception {
+        JPanel panel = new JPanel();
+        JTextArea ta = new JTextArea();
+        ta.setEditable(false);
+        panel.add(ta);
+
+        assertEquals(
+                "- panel\n"
+                + "  - text [ref=1, read_only, multi_line] actions: get_text",
                 snapshot(panel));
     }
 
@@ -480,7 +506,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         assertEquals(
                 "- panel\n"
                 + "  - spin_box [ref=1] actions: increment, decrement, get_text, get_value, set_value\n"
-                + "    - text [ref=2, editable] actions: get_text, set_text",
+                + "    - text [ref=2] actions: get_text, set_text",
                 snapshot(panel));
     }
 
@@ -724,9 +750,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 "- panel\n"
                 + "  - panel \"Login\"\n"
                 + "    - label \"Username\"\n"
-                + "    - text \"Username\" [ref=1, editable] actions: get_text, set_text\n"
+                + "    - text \"Username\" [ref=1] actions: get_text, set_text\n"
                 + "    - label \"Password\"\n"
-                + "    - password_text \"Password\" [ref=2, editable] actions: get_text, set_text\n"
+                + "    - password_text \"Password\" [ref=2] actions: get_text, set_text\n"
                 + "    - check_box \"Remember me\" [ref=3] actions: click\n"
                 + "    - push_button \"Sign In\" [ref=4] actions: click\n"
                 + "    - push_button \"Cancel\" [ref=5] actions: click",

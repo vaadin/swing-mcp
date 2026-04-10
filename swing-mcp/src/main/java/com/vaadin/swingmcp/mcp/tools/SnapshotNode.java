@@ -50,7 +50,8 @@ class SnapshotNode {
             AccessibleState.FOCUSED,
             AccessibleState.SELECTED,
             AccessibleState.CHECKED,
-            AccessibleState.EDITABLE,
+            // EDITABLE is omitted — editable is the default for text fields.
+            // Its absence is shown as "read_only" (synthetic, see render()).
             AccessibleState.EXPANDED,
             AccessibleState.COLLAPSED,
             AccessibleState.MODAL,
@@ -412,6 +413,12 @@ class SnapshotNode {
                 if (!stateSet.contains(AccessibleState.ENABLED)) {
                     bracketParts.add("disabled");
                 }
+                // "read_only" — text component that has AccessibleEditableText
+                // but lacks the EDITABLE state (e.g. JTextField with setEditable(false))
+                if (SwingUtils.hasEditableText(accessible)
+                        && !stateSet.contains(AccessibleState.EDITABLE)) {
+                    bracketParts.add("read_only");
+                }
                 for (AccessibleState state : DISPLAYED_STATES) {
                     if (stateSet.contains(state)) {
                         bracketParts.add(AccessibleNames.stateName(state));
@@ -483,6 +490,8 @@ class SnapshotNode {
         }
 
         // Step 4: text
+        // supportsSetText checks both AccessibleEditableText and EDITABLE state,
+        // so read-only text fields fall through to the get_text-only branch.
         if (SwingUtils.supportsSetText(accessible)) {
             actions.add("get_text");
             actions.add("set_text");

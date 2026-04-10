@@ -114,9 +114,23 @@ public final class SwingUtils {
 
     /**
      * Returns {@code true} if the accessible exposes {@link AccessibleEditableText}
-     * (i.e. its text content can be written).
+     * <em>and</em> is currently editable (has the {@link AccessibleState#EDITABLE} state).
+     * A text component with {@code setEditable(false)} returns {@code false} here.
      */
     public static boolean supportsSetText(Accessible a) {
+        AccessibleContext ac = a.getAccessibleContext();
+        if (ac == null) return false;
+        return ac.getAccessibleEditableText() != null
+                && ac.getAccessibleStateSet() != null
+                && ac.getAccessibleStateSet().contains(AccessibleState.EDITABLE);
+    }
+
+    /**
+     * Returns {@code true} if the accessible exposes {@link AccessibleEditableText},
+     * regardless of the current editable state. Use this to detect text components
+     * that are structurally capable of text editing (e.g. for emitting {@code read_only}).
+     */
+    public static boolean hasEditableText(Accessible a) {
         AccessibleContext ac = a.getAccessibleContext();
         if (ac == null) return false;
         return ac.getAccessibleEditableText() != null;

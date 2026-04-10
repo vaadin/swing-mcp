@@ -112,14 +112,17 @@ class SwingSetTextTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void nonEditableFieldReturnsMcpErrorSayingNotEditable() throws Exception {
+    void nonEditableFieldReturnsMcpErrorSayingNotSupported() throws Exception {
         JTextField field = new JTextField("read only");
         field.setEditable(false);
         snapshot(field);
 
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setText(context.getRefOf(field), "new"));
-        assertEquals("Component is not editable", ex.getMessage());
+        // Non-editable fields no longer pass supportsSetText(), so BR-04 fires
+        // before BR-07 with a "does not support set_text" message.
+        assertTrue(ex.getMessage().contains("does not support set_text"),
+                "Expected 'does not support set_text' error, got: " + ex.getMessage());
     }
 
     @Test

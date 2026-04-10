@@ -140,9 +140,9 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
         assertEquals(
                 "- dialog \"Login\"\n"
                 + "  - label \"Username\"\n"
-                + "  - text \"Username\" [ref=1, editable] actions: get_text, set_text\n"
+                + "  - text \"Username\" [ref=1] actions: get_text, set_text\n"
                 + "  - label \"Password\"\n"
-                + "  - password_text \"Password\" [ref=2, editable] actions: get_text, set_text\n"
+                + "  - password_text \"Password\" [ref=2] actions: get_text, set_text\n"
                 + "  - check_box \"Remember me\" [ref=3] actions: click\n"
                 + "  - push_button \"Sign In\" [ref=4] actions: click\n"
                 + "  - push_button \"Cancel\" [ref=5] actions: click",
