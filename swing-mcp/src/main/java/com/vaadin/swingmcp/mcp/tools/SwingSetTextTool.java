@@ -49,8 +49,8 @@ public class SwingSetTextTool extends AbstractSwingTool {
         // BR-02: ref lookup
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // BR-04: set_text support check
-        if (!SwingUtils.supportsSetText(accessible)) {
+        // BR-04: set_text structural support check
+        if (!SwingUtils.hasEditableText(accessible)) {
             throw new MCPErrorResponseException(
                     "Component does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
