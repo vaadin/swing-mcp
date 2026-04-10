@@ -428,11 +428,11 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [ ] A JButton (which has AccessibleAction click) with an additional application `MouseListener` shows `click` once (Tier 1 wins).
   - [ ] A disabled component with an application `MouseListener` shows `!click` (mutation action prefix applies).
   - [ ] A component with an interactive role (e.g. `JSlider`) and an application `MouseListener` but no AccessibleAction click does NOT get a `click` action from Tier 2 (interactive role exclusion).
-  - [ ] A JTable inside a JScrollPane shows `columns: [Col1, Col2]` on the table node line, after the bracket and before `actions:` (SC-6).
-  - [ ] A JTable NOT inside a JScrollPane does NOT show `columns:` on the table node line (SC-6).
-  - [ ] JTable children are rendered as pipe-separated row lines with 0-based index, not individual cell labels (SC-6).
-  - [ ] JTable truncation summary reads `... and N more rows` (SC-6).
-  - [ ] The JTableHeader panel is suppressed from the snapshot when the table is in a JScrollPane (SC-7).
+  - [x] A JTable inside a JScrollPane shows `columns: [Col1, Col2]` on the table node line, after the bracket and before `actions:` (SC-6).
+  - [x] A JTable NOT inside a JScrollPane does NOT show `columns:` on the table node line (SC-6).
+  - [x] JTable children are rendered as pipe-separated row lines with 0-based index, not individual cell labels (SC-6).
+  - [x] JTable truncation summary reads `... and N more rows` (SC-6).
+  - [x] The JTableHeader panel is suppressed from the snapshot when the table is in a JScrollPane (SC-7).
 
 ### Screen-mode tests (`src/testSwing`) — `SwingSnapshotToolWithScreenTest`
 
