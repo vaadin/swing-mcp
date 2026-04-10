@@ -352,6 +352,10 @@ All mutation tools (`swing_click`, `swing_set_text`, `swing_set_value`, etc.) mu
 returns `false`, the tool returns an MCP-level error (`isError: true`) explaining that the
 component is disabled.
 
+The `swing_snapshot` tool also uses `isEffectivelyEnabled()` in two ways:
+1. **`disabled` state in bracket** — shown when `isEffectivelyEnabled()` returns `false`, replacing the previous local `ENABLED` check. This ensures a locally-enabled component inside a disabled ancestor is correctly marked `disabled`.
+2. **`!` prefix on mutation actions** — mutation actions (`click`, `toggle_popup`, `increment`, `decrement`, `toggle_expand`, `set_text`, `set_value`, `close`) are prefixed with `!` when the component is not effectively enabled. Read-only actions and selection group labels are never prefixed. See **UC-002 BR-08** for the full rule.
+
 ### Detecting Close Support
 
 `supportsClose` is a **synthetic** action — it is not derived from `AccessibleAction` or any

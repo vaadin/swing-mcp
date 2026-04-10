@@ -125,7 +125,7 @@ After Stages 1 and 2, any surviving node is included. The following criteria ser
 | SC-1 | **JMenu items: include even when menu is closed.** Walk `AccessibleContext.getAccessibleChild(i)` for menus regardless of popup visibility. | The full menu structure is needed for migration. The accessibility API exposes menu items as accessible children even when the popup is not shown. |
 | SC-2 | **JTabbedPane: include only the selected tab's content.** Walk `getAccessibleChild()` naturally — it exposes the tab items (`PAGE_TAB`) and the selected tab's content panel. Mark the selected tab via `SELECTED` state. | The user can only see and interact with the selected tab's content; non-selected content is not accessible via the standard accessibility API anyway. |
 | SC-3 | **Large data components (JTable, JList, JTree): truncate to first N accessible children** where N is a static final constant in the tool class (initially **10**). When truncated, Phase 4 emits a render-only `... and X more items` summary line (not a `SnapshotNode`). | A table with thousands of rows would blow up the AI context window. 10 rows gives enough structural overview. |
-| SC-4 | **Disabled components: included with `disabled` state.** | Already in spec. The AI needs to see disabled components to understand the full UI. |
+| SC-4 | **Disabled components: included with `disabled` state.** The `disabled` state is derived from `SwingUtils.isEffectivelyEnabled()` (parent-chain walk), not from the component's own `AccessibleStateSet`. This ensures that a locally-enabled component inside a disabled ancestor is correctly marked `disabled`. | The AI needs to see disabled components to understand the full UI. Using `isEffectivelyEnabled()` is consistent with the check mutation tools perform — if a tool call would fail with "disabled", the snapshot already shows it. |
 | SC-5 | **JInternalFrame: include all, mark iconified ones** via `ICONIFIED` state. | Iconified internal frames are minimized but not invisible. |
 
 ### Accessible States — Display Rules
@@ -133,13 +133,15 @@ After Stages 1 and 2, any surviving node is included. The following criteria ser
 Which states from `AccessibleStateSet` appear in the snapshot output:
 
 **Included (meaningful for AI understanding):**
-`DISABLED`, `FOCUSED`, `SELECTED`, `CHECKED`, `EXPANDED`, `COLLAPSED`, `MODAL`, `MULTI_LINE`, `ICONIFIED`, `HORIZONTAL`, `VERTICAL`, `BUSY`, `INDETERMINATE`
+`FOCUSED`, `SELECTED`, `CHECKED`, `EXPANDED`, `COLLAPSED`, `MODAL`, `MULTI_LINE`, `ICONIFIED`, `HORIZONTAL`, `VERTICAL`, `BUSY`, `INDETERMINATE`
 
 **Synthetic states (derived, not from `AccessibleStateSet` directly):**
+`DISABLED` — emitted when `SwingUtils.isEffectivelyEnabled()` returns `false`. This walks the accessible parent chain, so a locally-enabled component inside a disabled ancestor is correctly marked `disabled`. This is consistent with the check that mutation tools perform at execution time.
+
 `READ_ONLY` — emitted for text components that expose `AccessibleEditableText` but lack the `EDITABLE` state in their `AccessibleStateSet` (e.g. `JTextField` with `setEditable(false)`). Most text fields are editable by default, so the absence of `read_only` means editable — no `editable` flag is shown. This keeps the snapshot concise: only the exceptional read-only case is annotated.
 
 **Omitted (noise or always-true for included nodes):**
-`VISIBLE`, `SHOWING`, `ENABLED` (default — only show its absence as `DISABLED`), `EDITABLE` (default for text fields — only show its absence as `READ_ONLY`), `OPAQUE`, `RESIZABLE`, `ARMED`, `TRANSIENT`, `MANAGES_DESCENDANTS`
+`VISIBLE`, `SHOWING`, `ENABLED` (superseded by synthetic `DISABLED` derived from `isEffectivelyEnabled()`), `EDITABLE` (default for text fields — only show its absence as `READ_ONLY`), `OPAQUE`, `RESIZABLE`, `ARMED`, `TRANSIENT`, `MANAGES_DESCENDANTS`
 
 ---
 
@@ -242,6 +244,7 @@ survives pruning, and what it looks like in the snapshot output.
 - `JCheckBoxMenuItem` and `JRadioButtonMenuItem` share roles with their non-menu counterparts (`CHECK_BOX`, `RADIO_BUTTON`).
 - `JTextArea` and `JEditorPane` share the `TEXT` role with `JTextField` but include the `multi_line` state.
 - Snapshot examples show typical states; actual output depends on the component's runtime configuration.
+- Mutation actions prefixed with `!` are unavailable because the component is disabled or read-only. For example, a disabled button shows `actions: !click`; a read-only text field shows `actions: get_text, !set_text`.
 
 ---
 
@@ -308,11 +311,12 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 |----|------|
 | BR-01 | Refs are short integers starting from 1, assigned fresh with each snapshot call, globally across all roots. Only nodes that expose at least one action under the BR-06/BR-07 algorithm receive a ref. |
 | BR-02 | The entire four-phase pipeline runs on the EDT via `runInEDT()` (which uses `SwingUtilities.invokeLater()` + a `CountDownLatch`). All phases — including prune, assignRefs, and render — execute inside that single call. Off-EDT optimisation is deferred until a performance problem is demonstrated. Tool calls always arrive from an HTTP thread (via `TinyMCPServer`) — never from the EDT — so `runInEDT()` will never deadlock. Do **not** add EDT detection (`SwingUtilities.isEventDispatchThread()`) as a "helpful" fallback; it would mask bugs and is not needed. |
-| BR-03 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. Line format: `- role "name" "description" [ref=N, state1, state2] actions: action1, action2`. Role is the `AccessibleRole` field name lowercased with underscores (e.g. `push_button`, `text`, `scroll_pane`) — never `toDisplayString()`, which is locale-sensitive. Omit `"name"` if blank; omit `"description"` if blank. Ref and states share one bracket, comma-separated, lowercase. Omit the bracket entirely if there is no ref and no states. Omit `actions:` if none. Field values (`AccessibleText` content, `AccessibleValue`) are **not** shown in the output — only name and description are shown, consistent with Playwright MCP's approach. Revisit if the AI needs field values in future. |
+| BR-03 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. Line format: `- role "name" "description" [ref=N, state1, state2] actions: action1, !action2`. Role is the `AccessibleRole` field name lowercased with underscores (e.g. `push_button`, `text`, `scroll_pane`) — never `toDisplayString()`, which is locale-sensitive. Omit `"name"` if blank; omit `"description"` if blank. Ref and states share one bracket, comma-separated, lowercase. Omit the bracket entirely if there is no ref and no states. Omit `actions:` if none. Mutation actions that would fail validation are prefixed with `!` (see BR-08). Field values (`AccessibleText` content, `AccessibleValue`) are **not** shown in the output — only name and description are shown, consistent with Playwright MCP's approach. Revisit if the AI needs field values in future. |
 | BR-04 | The tree walker walks the `javax.accessibility` tree via `AccessibleContext.getAccessibleChild(i)`, **not** the `Component.getComponents()` component tree. The accessibility tree provides virtual children for complex components (table cells, list items, tree nodes). |
 | BR-05 | Large data components (JTable, JList, JTree) are truncated to `MAX_DATA_CHILDREN` accessible children (static final constant, initially 5). When truncated, a synthetic `... and N more items` node is appended. |
 | BR-06 | Action labels displayed in the snapshot are determined by the **Action Label Algorithm** below. Detection methods, Java mechanisms, and MCP tool names are defined in **architecture.md §6**. All action names use lower-case underscore-separated format. |
-| BR-07 | A node receives a ref if it exposes at least one action under the BR-06 algorithm — i.e. any of: `supportsClick()`, `supportsTogglePopup()`, a known `AccessibleAction` constant, `supportsGetText()`, `supportsSetText()`, `supportsGetValue()`, `supportsSetValue()`, `supportsSelection()`, `supportsClose()`, or the `isLargeDataComponent` truncation gate (step 6b) returns non-null/true. `supportsSelection()` maps to one group label (`single-selection` or `multi-selection`). This supersedes the `AccessibleAction`-only gate in BR-01. |
+| BR-07 | A node receives a ref if it exposes at least one action under the BR-06 algorithm — i.e. any of: `supportsClick()`, `supportsTogglePopup()`, a known `AccessibleAction` constant, `supportsGetText()`, `supportsSetText()`, `supportsGetValue()`, `supportsSetValue()`, `supportsSelection()`, `supportsClose()`, or the `isLargeDataComponent` truncation gate (step 6b) returns non-null/true. `supportsSelection()` maps to one group label (`single-selection` or `multi-selection`). This supersedes the `AccessibleAction`-only gate in BR-01. Nodes where all actions are `!`-prefixed still receive a ref. |
+| BR-08 | **Unavailable action prefix (`!`).** After the BR-06 algorithm produces the action list, each **mutation action** is checked: if the action would fail validation when invoked, it is prefixed with `!` (e.g. `!click`, `!set_text`). A mutation action is unavailable when: (a) `SwingUtils.isEffectivelyEnabled()` returns `false` (component or an ancestor is disabled), or (b) the action is `set_text` and the component is read-only (has `AccessibleEditableText` but lacks the `EDITABLE` state). **Read-only actions** (`get_text`, `get_value`, `get_selection`, `get_selectable_items`, `get_selectable_items_count`, `get_cell_count`, `get_cells`) are never prefixed — they always succeed. **Selection group labels** (`single-selection`, `multi-selection`) are never prefixed — they are informational labels, not directly invocable actions. The set of mutation actions is: `click`, `toggle_popup`, `increment`, `decrement`, `toggle_expand`, `set_text`, `set_value`, `close`. This set is stored as a constant (`MUTATION_ACTIONS`) in `SnapshotNode`. |
 
 ### Action Label Algorithm (BR-06)
 
@@ -321,7 +325,7 @@ For each node, collect actions by running the following checks in order. All det
 1. `supportsClick()` → add `click`
 2. `supportsTogglePopup()` → add `toggle_popup`
 3. Iterate `AccessibleAction` descriptions; for each that equals a known constant (`AccessibleAction.INCREMENT`, `DECREMENT`, `TOGGLE_EXPAND`), normalize to lower-case underscore format and add it (`increment`, `decrement`, `toggle_expand`)
-4. `supportsSetText()` **and** `AccessibleStateSet` contains `EDITABLE` → add `get_text`, `set_text`; else if `supportsSetText()` without `EDITABLE` (read-only text field) → add `get_text` only; else `supportsGetText()` → add `get_text`
+4. `supportsSetText()` **and** `AccessibleStateSet` contains `EDITABLE` → add `get_text`, `set_text`; else if `supportsSetText()` without `EDITABLE` (read-only text field) → add `get_text`, `set_text` (the `set_text` will be prefixed with `!` by BR-08 since the component is read-only); else `supportsGetText()` → add `get_text`
 5. `supportsGetValue()` → add `get_value`; additionally `supportsSetValue()` → add `set_value`
 6. **Selection group labels:**
    - `supportsMultiSelection()` → add `multi-selection`
@@ -350,7 +354,10 @@ For each node, collect actions by running the following checks in order. All det
 - [x] A panel with a button and a text field produces a tree with the expected structure and refs.
 - [x] Nested component hierarchies are represented with correct indentation.
 - [x] Non-visible components (`setVisible(false)`) are excluded from the tree, including all descendants.
-- [x] Disabled components (`setEnabled(false)`) are included in the tree; their state reflects that they are disabled.
+- [x] Disabled components (`setEnabled(false)`) are included in the tree; their state reflects that they are disabled. The `disabled` state uses `isEffectivelyEnabled()` (parent-chain walk).
+- [ ] Mutation actions on disabled components are prefixed with `!` (e.g. `!click`). Read-only actions and selection group labels are never prefixed.
+- [ ] A read-only text field shows `!set_text` (not suppressed) alongside `get_text`.
+- [ ] An enabled component inside a disabled parent shows `disabled` state and `!`-prefixed mutation actions.
 - [x] Framework-internal containers (`root_pane`, `layered_pane`, `viewport`, `filler`) are transparently pruned — their children appear under the parent.
 - [x] Unnamed panels (no accessible name, no accessible description, no titled border) are transparently pruned.
 - [x] Named panels (with accessible name, description, or titled border) are kept in the tree.
@@ -386,6 +393,11 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [x] JTabbedPane shows tab items; selected tab has `SELECTED` state; non-selected tab content is not included.
   - [x] Only meaningful states are shown (e.g., `disabled` appears, `visible`/`enabled` do not).
   - [x] Disabled components appear in the tree with `disabled` state.
+  - [ ] Disabled button shows `!click` (mutation action prefixed with `!`).
+  - [ ] Disabled slider shows `!increment`, `!decrement`, `get_value`, `!set_value` (read-only actions unprefixed).
+  - [ ] Read-only text field shows `get_text, !set_text`.
+  - [ ] Enabled button inside a disabled panel shows `disabled` state and `!click`.
+  - [ ] Disabled component with only `!`-prefixed actions still receives a ref.
   - [x] When two roots are provided, their trees are separated by a `---` line and refs are numbered globally (not reset between roots).
   - [x] Calling `swing_snapshot` via the MCP client returns a valid text response.
 
