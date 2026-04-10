@@ -259,7 +259,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void largeJTableIsTruncatedWithSummary() throws Exception {
+    void largeJTableIsTruncatedWithRowSummary() throws Exception {
         DefaultTableModel model = new DefaultTableModel(15, 1);
         for (int i = 0; i < 15; i++) {
             model.setValueAt("row" + i, i, 0);
@@ -273,13 +273,94 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         assertEquals(
                 "- panel\n"
                 + "  - table [ref=1] actions: multi-selection, get_cell_count, get_cells\n"
-                + "    - label \"row0\"\n"
-                + "    - label \"row1\"\n"
-                + "    - label \"row2\"\n"
-                + "    - label \"row3\"\n"
-                + "    - label \"row4\"\n"
-                + "    ... and 10 more items",
+                + "    - row 0: row0\n"
+                + "    - row 1: row1\n"
+                + "    - row 2: row2\n"
+                + "    - row 3: row3\n"
+                + "    - row 4: row4\n"
+                + "    ... and 10 more rows",
                 output);
+    }
+
+    @Test
+    void jTableMultiColumnRendersRowsWithPipeSeparator() throws Exception {
+        JTable table = new JTable(new DefaultTableModel(
+                new Object[][]{{"1", "Alice", "NY"}, {"2", "Bob", "LA"}},
+                new Object[]{"ID", "Name", "City"}));
+        JPanel root = new JPanel();
+        root.add(table);
+
+        String output = snapshot(root);
+
+        // No JScrollPane → no columns: annotation
+        assertEquals(
+                "- panel\n"
+                + "  - table [ref=1] actions: multi-selection\n"
+                + "    - row 0: 1 | Alice | NY\n"
+                + "    - row 1: 2 | Bob | LA",
+                output);
+    }
+
+    @Test
+    void jTableInScrollPaneShowsColumnHeaders() throws Exception {
+        JTable table = new JTable(new DefaultTableModel(
+                new Object[][]{{"1", "Alice", "NY"}, {"2", "Bob", "LA"}},
+                new Object[]{"ID", "Name", "City"}));
+        JScrollPane scrollPane = new JScrollPane(table,
+                JScrollPane.VERTICAL_SCROLLBAR_NEVER,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        JPanel root = new JPanel();
+        root.add(scrollPane);
+
+        String output = snapshot(root);
+
+        // In JScrollPane → columns: annotation on table node, header panel suppressed
+        // columns: comes after name (before bracket), scroll bars still show
+        assertTrue(output.contains("- table [ref=1] columns: [ID, Name, City] actions: multi-selection"),
+                "Table should have columns: annotation after bracket. Actual:\n" + output);
+        assertTrue(output.contains("- row 0: 1 | Alice | NY"),
+                "Should show row-based rendering");
+        assertTrue(output.contains("- row 1: 2 | Bob | LA"),
+                "Should show all rows");
+        // JTableHeader should be suppressed (SC-7)
+        assertFalse(output.contains("label \"ID\""),
+                "JTableHeader labels should not appear");
+    }
+
+    @Test
+    void jTableNotInScrollPaneOmitsColumnHeaders() throws Exception {
+        JTable table = new JTable(new DefaultTableModel(
+                new Object[][]{{"Alice"}},
+                new Object[]{"Name"}));
+        JPanel root = new JPanel();
+        root.add(table);
+
+        String output = snapshot(root);
+
+        // Not in JScrollPane → no columns: annotation
+        assertFalse(output.contains("columns:"), "Should not contain columns: when not in JScrollPane");
+        assertTrue(output.contains("- row 0: Alice"), "Should show row-based rendering");
+    }
+
+    @Test
+    void jTableHeaderSuppressedFromSnapshot() throws Exception {
+        JTable table = new JTable(new DefaultTableModel(
+                new Object[][]{{"Alice"}},
+                new Object[]{"Name"}));
+        JScrollPane scrollPane = new JScrollPane(table,
+                JScrollPane.VERTICAL_SCROLLBAR_NEVER,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        JPanel root = new JPanel();
+        root.add(scrollPane);
+
+        String output = snapshot(root);
+
+        // JTableHeader panel should not appear in the tree (SC-7)
+        assertFalse(output.contains("label \"Name\""),
+                "JTableHeader labels should be suppressed from snapshot");
+        // But columns: annotation should be there
+        assertTrue(output.contains("columns: [Name]"),
+                "columns: annotation should be present");
     }
 
     @Test

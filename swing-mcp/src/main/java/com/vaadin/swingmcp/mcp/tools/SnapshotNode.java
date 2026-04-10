@@ -4,6 +4,7 @@ import com.vaadin.swingmcp.mcp.SwingUtils;
 
 import javax.accessibility.*;
 import javax.swing.*;
+import javax.swing.table.JTableHeader;
 import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
@@ -121,7 +122,11 @@ class SnapshotNode {
 
     // ── Instance fields ────────────────────────────────────────────────────────
 
-    /** The accessibility object this node mirrors. Never null. */
+    /**
+     * The accessibility object this node mirrors. May be {@code null} for
+     * virtual nodes that do not correspond to any real accessible (e.g.
+     * {@link JTableRowSnapshotNode}).
+     */
     final Accessible accessible;
 
     /** Mutable children list; replaced during Phase 2 (prune). */
@@ -156,13 +161,27 @@ class SnapshotNode {
     /**
      * Recursively builds a SnapshotNode tree from an accessibility tree root.
      * Large data components (JTable, JList, JTree) are truncated to
-     * {@link #MAX_DATA_CHILDREN} children.
+     * {@link #MAX_DATA_CHILDREN} children. JTable gets a specialised subclass
+     * that renders rows instead of individual cells.
      */
     static SnapshotNode build(Accessible accessible) {
-        SnapshotNode node = new SnapshotNode(accessible);
+        SnapshotNode node = (accessible instanceof JTable)
+                ? new JTableSnapshotNode((JTable) accessible)
+                : new SnapshotNode(accessible);
+        node.buildChildren();
+        return node;
+    }
+
+    /**
+     * Populates this node's children by walking the accessibility tree.
+     * Large data components are truncated to {@link #MAX_DATA_CHILDREN} children.
+     * Subclasses (e.g. {@link JTableSnapshotNode}) override this to provide
+     * component-specific child construction.
+     */
+    void buildChildren() {
         AccessibleContext ctx = accessible.getAccessibleContext();
         if (ctx == null) {
-            return node;
+            return;
         }
 
         int totalChildren = ctx.getAccessibleChildrenCount();
@@ -176,16 +195,14 @@ class SnapshotNode {
         for (int i = 0; i < limit; i++) {
             Accessible child = ctx.getAccessibleChild(i);
             if (child != null) {
-                node.children.add(build(child));
+                children.add(build(child));
             }
         }
 
         if (isLargeDataComponent && totalChildren > MAX_DATA_CHILDREN) {
-            node.truncated = true;
-            node.truncatedCount = totalChildren - MAX_DATA_CHILDREN;
+            truncated = true;
+            truncatedCount = totalChildren - MAX_DATA_CHILDREN;
         }
-
-        return node;
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -229,6 +246,11 @@ class SnapshotNode {
 
         // HE-2: CellRendererPane (rendering artifact)
         if (accessible instanceof CellRendererPane) {
+            return PruneResult.DROP;
+        }
+
+        // HE-4: JTableHeader (SC-7) — column names are shown via columns: annotation on table node
+        if (accessible instanceof JTableHeader) {
             return PruneResult.DROP;
         }
 
@@ -385,6 +407,23 @@ class SnapshotNode {
     // ══════════════════════════════════════════════════════════════════════════
 
     /**
+     * Returns additional component-specific info to append after the name/description
+     * on the node's rendered line (e.g. column headers for JTable).
+     * Default returns empty string. Subclasses override to provide info.
+     */
+    String getAdditionalInfo() {
+        return "";
+    }
+
+    /**
+     * Returns the label used in truncation summaries (e.g. "items", "rows").
+     * Default returns "items". Subclasses override for component-specific labels.
+     */
+    String getTruncationLabel() {
+        return "items";
+    }
+
+    /**
      * Renders this node and its children as indented text lines.
      *
      * @param depth current indentation depth
@@ -440,6 +479,12 @@ class SnapshotNode {
             sb.append(" [").append(String.join(", ", bracketParts)).append(']');
         }
 
+        // Additional component-specific info (e.g. column headers for JTable)
+        String additionalInfo = getAdditionalInfo();
+        if (!additionalInfo.isEmpty()) {
+            sb.append(' ').append(additionalInfo);
+        }
+
         // Actions (BR-06) with "!" prefix for unavailable mutations (BR-08)
         List<String> actions = resolveActions();
         if (!actions.isEmpty()) {
@@ -457,7 +502,7 @@ class SnapshotNode {
         // Truncation summary (render-only, no node, no ref)
         if (truncated) {
             sb.append("  ".repeat(depth + 1))
-              .append("... and ").append(truncatedCount).append(" more items\n");
+              .append("... and ").append(truncatedCount).append(" more ").append(getTruncationLabel()).append('\n');
         }
     }
 
@@ -607,5 +652,94 @@ class SnapshotNode {
             end--;
         }
         return s.substring(0, end);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JTable-specific subclasses (SC-6)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Snapshot node for a JTable. Overrides child construction to create
+     * {@link JTableRowSnapshotNode}s (one per row, capped at {@link #MAX_DATA_CHILDREN}),
+     * and provides column header info and row-based truncation labels.
+     */
+    static final class JTableSnapshotNode extends SnapshotNode {
+
+        private final JTable table;
+
+        JTableSnapshotNode(JTable table) {
+            super(table);
+            this.table = table;
+        }
+
+        @Override
+        void buildChildren() {
+            AccessibleContext ctx = table.getAccessibleContext();
+            if (ctx == null) return;
+            AccessibleTable at = ctx.getAccessibleTable();
+            if (at == null) return;
+
+            int totalRows = at.getAccessibleRowCount();
+            int cols = at.getAccessibleColumnCount();
+            int rowLimit = Math.min(totalRows, MAX_DATA_CHILDREN);
+
+            for (int row = 0; row < rowLimit; row++) {
+                String rowText = SwingUtils.buildTableRowText(at, row, cols);
+                children.add(new JTableRowSnapshotNode(row, rowText));
+            }
+
+            if (totalRows > MAX_DATA_CHILDREN) {
+                truncated = true;
+                truncatedCount = totalRows - MAX_DATA_CHILDREN;
+            }
+        }
+
+        /** Row children are synthetic — never pruned. */
+        @Override
+        void pruneChildren() { }
+
+        @Override
+        String getAdditionalInfo() {
+            if (!SwingUtils.isTableHeaderVisible(table)) return "";
+            List<String> names = SwingUtils.getTableColumnNames(table);
+            if (names.isEmpty()) return "";
+            return "columns: [" + String.join(", ", names) + "]";
+        }
+
+        @Override
+        String getTruncationLabel() {
+            return "rows";
+        }
+    }
+
+    /**
+     * Virtual snapshot node for a single JTable row. Stores the 0-based row
+     * index and pre-built pipe-separated row text. Has no children, no actions,
+     * no ref, and no backing accessible ({@code accessible} is {@code null}).
+     * Render produces {@code - row 0: Val1 | Val2 | Val3}.
+     */
+    static final class JTableRowSnapshotNode extends SnapshotNode {
+
+        private final int rowIndex;
+        private final String rowText;
+
+        JTableRowSnapshotNode(int rowIndex, String rowText) {
+            super(null);
+            this.rowIndex = rowIndex;
+            this.rowText = rowText;
+        }
+
+        /** No actions, no children — nothing to assign. */
+        @Override
+        int assignRefs(int nextRef, SwingToolContext context) {
+            return nextRef;
+        }
+
+        @Override
+        void render(int depth, StringBuilder sb) {
+            sb.append("  ".repeat(depth))
+              .append("- row ").append(rowIndex).append(": ").append(rowText)
+              .append('\n');
+        }
     }
 }
