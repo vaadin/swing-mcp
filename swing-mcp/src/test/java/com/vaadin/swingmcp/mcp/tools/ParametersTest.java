@@ -80,8 +80,22 @@ class ParametersTest {
     }
 
     @Test
-    void getIntThrowsWhenWrongType() {
+    void getIntReturnsValueFromString() {
+        var params = new Parameters(Map.of("ref", "21"));
+        assertEquals(21, params.getInt("ref"));
+    }
+
+    @Test
+    void getIntThrowsWhenNonNumericString() {
         var params = new Parameters(Map.of("ref", "notanumber"));
+        var ex = assertThrows(MCPServerException.class, () -> params.getInt("ref"));
+        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        assertEquals("Parameter 'ref' must be an integer, got 'notanumber'", ex.getMessage());
+    }
+
+    @Test
+    void getIntThrowsWhenWrongType() {
+        var params = new Parameters(Map.of("ref", List.of()));
         var ex = assertThrows(MCPServerException.class, () -> params.getInt("ref"));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
         assertEquals("Parameter 'ref' must be an integer", ex.getMessage());
@@ -114,8 +128,23 @@ class ParametersTest {
     }
 
     @Test
-    void getNumberThrowsWhenWrongType() {
+    void getNumberReturnsValueFromString() {
+        var params = new Parameters(Map.of("value", "42.5"));
+        Number result = params.getNumber("value");
+        assertEquals(42.5, result.doubleValue());
+    }
+
+    @Test
+    void getNumberThrowsWhenNonNumericString() {
         var params = new Parameters(Map.of("value", "notanumber"));
+        var ex = assertThrows(MCPServerException.class, () -> params.getNumber("value"));
+        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        assertEquals("Parameter 'value' must be a number, got 'notanumber'", ex.getMessage());
+    }
+
+    @Test
+    void getNumberThrowsWhenWrongType() {
+        var params = new Parameters(Map.of("value", List.of()));
         var ex = assertThrows(MCPServerException.class, () -> params.getNumber("value"));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
         assertEquals("Parameter 'value' must be a number", ex.getMessage());
@@ -142,8 +171,22 @@ class ParametersTest {
     }
 
     @Test
-    void getIntOrNullThrowsWhenWrongType() {
+    void getIntOrNullReturnsValueFromString() {
+        var params = new Parameters(Map.of("offset", "5"));
+        assertEquals(5, params.getIntOrNull("offset"));
+    }
+
+    @Test
+    void getIntOrNullThrowsWhenNonNumericString() {
         var params = new Parameters(Map.of("offset", "five"));
+        var ex = assertThrows(MCPServerException.class, () -> params.getIntOrNull("offset"));
+        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        assertEquals("Parameter 'offset' must be an integer, got 'five'", ex.getMessage());
+    }
+
+    @Test
+    void getIntOrNullThrowsWhenWrongType() {
+        var params = new Parameters(Map.of("offset", List.of()));
         var ex = assertThrows(MCPServerException.class, () -> params.getIntOrNull("offset"));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
         assertEquals("Parameter 'offset' must be an integer", ex.getMessage());
@@ -195,8 +238,22 @@ class ParametersTest {
     }
 
     @Test
-    void getIntArrayThrowsWhenElementNotANumber() {
+    void getIntArrayReturnsValuesFromStrings() {
+        var params = new Parameters(Map.of("indices", List.of("1", "2", "3")));
+        assertEquals(List.of(1, 2, 3), params.getIntArray("indices"));
+    }
+
+    @Test
+    void getIntArrayThrowsWhenElementIsNonNumericString() {
         var params = new Parameters(Map.of("indices", List.of(1.0, "two", 3.0)));
+        var ex = assertThrows(MCPServerException.class, () -> params.getIntArray("indices"));
+        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        assertEquals("Parameter 'indices' must be an array of integers, but element at index 1 is 'two'", ex.getMessage());
+    }
+
+    @Test
+    void getIntArrayThrowsWhenElementNotANumber() {
+        var params = new Parameters(Map.of("indices", List.of(1.0, true, 3.0)));
         var ex = assertThrows(MCPServerException.class, () -> params.getIntArray("indices"));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
         assertEquals("Parameter 'indices' must be an array of integers", ex.getMessage());

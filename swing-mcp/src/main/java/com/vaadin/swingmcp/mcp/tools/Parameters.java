@@ -68,6 +68,14 @@ public class Parameters {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                     "Required parameter '" + key + "' is missing");
         }
+        if (value instanceof String) {
+            try {
+                return Integer.parseInt((String) value);
+            } catch (NumberFormatException e) {
+                throw new MCPServerException(MCPServerException.INVALID_PARAMS,
+                        "Parameter '" + key + "' must be an integer, got '" + value + "'");
+            }
+        }
         if (!(value instanceof Number)) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                     "Parameter '" + key + "' must be an integer");
@@ -92,6 +100,14 @@ public class Parameters {
         if (value == null) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                     "Required parameter '" + key + "' is missing");
+        }
+        if (value instanceof String) {
+            try {
+                return Double.parseDouble((String) value);
+            } catch (NumberFormatException e) {
+                throw new MCPServerException(MCPServerException.INVALID_PARAMS,
+                        "Parameter '" + key + "' must be a number, got '" + value + "'");
+            }
         }
         if (!(value instanceof Number)) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
@@ -124,11 +140,20 @@ public class Parameters {
         List<Integer> result = new ArrayList<>(list.size());
         for (int i = 0; i < list.size(); i++) {
             Object element = list.get(i);
-            if (!(element instanceof Number)) {
+            Number num;
+            if (element instanceof Number) {
+                num = (Number) element;
+            } else if (element instanceof String) {
+                try {
+                    num = Integer.parseInt((String) element);
+                } catch (NumberFormatException e) {
+                    throw new MCPServerException(MCPServerException.INVALID_PARAMS,
+                            "Parameter '" + key + "' must be an array of integers, but element at index " + i + " is '" + element + "'");
+                }
+            } else {
                 throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                         "Parameter '" + key + "' must be an array of integers");
             }
-            Number num = (Number) element;
             if (num.doubleValue() % 1 != 0) {
                 throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                         "Parameter '" + key + "' must be an array of integers, but element at index " + i + " is " + num);
@@ -147,6 +172,14 @@ public class Parameters {
         Object value = raw.get(key);
         if (value == null) {
             return null;
+        }
+        if (value instanceof String) {
+            try {
+                return Integer.parseInt((String) value);
+            } catch (NumberFormatException e) {
+                throw new MCPServerException(MCPServerException.INVALID_PARAMS,
+                        "Parameter '" + key + "' must be an integer, got '" + value + "'");
+            }
         }
         if (!(value instanceof Number)) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
