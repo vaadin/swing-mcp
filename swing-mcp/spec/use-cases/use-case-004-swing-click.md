@@ -48,9 +48,9 @@ Execution order:
 - [x] Calling `swing_click` with an invalid ref returns an MCP error with a recovery message.
 - [x] Calling `swing_click` on a disabled component returns an MCP error explaining the component is disabled.
 - [x] Calling `swing_click` on a component that does not support click returns an MCP error suggesting to call `swing_snapshot`.
-- [ ] Calling `swing_click` on a JPanel with an application MouseListener fires the synthetic mouse event sequence and returns `null`.
-- [ ] Calling `swing_click` on a disabled JPanel with an application MouseListener returns an MCP error explaining the component is disabled.
-- [ ] Calling `swing_click` on a component with no AccessibleAction click and no application MouseListener returns an MCP error.
+- [x] Calling `swing_click` on a JPanel with an application MouseListener fires the synthetic mouse event sequence and returns `null`.
+- [x] Calling `swing_click` on a disabled JPanel with an application MouseListener returns an MCP error explaining the component is disabled.
+- [x] Calling `swing_click` on a component with no AccessibleAction click and no application MouseListener returns an MCP error.
 
 ---
 
@@ -66,12 +66,12 @@ Execution order:
   - [x] Clicking a disabled button returns an MCP error with `isError: true` explaining the component is disabled.
   - [x] Clicking a component without click support (e.g. `JSlider`) returns an MCP error with `isError: true`.
   - [x] Each component from the component matrix is tested.
-  - [ ] Clicking a `ClickRecordingPanel` (see below) dispatches the full mouse event sequence and the panel reports `wasClicked() == true`.
-  - [ ] The synthetic MouseEvent coordinates are at the center of the component.
-  - [ ] The synthetic MouseEvent uses BUTTON1 with click count 1.
-  - [ ] Clicking a disabled `ClickRecordingPanel` returns an MCP error with `isError: true`.
-  - [ ] Clicking a component with no AccessibleAction click and no application MouseListener returns an MCP error with `isError: true`.
-  - [ ] A component with an interactive role (e.g. `JSlider`) and an application MouseListener but no AccessibleAction click is not clickable (Tier 2 skipped for interactive roles).
+  - [x] Clicking a `ClickRecordingPanel` (see below) dispatches the full mouse event sequence and the panel reports `wasClicked() == true`.
+  - [x] The synthetic MouseEvent coordinates are at the center of the component.
+  - [x] The synthetic MouseEvent uses BUTTON1 with click count 1.
+  - [x] Clicking a disabled `ClickRecordingPanel` returns an MCP error with `isError: true`.
+  - [x] Clicking a component with no AccessibleAction click and no application MouseListener returns an MCP error with `isError: true`.
+  - [x] A component with an interactive role (e.g. `JSlider`) and an application MouseListener but no AccessibleAction click is not clickable (Tier 2 skipped for interactive roles).
 
 ### `ClickRecordingPanel` — Reusable Test Component
 
