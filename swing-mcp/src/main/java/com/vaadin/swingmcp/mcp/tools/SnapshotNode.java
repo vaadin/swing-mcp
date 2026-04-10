@@ -28,8 +28,8 @@ import java.util.List;
  */
 class SnapshotNode {
 
-    /** Maximum accessible children shown for JTable / JList / JTree. */
-    static final int MAX_DATA_CHILDREN = 5;
+    /** Maximum child SnapshotNodes for large data components (JTable rows, JList items, JTree nodes). */
+    static final int MAX_DATA_ROW_NODES = 5;
 
     // ── Roles that are always included (AI-1) ──────────────────────────────────
 
@@ -139,7 +139,7 @@ class SnapshotNode {
     int ref = 0;
 
     /**
-     * True when this node's children were capped at {@link #MAX_DATA_CHILDREN}
+     * True when this node's children were capped at {@link #MAX_DATA_ROW_NODES}
      * during Phase 1 (build).
      */
     boolean truncated = false;
@@ -161,7 +161,7 @@ class SnapshotNode {
     /**
      * Recursively builds a SnapshotNode tree from an accessibility tree root.
      * Large data components (JTable, JList, JTree) are truncated to
-     * {@link #MAX_DATA_CHILDREN} children. JTable gets a specialised subclass
+     * {@link #MAX_DATA_ROW_NODES} children. JTable gets a specialised subclass
      * that renders rows instead of individual cells.
      */
     static SnapshotNode build(Accessible accessible) {
@@ -174,7 +174,7 @@ class SnapshotNode {
 
     /**
      * Populates this node's children by walking the accessibility tree.
-     * Large data components are truncated to {@link #MAX_DATA_CHILDREN} children.
+     * Large data components are truncated to {@link #MAX_DATA_ROW_NODES} children.
      * Subclasses (e.g. {@link JTableSnapshotNode}) override this to provide
      * component-specific child construction.
      */
@@ -189,7 +189,7 @@ class SnapshotNode {
         boolean isLargeDataComponent = SwingUtils.isLargeDataComponent(accessible);
 
         int limit = isLargeDataComponent
-                ? Math.min(totalChildren, MAX_DATA_CHILDREN)
+                ? Math.min(totalChildren, MAX_DATA_ROW_NODES)
                 : totalChildren;
 
         for (int i = 0; i < limit; i++) {
@@ -199,9 +199,9 @@ class SnapshotNode {
             }
         }
 
-        if (isLargeDataComponent && totalChildren > MAX_DATA_CHILDREN) {
+        if (isLargeDataComponent && totalChildren > MAX_DATA_ROW_NODES) {
             truncated = true;
-            truncatedCount = totalChildren - MAX_DATA_CHILDREN;
+            truncatedCount = totalChildren - MAX_DATA_ROW_NODES;
         }
     }
 
@@ -660,7 +660,7 @@ class SnapshotNode {
 
     /**
      * Snapshot node for a JTable. Overrides child construction to create
-     * {@link JTableRowSnapshotNode}s (one per row, capped at {@link #MAX_DATA_CHILDREN}),
+     * {@link JTableRowSnapshotNode}s (one per row, capped at {@link #MAX_DATA_ROW_NODES}),
      * and provides column header info and row-based truncation labels.
      */
     static final class JTableSnapshotNode extends SnapshotNode {
@@ -681,16 +681,16 @@ class SnapshotNode {
 
             int totalRows = at.getAccessibleRowCount();
             int cols = at.getAccessibleColumnCount();
-            int rowLimit = Math.min(totalRows, MAX_DATA_CHILDREN);
+            int rowLimit = Math.min(totalRows, MAX_DATA_ROW_NODES);
 
             for (int row = 0; row < rowLimit; row++) {
                 String rowText = SwingUtils.buildTableRowText(at, row, cols);
                 children.add(new JTableRowSnapshotNode(row, rowText));
             }
 
-            if (totalRows > MAX_DATA_CHILDREN) {
+            if (totalRows > MAX_DATA_ROW_NODES) {
                 truncated = true;
-                truncatedCount = totalRows - MAX_DATA_CHILDREN;
+                truncatedCount = totalRows - MAX_DATA_ROW_NODES;
             }
         }
 

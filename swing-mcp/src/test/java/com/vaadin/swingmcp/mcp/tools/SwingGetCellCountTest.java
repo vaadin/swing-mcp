@@ -215,7 +215,7 @@ class SwingGetCellCountTest extends AbstractHeadlessTest {
         tree.setRootVisible(false);
         tree.setSize(200, 400);
         tree.expandRow(0);
-        // JTree with 2 nodes won't get a ref via snapshot (below MAX_DATA_CHILDREN
+        // JTree with 2 nodes won't get a ref via snapshot (below MAX_DATA_ROW_NODES
         // and no selection actions), so register directly
         context.putRef(99, tree);
         assertEquals("2", getCount(99));
