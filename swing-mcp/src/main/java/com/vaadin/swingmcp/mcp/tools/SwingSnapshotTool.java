@@ -40,7 +40,9 @@ public class SwingSnapshotTool extends AbstractSwingTool {
     public String getDescription() {
         return "Returns an accessibility tree snapshot of the Swing application. "
                 + "Use this to understand the current UI structure and identify "
-                + "components for interaction via their numeric refs.";
+                + "components for interaction via their numeric refs. "
+                + "Mutation actions prefixed with ! are unavailable because "
+                + "the component is disabled or read-only.";
     }
 
     @Override

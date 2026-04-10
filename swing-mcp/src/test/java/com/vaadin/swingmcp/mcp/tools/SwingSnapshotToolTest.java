@@ -349,8 +349,53 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - push_button \"Disabled\" [ref=1, disabled] actions: click",
+                + "  - push_button \"Disabled\" [ref=1, disabled] actions: !click",
                 output);
+    }
+
+    @Test
+    void disabledSliderShowsPrefixedMutationsAndUnprefixedReadOnly() throws Exception {
+        JPanel panel = new JPanel();
+        JSlider slider = new JSlider(0, 100, 50);
+        slider.setEnabled(false);
+        panel.add(slider);
+
+        String output = snapshot(panel);
+
+        assertEquals(
+                "- panel\n"
+                + "  - slider [ref=1, disabled, horizontal] actions: !increment, !decrement, get_value, !set_value",
+                output);
+    }
+
+    @Test
+    void enabledButtonInsideDisabledPanelShowsDisabledAndPrefixedClick() throws Exception {
+        JPanel parent = new JPanel();
+        parent.setEnabled(false);
+        JButton button = new JButton("Click Me");
+        // Button is locally enabled, but parent is disabled
+        parent.add(button);
+
+        String output = snapshot(parent);
+
+        assertEquals(
+                "- panel [disabled]\n"
+                + "  - push_button \"Click Me\" [ref=1, disabled] actions: !click",
+                output);
+    }
+
+    @Test
+    void disabledComponentWithOnlyPrefixedActionsStillReceivesRef() throws Exception {
+        JPanel panel = new JPanel();
+        JButton button = new JButton("Disabled");
+        button.setEnabled(false);
+        panel.add(button);
+
+        String output = snapshot(panel);
+
+        // The disabled button should still have a ref despite all actions being prefixed
+        assertTrue(output.contains("[ref=1, disabled]"), "disabled button should have ref");
+        assertTrue(output.contains("!click"), "click should be prefixed with !");
     }
 
     @Test
@@ -430,7 +475,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - text [ref=1, read_only] actions: get_text",
+                + "  - text [ref=1, read_only] actions: get_text, !set_text",
                 snapshot(panel));
     }
 
@@ -443,7 +488,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- panel\n"
-                + "  - text [ref=1, read_only, multi_line] actions: get_text",
+                + "  - text [ref=1, read_only, multi_line] actions: get_text, !set_text",
                 snapshot(panel));
     }
 

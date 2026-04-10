@@ -42,6 +42,13 @@ class SnapshotNode {
             AccessibleAction.TOGGLE_EXPAND, "toggle_expand"
     );
 
+    // ── Mutation actions that get "!" prefix when unavailable (BR-08) ────────
+
+    private static final Set<String> MUTATION_ACTIONS = Set.of(
+            "click", "toggle_popup", "increment", "decrement",
+            "toggle_expand", "set_text", "set_value", "close"
+    );
+
     // ── States shown in the snapshot ──────────────────────────────────────────
 
     // Note: AccessibleState has no DISABLED constant; disability is the absence of ENABLED.
@@ -406,19 +413,22 @@ class SnapshotNode {
         if (ref > 0) {
             bracketParts.add("ref=" + ref);
         }
+        // Compute enabled/read-only state once for both bracket and action prefixing
+        boolean effectivelyEnabled = SwingUtils.isEffectivelyEnabled(accessible);
+        boolean readOnly = ctx != null && SwingUtils.hasEditableText(accessible)
+                && ctx.getAccessibleStateSet() != null
+                && !ctx.getAccessibleStateSet().contains(AccessibleState.EDITABLE);
+
+        // "disabled" uses isEffectivelyEnabled() — walks the parent chain (BR-08/SC-4)
+        if (!effectivelyEnabled) {
+            bracketParts.add("disabled");
+        }
+        if (readOnly) {
+            bracketParts.add("read_only");
+        }
         if (ctx != null) {
             AccessibleStateSet stateSet = ctx.getAccessibleStateSet();
             if (stateSet != null) {
-                // "disabled" is represented by the ABSENCE of ENABLED (no DISABLED constant)
-                if (!stateSet.contains(AccessibleState.ENABLED)) {
-                    bracketParts.add("disabled");
-                }
-                // "read_only" — text component that has AccessibleEditableText
-                // but lacks the EDITABLE state (e.g. JTextField with setEditable(false))
-                if (SwingUtils.hasEditableText(accessible)
-                        && !stateSet.contains(AccessibleState.EDITABLE)) {
-                    bracketParts.add("read_only");
-                }
                 for (AccessibleState state : DISPLAYED_STATES) {
                     if (stateSet.contains(state)) {
                         bracketParts.add(AccessibleNames.stateName(state));
@@ -430,10 +440,11 @@ class SnapshotNode {
             sb.append(" [").append(String.join(", ", bracketParts)).append(']');
         }
 
-        // Actions
+        // Actions (BR-06) with "!" prefix for unavailable mutations (BR-08)
         List<String> actions = resolveActions();
         if (!actions.isEmpty()) {
-            sb.append(" actions: ").append(String.join(", ", actions));
+            List<String> prefixed = prefixUnavailable(actions, effectivelyEnabled, readOnly);
+            sb.append(" actions: ").append(String.join(", ", prefixed));
         }
 
         sb.append('\n');
@@ -490,9 +501,13 @@ class SnapshotNode {
         }
 
         // Step 4: text
-        // supportsSetText checks both AccessibleEditableText and EDITABLE state,
-        // so read-only text fields fall through to the get_text-only branch.
+        // Read-only text fields (hasEditableText but not EDITABLE) now emit set_text too;
+        // BR-08 will prefix it with "!" since the component is read-only.
         if (SwingUtils.supportsSetText(accessible)) {
+            actions.add("get_text");
+            actions.add("set_text");
+        } else if (SwingUtils.hasEditableText(accessible)) {
+            // Read-only text field: has AccessibleEditableText but lacks EDITABLE state
             actions.add("get_text");
             actions.add("set_text");
         } else if (SwingUtils.supportsGetText(accessible)) {
@@ -526,6 +541,34 @@ class SnapshotNode {
         }
 
         return actions;
+    }
+
+    /**
+     * Prefixes mutation actions with "!" when they would fail validation (BR-08).
+     * A mutation action is unavailable when:
+     * (a) the component is not effectively enabled, or
+     * (b) the action is "set_text" and the component is read-only.
+     */
+    private static List<String> prefixUnavailable(List<String> actions,
+                                                   boolean effectivelyEnabled,
+                                                   boolean readOnly) {
+        if (effectivelyEnabled && !readOnly) {
+            return actions; // fast path: nothing to prefix
+        }
+        List<String> result = new ArrayList<>(actions.size());
+        for (String action : actions) {
+            if (MUTATION_ACTIONS.contains(action)) {
+                // All mutations blocked when disabled; only set_text blocked when read-only
+                if (!effectivelyEnabled || (readOnly && "set_text".equals(action))) {
+                    result.add("!" + action);
+                } else {
+                    result.add(action);
+                }
+            } else {
+                result.add(action);
+            }
+        }
+        return result;
     }
 
     /**
