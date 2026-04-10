@@ -17,7 +17,7 @@
 - The tool returns a compact indented text tree with each node showing role, name, states, and available actions.
   - Nodes that expose at least one `AccessibleAction` also receive a numeric ref.
   - Only include accessibility name and description if those are not blank. Description follows the name in the line format.
-- If `filter_substring` is provided, the rendered output is post-filtered: only lines whose text contains the substring (case-insensitive) are returned. Root separators (`---`) are dropped from filtered output. If no lines match, a short message is returned instead of an empty string.
+- If `filter_substring` is provided, the tool applies **tree filtering** after Phase 4 (render): it walks the rendered tree and includes every node whose rendered line contains the substring (case-insensitive), plus all **ancestors** of matching nodes (for structural context) and all **descendants** of matching nodes (so children like table rows, list items, or combo-box entries are not stripped). Non-matching sibling branches are dropped. The first line of filtered output is a notice: `[filter active: only nodes matching "<filter>" and their ancestors/descendants are shown]`. Root separators (`---`) are dropped from filtered output. If no nodes match, a short message is returned instead of an empty string.
 
 ---
 
@@ -321,7 +321,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 | BR-06 | Action labels displayed in the snapshot are determined by the **Action Label Algorithm** below. Detection methods, Java mechanisms, and MCP tool names are defined in **architecture.md §6**. All action names use lower-case underscore-separated format. |
 | BR-07 | A node receives a ref if it exposes at least one action under the BR-06 algorithm — i.e. any of: `supportsClick()` returns non-null (covers both AccessibleAction and MouseListener fallback), `supportsTogglePopup()`, a known `AccessibleAction` constant, `supportsGetText()`, `supportsSetText()`, `supportsGetValue()`, `supportsSetValue()`, `supportsSelection()`, `supportsClose()`, or the `isLargeDataComponent` truncation gate (step 6b) returns non-null/true. `supportsSelection()` maps to one group label (`single-selection` or `multi-selection`). This supersedes the `AccessibleAction`-only gate in BR-01. Nodes where all actions are `!`-prefixed still receive a ref. |
 | BR-08 | **Unavailable action prefix (`!`).** After the BR-06 algorithm produces the action list, each **mutation action** is checked: if the action would fail validation when invoked, it is prefixed with `!` (e.g. `!click`, `!set_text`). A mutation action is unavailable when: (a) `SwingUtils.isEffectivelyEnabled()` returns `false` (component or an ancestor is disabled), or (b) the action is `set_text` and the component is read-only (has `AccessibleEditableText` but lacks the `EDITABLE` state). **Read-only actions** (`get_text`, `get_value`, `get_selection`, `get_selectable_items`, `get_selectable_items_count`, `get_cell_count`, `get_cells`) are never prefixed — they always succeed. **Selection group labels** (`single-selection`, `multi-selection`) are never prefixed — they are informational labels, not directly invocable actions. The set of mutation actions is: `click`, `toggle_popup`, `increment`, `decrement`, `toggle_expand`, `set_text`, `set_value`, `close`. This set is stored as a constant (`MUTATION_ACTIONS`) in `SnapshotNode`. |
-| BR-09 | **Snapshot filtering (`filter_substring`).** When the optional `filter_substring` parameter is provided, the tool applies a post-processing filter after the four-phase pipeline completes. Each rendered line is tested with a case-insensitive substring match (`String.toLowerCase().contains()`). Only matching lines are included in the output. Root separators (`---`) are excluded from filtered output. The ref map is unaffected — filtering does not change ref assignment. If no lines match, the tool returns the message `No lines matched filter_substring 'X'` (where X is the provided value). The filter operates on the full rendered line (role, name, states, actions — everything). |
+| BR-09 | **Snapshot filtering (`filter_substring`).** When the optional `filter_substring` parameter is provided, the tool applies **tree filtering** after Phase 4 (render). The algorithm walks the rendered tree (split into lines, using indentation depth to reconstruct parent/child relationships) and marks every node whose rendered line contains the substring (case-insensitive `String.toLowerCase().contains()`) as a **match**. The output includes: (a) every matched node, (b) every **ancestor** of a matched node (to preserve structural context / path from root), and (c) every **descendant** of a matched node (so children like table rows, list items, combo-box entries are always shown with their parent). Non-matching sibling branches are dropped entirely. The first line of filtered output is a notice: `[filter active: only nodes matching "<filter>" and their ancestors/descendants are shown]`. Root separators (`---`) are excluded from filtered output. The ref map is unaffected — filtering does not change ref assignment. If no nodes match, the tool returns the message `No lines matched filter_substring 'X'` (where X is the provided value). |
 
 ### Action Label Algorithm (BR-06)
 
@@ -350,6 +350,16 @@ For each node, collect actions by running the following checks in order. All det
 
 > **`JListChild` action note:** `click` is always present on `JListChild` (via `AccessibleAction`) and is always legitimate — a list item can always be clicked. Selection group labels (`single-selection`, `multi-selection`) appear on a `JListChild` only when that child's `getAccessibleSelection()` is non-null, which occurs only in unusual cases where the cell renderer itself contains a selectable component (e.g. a nested `JList`). In that case the selection tools are also legitimate. No special-casing of `JListChild` is needed — the Action Label Algorithm handles it correctly.
 
+### Design notes
+
+**Why tree filtering replaced line-grep filtering (BR-09).**
+The original `filter_substring` implementation was a simple post-render line grep: render the full tree, then return only lines whose text contained the substring. This caused two problems in practice:
+
+1. **AI confusion loop.** The grep returned isolated lines without structural context — the AI could not tell *where* a matched component sat in the hierarchy. This led to repeated `swing_snapshot` calls with different filters, trying to orient itself.
+2. **Missing children.** Filtering on a container (e.g. a JTable, JComboBox, or JList) returned the container's own line but dropped all its children (rows, items, entries). The result was structurally incomplete and misleading — the AI saw a table with no rows.
+
+Tree filtering fixes both problems: ancestors give the AI a path from the root (orientation), and descendants give it the full content of matched containers (completeness). The `[filter active: …]` header line tells the AI that sibling branches were dropped, so it knows to re-snapshot without a filter if a complete tree is needed.
+
 ---
 
 ## Acceptance Criteria
@@ -376,11 +386,14 @@ For each node, collect actions by running the following checks in order. All det
 - [x] An unnamed JPanel with only framework MouseListeners (e.g. ToolTipManager) and no AccessibleAction is pruned normally by TP-5.
 - [x] A component with both AccessibleAction click and a MouseListener shows `click` (Tier 1 takes precedence — no duplication).
 - [x] A component with an interactive role and an application MouseListener but no AccessibleAction click does NOT get a `click` action (Tier 2 skipped for interactive roles).
-- [x] When `filter_substring` is provided, only lines containing the substring (case-insensitive) are returned.
-- [x] When `filter_substring` matches no lines, a descriptive message is returned instead of empty output.
-- [x] Filtering does not affect ref assignment — refs remain the same as in the unfiltered snapshot.
-- [x] Root separators (`---`) are excluded from filtered output.
-- [x] When `filter_substring` is omitted or empty, the full snapshot is returned (no change to existing behavior).
+- [ ] When `filter_substring` is provided, tree filtering is applied: matched nodes, their ancestors, and their descendants are included; non-matching sibling branches are dropped.
+- [ ] The first line of filtered output is `[filter active: only nodes matching "<filter>" and their ancestors/descendants are shown]`.
+- [ ] When `filter_substring` matches no nodes, a descriptive message is returned instead of empty output.
+- [ ] Filtering does not affect ref assignment — refs remain the same as in the unfiltered snapshot.
+- [ ] Root separators (`---`) are excluded from filtered output.
+- [ ] When `filter_substring` is omitted or empty, the full snapshot is returned (no change to existing behavior).
+- [ ] Ancestors of a matched node are included (with their own line) but their non-matching children are omitted.
+- [ ] All descendants of a matched node are included unconditionally.
 - [x] A JTable inside a JScrollPane shows `columns: [Col1, Col2, …]` on the table node line, after the bracket and before `actions:` (SC-6).
 - [x] A JTable NOT inside a JScrollPane (header not visible) does NOT show `columns:` (SC-6).
 - [x] JTable children are rendered as pipe-separated row lines with 0-based index (`- row 0: Val1 | Val2 | Val3`), not individual cell labels (SC-6).
@@ -419,11 +432,14 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [x] Disabled component with only `!`-prefixed actions still receives a ref.
   - [x] When two roots are provided, their trees are separated by a `---` line and refs are numbered globally (not reset between roots).
   - [x] Calling `swing_snapshot` via the MCP client returns a valid text response.
-  - [x] `filter_substring` returns only matching lines (case-insensitive substring match on full rendered line).
-  - [x] `filter_substring` with no matches returns a descriptive message.
-  - [x] `filter_substring` does not affect ref numbering — a filtered component has the same ref as in the unfiltered snapshot.
-  - [x] `filter_substring` drops root separators (`---`) from the output.
-  - [x] Omitting `filter_substring` (or passing empty/null) returns the full unfiltered snapshot.
+  - [ ] `filter_substring` applies tree filtering: matched nodes plus ancestors and descendants are included; non-matching siblings are dropped.
+  - [ ] Filtered output starts with `[filter active: only nodes matching "<filter>" and their ancestors/descendants are shown]`.
+  - [ ] `filter_substring` with no matches returns a descriptive message.
+  - [ ] `filter_substring` does not affect ref numbering — a filtered component has the same ref as in the unfiltered snapshot.
+  - [ ] `filter_substring` drops root separators (`---`) from the output.
+  - [ ] Omitting `filter_substring` (or passing empty/null) returns the full unfiltered snapshot.
+  - [ ] Ancestors of a matched node appear in the output (structural path from root), but their non-matching children are omitted.
+  - [ ] All descendants of a matched node appear unconditionally (e.g. table rows under a matched table).
   - [x] An unnamed JPanel with an application `MouseListener` appears in the snapshot with `click` action and a ref.
   - [x] An unnamed JPanel with only framework `MouseListener`s (e.g. from setting a tooltip) is pruned as usual.
   - [x] A JButton (which has AccessibleAction click) with an additional application `MouseListener` shows `click` once (Tier 1 wins).
