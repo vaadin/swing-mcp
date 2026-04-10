@@ -535,9 +535,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot(panel);
 
-        // The disabled button should still have a ref despite all actions being prefixed
-        assertTrue(output.contains("[ref=1, disabled]"), "disabled button should have ref");
-        assertTrue(output.contains("!click"), "click should be prefixed with !");
+        assertEquals(
+                "- panel\n"
+                + "  - push_button \"Disabled\" [ref=1, disabled] actions: !click",
+                output);
     }
 
     @Test
@@ -1087,10 +1088,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     void unnamedPanelWithAppMouseListener_appearsInSnapshotWithClickAction() throws Exception {
         ClickRecordingPanel panel = new ClickRecordingPanel();
 
-        String output = snapshot(panel);
-
-        assertTrue(output.contains("click"), "Panel with app MouseListener should have click action");
-        assertTrue(output.contains("ref="), "Panel with app MouseListener should receive a ref");
+        assertEquals(
+                "- panel [ref=1] actions: click",
+                snapshot(panel));
     }
 
     @Test
@@ -1100,11 +1100,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         JPanel panel = new JPanel();
         panel.addMouseListener(javax.swing.ToolTipManager.sharedInstance());
 
-        String output = snapshot(panel);
-
-        // The panel is the root (always shown) but should NOT get a click action or ref.
-        assertFalse(output.contains("ref="), "Framework MouseListener should not grant a ref, got:\n" + output);
-        assertFalse(output.contains("actions:"), "Framework MouseListener should not produce any actions, got:\n" + output);
+        assertEquals(
+                "- panel",
+                snapshot(panel));
     }
 
     @Test
@@ -1115,16 +1113,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
             public void mouseClicked(java.awt.event.MouseEvent e) {}
         });
 
-        String output = snapshot(button);
-
-        // Should show "click" exactly once (Tier 1 wins)
-        int clickCount = 0;
-        int idx = 0;
-        while ((idx = output.indexOf("click", idx)) != -1) {
-            clickCount++;
-            idx += 5;
-        }
-        assertEquals(1, clickCount, "Should show 'click' exactly once, got: " + output);
+        // Tier 1 (AccessibleAction) wins — click appears exactly once
+        assertEquals(
+                "- push_button \"OK\" [ref=1] actions: click",
+                snapshot(button));
     }
 
     @Test
@@ -1132,9 +1124,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         ClickRecordingPanel panel = new ClickRecordingPanel();
         panel.setEnabled(false);
 
-        String output = snapshot(panel);
-
-        assertTrue(output.contains("!click"), "Disabled panel with MouseListener should show !click");
+        assertEquals(
+                "- panel [ref=1, disabled] actions: !click",
+                snapshot(panel));
     }
 
     @Test
@@ -1145,11 +1137,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
             public void mouseClicked(java.awt.event.MouseEvent e) {}
         });
 
-        String output = snapshot(slider);
-
-        // Slider has interactive role — Tier 2 skipped. Should have increment/decrement but NOT click.
-        assertFalse(output.contains("click"), "Interactive role should not get Tier 2 click, got: " + output);
-        assertTrue(output.contains("increment"), "Slider should still have increment");
+        // Slider has interactive role — Tier 2 skipped. No click action.
+        assertEquals(
+                "- slider [ref=1, horizontal] actions: increment, decrement, get_value, set_value",
+                snapshot(slider));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

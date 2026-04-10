@@ -360,9 +360,9 @@ For each node, collect actions by running the following checks in order. All det
 - [x] Nested component hierarchies are represented with correct indentation.
 - [x] Non-visible components (`setVisible(false)`) are excluded from the tree, including all descendants.
 - [x] Disabled components (`setEnabled(false)`) are included in the tree; their state reflects that they are disabled. The `disabled` state uses `isEffectivelyEnabled()` (parent-chain walk).
-- [ ] Mutation actions on disabled components are prefixed with `!` (e.g. `!click`). Read-only actions and selection group labels are never prefixed.
-- [ ] A read-only text field shows `!set_text` (not suppressed) alongside `get_text`.
-- [ ] An enabled component inside a disabled parent shows `disabled` state and `!`-prefixed mutation actions.
+- [x] Mutation actions on disabled components are prefixed with `!` (e.g. `!click`). Read-only actions and selection group labels are never prefixed.
+- [x] A read-only text field shows `!set_text` (not suppressed) alongside `get_text`.
+- [x] An enabled component inside a disabled parent shows `disabled` state and `!`-prefixed mutation actions.
 - [x] Framework-internal containers (`root_pane`, `layered_pane`, `viewport`, `filler`) are transparently pruned — their children appear under the parent.
 - [x] Unnamed panels (no accessible name, no accessible description, no titled border) are transparently pruned.
 - [x] Named panels (with accessible name, description, or titled border) are kept in the tree.
@@ -372,15 +372,15 @@ For each node, collect actions by running the following checks in order. All det
 - [x] JTabbedPane shows tab items with the selected tab marked `SELECTED`; only the selected tab's content is included.
 - [x] A JTable/JList/JTree with more than `MAX_DATA_ROW_NODES` rows shows only the first `MAX_DATA_ROW_NODES` rows plus a `... and N more items` summary.
 - [x] Only meaningful accessible states are shown (see **Accessible States — Display Rules**).
-- [ ] An unnamed JPanel with an application MouseListener receives the `click` action and a ref (not pruned by TP-5 — AI-3 safety net applies).
-- [ ] An unnamed JPanel with only framework MouseListeners (e.g. ToolTipManager) and no AccessibleAction is pruned normally by TP-5.
-- [ ] A component with both AccessibleAction click and a MouseListener shows `click` (Tier 1 takes precedence — no duplication).
-- [ ] A component with an interactive role and an application MouseListener but no AccessibleAction click does NOT get a `click` action (Tier 2 skipped for interactive roles).
-- [ ] When `filter_substring` is provided, only lines containing the substring (case-insensitive) are returned.
-- [ ] When `filter_substring` matches no lines, a descriptive message is returned instead of empty output.
-- [ ] Filtering does not affect ref assignment — refs remain the same as in the unfiltered snapshot.
-- [ ] Root separators (`---`) are excluded from filtered output.
-- [ ] When `filter_substring` is omitted or empty, the full snapshot is returned (no change to existing behavior).
+- [x] An unnamed JPanel with an application MouseListener receives the `click` action and a ref (not pruned by TP-5 — AI-3 safety net applies).
+- [x] An unnamed JPanel with only framework MouseListeners (e.g. ToolTipManager) and no AccessibleAction is pruned normally by TP-5.
+- [x] A component with both AccessibleAction click and a MouseListener shows `click` (Tier 1 takes precedence — no duplication).
+- [x] A component with an interactive role and an application MouseListener but no AccessibleAction click does NOT get a `click` action (Tier 2 skipped for interactive roles).
+- [x] When `filter_substring` is provided, only lines containing the substring (case-insensitive) are returned.
+- [x] When `filter_substring` matches no lines, a descriptive message is returned instead of empty output.
+- [x] Filtering does not affect ref assignment — refs remain the same as in the unfiltered snapshot.
+- [x] Root separators (`---`) are excluded from filtered output.
+- [x] When `filter_substring` is omitted or empty, the full snapshot is returned (no change to existing behavior).
 - [x] A JTable inside a JScrollPane shows `columns: [Col1, Col2, …]` on the table node line, after the bracket and before `actions:` (SC-6).
 - [x] A JTable NOT inside a JScrollPane (header not visible) does NOT show `columns:` (SC-6).
 - [x] JTable children are rendered as pipe-separated row lines with 0-based index (`- row 0: Val1 | Val2 | Val3`), not individual cell labels (SC-6).
@@ -412,23 +412,23 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [x] JTabbedPane shows tab items; selected tab has `SELECTED` state; non-selected tab content is not included.
   - [x] Only meaningful states are shown (e.g., `disabled` appears, `visible`/`enabled` do not).
   - [x] Disabled components appear in the tree with `disabled` state.
-  - [ ] Disabled button shows `!click` (mutation action prefixed with `!`).
-  - [ ] Disabled slider shows `!increment`, `!decrement`, `get_value`, `!set_value` (read-only actions unprefixed).
-  - [ ] Read-only text field shows `get_text, !set_text`.
-  - [ ] Enabled button inside a disabled panel shows `disabled` state and `!click`.
-  - [ ] Disabled component with only `!`-prefixed actions still receives a ref.
+  - [x] Disabled button shows `!click` (mutation action prefixed with `!`).
+  - [x] Disabled slider shows `!increment`, `!decrement`, `get_value`, `!set_value` (read-only actions unprefixed).
+  - [x] Read-only text field shows `get_text, !set_text`.
+  - [x] Enabled button inside a disabled panel shows `disabled` state and `!click`.
+  - [x] Disabled component with only `!`-prefixed actions still receives a ref.
   - [x] When two roots are provided, their trees are separated by a `---` line and refs are numbered globally (not reset between roots).
   - [x] Calling `swing_snapshot` via the MCP client returns a valid text response.
-  - [ ] `filter_substring` returns only matching lines (case-insensitive substring match on full rendered line).
-  - [ ] `filter_substring` with no matches returns a descriptive message.
-  - [ ] `filter_substring` does not affect ref numbering — a filtered component has the same ref as in the unfiltered snapshot.
-  - [ ] `filter_substring` drops root separators (`---`) from the output.
-  - [ ] Omitting `filter_substring` (or passing empty/null) returns the full unfiltered snapshot.
-  - [ ] An unnamed JPanel with an application `MouseListener` appears in the snapshot with `click` action and a ref.
-  - [ ] An unnamed JPanel with only framework `MouseListener`s (e.g. from setting a tooltip) is pruned as usual.
-  - [ ] A JButton (which has AccessibleAction click) with an additional application `MouseListener` shows `click` once (Tier 1 wins).
-  - [ ] A disabled component with an application `MouseListener` shows `!click` (mutation action prefix applies).
-  - [ ] A component with an interactive role (e.g. `JSlider`) and an application `MouseListener` but no AccessibleAction click does NOT get a `click` action from Tier 2 (interactive role exclusion).
+  - [x] `filter_substring` returns only matching lines (case-insensitive substring match on full rendered line).
+  - [x] `filter_substring` with no matches returns a descriptive message.
+  - [x] `filter_substring` does not affect ref numbering — a filtered component has the same ref as in the unfiltered snapshot.
+  - [x] `filter_substring` drops root separators (`---`) from the output.
+  - [x] Omitting `filter_substring` (or passing empty/null) returns the full unfiltered snapshot.
+  - [x] An unnamed JPanel with an application `MouseListener` appears in the snapshot with `click` action and a ref.
+  - [x] An unnamed JPanel with only framework `MouseListener`s (e.g. from setting a tooltip) is pruned as usual.
+  - [x] A JButton (which has AccessibleAction click) with an additional application `MouseListener` shows `click` once (Tier 1 wins).
+  - [x] A disabled component with an application `MouseListener` shows `!click` (mutation action prefix applies).
+  - [x] A component with an interactive role (e.g. `JSlider`) and an application `MouseListener` but no AccessibleAction click does NOT get a `click` action from Tier 2 (interactive role exclusion).
   - [x] A JTable inside a JScrollPane shows `columns: [Col1, Col2]` on the table node line, after the bracket and before `actions:` (SC-6).
   - [x] A JTable NOT inside a JScrollPane does NOT show `columns:` on the table node line (SC-6).
   - [x] JTable children are rendered as pipe-separated row lines with 0-based index, not individual cell labels (SC-6).
