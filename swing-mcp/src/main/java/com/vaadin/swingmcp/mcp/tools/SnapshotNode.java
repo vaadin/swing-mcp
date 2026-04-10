@@ -222,8 +222,8 @@ class SnapshotNode {
 
         // ── Stage 1: hard exclusions ──────────────────────────────────────────
 
-        // HE-1: non-visible component
-        if (accessible instanceof Component && !((Component) accessible).isVisible()) {
+        // HE-1: non-visible component (invisible or zero-size)
+        if (!SwingUtils.isVisible(accessible)) {
             return PruneResult.DROP;
         }
 

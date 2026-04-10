@@ -411,6 +411,27 @@ public final class SwingUtils {
     }
 
     /**
+     * Returns {@code true} if the given accessible is effectively visible:
+     * it must be a {@link Component} that is {@linkplain Component#isVisible() visible}
+     * and has both width &gt; 0 and height &gt; 0.
+     * Non-{@code Component} accessibles are considered visible.
+     *
+     * @param accessible the accessible to check
+     * @return {@code true} if effectively visible
+     */
+    public static boolean isVisible(Accessible accessible) {
+        if (accessible instanceof Component) {
+            Component c = (Component) accessible;
+            if (!c.isVisible()) return false;
+            // A showing component with zero width or height is effectively invisible.
+            // We only check size when isShowing() is true, because unrealized
+            // components (e.g. in unit tests) legitimately have zero size.
+            if (c.isShowing() && (c.getWidth() <= 0 || c.getHeight() <= 0)) return false;
+        }
+        return true;
+    }
+
+    /**
      * Returns the topmost visible modal dialog, or {@code null} if no modal
      * dialog is currently visible.
      * <p>

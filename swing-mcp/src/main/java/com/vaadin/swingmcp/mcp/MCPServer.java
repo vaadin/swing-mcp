@@ -266,7 +266,7 @@ public class MCPServer {
 
         List<Component> visible = new ArrayList<>();
         for (Window w : windows) {
-            if (w.isVisible()) {
+            if (SwingUtils.isVisible(w)) {
                 visible.add(w);
             }
         }
