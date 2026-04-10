@@ -17,7 +17,7 @@
 - The tool returns a JSON object containing `totalCount` (total number of selectable items) and `items` (array of objects, each with `index` and `name`).
 - I use the `index` values from the response to call `swing_set_selection` or to understand what the component contains.
 
-**Tool description:** "List selectable items of a UI component by ref. Returns a paged JSON array of items (0-based index + name). Indices are in the selection item index space — pass them directly to swing_set_selection. For JTable, index is the row index and name is a comma-separated summary of cell values. Requires offset and length parameters for paging. If offset+length is bigger than the amount of data available, fewer items than requested may be returned. Requires a ref obtained from swing_snapshot or swing_get_cells."
+**Tool description:** "List selectable items of a UI component by ref. Returns a paged JSON array of items (0-based index + name). Indices are in the selection item index space — pass them directly to swing_set_selection. For JTable, index is the row index and name is a pipe-separated summary of cell values. Requires offset and length parameters for paging. If offset+length is bigger than the amount of data available, fewer items than requested may be returned. Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 
@@ -51,7 +51,7 @@ Execution order:
       - `totalCount = ac.getAccessibleTable().getAccessibleRowCount()`.
       - For each row `r` in `[offset, min(offset + length, totalCount))`:
         - Build `name` via `buildTableRowText(at, r, cols)`.
-        - Add `{"index": r, "name": "Alice, 30, NY"}`.
+        - Add `{"index": r, "name": "Alice | 30 | NY"}`.
 
    b. **If the target is a `JComboBox`** (BR-10):
       - `totalCount = ((JComboBox<?>) accessible).getItemCount()`.

@@ -40,7 +40,7 @@ public class SwingGetSelectionTool extends AbstractSwingTool {
     public String getDescription() {
         return "Read the current selection of a UI component by ref. Returns JSON with "
                 + "selectedCount and selected items (0-based index + name). For JTable, index "
-                + "is the row index (not cell index) and name is a comma-separated summary of "
+                + "is the row index (not cell index) and name is a pipe-separated summary of "
                 + "cell values. Requires a ref obtained from swing_snapshot or swing_get_cells.";
     }
 
