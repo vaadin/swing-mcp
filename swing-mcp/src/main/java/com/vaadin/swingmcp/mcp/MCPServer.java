@@ -2,9 +2,6 @@ package com.vaadin.swingmcp.mcp;
 
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.TinyMCPServer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import javax.swing.SwingUtilities;
 import com.vaadin.swingmcp.mcp.tools.AbstractSwingTool;
 import com.vaadin.swingmcp.mcp.tools.Parameters;
@@ -23,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Logger;
 
 /**
  * MCP server providing Swing-specific tools for UI inspection and interaction.
@@ -35,7 +33,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class MCPServer {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MCPServer.class);
+    private static final Logger LOG = Logger.getLogger(MCPServer.class.getName());
 
     private static final String SERVER_NAME = "Swing MCP";
     private static final String SERVER_VERSION = "0.0.1";

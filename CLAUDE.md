@@ -12,9 +12,8 @@ to an existing Swing app, it must have as few runtime dependencies
 as possible, to avoid transitive dependency version clashes.
 Do not introduce new runtime dependencies without asking.
 On the other hand, we can use any number of testing dependencies.
-We use slf4j for logging since that's the overwhelming default
-for all apps and the dependency is tiny. We may replace that
-in the future by Java built-in logging, but that remains to be seen.
+We use `java.util.logging` (JUL) for logging — it's built into the JDK,
+so it adds zero runtime dependencies.
 
 `libs.version.toml` and `build.gradle.kts`/`settings.gradle.kts`
 are the source of truth for dependencies and versions.

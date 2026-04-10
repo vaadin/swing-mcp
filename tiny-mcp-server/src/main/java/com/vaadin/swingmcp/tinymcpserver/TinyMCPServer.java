@@ -2,9 +2,6 @@ package com.vaadin.swingmcp.tinymcpserver;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -19,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A minimal in-process MCP server using Java's built-in HttpServer.
@@ -26,7 +25,7 @@ import java.util.concurrent.Executors;
  */
 public class TinyMCPServer {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TinyMCPServer.class);
+    private static final Logger LOG = Logger.getLogger(TinyMCPServer.class.getName());
 
     public static final int DEFAULT_PORT = 18088;
     public static final String DEFAULT_CONTEXT_PATH = "/mcp";
@@ -209,18 +208,18 @@ public class TinyMCPServer {
                     break;
             }
         } catch (Exception e) {
-            LOG.error("Error handling request", e);
+            LOG.log(Level.SEVERE, "Error handling request", e);
             try {
                 sendPlainResponse(exchange, 500, "Internal Server Error");
             } catch (IOException ioe) {
-                LOG.error("Failed to send error response", ioe);
+                LOG.log(Level.SEVERE, "Failed to send error response", ioe);
             }
         }
     }
 
     private void handlePost(HttpExchange exchange) throws IOException {
         String body = readBody(exchange);
-        LOG.debug("Received POST: {}", body);
+        LOG.fine("Received POST: " + body);
 
         MCPProtocol.JsonRpcRequest request = MCPProtocol.fromJson(body, MCPProtocol.JsonRpcRequest.class);
         String rpcMethod = request.getMethod();
@@ -260,7 +259,7 @@ public class TinyMCPServer {
     private void handleInitialize(HttpExchange exchange, MCPProtocol.JsonRpcRequest request) throws IOException {
         synchronized (this) {
             if (activeSessionId != null) {
-                LOG.warn("Rejecting initialization: another session is already active (id={})", activeSessionId);
+                LOG.warning("Rejecting initialization: another session is already active (id=" + activeSessionId + ")");
                 sendPlainResponse(exchange, 409, "Another session is already active");
                 return;
             }
@@ -320,7 +319,7 @@ public class TinyMCPServer {
         // Warn about unknown parameters
         for (String key : rawArgs.keySet()) {
             if (!properties.containsKey(key)) {
-                LOG.warn("Unknown parameter '{}' for tool '{}', ignoring", key, toolName);
+                LOG.warning("Unknown parameter '" + key + "' for tool '" + toolName + "', ignoring");
             }
         }
 
@@ -382,16 +381,16 @@ public class TinyMCPServer {
             }
             sendJsonRpcResponse(exchange, request.getId(), result);
         } catch (MCPErrorResponseException e) {
-            LOG.debug("Tool '{}' returned error response: {}", toolName, e.getMessage());
+            LOG.fine("Tool '" + toolName + "' returned error response: " + e.getMessage());
             MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
             result.setIsError(true);
             result.setContent(Collections.singletonList(MCPProtocol.Content.text(e.getMessage())));
             sendJsonRpcResponse(exchange, request.getId(), result);
         } catch (MCPServerException e) {
-            LOG.debug("Tool '{}' threw MCPServerException (code={})", toolName, e.getCode(), e);
+            LOG.log(Level.FINE, "Tool '" + toolName + "' threw MCPServerException (code=" + e.getCode() + ")", e);
             sendJsonRpcError(exchange, request.getId(), e.getCode(), e.getMessage());
         } catch (Exception e) {
-            LOG.warn("Tool '{}' threw an exception", toolName, e);
+            LOG.log(Level.WARNING, "Tool '" + toolName + "' threw an exception", e);
             MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
             result.setIsError(true);
             result.setContent(Collections.singletonList(MCPProtocol.Content.text(e.toString())));
@@ -414,7 +413,7 @@ public class TinyMCPServer {
     private void handleDelete(HttpExchange exchange) throws IOException {
         synchronized (this) {
             if (activeSessionId != null) {
-                LOG.info("Session terminated: {}", activeSessionId);
+                LOG.info("Session terminated: " + activeSessionId);
                 activeSessionId = null;
             }
         }

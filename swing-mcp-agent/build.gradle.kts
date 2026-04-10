@@ -5,9 +5,7 @@ plugins {
 
 dependencies {
     implementation(project(":swing-mcp"))
-    implementation(libs.slf4j.api)
 
-    testImplementation(libs.slf4j.simple)
     testImplementation(libs.junit)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

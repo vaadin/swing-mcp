@@ -1,10 +1,10 @@
 package com.vaadin.swingmcp.agent;
 
 import com.vaadin.swingmcp.mcp.MCPServer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.lang.instrument.Instrumentation;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Java Instrumentation Agent that starts the Swing MCP server.
@@ -16,7 +16,7 @@ import java.lang.instrument.Instrumentation;
  */
 public final class Agent {
 
-    private static final Logger LOG = LoggerFactory.getLogger(Agent.class);
+    private static final Logger LOG = Logger.getLogger(Agent.class.getName());
 
     private Agent() {
     }
@@ -31,7 +31,7 @@ public final class Agent {
                 server.startAndAutoStop();
                 LOG.info("Swing MCP agent started");
             } catch (Exception e) {
-                LOG.error("Failed to start Swing MCP agent", e);
+                LOG.log(Level.SEVERE, "Failed to start Swing MCP agent", e);
             }
         }, "swing-mcp-agent-starter");
         starter.setDaemon(true);

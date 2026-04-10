@@ -5,7 +5,6 @@ plugins {
 
 dependencies {
     implementation(project(":swing-mcp"))
-    implementation(libs.slf4j.simple)
 
     testImplementation(libs.mcp.client)
     testImplementation(libs.mcp.json.jackson3)
