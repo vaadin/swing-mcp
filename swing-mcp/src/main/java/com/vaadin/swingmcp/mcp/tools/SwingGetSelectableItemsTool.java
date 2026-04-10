@@ -22,7 +22,7 @@ import java.util.Map;
  *
  * <p>Returns a JSON object with {@code totalCount} and {@code items} (array of
  * objects, each with {@code index} and {@code name}). For JTable, index is the
- * row index and name is a comma-separated summary of cell values. For
+ * row index and name is a pipe-separated summary of cell values. For
  * JTabbedPane, disabled tabs include {@code "enabled": false}.</p>
  *
  * @see <a href="use-case-017-swing-get-selectable-items.md">UC-017</a>
@@ -39,7 +39,7 @@ public class SwingGetSelectableItemsTool extends AbstractSwingTool {
         return "List selectable items of a UI component by ref. Returns a paged JSON array "
                 + "of items (0-based index + name). Indices are in the selection item index "
                 + "space \u2014 pass them directly to swing_set_selection. For JTable, index is "
-                + "the row index and name is a comma-separated summary of cell values. Requires "
+                + "the row index and name is a pipe-separated summary of cell values. Requires "
                 + "offset and length parameters for paging. If offset+length is bigger than the "
                 + "amount of data available, fewer items than requested may be returned. "
                 + "Requires a ref obtained from swing_snapshot or swing_get_cells.";
@@ -93,7 +93,7 @@ public class SwingGetSelectableItemsTool extends AbstractSwingTool {
             for (int r = start; r < end; r++) {
                 Map<String, Object> item = new LinkedHashMap<>();
                 item.put("index", r);
-                item.put("name", SwingUtils.buildRowName(at, r, cols));
+                item.put("name", SwingUtils.buildTableRowText(at, r, cols));
                 items.add(item);
             }
         } else if (accessible instanceof JComboBox) {

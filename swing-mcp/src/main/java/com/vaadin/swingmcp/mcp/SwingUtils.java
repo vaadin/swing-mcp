@@ -510,33 +510,6 @@ public final class SwingUtils {
     }
 
     /**
-     * Builds a comma-separated name for a JTable row by concatenating cell
-     * accessible names for the first {@link #MAX_ROW_NAME_COLUMNS} columns.
-     * <p>
-     * Null cells or null cell names produce the literal string {@code "null"}.
-     *
-     * @param at   the accessible table
-     * @param row  the 0-based row index
-     * @param cols the total number of columns in the table
-     * @return a comma-separated summary of cell values (e.g. {@code "Alice, 30, NY"})
-     */
-    public static String buildRowName(AccessibleTable at, int row, int cols) {
-        int colLimit = Math.min(cols, MAX_ROW_NAME_COLUMNS);
-        StringBuilder sb = new StringBuilder();
-        for (int col = 0; col < colLimit; col++) {
-            if (col > 0) sb.append(", ");
-            Accessible cell = at.getAccessibleAt(row, col);
-            if (cell == null) {
-                sb.append("null");
-            } else {
-                String cellName = cell.getAccessibleContext().getAccessibleName();
-                sb.append(cellName != null ? cellName : "null");
-            }
-        }
-        return sb.toString();
-    }
-
-    /**
      * Serializes a {@link Number} for AI-readable output: returns a {@code long}
      * when the value is a whole number, otherwise a {@code double}.
      *

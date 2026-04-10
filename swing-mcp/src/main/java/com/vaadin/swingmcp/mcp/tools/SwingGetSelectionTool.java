@@ -22,7 +22,7 @@ import java.util.Set;
  *
  * <p>Returns JSON with {@code selectedCount} and {@code selected} items
  * (0-based index + name). For JTable, index is the row index and name is a
- * comma-separated summary of cell values.</p>
+ * pipe-separated summary of cell values.</p>
  *
  * @see <a href="use-case-014-swing-get-selection.md">UC-014</a>
  */
@@ -89,7 +89,7 @@ public class SwingGetSelectionTool extends AbstractSwingTool {
             int count = 0;
             for (int row : rows) {
                 if (count >= MAX_SELECTION_ITEMS) break;
-                String name = SwingUtils.buildRowName(at, row, cols);
+                String name = SwingUtils.buildTableRowText(at, row, cols);
                 Map<String, Object> item = new LinkedHashMap<>();
                 item.put("index", row);
                 item.put("name", name);

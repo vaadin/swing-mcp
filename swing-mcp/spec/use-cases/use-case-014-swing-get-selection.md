@@ -16,7 +16,7 @@
 - The tool looks up the component by ref and reads its selection via the accessibility API (`AccessibleSelection`).
 - The tool returns a JSON object containing `selectedCount` (integer) and `selected` (array of objects, each with `index` and `name`).
 
-**Tool description:** "Read the current selection of a UI component by ref. Returns JSON with selectedCount and selected items (0-based index + name). For JTable, index is the row index (not cell index) and name is a comma-separated summary of cell values. Requires a ref obtained from swing_snapshot or swing_get_cells."
+**Tool description:** "Read the current selection of a UI component by ref. Returns JSON with selectedCount and selected items (0-based index + name). For JTable, index is the row index (not cell index) and name is a pipe-separated summary of cell values. Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 
@@ -56,8 +56,8 @@ Execution order:
    b. Read `int selCount = as.getAccessibleSelectionCount()`.
    c. Iterate `i` in `[0, selCount)`: get `Accessible cell = as.getAccessibleSelection(i)`, compute `cellIndex = cell.getAccessibleContext().getAccessibleIndexInParent()`, then `row = cellIndex / cols`. Collect unique rows (insertion-ordered set).
    d. Cap at `MAX_SELECTION_ITEMS` rows. If more, set `truncated = true`.
-   e. For each unique row, build `name` by concatenating cell names from `at.getAccessibleAt(row, col)` for `col` in `[0, min(cols, MAX_ROW_NAME_COLUMNS))`, separated by `", "`. Use literal `"null"` for null cells/names.
-   f. Each entry: `{"index": row, "name": "Alice, 30, NY"}`. Here `index` is the **row index** (not the cell index), because `swing_set_selection` for JTable will need to translate rows back to cell indices internally.
+   e. For each unique row, build `name` via `SwingUtils.buildTableRowText(at, row, cols)` — pipe-separated cell names (e.g. `"Alice | 30 | NY"`). Use literal `"null"` for null cells/names.
+   f. Each entry: `{"index": row, "name": "Alice | 30 | NY"}`. Here `index` is the **row index** (not the cell index), because `swing_set_selection` for JTable will need to translate rows back to cell indices internally.
    g. `selectedCount` = number of unique rows.
 5. **Otherwise** — use the **generic path**:
    a. Read `int selCount = as.getAccessibleSelectionCount()`.
@@ -120,7 +120,7 @@ Verified empirically on Java 21 OpenJDK in headless mode (`AccessibleSelectionPr
 - [x] Calling `swing_get_selection` with a valid ref for a `JList` with multiple items selected returns all selected items.
 - [x] Calling `swing_get_selection` with a valid ref for a `JTabbedPane` returns the currently selected tab index and name.
 - [x] Calling `swing_get_selection` with a valid ref for a `JComboBox` returns the currently selected item index and name.
-- [x] Calling `swing_get_selection` with a valid ref for a `JTable` (row-selection mode) with a row selected returns row-level selection (aggregated from cells, with comma-separated cell values as name).
+- [x] Calling `swing_get_selection` with a valid ref for a `JTable` (row-selection mode) with a row selected returns row-level selection (aggregated from cells, with pipe-separated cell values as name).
 - [x] Calling `swing_get_selection` with a valid ref for a `JTable` (row-selection mode) with multiple rows selected returns all selected rows.
 - [x] Calling `swing_get_selection` on a `JTable` in column-selection mode returns an MCP error (unsupported).
 - [x] Calling `swing_get_selection` on a `JTable` in cell-selection mode returns an MCP error (unsupported).
@@ -153,7 +153,7 @@ Verified empirically on Java 21 OpenJDK in headless mode (`AccessibleSelectionPr
   - [x] Reading a `JTabbedPane` returns the selected tab's index and title.
   - [x] Reading a `JComboBox` returns the selected item's index and name.
   - [x] Reading an empty `JComboBox` (`new JComboBox<>()`) returns `selectedCount: 0` and an empty array (or handles gracefully if `getAccessibleSelection(0)` returns null).
-  - [x] Reading a `JTable` (row-selection mode) with a single row selected returns `selectedCount: 1` with row index and comma-separated cell values as name.
+  - [x] Reading a `JTable` (row-selection mode) with a single row selected returns `selectedCount: 1` with row index and pipe-separated cell values as name.
   - [x] Reading a `JTable` (row-selection mode) with multiple rows selected returns all rows.
   - [x] Reading a `JTable` in column-selection mode returns an MCP error.
   - [x] Reading a `JTable` in cell-selection mode returns an MCP error.

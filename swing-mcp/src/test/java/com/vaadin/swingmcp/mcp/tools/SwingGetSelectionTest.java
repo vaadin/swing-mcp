@@ -130,7 +130,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         snapshot(table);
         String json = getSelection(context.getRefOf(table));
         assertEquals(
-                "{\"selectedCount\":1,\"selected\":[{\"index\":1,\"name\":\"Bob, 25\"}]}",
+                "{\"selectedCount\":1,\"selected\":[{\"index\":1,\"name\":\"Bob | 25\"}]}",
                 json);
     }
 
@@ -146,8 +146,8 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         String json = getSelection(context.getRefOf(table));
         assertEquals(
                 "{\"selectedCount\":2,\"selected\":["
-                        + "{\"index\":0,\"name\":\"Alice, 30\"},"
-                        + "{\"index\":2,\"name\":\"Carol, 35\"}"
+                        + "{\"index\":0,\"name\":\"Alice | 30\"},"
+                        + "{\"index\":2,\"name\":\"Carol | 35\"}"
                         + "]}",
                 json);
     }
@@ -401,7 +401,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         snapshot(table);
         String json = getSelection(context.getRefOf(table));
         assertTrue(json.contains("\"selectedCount\":1"));
-        assertTrue(json.contains("\"name\":\"A, 1\""));
+        assertTrue(json.contains("\"name\":\"A | 1\""));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

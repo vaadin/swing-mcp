@@ -116,8 +116,8 @@ class SwingGetSelectableItemsScreenTest extends AbstractScreenTest {
         snapshot(frame);
         String json = getItems(context.getRefOf(table), 0, 2);
         assertEquals("{\"totalCount\":2,\"items\":["
-                + "{\"index\":0,\"name\":\"Alice, 30\"},"
-                + "{\"index\":1,\"name\":\"Bob, 25\"}"
+                + "{\"index\":0,\"name\":\"Alice | 30\"},"
+                + "{\"index\":1,\"name\":\"Bob | 25\"}"
                 + "]}", json);
     }
 

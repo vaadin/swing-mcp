@@ -198,9 +198,9 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
         snapshot(table);
         String json = getItems(context.getRefOf(table), 0, 3);
         assertEquals("{\"totalCount\":3,\"items\":["
-                + "{\"index\":0,\"name\":\"Alice, 30\"},"
-                + "{\"index\":1,\"name\":\"Bob, 25\"},"
-                + "{\"index\":2,\"name\":\"Carol, 35\"}"
+                + "{\"index\":0,\"name\":\"Alice | 30\"},"
+                + "{\"index\":1,\"name\":\"Bob | 25\"},"
+                + "{\"index\":2,\"name\":\"Carol | 35\"}"
                 + "]}", json);
     }
 
@@ -214,8 +214,8 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
         snapshot(table);
         String json = getItems(context.getRefOf(table), 10, 5);
         assertTrue(json.startsWith("{\"totalCount\":100,\"items\":["));
-        assertTrue(json.contains("{\"index\":10,\"name\":\"Name-10, 10\"}"));
-        assertTrue(json.contains("{\"index\":14,\"name\":\"Name-14, 14\"}"));
+        assertTrue(json.contains("{\"index\":10,\"name\":\"Name-10 | 10\"}"));
+        assertTrue(json.contains("{\"index\":14,\"name\":\"Name-14 | 14\"}"));
         assertFalse(json.contains("\"index\":15"));
     }
 
@@ -444,7 +444,7 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
         snapshot(table);
         String json = getItems(context.getRefOf(table), 0, 2);
         assertTrue(json.contains("\"totalCount\":2"));
-        assertTrue(json.contains("\"name\":\"A, 1\""));
+        assertTrue(json.contains("\"name\":\"A | 1\""));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

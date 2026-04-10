@@ -3,15 +3,13 @@ package com.vaadin.swingmcp.mcp;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import javax.accessibility.AccessibleTable;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Headless tests for {@link SwingUtils#getSelectableItemsCount} and
- * {@link SwingUtils#buildRowName}.
+ * Headless tests for {@link SwingUtils#getSelectableItemsCount}.
  */
 class SwingUtilsSelectableItemsTest {
 
@@ -89,65 +87,4 @@ class SwingUtilsSelectableItemsTest {
         assertEquals(200, SwingUtils.getSelectableItemsCount(table));
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // buildRowName
-    // ══════════════════════════════════════════════════════════════════════════
-
-    @Test
-    void buildRowName_singleColumn() {
-        JTable table = new JTable(new DefaultTableModel(
-                new Object[][]{{"Alice"}}, new Object[]{"Name"}));
-        AccessibleTable at = table.getAccessibleContext().getAccessibleTable();
-        assertEquals("Alice", SwingUtils.buildRowName(at, 0, 1));
-    }
-
-    @Test
-    void buildRowName_multipleColumns() {
-        JTable table = new JTable(new DefaultTableModel(
-                new Object[][]{{"Alice", "30", "NY"}},
-                new Object[]{"Name", "Age", "City"}));
-        AccessibleTable at = table.getAccessibleContext().getAccessibleTable();
-        assertEquals("Alice, 30, NY", SwingUtils.buildRowName(at, 0, 3));
-    }
-
-    @Test
-    void buildRowName_nullCellValue() {
-        JTable table = new JTable(new DefaultTableModel(
-                new Object[][]{{"Alice", null, "NY"}},
-                new Object[]{"Name", "Age", "City"}));
-        AccessibleTable at = table.getAccessibleContext().getAccessibleTable();
-        assertEquals("Alice, null, NY", SwingUtils.buildRowName(at, 0, 3));
-    }
-
-    @Test
-    void buildRowName_truncatedToMaxColumns() {
-        // Create a table with more than MAX_ROW_NAME_COLUMNS columns
-        int cols = SwingUtils.MAX_ROW_NAME_COLUMNS + 5;
-        Object[] headers = new Object[cols];
-        Object[] row = new Object[cols];
-        for (int i = 0; i < cols; i++) {
-            headers[i] = "col" + i;
-            row[i] = "v" + i;
-        }
-        JTable table = new JTable(new DefaultTableModel(
-                new Object[][]{row}, headers));
-        AccessibleTable at = table.getAccessibleContext().getAccessibleTable();
-
-        String name = SwingUtils.buildRowName(at, 0, cols);
-        // Should only include the first MAX_ROW_NAME_COLUMNS values
-        String[] parts = name.split(", ");
-        assertEquals(SwingUtils.MAX_ROW_NAME_COLUMNS, parts.length);
-        assertEquals("v0", parts[0]);
-        assertEquals("v" + (SwingUtils.MAX_ROW_NAME_COLUMNS - 1), parts[parts.length - 1]);
-    }
-
-    @Test
-    void buildRowName_multipleRows_correctRowSelected() {
-        JTable table = new JTable(new DefaultTableModel(
-                new Object[][]{{"Alice", "30"}, {"Bob", "25"}},
-                new Object[]{"Name", "Age"}));
-        AccessibleTable at = table.getAccessibleContext().getAccessibleTable();
-        assertEquals("Alice, 30", SwingUtils.buildRowName(at, 0, 2));
-        assertEquals("Bob, 25", SwingUtils.buildRowName(at, 1, 2));
-    }
 }

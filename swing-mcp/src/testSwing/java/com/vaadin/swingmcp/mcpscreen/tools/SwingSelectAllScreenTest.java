@@ -123,9 +123,9 @@ class SwingSelectAllScreenTest extends AbstractScreenTest {
         String json = getSelection(context.getRefOf(table));
         assertEquals(
                 "{\"selectedCount\":3,\"selected\":["
-                        + "{\"index\":0,\"name\":\"Alice, 30\"},"
-                        + "{\"index\":1,\"name\":\"Bob, 25\"},"
-                        + "{\"index\":2,\"name\":\"Carol, 35\"}"
+                        + "{\"index\":0,\"name\":\"Alice | 30\"},"
+                        + "{\"index\":1,\"name\":\"Bob | 25\"},"
+                        + "{\"index\":2,\"name\":\"Carol | 35\"}"
                         + "]}",
                 json);
     }

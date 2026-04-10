@@ -33,7 +33,7 @@
 | BR-06 | No enabled check is performed — listing selectable items is always allowed, even on disabled components. |
 | BR-07 | If `offset` is greater than or equal to `totalCount`, the `items` array is empty (not an error). This allows the AI to detect end-of-list. |
 | BR-08 | The `items` array contains objects with `index` (integer — the 0-based item index in the selection item index space, suitable for passing directly to `swing_set_selection` / `addAccessibleSelection()`) and `name` (string or `null` — the accessible name of the item). |
-| BR-09 | **JTable row enumeration.** When the target is a `JTable` in row-selection mode, items are **rows**, not cells. `totalCount` is the number of rows (`AccessibleTable.getAccessibleRowCount()`). Each item's `index` is the row index (0-based). Each item's `name` is built by concatenating cell accessible names for the first `MAX_ROW_NAME_COLUMNS` (10) columns, separated by `", "` — same logic as UC-014 BR-11's `buildRowName()`. `offset` and `length` refer to row indices. |
+| BR-09 | **JTable row enumeration.** When the target is a `JTable` in row-selection mode, items are **rows**, not cells. `totalCount` is the number of rows (`AccessibleTable.getAccessibleRowCount()`). Each item's `index` is the row index (0-based). Each item's `name` is built via `SwingUtils.buildTableRowText()` — pipe-separated cell accessible names for the first `MAX_ROW_NAME_COLUMNS` (10) columns (e.g. `"Alice \| 30 \| NY"`). `offset` and `length` refer to row indices. |
 | BR-10 | **JComboBox item enumeration.** The item count is determined via `((JComboBox<?>) accessible).getItemCount()`, not `getAccessibleChildrenCount()` (which returns 1 — the popup menu). Items are enumerated via the combo box's internal `AccessibleSelection` API: `ac.getAccessibleChild(0)` returns the popup menu; its `getAccessibleChildrenCount()` returns the true item count; `getAccessibleChild(i)` on the popup returns the i-th item. Alternatively, iterate `addAccessibleSelection(i)` / read / `clearAccessibleSelection()` — but this is a mutation and is undesirable for a read-only tool. **Preferred approach:** use `JComboBox.getItemAt(i).toString()` for the name and `i` for the index, since the item index space is simply `[0, itemCount)`. |
 | BR-11 | **Generic enumeration (JList, JTabbedPane).** For these components, `totalCount` is `ac.getAccessibleChildrenCount()`. Each item is obtained via `ac.getAccessibleChild(i)` where `i` ranges over `[offset, min(offset + length, totalCount))`. The item's `index` is `i` (children index = item index for these components — verified by UC-014 probe tests). The item's `name` is `child.getAccessibleContext().getAccessibleName()`. |
 | BR-12 | **Disabled item indicator.** For JTabbedPane, if `((JTabbedPane) accessible).isEnabledAt(index)` returns `false`, the item object includes `"enabled": false`. When the tab is enabled, the `enabled` field is omitted (absence means enabled). For all other components (JList, JComboBox, JTable), the `enabled` field is never emitted — they have no standard per-item disable API, so all items are implicitly enabled. |
@@ -50,7 +50,7 @@ Execution order:
    a. **If the target is a `JTable`** (BR-09):
       - `totalCount = ac.getAccessibleTable().getAccessibleRowCount()`.
       - For each row `r` in `[offset, min(offset + length, totalCount))`:
-        - Build `name` via `buildRowName(at, r, cols)` (reuse from UC-014).
+        - Build `name` via `buildTableRowText(at, r, cols)`.
         - Add `{"index": r, "name": "Alice, 30, NY"}`.
 
    b. **If the target is a `JComboBox`** (BR-10):
@@ -83,7 +83,7 @@ Execution order:
 - `AccessibleContext.getAccessibleName()` — item name
 - `AccessibleContext.getAccessibleTable()` — JTable-specific: row/column structure
 - `AccessibleTable.getAccessibleRowCount()` — JTable-specific: total row count
-- `AccessibleTable.getAccessibleColumnCount()` — JTable-specific: for `buildRowName()`
+- `AccessibleTable.getAccessibleColumnCount()` — JTable-specific: for `buildTableRowText()`
 - `AccessibleTable.getAccessibleAt(int row, int col)` — JTable-specific: for building row name summaries
 - `JComboBox.getItemCount()` — JComboBox-specific: true item count
 - `JComboBox.getItemAt(int i)` — JComboBox-specific: item access
@@ -94,7 +94,7 @@ Execution order:
 - **Relationship to `get_cells`.** `get_cells` / `get_cell_count` operate in the **accessible children index space** and are advertised only when the snapshot truncated a large data component. `get_selectable_items` operates in the **selection item index space** and is available on any component with `single-selection` or `multi-selection`. For JList and JTabbedPane, the two index spaces are identical. For JComboBox, they diverge (children index has only 1 child — the popup menu). For JTable, `get_cells` enumerates cells while `get_selectable_items` enumerates rows. The tools serve different purposes: `get_cells` is for content discovery (finding a button in a table), `get_selectable_items` is for selection browsing (seeing what can be selected).
 - **Not listed in snapshot actions.** Per architecture.md § 6 "Selection Action Groups", `get_selectable_items` is not listed as a snapshot action. Its availability is documented in the tool description and is implied by the `single-selection` / `multi-selection` group labels.
 - **Paging rationale.** `offset`/`length` are required parameters with no upper cap. The AI client is in charge of its own context window — if it wants to request all 10,000 rows at once, that's its choice. The server does not second-guess the client.
-- **`buildRowName()` reuse.** The row name construction logic is identical to UC-014 BR-11. The helper method has been extracted to `SwingUtils.buildRowName()` and is shared by both tools.
+- **`buildTableRowText()` reuse.** The row name construction logic uses `SwingUtils.buildTableRowText()` (pipe-separated), shared by the snapshot tool (SC-6), selection tools (UC-014), and selectable-items tools.
 - **Integer overflow.** When computing the iteration end index (`offset + length`), use `long` arithmetic to avoid overflow: `int end = (int) Math.min((long) offset + length, totalCount);`
 - **JComboBox enumeration.** Using `JComboBox.getItemAt(i)` is the simplest and most reliable approach. The accessibility API path (`getAccessibleChild(0).getAccessibleContext().getAccessibleChild(i)`) navigates through the popup menu, which is fragile and may not work when the popup is closed. The direct `JComboBox` API works regardless of popup state.
 - **JTree** — suppressed by `SUPPRESSED_SELECTION_ROLES` in `supportsSelection()`. Same as UC-014.
@@ -112,7 +112,7 @@ Execution order:
 - [x] A disabled tab in `JTabbedPane` has `"enabled": false` in its item object.
 - [x] An enabled tab in `JTabbedPane` does **not** have the `enabled` field (absence means enabled).
 - [x] Calling `swing_get_selectable_items` with a valid ref for a `JComboBox` returns all items with correct indices and names.
-- [x] Calling `swing_get_selectable_items` with a valid ref for a `JTable` (row-selection mode) returns rows with comma-separated cell values as names.
+- [x] Calling `swing_get_selectable_items` with a valid ref for a `JTable` (row-selection mode) returns rows with pipe-separated cell values as names.
 - [x] Calling `swing_get_selectable_items` on a `JTable` in column-selection mode returns an MCP error (unsupported).
 - [x] Calling `swing_get_selectable_items` on a `JTree` returns an MCP error (suppressed).
 - [x] Calling `swing_get_selectable_items` with an invalid ref returns an MCP error with a recovery message.
@@ -140,7 +140,7 @@ Execution order:
   - [x] A disabled tab has `"enabled": false`; an enabled tab omits the `enabled` field.
   - [x] Reading a `JComboBox` returns all items with correct indices and names.
   - [x] Reading an empty `JComboBox` returns `totalCount: 0` and empty `items`.
-  - [x] Reading a `JTable` (row-selection mode) returns rows with comma-separated cell names.
+  - [x] Reading a `JTable` (row-selection mode) returns rows with pipe-separated cell names.
   - [x] Reading a `JTable` with `offset` and `length` returns the correct row page.
   - [x] Reading a `JTable` in column-selection mode returns an MCP error.
   - [x] Reading a `JTable` in cell-selection mode returns an MCP error.

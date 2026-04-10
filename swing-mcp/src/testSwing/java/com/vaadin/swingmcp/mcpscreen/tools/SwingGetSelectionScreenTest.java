@@ -103,7 +103,7 @@ class SwingGetSelectionScreenTest extends AbstractScreenTest {
         snapshot(frame);
         String json = getSelection(context.getRefOf(table));
         assertEquals(
-                "{\"selectedCount\":1,\"selected\":[{\"index\":0,\"name\":\"Alice, 30\"}]}",
+                "{\"selectedCount\":1,\"selected\":[{\"index\":0,\"name\":\"Alice | 30\"}]}",
                 json);
     }
 
