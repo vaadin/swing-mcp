@@ -133,10 +133,13 @@ After Stages 1 and 2, any surviving node is included. The following criteria ser
 Which states from `AccessibleStateSet` appear in the snapshot output:
 
 **Included (meaningful for AI understanding):**
-`DISABLED`, `FOCUSED`, `SELECTED`, `CHECKED`, `EDITABLE`, `EXPANDED`, `COLLAPSED`, `MODAL`, `MULTI_LINE`, `ICONIFIED`, `HORIZONTAL`, `VERTICAL`, `BUSY`, `INDETERMINATE`
+`DISABLED`, `FOCUSED`, `SELECTED`, `CHECKED`, `EXPANDED`, `COLLAPSED`, `MODAL`, `MULTI_LINE`, `ICONIFIED`, `HORIZONTAL`, `VERTICAL`, `BUSY`, `INDETERMINATE`
+
+**Synthetic states (derived, not from `AccessibleStateSet` directly):**
+`READ_ONLY` — emitted for text components that expose `AccessibleEditableText` but lack the `EDITABLE` state in their `AccessibleStateSet` (e.g. `JTextField` with `setEditable(false)`). Most text fields are editable by default, so the absence of `read_only` means editable — no `editable` flag is shown. This keeps the snapshot concise: only the exceptional read-only case is annotated.
 
 **Omitted (noise or always-true for included nodes):**
-`VISIBLE`, `SHOWING`, `ENABLED` (default — only show its absence as `DISABLED`), `OPAQUE`, `RESIZABLE`, `ARMED`, `TRANSIENT`, `MANAGES_DESCENDANTS`
+`VISIBLE`, `SHOWING`, `ENABLED` (default — only show its absence as `DISABLED`), `EDITABLE` (default for text fields — only show its absence as `READ_ONLY`), `OPAQUE`, `RESIZABLE`, `ARMED`, `TRANSIENT`, `MANAGES_DESCENDANTS`
 
 ---
 
@@ -318,7 +321,7 @@ For each node, collect actions by running the following checks in order. All det
 1. `supportsClick()` → add `click`
 2. `supportsTogglePopup()` → add `toggle_popup`
 3. Iterate `AccessibleAction` descriptions; for each that equals a known constant (`AccessibleAction.INCREMENT`, `DECREMENT`, `TOGGLE_EXPAND`), normalize to lower-case underscore format and add it (`increment`, `decrement`, `toggle_expand`)
-4. `supportsSetText()` → add `get_text`, `set_text`; else `supportsGetText()` → add `get_text`
+4. `supportsSetText()` **and** `AccessibleStateSet` contains `EDITABLE` → add `get_text`, `set_text`; else if `supportsSetText()` without `EDITABLE` (read-only text field) → add `get_text` only; else `supportsGetText()` → add `get_text`
 5. `supportsGetValue()` → add `get_value`; additionally `supportsSetValue()` → add `set_value`
 6. **Selection group labels:**
    - `supportsMultiSelection()` → add `multi-selection`
