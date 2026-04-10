@@ -972,11 +972,20 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // filter_substring tests (BR-09)
+    // filter_substring tree-filtering tests (BR-09)
     // ══════════════════════════════════════════════════════════════════════════
 
+    private static final String FILTER_HEADER_PREFIX =
+            "[filter active: only nodes matching \"";
+    private static final String FILTER_HEADER_SUFFIX =
+            "\" and their ancestors/descendants are shown]";
+
+    private static String filterHeader(String filter) {
+        return FILTER_HEADER_PREFIX + filter + FILTER_HEADER_SUFFIX;
+    }
+
     @Test
-    void filterSubstringReturnsOnlyMatchingLines() throws Exception {
+    void filterTreeIncludesMatchedNodeAndAncestors() throws Exception {
         JPanel panel = new JPanel();
         panel.add(new JButton("Save"));
         panel.add(new JButton("Cancel"));
@@ -984,21 +993,29 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot("Save", panel);
 
-        assertEquals("  - push_button \"Save\" [ref=1] actions: click", output);
+        assertEquals(
+                filterHeader("Save") + "\n"
+                + "- panel\n"
+                + "  - push_button \"Save\" [ref=1] actions: click",
+                output);
     }
 
     @Test
-    void filterSubstringIsCaseInsensitive() throws Exception {
+    void filterTreeIsCaseInsensitive() throws Exception {
         JPanel panel = new JPanel();
         panel.add(new JButton("Save"));
 
         String output = snapshot("save", panel);
 
-        assertEquals("  - push_button \"Save\" [ref=1] actions: click", output);
+        assertEquals(
+                filterHeader("save") + "\n"
+                + "- panel\n"
+                + "  - push_button \"Save\" [ref=1] actions: click",
+                output);
     }
 
     @Test
-    void filterSubstringNoMatchReturnsMessage() throws Exception {
+    void filterTreeNoMatchReturnsMessage() throws Exception {
         JPanel panel = new JPanel();
         panel.add(new JButton("Save"));
 
@@ -1008,7 +1025,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void filterSubstringDoesNotAffectRefNumbering() throws Exception {
+    void filterTreeDoesNotAffectRefNumbering() throws Exception {
         JPanel panel = new JPanel();
         panel.add(new JButton("First"));
         panel.add(new JButton("Second"));
@@ -1017,27 +1034,35 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         // "Third" should still be ref=3 even when filtered
         String output = snapshot("Third", panel);
 
-        assertEquals("  - push_button \"Third\" [ref=3] actions: click", output);
+        assertEquals(
+                filterHeader("Third") + "\n"
+                + "- panel\n"
+                + "  - push_button \"Third\" [ref=3] actions: click",
+                output);
     }
 
     @Test
-    void filterSubstringDropsRootSeparators() throws Exception {
+    void filterTreeDropsRootSeparators() throws Exception {
         JPanel root1 = new JPanel();
         root1.add(new JButton("A"));
 
         JPanel root2 = new JPanel();
         root2.add(new JButton("B"));
 
+        // Both roots contain push_button — both should appear, no "---"
         String output = snapshot("push_button", root1, root2);
 
         assertEquals(
-                "  - push_button \"A\" [ref=1] actions: click\n"
+                filterHeader("push_button") + "\n"
+                + "- panel\n"
+                + "  - push_button \"A\" [ref=1] actions: click\n"
+                + "- panel\n"
                 + "  - push_button \"B\" [ref=2] actions: click",
                 output);
     }
 
     @Test
-    void filterSubstringOmittedReturnsFullSnapshot() throws Exception {
+    void filterTreeOmittedReturnsFullSnapshot() throws Exception {
         JPanel panel = new JPanel();
         panel.add(new JButton("Save"));
 
@@ -1051,25 +1076,156 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void filterSubstringMatchesOnRole() throws Exception {
+    void filterTreeAncestorsIncludedButNonMatchingSiblingsDropped() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JButton("Keep"));
+        panel.add(new JButton("Drop"));
+        panel.add(new JTextField());
+
+        String output = snapshot("Keep", panel);
+
+        // Panel (ancestor) is included; "Drop" button and text field are not
+        assertEquals(
+                filterHeader("Keep") + "\n"
+                + "- panel\n"
+                + "  - push_button \"Keep\" [ref=1] actions: click",
+                output);
+    }
+
+    @Test
+    void filterTreeDescendantsIncludedUnconditionally() throws Exception {
+        // A named panel with children — filter on the panel name,
+        // all children should appear even though they don't match
+        JPanel outer = new JPanel();
+        JPanel inner = new JPanel();
+        inner.getAccessibleContext().setAccessibleName("Toolbar");
+        JButton b1 = new JButton("Open");
+        JButton b2 = new JButton("Close");
+        inner.add(b1);
+        inner.add(b2);
+        outer.add(inner);
+
+        String output = snapshot("Toolbar", outer);
+
+        // "Toolbar" matches — its children (Open, Close) must appear
+        // even though they don't contain "Toolbar"
+        assertEquals(
+                filterHeader("Toolbar") + "\n"
+                + "- panel\n"
+                + "  - panel \"Toolbar\"\n"
+                + "    - push_button \"Open\" [ref=1] actions: click\n"
+                + "    - push_button \"Close\" [ref=2] actions: click",
+                output);
+    }
+
+    @Test
+    void filterTreeMatchesOnRole() throws Exception {
         JPanel panel = new JPanel();
         panel.add(new JButton("Go"));
         panel.add(new JTextField());
 
+        // "text" matches the text field role
         String output = snapshot("text", panel);
 
-        assertEquals("  - text [ref=2] actions: get_text, set_text", output);
+        // "text" also matches push_button's "set_text" in actions... but let's
+        // check that the text field is definitely included with its ancestor
+        assertTrue(output.contains("- text [ref=2] actions: get_text, set_text"),
+                "Text field should be in output");
+        assertTrue(output.startsWith(filterHeader("text")),
+                "Output should start with filter header");
     }
 
     @Test
-    void filterSubstringMatchesOnActions() throws Exception {
+    void filterTreeMatchesOnActions() throws Exception {
         JPanel panel = new JPanel();
         panel.add(new JButton("Go"));
         panel.add(new JTextField());
 
         String output = snapshot("set_text", panel);
 
-        assertEquals("  - text [ref=2] actions: get_text, set_text", output);
+        // "set_text" matches the text field's actions line
+        assertTrue(output.contains("- text [ref=2] actions: get_text, set_text"),
+                "Text field should be in output");
+        assertTrue(output.startsWith(filterHeader("set_text")),
+                "Output should start with filter header");
+    }
+
+    // ── Additional tree-filter integration tests ───────────────────────────────
+
+    @Test
+    void filterTreeIncludesTableDescendantsAndTruncation() throws Exception {
+        // Build a table with more rows than MAX_DATA_ROW_NODES so truncation kicks in
+        Object[][] data = new Object[SnapshotNode.MAX_DATA_ROW_NODES + 3][2];
+        for (int i = 0; i < data.length; i++) {
+            data[i] = new Object[]{"Name" + i, "Email" + i};
+        }
+        JTable table = new JTable(data, new Object[]{"Name", "Email"});
+        table.getAccessibleContext().setAccessibleName("Customers");
+        JScrollPane scroll = new JScrollPane(table);
+
+        JPanel panel = new JPanel();
+        panel.add(scroll);
+        panel.add(new JButton("Save"));
+
+        String output = snapshot("Customers", panel);
+
+        // Table + all visible rows + truncation summary should be included;
+        // "Save" button should be excluded
+        assertTrue(output.startsWith(filterHeader("Customers")),
+                "Should start with filter header");
+        assertTrue(output.contains("table \"Customers\""),
+                "Table should be in output");
+        assertTrue(output.contains("- row 0:"),
+                "First row should be in output");
+        assertTrue(output.contains("... and " + 3 + " more rows"),
+                "Truncation summary should be in output");
+        assertFalse(output.contains("Save"),
+                "Non-matching sibling 'Save' should be excluded");
+    }
+
+    @Test
+    void filterTreeMultipleRootsDropsSeparators() throws Exception {
+        JPanel root1 = new JPanel();
+        root1.add(new JButton("Alpha"));
+        root1.add(new JButton("Shared"));
+
+        JPanel root2 = new JPanel();
+        root2.add(new JButton("Gamma"));
+        root2.add(new JButton("Shared"));
+
+        String output = snapshot("Shared", root1, root2);
+
+        // Both "Shared" buttons should appear, no "---" separator
+        assertFalse(output.contains("---"), "No root separator in filtered output");
+        assertTrue(output.contains("\"Shared\" [ref=2]"), "First Shared button");
+        assertTrue(output.contains("\"Shared\" [ref=4]"), "Second Shared button");
+        assertFalse(output.contains("Alpha"), "Non-matching sibling excluded");
+        assertFalse(output.contains("Gamma"), "Non-matching sibling excluded");
+    }
+
+    @Test
+    void filterTreeDeepNesting() throws Exception {
+        // Match a deeply nested node — all ancestors should appear,
+        // non-matching sibling branches should be dropped
+        JPanel outer = new JPanel();
+        JPanel left = new JPanel();
+        left.getAccessibleContext().setAccessibleName("Left");
+        left.add(new JButton("Alpha"));
+        JPanel right = new JPanel();
+        right.getAccessibleContext().setAccessibleName("Right");
+        right.add(new JButton("Target"));
+        right.add(new JButton("Other"));
+        outer.add(left);
+        outer.add(right);
+
+        String output = snapshot("Target", outer);
+
+        assertEquals(
+                filterHeader("Target") + "\n"
+                + "- panel\n"
+                + "  - panel \"Right\"\n"
+                + "    - push_button \"Target\" [ref=2] actions: click",
+                output);
     }
 
     // ══════════════════════════════════════════════════════════════════════════

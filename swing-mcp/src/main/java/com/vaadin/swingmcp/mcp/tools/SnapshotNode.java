@@ -430,6 +430,21 @@ class SnapshotNode {
      * @param sb    the target buffer
      */
     void render(int depth, StringBuilder sb) {
+        renderSelfLine(depth, sb);
+
+        // Children
+        for (SnapshotNode child : children) {
+            child.render(depth + 1, sb);
+        }
+
+        // Truncation summary (render-only, no node, no ref)
+        renderTruncationSummary(depth, sb);
+    }
+
+    /**
+     * Renders only this node's own line (no children, no truncation summary).
+     */
+    void renderSelfLine(int depth, StringBuilder sb) {
         String indent = "  ".repeat(depth);
         sb.append(indent).append("- ");
 
@@ -493,16 +508,70 @@ class SnapshotNode {
         }
 
         sb.append('\n');
+    }
 
-        // Children
-        for (SnapshotNode child : children) {
-            child.render(depth + 1, sb);
-        }
-
-        // Truncation summary (render-only, no node, no ref)
+    /**
+     * Renders the truncation summary line if this node was truncated.
+     */
+    void renderTruncationSummary(int depth, StringBuilder sb) {
         if (truncated) {
             sb.append("  ".repeat(depth + 1))
               .append("... and ").append(truncatedCount).append(" more ").append(getTruncationLabel()).append('\n');
+        }
+    }
+
+    // ── Tree filtering (BR-09) ────────────────────────────────────────────────
+
+    /**
+     * Returns whether this node's rendered self-line contains the given
+     * filter substring (case-insensitive). Used by the tree filter algorithm.
+     */
+    boolean matchesFilter(String filterLower, int depth) {
+        StringBuilder line = new StringBuilder();
+        renderSelfLine(depth, line);
+        return line.toString().toLowerCase().contains(filterLower);
+    }
+
+    /**
+     * Checks whether this node or any descendant matches the filter.
+     * Returns {@code true} if this node should be included in filtered output.
+     */
+    boolean subtreeMatchesFilter(String filterLower, int depth) {
+        if (matchesFilter(filterLower, depth)) {
+            return true;
+        }
+        for (int i = 0; i < children.size(); i++) {
+            if (children.get(i).subtreeMatchesFilter(filterLower, depth + 1)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Renders this node's filtered subtree. If this node directly matches
+     * the filter, it and all descendants are rendered unconditionally.
+     * Otherwise, only the self-line is rendered (as an ancestor providing
+     * context) and filtering continues into children.
+     *
+     * @param filterLower the lowercase filter substring
+     * @param depth       current indentation depth
+     * @param sb          the target buffer
+     */
+    void renderFiltered(String filterLower, int depth, StringBuilder sb) {
+        if (matchesFilter(filterLower, depth)) {
+            // Direct match — render this node and ALL descendants unconditionally
+            render(depth, sb);
+        } else {
+            // Ancestor of a match — render self-line, recurse only into matching branches
+            renderSelfLine(depth, sb);
+            for (SnapshotNode child : children) {
+                if (child.subtreeMatchesFilter(filterLower, depth + 1)) {
+                    child.renderFiltered(filterLower, depth + 1, sb);
+                }
+            }
+            // Don't render truncation summary for ancestor-only nodes —
+            // the truncated children are not part of the filtered output
         }
     }
 
@@ -735,7 +804,7 @@ class SnapshotNode {
         }
 
         @Override
-        void render(int depth, StringBuilder sb) {
+        void renderSelfLine(int depth, StringBuilder sb) {
             sb.append("  ".repeat(depth))
               .append("- row ").append(rowIndex).append(": ").append(rowText)
               .append('\n');

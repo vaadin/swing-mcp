@@ -386,14 +386,14 @@ Tree filtering fixes both problems: ancestors give the AI a path from the root (
 - [x] An unnamed JPanel with only framework MouseListeners (e.g. ToolTipManager) and no AccessibleAction is pruned normally by TP-5.
 - [x] A component with both AccessibleAction click and a MouseListener shows `click` (Tier 1 takes precedence — no duplication).
 - [x] A component with an interactive role and an application MouseListener but no AccessibleAction click does NOT get a `click` action (Tier 2 skipped for interactive roles).
-- [ ] When `filter_substring` is provided, tree filtering is applied: matched nodes, their ancestors, and their descendants are included; non-matching sibling branches are dropped.
-- [ ] The first line of filtered output is `[filter active: only nodes matching "<filter>" and their ancestors/descendants are shown]`.
-- [ ] When `filter_substring` matches no nodes, a descriptive message is returned instead of empty output.
-- [ ] Filtering does not affect ref assignment — refs remain the same as in the unfiltered snapshot.
-- [ ] Root separators (`---`) are excluded from filtered output.
-- [ ] When `filter_substring` is omitted or empty, the full snapshot is returned (no change to existing behavior).
-- [ ] Ancestors of a matched node are included (with their own line) but their non-matching children are omitted.
-- [ ] All descendants of a matched node are included unconditionally.
+- [x] When `filter_substring` is provided, tree filtering is applied: matched nodes, their ancestors, and their descendants are included; non-matching sibling branches are dropped.
+- [x] The first line of filtered output is `[filter active: only nodes matching "<filter>" and their ancestors/descendants are shown]`.
+- [x] When `filter_substring` matches no nodes, a descriptive message is returned instead of empty output.
+- [x] Filtering does not affect ref assignment — refs remain the same as in the unfiltered snapshot.
+- [x] Root separators (`---`) are excluded from filtered output.
+- [x] When `filter_substring` is omitted or empty, the full snapshot is returned (no change to existing behavior).
+- [x] Ancestors of a matched node are included (with their own line) but their non-matching children are omitted.
+- [x] All descendants of a matched node are included unconditionally.
 - [x] A JTable inside a JScrollPane shows `columns: [Col1, Col2, …]` on the table node line, after the bracket and before `actions:` (SC-6).
 - [x] A JTable NOT inside a JScrollPane (header not visible) does NOT show `columns:` (SC-6).
 - [x] JTable children are rendered as pipe-separated row lines with 0-based index (`- row 0: Val1 | Val2 | Val3`), not individual cell labels (SC-6).
@@ -432,14 +432,14 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [x] Disabled component with only `!`-prefixed actions still receives a ref.
   - [x] When two roots are provided, their trees are separated by a `---` line and refs are numbered globally (not reset between roots).
   - [x] Calling `swing_snapshot` via the MCP client returns a valid text response.
-  - [ ] `filter_substring` applies tree filtering: matched nodes plus ancestors and descendants are included; non-matching siblings are dropped.
-  - [ ] Filtered output starts with `[filter active: only nodes matching "<filter>" and their ancestors/descendants are shown]`.
-  - [ ] `filter_substring` with no matches returns a descriptive message.
-  - [ ] `filter_substring` does not affect ref numbering — a filtered component has the same ref as in the unfiltered snapshot.
-  - [ ] `filter_substring` drops root separators (`---`) from the output.
-  - [ ] Omitting `filter_substring` (or passing empty/null) returns the full unfiltered snapshot.
-  - [ ] Ancestors of a matched node appear in the output (structural path from root), but their non-matching children are omitted.
-  - [ ] All descendants of a matched node appear unconditionally (e.g. table rows under a matched table).
+  - [x] `filter_substring` applies tree filtering: matched nodes plus ancestors and descendants are included; non-matching siblings are dropped.
+  - [x] Filtered output starts with `[filter active: only nodes matching "<filter>" and their ancestors/descendants are shown]`.
+  - [x] `filter_substring` with no matches returns a descriptive message.
+  - [x] `filter_substring` does not affect ref numbering — a filtered component has the same ref as in the unfiltered snapshot.
+  - [x] `filter_substring` drops root separators (`---`) from the output.
+  - [x] Omitting `filter_substring` (or passing empty/null) returns the full unfiltered snapshot.
+  - [x] Ancestors of a matched node appear in the output (structural path from root), but their non-matching children are omitted.
+  - [x] All descendants of a matched node appear unconditionally (e.g. table rows under a matched table).
   - [x] An unnamed JPanel with an application `MouseListener` appears in the snapshot with `click` action and a ref.
   - [x] An unnamed JPanel with only framework `MouseListener`s (e.g. from setting a tooltip) is pruned as usual.
   - [x] A JButton (which has AccessibleAction click) with an additional application `MouseListener` shows `click` once (Tier 1 wins).

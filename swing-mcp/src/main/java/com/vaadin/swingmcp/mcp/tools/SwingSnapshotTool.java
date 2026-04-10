@@ -41,9 +41,11 @@ public class SwingSnapshotTool extends AbstractSwingTool {
     public MCPProtocol.InputSchema getInputSchema() {
         return new InputSchemaBuilder()
                 .optionalString("filter_substring",
-                        "If provided, only lines containing this substring "
-                        + "(case-insensitive) are returned. Useful for finding "
-                        + "a specific component without receiving the full tree.")
+                        "If provided, returns a pruned tree: nodes whose text "
+                        + "contains the substring (case-insensitive) are included "
+                        + "together with their ancestors (for context) and all "
+                        + "descendants (e.g. table rows, list items). Non-matching "
+                        + "sibling branches are dropped.")
                 .build();
     }
 
@@ -91,24 +93,38 @@ public class SwingSnapshotTool extends AbstractSwingTool {
 
         String rendered = SnapshotNode.stripTrailingNewlines(sb.toString());
 
-        // BR-09: optional post-processing filter
+        // BR-09: optional tree filtering (operates on the SnapshotNode graph)
         String filter = params.getStringOrNull("filter_substring");
         if (filter != null && !filter.isEmpty()) {
             String filterLower = filter.toLowerCase();
-            StringBuilder filtered = new StringBuilder();
-            for (String line : rendered.split("\n", -1)) {
-                if (!"---".equals(line) && line.toLowerCase().contains(filterLower)) {
-                    if (filtered.length() > 0) {
-                        filtered.append('\n');
-                    }
-                    filtered.append(line);
+
+            // Check if any node in any root matches
+            boolean anyMatch = false;
+            for (SnapshotNode root : roots) {
+                if (root.subtreeMatchesFilter(filterLower, 0)) {
+                    anyMatch = true;
+                    break;
                 }
             }
-            if (filtered.length() == 0) {
+            if (!anyMatch) {
                 return MCPProtocol.Content.text(
                         "No lines matched filter_substring '" + filter + "'");
             }
-            return MCPProtocol.Content.text(filtered.toString());
+
+            StringBuilder filtered = new StringBuilder();
+            filtered.append("[filter active: only nodes matching \"")
+                    .append(filter)
+                    .append("\" and their ancestors/descendants are shown]")
+                    .append('\n');
+
+            for (SnapshotNode root : roots) {
+                if (root.subtreeMatchesFilter(filterLower, 0)) {
+                    root.renderFiltered(filterLower, 0, filtered);
+                }
+            }
+
+            return MCPProtocol.Content.text(
+                    SnapshotNode.stripTrailingNewlines(filtered.toString()));
         }
 
         return MCPProtocol.Content.text(rendered);
