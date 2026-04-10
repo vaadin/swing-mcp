@@ -132,6 +132,12 @@ Each getter has a required variant (throws `MCPServerException(INVALID_PARAMS, �
 missing or wrong type) and an optional variant (returns `null` if missing, throws on
 wrong type).
 
+**String-to-number coercion.** Numeric getters (`getInt`, `getIntOrNull`, `getNumber`,
+`getIntArray`) accept string-encoded numbers (e.g. `"21"` instead of `21`) and coerce
+them to the expected type. This is necessary because LLM clients frequently send all
+tool arguments as strings, ignoring the `"type": "integer"` declared in the JSON schema.
+Non-parseable strings still produce `INVALID_PARAMS` errors.
+
 ```java
 class Parameters {
     Parameters(Map<String, Object> raw);
@@ -141,10 +147,10 @@ class Parameters {
     // Optional — returns null if key is missing; throws if present but not a String
     String getStringOrNull(String key);
 
-    // Required — throws MCPServerException(INVALID_PARAMS) if key is missing or value is not a Number.
-    // Converts to int via Number.intValue().
+    // Required — throws MCPServerException(INVALID_PARAMS) if key is missing or value is not a Number/numeric string.
+    // Converts to int via Number.intValue() or Integer.parseInt().
     int getInt(String key);
-    // Optional — returns null if key is missing; throws if present but not a Number
+    // Optional — returns null if key is missing; throws if present but not a Number/numeric string
     Integer getIntOrNull(String key);
 }
 ```
