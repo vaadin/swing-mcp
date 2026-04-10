@@ -302,25 +302,62 @@ int supportsTogglePopup(Accessible a) {
 
 ### Detecting Click Support
 
-An `Accessible` supports the click action if any of its accessible action descriptions matches a
-known click string. Because Swing localizes the click description via `UIManager` while AWT
-uses a hardcoded literal, both must be checked:
+Click detection uses a two-tier approach: first check `AccessibleAction` (the standard path),
+then fall back to checking for application-installed `MouseListener`s on the underlying
+`Component`. The fallback covers custom "button-like" components (e.g. a `JPanel` with a
+`MouseAdapter` for click handling) that do not expose an `AccessibleAction`.
+
+`supportsClick()` returns a `Runnable` that performs the click when invoked, or `null` if the
+component does not support clicking. The returned `Runnable` captures everything needed to
+execute the click (the `AccessibleAction` + index for Tier 1, or the `Component` for Tier 2),
+so callers never need to know which tier was used. The snapshot checks `!= null` to decide
+whether to add the `click` action; `swing_click` calls `run()` inside `invokeLater()`.
 
 ```java
-int supportsClick(Accessible a) {
+Runnable supportsClick(Accessible a) {
+    // --- Tier 1: AccessibleAction ---
     AccessibleContext ac = a.getAccessibleContext();
-    if (ac == null) return -1;
-    AccessibleAction aa = ac.getAccessibleAction();
-    if (aa == null) return -1;
-    for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
-        String desc = aa.getAccessibleActionDescription(i);
-        if (AccessibleAction.CLICK.equals(desc) ||
-            UIManager.getString("AbstractButton.clickText").equals(desc))
-            return i;
+    if (ac != null) {
+        AccessibleAction aa = ac.getAccessibleAction();
+        if (aa != null) {
+            for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
+                String desc = aa.getAccessibleActionDescription(i);
+                if (AccessibleAction.CLICK.equals(desc) ||
+                    UIManager.getString("AbstractButton.clickText").equals(desc)) {
+                    final int idx = i;
+                    return () -> aa.doAccessibleAction(idx);
+                }
+            }
+        }
     }
-    return -1;
+    // --- Tier 2: MouseListener fallback ---
+    if (a instanceof Component) {
+        Component c = (Component) a;
+        for (MouseListener ml : c.getMouseListeners()) {
+            String cls = ml.getClass().getName();
+            if (!cls.startsWith("javax.swing.") &&
+                !cls.startsWith("java.awt.") &&
+                !cls.startsWith("sun.") &&
+                !cls.startsWith("com.sun.")) {
+                return () -> {
+                    int x = c.getWidth() / 2;
+                    int y = c.getHeight() / 2;
+                    long now = System.currentTimeMillis();
+                    c.dispatchEvent(new MouseEvent(c, MouseEvent.MOUSE_PRESSED,
+                        now, InputEvent.BUTTON1_DOWN_MASK, x, y, 1, false, MouseEvent.BUTTON1));
+                    c.dispatchEvent(new MouseEvent(c, MouseEvent.MOUSE_RELEASED,
+                        now, 0, x, y, 1, false, MouseEvent.BUTTON1));
+                    c.dispatchEvent(new MouseEvent(c, MouseEvent.MOUSE_CLICKED,
+                        now, 0, x, y, 1, false, MouseEvent.BUTTON1));
+                };
+            }
+        }
+    }
+    return null;
 }
 ```
+
+#### Tier 1 — AccessibleAction
 
 - `AccessibleAction.CLICK` (`"click"`) covers AWT components (`Button`, `MenuItem`, `Menu`,
   `PopupMenu`) which hardcode this literal.
@@ -329,6 +366,36 @@ int supportsClick(Accessible a) {
   same UIManager lookup ensures locale-safe matching.
 - Components with dynamic/algorithm-derived actions (text components, tree nodes, hyperlinks)
   never produce either string and are therefore excluded automatically.
+- The returned `Runnable` captures the `AccessibleAction` and the matched index, calling
+  `aa.doAccessibleAction(idx)`.
+
+#### Tier 2 — MouseListener Fallback
+
+Many real-world Swing applications build clickable UI elements from plain containers
+(e.g. `JPanel`, `JLabel`) by attaching a `MouseListener`/`MouseAdapter` — these components are
+functionally buttons but the accessibility API reports no click action.
+
+**Filtering out framework listeners:** Swing and AWT install internal `MouseListener`s for
+tooltip management (`ToolTipManager`), look-and-feel behaviour, and other plumbing. These are
+identified by package prefix and excluded. Only listeners from application packages are
+considered evidence of click behaviour. The checked prefixes are:
+- `javax.swing.*` — Swing internals (ToolTipManager, BasicXxxUI classes, etc.)
+- `java.awt.*` — AWT internals
+- `sun.*` — JDK internal implementation classes
+- `com.sun.*` — JDK internal implementation classes
+
+The returned `Runnable` synthesizes a mouse click event sequence on the component: three
+`MouseEvent`s dispatched in order (`MOUSE_PRESSED`, `MOUSE_RELEASED`, `MOUSE_CLICKED`) with
+`BUTTON1`, click count 1, and coordinates at the center of the component. This matches the
+event sequence a real mouse click produces.
+
+**Impact on the snapshot:** A component where `supportsClick()` returns non-null receives the
+`click` action in the snapshot and is assigned a ref. This means unnamed panels (TP-5) that
+have an application MouseListener are **not** pruned — the AI-3 safety net ("has at least one
+action") prevents it.
+
+**Impact on `swing_click`:** The tool calls `supportsClick()`, gets the `Runnable`, and posts
+it via `SwingUtilities.invokeLater()`. No branching on which tier was used.
 
 ### Effectively Enabled Check
 
@@ -592,7 +659,7 @@ Other specs reference this table instead of duplicating detection logic.
 
 | Spec Action Name | Detection Method | Java Mechanism | MCP Tool | Notes |
 |---|---|---|---|---|
-| `click` | `supportsClick()` | `AccessibleAction.CLICK` (AWT literal) OR `UIManager.getString("AbstractButton.clickText")` (Swing UIManager) | `swing_click` | AWT hardcodes the literal; Swing uses a potentially localized UIManager lookup — both must be checked |
+| `click` | `supportsClick()` returns non-null `Runnable` | **Tier 1:** `AccessibleAction.CLICK` (AWT literal) OR `UIManager.getString("AbstractButton.clickText")` (Swing UIManager). **Tier 2 (fallback):** application-installed `MouseListener` on the underlying `Component` (framework listeners filtered by package prefix). See § 4 "Detecting Click Support" for full algorithm. | `swing_click` | `supportsClick()` returns a `Runnable` encapsulating the click action (Tier 1: `doAccessibleAction(i)`, Tier 2: synthetic MouseEvent sequence). Callers just check `!= null` and call `run()`. |
 | `toggle_popup` | `supportsTogglePopup()` | `AccessibleAction.TOGGLE_POPUP` OR `UIManager.getString("ComboBox.togglePopupText")` | `swing_toggle_popup` | Toggles open/closed; AI can infer current state from snapshot |
 | `increment` | Raw `AccessibleAction` description compare | `AccessibleAction.INCREMENT` static constant | `swing_increment` | Safe to match by raw constant — `JSlider`/`JSpinner` use the static field directly, no UIManager variant exists |
 | `decrement` | Raw `AccessibleAction` description compare | `AccessibleAction.DECREMENT` static constant | `swing_decrement` | Same rationale as `increment` |

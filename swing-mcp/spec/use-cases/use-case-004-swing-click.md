@@ -24,20 +24,20 @@
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | The click is performed by finding the component's `AccessibleAction` index whose description matches the click action (see algorithm below), then posting `doAccessibleAction(i)` via `SwingUtilities.invokeLater()` (fire-and-forget — see **architecture.md § 2 — Fire-and-Forget Mutation Dispatch**). |
+| BR-03 | The click is performed by calling `supportsClick(accessible)` which returns a `Runnable` encapsulating the click action (see **architecture.md § 4 — Detecting Click Support**). The `Runnable` is posted via `SwingUtilities.invokeLater()` (fire-and-forget — see **architecture.md § 2 — Fire-and-Forget Mutation Dispatch**). The caller does not need to know whether the click uses `AccessibleAction` (Tier 1) or synthetic `MouseEvent` (Tier 2) — this is captured inside the `Runnable`. |
 | BR-04 | All validation runs on the EDT inside `runInEDT()`. The action itself is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
 | BR-05 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled and cannot be clicked. See also **architecture.md § 6** — Tool execution level. |
-| BR-06 | If the target has no matching click action (i.e. `supportsClick()` returns -1), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support click. Call swing_snapshot or swing_get_cells to verify the list of actions". |
+| BR-06 | If the target does not support clicking (i.e. `supportsClick()` returns `null`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support click. Call swing_snapshot or swing_get_cells to verify the list of actions". |
 
 ### Algorithm: detecting and invoking the click action
 
-See **architecture.md § 4 — Detecting Click Support** for the full algorithm and rationale, and **architecture.md § 6 — Action Detection Summary** for the authoritative action-to-tool mapping.
+See **architecture.md § 4 — Detecting Click Support** for the full algorithm and rationale (`supportsClick()` returns a `Runnable` or `null`), and **architecture.md § 6 — Action Detection Summary** for the authoritative action-to-tool mapping.
 
 Execution order:
 1. **BR-02** — ref lookup (fail fast if ref is invalid)
-2. **BR-06** — `int i = supportsClick(accessible)` — if `i < 0`, fail before walking the parent chain
-3. **BR-05** — `isEffectivelyEnabled(accessible)` — only checked when click action exists
-4. `SwingUtilities.invokeLater(() -> aa.doAccessibleAction(i))` — fire-and-forget; return `null`
+2. **BR-06** — `Runnable click = supportsClick(accessible)` — if `null`, return error
+3. **BR-05** — `isEffectivelyEnabled(accessible)` — only checked when click is supported
+4. `SwingUtilities.invokeLater(click)` — fire-and-forget; return `null`
 
 ---
 
@@ -48,6 +48,9 @@ Execution order:
 - [x] Calling `swing_click` with an invalid ref returns an MCP error with a recovery message.
 - [x] Calling `swing_click` on a disabled component returns an MCP error explaining the component is disabled.
 - [x] Calling `swing_click` on a component that does not support click returns an MCP error suggesting to call `swing_snapshot`.
+- [ ] Calling `swing_click` on a JPanel with an application MouseListener fires the synthetic mouse event sequence and returns `null`.
+- [ ] Calling `swing_click` on a disabled JPanel with an application MouseListener returns an MCP error explaining the component is disabled.
+- [ ] Calling `swing_click` on a component with no AccessibleAction click and no application MouseListener returns an MCP error.
 
 ---
 
@@ -63,6 +66,11 @@ Execution order:
   - [x] Clicking a disabled button returns an MCP error with `isError: true` explaining the component is disabled.
   - [x] Clicking a component without click support (e.g. `JSlider`) returns an MCP error with `isError: true`.
   - [x] Each component from the component matrix is tested.
+  - [ ] Clicking a JPanel with an application MouseListener dispatches mousePressed, mouseReleased, mouseClicked (verified by recording events in the MouseListener).
+  - [ ] The synthetic MouseEvent coordinates are at the center of the component.
+  - [ ] The synthetic MouseEvent uses BUTTON1 with click count 1.
+  - [ ] Clicking a disabled JPanel with an application MouseListener returns an MCP error with `isError: true`.
+  - [ ] Clicking a component with no AccessibleAction click and no application MouseListener returns an MCP error with `isError: true`.
 
 - [x] `SwingClickScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
   - [x] Clicking a button inside `JFrame` fires its action listener (verified after EDT drains).

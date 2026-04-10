@@ -316,7 +316,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 | BR-04 | The tree walker walks the `javax.accessibility` tree via `AccessibleContext.getAccessibleChild(i)`, **not** the `Component.getComponents()` component tree. The accessibility tree provides virtual children for complex components (table cells, list items, tree nodes). |
 | BR-05 | Large data components (JTable, JList, JTree) are truncated to `MAX_DATA_CHILDREN` accessible children (static final constant, initially 5). When truncated, a synthetic `... and N more items` node is appended. |
 | BR-06 | Action labels displayed in the snapshot are determined by the **Action Label Algorithm** below. Detection methods, Java mechanisms, and MCP tool names are defined in **architecture.md §6**. All action names use lower-case underscore-separated format. |
-| BR-07 | A node receives a ref if it exposes at least one action under the BR-06 algorithm — i.e. any of: `supportsClick()`, `supportsTogglePopup()`, a known `AccessibleAction` constant, `supportsGetText()`, `supportsSetText()`, `supportsGetValue()`, `supportsSetValue()`, `supportsSelection()`, `supportsClose()`, or the `isLargeDataComponent` truncation gate (step 6b) returns non-null/true. `supportsSelection()` maps to one group label (`single-selection` or `multi-selection`). This supersedes the `AccessibleAction`-only gate in BR-01. Nodes where all actions are `!`-prefixed still receive a ref. |
+| BR-07 | A node receives a ref if it exposes at least one action under the BR-06 algorithm — i.e. any of: `supportsClick()` returns non-null (covers both AccessibleAction and MouseListener fallback), `supportsTogglePopup()`, a known `AccessibleAction` constant, `supportsGetText()`, `supportsSetText()`, `supportsGetValue()`, `supportsSetValue()`, `supportsSelection()`, `supportsClose()`, or the `isLargeDataComponent` truncation gate (step 6b) returns non-null/true. `supportsSelection()` maps to one group label (`single-selection` or `multi-selection`). This supersedes the `AccessibleAction`-only gate in BR-01. Nodes where all actions are `!`-prefixed still receive a ref. |
 | BR-08 | **Unavailable action prefix (`!`).** After the BR-06 algorithm produces the action list, each **mutation action** is checked: if the action would fail validation when invoked, it is prefixed with `!` (e.g. `!click`, `!set_text`). A mutation action is unavailable when: (a) `SwingUtils.isEffectivelyEnabled()` returns `false` (component or an ancestor is disabled), or (b) the action is `set_text` and the component is read-only (has `AccessibleEditableText` but lacks the `EDITABLE` state). **Read-only actions** (`get_text`, `get_value`, `get_selection`, `get_selectable_items`, `get_selectable_items_count`, `get_cell_count`, `get_cells`) are never prefixed — they always succeed. **Selection group labels** (`single-selection`, `multi-selection`) are never prefixed — they are informational labels, not directly invocable actions. The set of mutation actions is: `click`, `toggle_popup`, `increment`, `decrement`, `toggle_expand`, `set_text`, `set_value`, `close`. This set is stored as a constant (`MUTATION_ACTIONS`) in `SnapshotNode`. |
 | BR-09 | **Snapshot filtering (`filter_substring`).** When the optional `filter_substring` parameter is provided, the tool applies a post-processing filter after the four-phase pipeline completes. Each rendered line is tested with a case-insensitive substring match (`String.toLowerCase().contains()`). Only matching lines are included in the output. Root separators (`---`) are excluded from filtered output. The ref map is unaffected — filtering does not change ref assignment. If no lines match, the tool returns the message `No lines matched filter_substring 'X'` (where X is the provided value). The filter operates on the full rendered line (role, name, states, actions — everything). |
 
@@ -324,7 +324,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 
 For each node, collect actions by running the following checks in order. All detection methods are defined in **architecture.md §§ 4–5**.
 
-1. `supportsClick()` → add `click`
+1. `supportsClick()` returns non-null → add `click` (covers both AccessibleAction and MouseListener fallback — see **architecture.md § 4 "Detecting Click Support"**)
 2. `supportsTogglePopup()` → add `toggle_popup`
 3. Iterate `AccessibleAction` descriptions; for each that equals a known constant (`AccessibleAction.INCREMENT`, `DECREMENT`, `TOGGLE_EXPAND`), normalize to lower-case underscore format and add it (`increment`, `decrement`, `toggle_expand`)
 4. `supportsSetText()` **and** `AccessibleStateSet` contains `EDITABLE` → add `get_text`, `set_text`; else if `supportsSetText()` without `EDITABLE` (read-only text field) → add `get_text`, `set_text` (the `set_text` will be prefixed with `!` by BR-08 since the component is read-only); else `supportsGetText()` → add `get_text`
@@ -369,6 +369,9 @@ For each node, collect actions by running the following checks in order. All det
 - [x] JTabbedPane shows tab items with the selected tab marked `SELECTED`; only the selected tab's content is included.
 - [x] A JTable/JList/JTree with more than `MAX_DATA_CHILDREN` rows shows only the first `MAX_DATA_CHILDREN` rows plus a `... and N more items` summary.
 - [x] Only meaningful accessible states are shown (see **Accessible States — Display Rules**).
+- [ ] An unnamed JPanel with an application MouseListener receives the `click` action and a ref (not pruned by TP-5 — AI-3 safety net applies).
+- [ ] An unnamed JPanel with only framework MouseListeners (e.g. ToolTipManager) and no AccessibleAction is pruned normally by TP-5.
+- [ ] A component with both AccessibleAction click and a MouseListener shows `click` (Tier 1 takes precedence — no duplication).
 - [ ] When `filter_substring` is provided, only lines containing the substring (case-insensitive) are returned.
 - [ ] When `filter_substring` matches no lines, a descriptive message is returned instead of empty output.
 - [ ] Filtering does not affect ref assignment — refs remain the same as in the unfiltered snapshot.
@@ -412,6 +415,10 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [ ] `filter_substring` does not affect ref numbering — a filtered component has the same ref as in the unfiltered snapshot.
   - [ ] `filter_substring` drops root separators (`---`) from the output.
   - [ ] Omitting `filter_substring` (or passing empty/null) returns the full unfiltered snapshot.
+  - [ ] An unnamed JPanel with an application `MouseListener` appears in the snapshot with `click` action and a ref.
+  - [ ] An unnamed JPanel with only framework `MouseListener`s (e.g. from setting a tooltip) is pruned as usual.
+  - [ ] A JButton (which has AccessibleAction click) with an additional application `MouseListener` shows `click` once (Tier 1 wins).
+  - [ ] A disabled component with an application `MouseListener` shows `!click` (mutation action prefix applies).
 
 ### Screen-mode tests (`src/testSwing`) — `SwingSnapshotToolWithScreenTest`
 
