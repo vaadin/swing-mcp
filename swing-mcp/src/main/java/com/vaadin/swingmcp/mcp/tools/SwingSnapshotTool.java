@@ -47,7 +47,12 @@ public class SwingSnapshotTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.InputSchema getInputSchema() {
-        return new InputSchemaBuilder().build();
+        return new InputSchemaBuilder()
+                .optionalString("filter_substring",
+                        "If provided, only lines containing this substring "
+                        + "(case-insensitive) are returned. Useful for finding "
+                        + "a specific component without receiving the full tree.")
+                .build();
     }
 
     @Override
@@ -92,6 +97,28 @@ public class SwingSnapshotTool extends AbstractSwingTool {
             roots.get(i).render(0, sb);
         }
 
-        return MCPProtocol.Content.text(SnapshotNode.stripTrailingNewlines(sb.toString()));
+        String rendered = SnapshotNode.stripTrailingNewlines(sb.toString());
+
+        // BR-09: optional post-processing filter
+        String filter = params.getStringOrNull("filter_substring");
+        if (filter != null && !filter.isEmpty()) {
+            String filterLower = filter.toLowerCase();
+            StringBuilder filtered = new StringBuilder();
+            for (String line : rendered.split("\n", -1)) {
+                if (!"---".equals(line) && line.toLowerCase().contains(filterLower)) {
+                    if (filtered.length() > 0) {
+                        filtered.append('\n');
+                    }
+                    filtered.append(line);
+                }
+            }
+            if (filtered.length() == 0) {
+                return MCPProtocol.Content.text(
+                        "No lines matched filter_substring '" + filter + "'");
+            }
+            return MCPProtocol.Content.text(filtered.toString());
+        }
+
+        return MCPProtocol.Content.text(rendered);
     }
 }

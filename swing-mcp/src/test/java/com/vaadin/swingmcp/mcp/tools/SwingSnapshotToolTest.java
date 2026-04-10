@@ -39,6 +39,13 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         return result.getText();
     }
 
+    private String snapshot(String filterSubstring, Component... roots) throws Exception {
+        context.setConsideredComponents(Arrays.asList(roots));
+        MCPProtocol.Content result = tool.execute(
+                new Parameters(Map.of("filter_substring", filterSubstring)), context);
+        return result.getText();
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // Acceptance criteria tests
     // ══════════════════════════════════════════════════════════════════════════
@@ -826,6 +833,107 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 "- panel\n"
                 + "  - push_button \"MCP\" [ref=1] actions: click",
                 textContent.text());
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // filter_substring tests (BR-09)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void filterSubstringReturnsOnlyMatchingLines() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JButton("Save"));
+        panel.add(new JButton("Cancel"));
+        panel.add(new JTextField());
+
+        String output = snapshot("Save", panel);
+
+        assertEquals("  - push_button \"Save\" [ref=1] actions: click", output);
+    }
+
+    @Test
+    void filterSubstringIsCaseInsensitive() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JButton("Save"));
+
+        String output = snapshot("save", panel);
+
+        assertEquals("  - push_button \"Save\" [ref=1] actions: click", output);
+    }
+
+    @Test
+    void filterSubstringNoMatchReturnsMessage() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JButton("Save"));
+
+        String output = snapshot("nonexistent", panel);
+
+        assertEquals("No lines matched filter_substring 'nonexistent'", output);
+    }
+
+    @Test
+    void filterSubstringDoesNotAffectRefNumbering() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JButton("First"));
+        panel.add(new JButton("Second"));
+        panel.add(new JButton("Third"));
+
+        // "Third" should still be ref=3 even when filtered
+        String output = snapshot("Third", panel);
+
+        assertEquals("  - push_button \"Third\" [ref=3] actions: click", output);
+    }
+
+    @Test
+    void filterSubstringDropsRootSeparators() throws Exception {
+        JPanel root1 = new JPanel();
+        root1.add(new JButton("A"));
+
+        JPanel root2 = new JPanel();
+        root2.add(new JButton("B"));
+
+        String output = snapshot("push_button", root1, root2);
+
+        assertEquals(
+                "  - push_button \"A\" [ref=1] actions: click\n"
+                + "  - push_button \"B\" [ref=2] actions: click",
+                output);
+    }
+
+    @Test
+    void filterSubstringOmittedReturnsFullSnapshot() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JButton("Save"));
+
+        // Use the no-filter overload
+        String output = snapshot(panel);
+
+        assertEquals(
+                "- panel\n"
+                + "  - push_button \"Save\" [ref=1] actions: click",
+                output);
+    }
+
+    @Test
+    void filterSubstringMatchesOnRole() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JButton("Go"));
+        panel.add(new JTextField());
+
+        String output = snapshot("text", panel);
+
+        assertEquals("  - text [ref=2] actions: get_text, set_text", output);
+    }
+
+    @Test
+    void filterSubstringMatchesOnActions() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JButton("Go"));
+        panel.add(new JTextField());
+
+        String output = snapshot("set_text", panel);
+
+        assertEquals("  - text [ref=2] actions: get_text, set_text", output);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
