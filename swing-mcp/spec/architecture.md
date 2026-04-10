@@ -331,6 +331,11 @@ Runnable supportsClick(Accessible a) {
         }
     }
     // --- Tier 2: MouseListener fallback ---
+    // Skip for interactive roles — these should use AccessibleAction (Tier 1).
+    // See INTERACTIVE_ROLES constant below.
+    AccessibleRole role = (ac != null) ? ac.getAccessibleRole() : null;
+    if (role != null && INTERACTIVE_ROLES.contains(role)) return null;
+
     if (a instanceof Component) {
         Component c = (Component) a;
         for (MouseListener ml : c.getMouseListeners()) {
@@ -346,9 +351,9 @@ Runnable supportsClick(Accessible a) {
                     c.dispatchEvent(new MouseEvent(c, MouseEvent.MOUSE_PRESSED,
                         now, InputEvent.BUTTON1_DOWN_MASK, x, y, 1, false, MouseEvent.BUTTON1));
                     c.dispatchEvent(new MouseEvent(c, MouseEvent.MOUSE_RELEASED,
-                        now, 0, x, y, 1, false, MouseEvent.BUTTON1));
+                        now + 1, 0, x, y, 1, false, MouseEvent.BUTTON1));
                     c.dispatchEvent(new MouseEvent(c, MouseEvent.MOUSE_CLICKED,
-                        now, 0, x, y, 1, false, MouseEvent.BUTTON1));
+                        now + 2, 0, x, y, 1, false, MouseEvent.BUTTON1));
                 };
             }
         }
@@ -375,6 +380,15 @@ Many real-world Swing applications build clickable UI elements from plain contai
 (e.g. `JPanel`, `JLabel`) by attaching a `MouseListener`/`MouseAdapter` — these components are
 functionally buttons but the accessibility API reports no click action.
 
+**Interactive role exclusion (`INTERACTIVE_ROLES`):** Tier 2 is skipped for components whose
+`AccessibleRole` is in the interactive roles set from AI-1 in the snapshot spec. These
+components have well-defined accessibility contracts and should use `AccessibleAction` for
+click detection — a MouseListener on a `JButton` is L&F plumbing, not application click
+behaviour. The excluded roles are: `PUSH_BUTTON`, `TOGGLE_BUTTON`, `CHECK_BOX`,
+`RADIO_BUTTON`, `TEXT`, `PASSWORD_TEXT`, `COMBO_BOX`, `LIST`, `TABLE`, `TREE`, `MENU_BAR`,
+`MENU`, `MENU_ITEM`, `POPUP_MENU`, `SLIDER`, `SPIN_BOX`, `PROGRESS_BAR`, `SCROLL_BAR`,
+`COLOR_CHOOSER`, `FILE_CHOOSER`, `DATE_EDITOR`.
+
 **Filtering out framework listeners:** Swing and AWT install internal `MouseListener`s for
 tooltip management (`ToolTipManager`), look-and-feel behaviour, and other plumbing. These are
 identified by package prefix and excluded. Only listeners from application packages are
@@ -385,9 +399,12 @@ considered evidence of click behaviour. The checked prefixes are:
 - `com.sun.*` — JDK internal implementation classes
 
 The returned `Runnable` synthesizes a mouse click event sequence on the component: three
-`MouseEvent`s dispatched in order (`MOUSE_PRESSED`, `MOUSE_RELEASED`, `MOUSE_CLICKED`) with
-`BUTTON1`, click count 1, and coordinates at the center of the component. This matches the
-event sequence a real mouse click produces.
+`MouseEvent`s dispatched via `Component.dispatchEvent()` in order (`MOUSE_PRESSED`,
+`MOUSE_RELEASED`, `MOUSE_CLICKED`) with `BUTTON1`, click count 1, coordinates at the center
+of the component, and timestamps offset by +0/+1/+2 ms to mimic a real press-release-click
+sequence. This goes through the full AWT event pipeline (`processEvent()` →
+`processMouseEvent()` → listeners), faithfully emulating a real mouse click including any
+`processMouseEvent()` overrides and side effects.
 
 **Impact on the snapshot:** A component where `supportsClick()` returns non-null receives the
 `click` action in the snapshot and is assigned a ref. This means unnamed panels (TP-5) that
