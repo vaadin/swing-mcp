@@ -702,7 +702,6 @@ class SnapshotNode {
         String getAdditionalInfo() {
             if (!SwingUtils.isTableHeaderVisible(table)) return "";
             List<String> names = SwingUtils.getTableColumnNames(table);
-            if (names.isEmpty()) return "";
             return "columns: [" + String.join(", ", names) + "]";
         }
 

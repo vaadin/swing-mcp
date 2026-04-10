@@ -314,17 +314,20 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot(root);
 
-        // In JScrollPane → columns: annotation on table node, header panel suppressed
-        // columns: comes after name (before bracket), scroll bars still show
-        assertTrue(output.contains("- table [ref=1] columns: [ID, Name, City] actions: multi-selection"),
-                "Table should have columns: annotation after bracket. Actual:\n" + output);
-        assertTrue(output.contains("- row 0: 1 | Alice | NY"),
-                "Should show row-based rendering");
-        assertTrue(output.contains("- row 1: 2 | Bob | LA"),
-                "Should show all rows");
-        // JTableHeader should be suppressed (SC-7)
-        assertFalse(output.contains("label \"ID\""),
-                "JTableHeader labels should not appear");
+        // In JScrollPane → columns: annotation, header suppressed (SC-6/SC-7)
+        assertEquals(
+                "- panel\n"
+                + "  - scroll_pane\n"
+                + "    - table [ref=1] columns: [ID, Name, City] actions: multi-selection\n"
+                + "      - row 0: 1 | Alice | NY\n"
+                + "      - row 1: 2 | Bob | LA\n"
+                + "    - scroll_bar [ref=2, vertical] actions: get_value, set_value\n"
+                + "      - push_button [ref=3] actions: click\n"
+                + "      - push_button [ref=4] actions: click\n"
+                + "    - scroll_bar [ref=5, horizontal] actions: get_value, set_value\n"
+                + "      - push_button [ref=6] actions: click\n"
+                + "      - push_button [ref=7] actions: click",
+                output);
     }
 
     @Test
@@ -337,9 +340,52 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot(root);
 
-        // Not in JScrollPane → no columns: annotation
-        assertFalse(output.contains("columns:"), "Should not contain columns: when not in JScrollPane");
-        assertTrue(output.contains("- row 0: Alice"), "Should show row-based rendering");
+        assertEquals(
+                "- panel\n"
+                + "  - table [ref=1] actions: multi-selection\n"
+                + "    - row 0: Alice",
+                output);
+    }
+
+    @Test
+    void jTableWithZeroColumnsInScrollPane() throws Exception {
+        JTable table = new JTable(new DefaultTableModel(0, 0));
+        JScrollPane scrollPane = new JScrollPane(table,
+                JScrollPane.VERTICAL_SCROLLBAR_NEVER,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        JPanel root = new JPanel();
+        root.add(scrollPane);
+
+        String output = snapshot(root);
+
+        assertEquals(
+                "- panel\n"
+                + "  - scroll_pane\n"
+                + "    - table [ref=1] columns: [] actions: multi-selection\n"
+                + "    - scroll_bar [ref=2, vertical] actions: get_value, set_value\n"
+                + "      - push_button [ref=3] actions: click\n"
+                + "      - push_button [ref=4] actions: click\n"
+                + "    - scroll_bar [ref=5, horizontal] actions: get_value, set_value\n"
+                + "      - push_button [ref=6] actions: click\n"
+                + "      - push_button [ref=7] actions: click",
+                output);
+    }
+
+    @Test
+    void jTableWithRowsButZeroColumns() throws Exception {
+        JTable table = new JTable(new DefaultTableModel(3, 0));
+        JPanel root = new JPanel();
+        root.add(table);
+
+        String output = snapshot(root);
+
+        assertEquals(
+                "- panel\n"
+                + "  - table [ref=1] actions: multi-selection\n"
+                + "    - row 0: \n"
+                + "    - row 1: \n"
+                + "    - row 2: ",
+                output);
     }
 
     @Test
@@ -355,12 +401,19 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot(root);
 
-        // JTableHeader panel should not appear in the tree (SC-7)
-        assertFalse(output.contains("label \"Name\""),
-                "JTableHeader labels should be suppressed from snapshot");
-        // But columns: annotation should be there
-        assertTrue(output.contains("columns: [Name]"),
-                "columns: annotation should be present");
+        // SC-7: JTableHeader suppressed, columns: annotation present instead
+        assertEquals(
+                "- panel\n"
+                + "  - scroll_pane\n"
+                + "    - table [ref=1] columns: [Name] actions: multi-selection\n"
+                + "      - row 0: Alice\n"
+                + "    - scroll_bar [ref=2, vertical] actions: get_value, set_value\n"
+                + "      - push_button [ref=3] actions: click\n"
+                + "      - push_button [ref=4] actions: click\n"
+                + "    - scroll_bar [ref=5, horizontal] actions: get_value, set_value\n"
+                + "      - push_button [ref=6] actions: click\n"
+                + "      - push_button [ref=7] actions: click",
+                output);
     }
 
     @Test
