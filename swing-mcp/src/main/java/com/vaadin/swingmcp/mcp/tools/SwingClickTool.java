@@ -6,16 +6,14 @@ import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import javax.accessibility.Accessible;
-import javax.accessibility.AccessibleAction;
-import javax.accessibility.AccessibleContext;
 import javax.swing.SwingUtilities;
 
 /**
  * MCP tool {@code swing_click}: clicks a UI component identified by ref.
  *
  * <p>Looks up the component by ref, verifies it supports the click action
- * and is effectively enabled, then invokes the matching
- * {@link AccessibleAction}.</p>
+ * and is effectively enabled, then invokes the click via the {@link Runnable}
+ * returned by {@link SwingUtils#supportsClick(Accessible)}.</p>
  *
  * @see <a href="use-case-004-swing-click.md">UC-004</a>
  */
@@ -46,9 +44,9 @@ public class SwingClickTool extends AbstractSwingTool {
         // BR-02: look up the accessible by ref (throws MCPServerException if not found)
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // BR-06: check click support before walking the parent chain
-        int actionIndex = SwingUtils.supportsClick(accessible);
-        if (actionIndex < 0) {
+        // BR-06: check click support (Tier 1: AccessibleAction, Tier 2: MouseListener)
+        Runnable click = SwingUtils.supportsClick(accessible);
+        if (click == null) {
             throw new MCPErrorResponseException(
                     "Component does not support click. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
@@ -60,9 +58,7 @@ public class SwingClickTool extends AbstractSwingTool {
         }
 
         // BR-03: fire the click action asynchronously (fire-and-forget)
-        AccessibleContext ac = accessible.getAccessibleContext();
-        AccessibleAction aa = ac.getAccessibleAction();
-        SwingUtilities.invokeLater(() -> aa.doAccessibleAction(actionIndex));
+        SwingUtilities.invokeLater(click);
         return null;
     }
 

@@ -1,6 +1,7 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
+import com.vaadin.swingmcp.mcp.ClickRecordingPanel;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
@@ -442,5 +443,98 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         // JList children have click action — ref is listRef + 1
         int childRef = listRef + 1;
         click(childRef);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Tier 2 — MouseListener fallback
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void clickingPanelWithMouseListenerFiresSyntheticEvents() throws Exception {
+        ClickRecordingPanel panel = new ClickRecordingPanel();
+
+        snapshot(panel);
+        click(context.getRefOf(panel));
+        assertTrue(panel.wasClicked(),
+                "ClickRecordingPanel should report wasClicked() after swing_click");
+    }
+
+    @Test
+    void syntheticMouseEventCoordinatesAtCenter() throws Exception {
+        ClickRecordingPanel panel = new ClickRecordingPanel();
+        panel.setSize(200, 100);
+
+        // Record the event coordinates
+        final int[] coords = new int[2];
+        panel.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                coords[0] = e.getX();
+                coords[1] = e.getY();
+            }
+        });
+
+        snapshot(panel);
+        click(context.getRefOf(panel));
+
+        assertEquals(100, coords[0], "X should be at center (width/2)");
+        assertEquals(50, coords[1], "Y should be at center (height/2)");
+    }
+
+    @Test
+    void syntheticMouseEventUsesButton1() throws Exception {
+        ClickRecordingPanel panel = new ClickRecordingPanel();
+
+        final int[] button = new int[1];
+        panel.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                button[0] = e.getButton();
+            }
+        });
+
+        snapshot(panel);
+        click(context.getRefOf(panel));
+
+        assertEquals(java.awt.event.MouseEvent.BUTTON1, button[0], "Should use BUTTON1");
+    }
+
+    @Test
+    void disabledPanelWithMouseListenerReturnsMcpError() throws Exception {
+        ClickRecordingPanel panel = new ClickRecordingPanel();
+        panel.setEnabled(false);
+
+        snapshot(panel);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> click(context.getRefOf(panel)));
+        assertTrue(ex.getMessage().contains("disabled"),
+                "Error should mention disabled, got: " + ex.getMessage());
+        assertFalse(panel.wasClicked(), "Panel should not have been clicked");
+    }
+
+    @Test
+    void componentWithNoClickSupportAndNoMouseListenerReturnsMcpError() throws Exception {
+        // A JSplitPane has get_value/set_value but no click and no app MouseListener
+        JSplitPane sp = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JPanel(), new JPanel());
+
+        snapshot(sp);
+        int ref = context.getRefOf(sp);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
+        assertTrue(ex.getMessage().contains("does not support click"));
+    }
+
+    @Test
+    void interactiveRoleWithMouseListenerIsNotClickable() throws Exception {
+        // JSlider has an interactive role — Tier 2 skipped even with app MouseListener
+        JSlider slider = new JSlider(0, 100, 50);
+        slider.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {}
+        });
+
+        snapshot(slider);
+        int ref = context.getRefOf(slider);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
+        assertTrue(ex.getMessage().contains("does not support click"));
     }
 }

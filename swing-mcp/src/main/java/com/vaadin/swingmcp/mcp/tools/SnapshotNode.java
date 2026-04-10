@@ -478,8 +478,8 @@ class SnapshotNode {
 
         List<String> actions = new ArrayList<>();
 
-        // Step 1: click
-        if (SwingUtils.supportsClick(accessible) >= 0) {
+        // Step 1: click (Tier 1: AccessibleAction, Tier 2: MouseListener fallback)
+        if (SwingUtils.supportsClick(accessible) != null) {
             actions.add("click");
         }
 
@@ -578,7 +578,7 @@ class SnapshotNode {
     static boolean hasAnyAction(Accessible accessible) {
         AccessibleContext ctx = accessible.getAccessibleContext();
         if (ctx == null) return false;
-        return SwingUtils.supportsClick(accessible) >= 0
+        return SwingUtils.supportsClick(accessible) != null
                 || SwingUtils.supportsTogglePopup(accessible) >= 0
                 || hasKnownActionConstant(ctx)
                 || SwingUtils.supportsGetText(accessible)

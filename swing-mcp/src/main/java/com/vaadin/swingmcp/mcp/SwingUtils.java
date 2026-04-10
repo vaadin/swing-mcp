@@ -7,10 +7,14 @@ import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
 import javax.swing.UIManager;
 import javax.swing.WindowConstants;
+import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.Frame;
 import java.awt.KeyboardFocusManager;
 import java.awt.Window;
+import java.awt.event.InputEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.util.Set;
 
 /**
@@ -41,6 +45,34 @@ public final class SwingUtils {
             AccessibleRole.PROGRESS_BAR
     );
 
+    // ── Interactive roles — Tier 2 MouseListener fallback is skipped for these ──
+    // These components have well-defined accessibility contracts and should use
+    // AccessibleAction for click detection. A MouseListener on a JButton is L&F
+    // plumbing, not application click behaviour.
+    static final Set<AccessibleRole> INTERACTIVE_ROLES = Set.of(
+            AccessibleRole.PUSH_BUTTON,
+            AccessibleRole.TOGGLE_BUTTON,
+            AccessibleRole.CHECK_BOX,
+            AccessibleRole.RADIO_BUTTON,
+            AccessibleRole.TEXT,
+            AccessibleRole.PASSWORD_TEXT,
+            AccessibleRole.COMBO_BOX,
+            AccessibleRole.LIST,
+            AccessibleRole.TABLE,
+            AccessibleRole.TREE,
+            AccessibleRole.MENU_BAR,
+            AccessibleRole.MENU,
+            AccessibleRole.MENU_ITEM,
+            AccessibleRole.POPUP_MENU,
+            AccessibleRole.SLIDER,
+            AccessibleRole.SPIN_BOX,
+            AccessibleRole.PROGRESS_BAR,
+            AccessibleRole.SCROLL_BAR,
+            AccessibleRole.COLOR_CHOOSER,
+            AccessibleRole.FILE_CHOOSER,
+            AccessibleRole.DATE_EDITOR
+    );
+
     // ── Roles where AccessibleSelection is internal or non-functional ────────
     // MENU_BAR / MENU: selection is internal keyboard navigation.
     // TREE: tree-level AccessibleSelection is non-functional
@@ -53,29 +85,71 @@ public final class SwingUtils {
     );
 
     /**
-     * Returns the action index for the click action on the given accessible,
-     * or {@code -1} if the accessible does not support click.
+     * Returns a {@link Runnable} that performs a click on the given accessible,
+     * or {@code null} if the accessible does not support clicking.
      * <p>
-     * Checks both {@link AccessibleAction#CLICK} (AWT literal) and
-     * {@link UIManager#getString(Object)} for {@code "AbstractButton.clickText"}
-     * (Swing UIManager) to handle locale-safe matching.
+     * Uses a two-tier approach:
+     * <ul>
+     *   <li><b>Tier 1 — AccessibleAction:</b> checks both
+     *       {@link AccessibleAction#CLICK} (AWT literal) and
+     *       {@link UIManager#getString(Object)} for {@code "AbstractButton.clickText"}
+     *       (Swing UIManager). The returned Runnable calls
+     *       {@code doAccessibleAction(i)}.</li>
+     *   <li><b>Tier 2 — MouseListener fallback:</b> if no AccessibleAction click
+     *       is found and the component's role is not in {@link #INTERACTIVE_ROLES},
+     *       checks for application-installed {@link MouseListener}s (filtering out
+     *       framework listeners by package prefix). The returned Runnable synthesizes
+     *       a mouse click event sequence via {@link Component#dispatchEvent}.</li>
+     * </ul>
      *
+     * @return a Runnable that performs the click, or null if click is not supported
      * @see <a href="architecture.md">architecture.md § 4 — Detecting Click Support</a>
      */
-    public static int supportsClick(Accessible a) {
+    public static Runnable supportsClick(Accessible a) {
+        // --- Tier 1: AccessibleAction ---
         AccessibleContext ac = a.getAccessibleContext();
-        if (ac == null) return -1;
-        AccessibleAction aa = ac.getAccessibleAction();
-        if (aa == null) return -1;
-        String clickText = UIManager.getString("AbstractButton.clickText");
-        for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
-            String desc = aa.getAccessibleActionDescription(i);
-            if (AccessibleAction.CLICK.equals(desc)
-                    || (clickText != null && clickText.equals(desc))) {
-                return i;
+        if (ac != null) {
+            AccessibleAction aa = ac.getAccessibleAction();
+            if (aa != null) {
+                String clickText = UIManager.getString("AbstractButton.clickText");
+                for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
+                    String desc = aa.getAccessibleActionDescription(i);
+                    if (AccessibleAction.CLICK.equals(desc)
+                            || (clickText != null && clickText.equals(desc))) {
+                        final int idx = i;
+                        return () -> aa.doAccessibleAction(idx);
+                    }
+                }
             }
         }
-        return -1;
+        // --- Tier 2: MouseListener fallback ---
+        // Skip for interactive roles — these should use AccessibleAction (Tier 1).
+        AccessibleRole role = (ac != null) ? ac.getAccessibleRole() : null;
+        if (role != null && INTERACTIVE_ROLES.contains(role)) return null;
+
+        if (a instanceof Component) {
+            Component c = (Component) a;
+            for (MouseListener ml : c.getMouseListeners()) {
+                String cls = ml.getClass().getName();
+                if (!cls.startsWith("javax.swing.")
+                        && !cls.startsWith("java.awt.")
+                        && !cls.startsWith("sun.")
+                        && !cls.startsWith("com.sun.")) {
+                    return () -> {
+                        int x = c.getWidth() / 2;
+                        int y = c.getHeight() / 2;
+                        long now = System.currentTimeMillis();
+                        c.dispatchEvent(new MouseEvent(c, MouseEvent.MOUSE_PRESSED,
+                                now, InputEvent.BUTTON1_DOWN_MASK, x, y, 1, false, MouseEvent.BUTTON1));
+                        c.dispatchEvent(new MouseEvent(c, MouseEvent.MOUSE_RELEASED,
+                                now + 1, 0, x, y, 1, false, MouseEvent.BUTTON1));
+                        c.dispatchEvent(new MouseEvent(c, MouseEvent.MOUSE_CLICKED,
+                                now + 2, 0, x, y, 1, false, MouseEvent.BUTTON1));
+                    };
+                }
+            }
+        }
+        return null;
     }
 
     /**

@@ -141,13 +141,13 @@ class SwingUtilsTest extends AbstractScreenTest {
     void jFrame_doesNotSupportClick() {
         JFrame frame = new JFrame("Test");
         createdWindows.add(frame);
-        assertEquals(-1, SwingUtils.supportsClick(frame));
+        assertNull(SwingUtils.supportsClick(frame));
     }
 
     @Test
     void jDialog_doesNotSupportClick() {
         JDialog dialog = newNonModalDialog();
-        assertEquals(-1, SwingUtils.supportsClick(dialog));
+        assertNull(SwingUtils.supportsClick(dialog));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

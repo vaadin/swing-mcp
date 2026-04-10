@@ -1,6 +1,7 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
+import com.vaadin.swingmcp.mcp.ClickRecordingPanel;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
@@ -944,6 +945,83 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
      * A CellRendererPane that also implements Accessible so it can appear
      * in the accessibility tree (allowing HE-2 to be tested).
      */
+    // ══════════════════════════════════════════════════════════════════════════
+    // Tier 2 — MouseListener fallback in snapshot
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void unnamedPanelWithAppMouseListener_appearsInSnapshotWithClickAction() throws Exception {
+        ClickRecordingPanel panel = new ClickRecordingPanel();
+
+        String output = snapshot(panel);
+
+        assertTrue(output.contains("click"), "Panel with app MouseListener should have click action");
+        assertTrue(output.contains("ref="), "Panel with app MouseListener should receive a ref");
+    }
+
+    @Test
+    void unnamedPanelWithOnlyFrameworkMouseListener_isPruned() throws Exception {
+        // Register ToolTipManager directly as a MouseListener (avoiding setToolTipText
+        // which also sets accessibleDescription, making the panel "named").
+        JPanel panel = new JPanel();
+        panel.addMouseListener(javax.swing.ToolTipManager.sharedInstance());
+
+        String output = snapshot(panel);
+
+        // The panel is the root (always shown) but should NOT get a click action or ref.
+        assertFalse(output.contains("ref="), "Framework MouseListener should not grant a ref, got:\n" + output);
+        assertFalse(output.contains("actions:"), "Framework MouseListener should not produce any actions, got:\n" + output);
+    }
+
+    @Test
+    void buttonWithAdditionalAppMouseListener_showsClickOnce() throws Exception {
+        JButton button = new JButton("OK");
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {}
+        });
+
+        String output = snapshot(button);
+
+        // Should show "click" exactly once (Tier 1 wins)
+        int clickCount = 0;
+        int idx = 0;
+        while ((idx = output.indexOf("click", idx)) != -1) {
+            clickCount++;
+            idx += 5;
+        }
+        assertEquals(1, clickCount, "Should show 'click' exactly once, got: " + output);
+    }
+
+    @Test
+    void disabledPanelWithAppMouseListener_showsBangClick() throws Exception {
+        ClickRecordingPanel panel = new ClickRecordingPanel();
+        panel.setEnabled(false);
+
+        String output = snapshot(panel);
+
+        assertTrue(output.contains("!click"), "Disabled panel with MouseListener should show !click");
+    }
+
+    @Test
+    void interactiveRoleWithAppMouseListener_noTier2Click() throws Exception {
+        JSlider slider = new JSlider(0, 100, 50);
+        slider.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {}
+        });
+
+        String output = snapshot(slider);
+
+        // Slider has interactive role — Tier 2 skipped. Should have increment/decrement but NOT click.
+        assertFalse(output.contains("click"), "Interactive role should not get Tier 2 click, got: " + output);
+        assertTrue(output.contains("increment"), "Slider should still have increment");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Helpers
+    // ══════════════════════════════════════════════════════════════════════════
+
     private static class AccessibleCellRendererPane extends CellRendererPane implements Accessible {
         @Override
         public AccessibleContext getAccessibleContext() {
