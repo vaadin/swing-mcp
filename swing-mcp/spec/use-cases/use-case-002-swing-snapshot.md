@@ -11,12 +11,13 @@
 
 ## Main Flow
 
-- I call the `swing_snapshot` tool with no parameters.
+- I call the `swing_snapshot` tool with an optional `filter_substring` parameter.
 - The tool walks the `javax.accessibility` tree of each component returned by `SwingToolContext.getConsideredComponents()` (usually a Window or JFrame, but during testing it could be any component). Each considered component is an independent root — no component in the list is nested inside another.
 - The tree walker applies the **Snapshot Inclusion Rules** (below) to decide which nodes appear in the output and which are pruned.
 - The tool returns a compact indented text tree with each node showing role, name, states, and available actions.
   - Nodes that expose at least one `AccessibleAction` also receive a numeric ref.
   - Only include accessibility name and description if those are not blank. Description follows the name in the line format.
+- If `filter_substring` is provided, the rendered output is post-filtered: only lines whose text contains the substring (case-insensitive) are returned. Root separators (`---`) are dropped from filtered output. If no lines match, a short message is returned instead of an empty string.
 
 ---
 
@@ -317,6 +318,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 | BR-06 | Action labels displayed in the snapshot are determined by the **Action Label Algorithm** below. Detection methods, Java mechanisms, and MCP tool names are defined in **architecture.md §6**. All action names use lower-case underscore-separated format. |
 | BR-07 | A node receives a ref if it exposes at least one action under the BR-06 algorithm — i.e. any of: `supportsClick()`, `supportsTogglePopup()`, a known `AccessibleAction` constant, `supportsGetText()`, `supportsSetText()`, `supportsGetValue()`, `supportsSetValue()`, `supportsSelection()`, `supportsClose()`, or the `isLargeDataComponent` truncation gate (step 6b) returns non-null/true. `supportsSelection()` maps to one group label (`single-selection` or `multi-selection`). This supersedes the `AccessibleAction`-only gate in BR-01. Nodes where all actions are `!`-prefixed still receive a ref. |
 | BR-08 | **Unavailable action prefix (`!`).** After the BR-06 algorithm produces the action list, each **mutation action** is checked: if the action would fail validation when invoked, it is prefixed with `!` (e.g. `!click`, `!set_text`). A mutation action is unavailable when: (a) `SwingUtils.isEffectivelyEnabled()` returns `false` (component or an ancestor is disabled), or (b) the action is `set_text` and the component is read-only (has `AccessibleEditableText` but lacks the `EDITABLE` state). **Read-only actions** (`get_text`, `get_value`, `get_selection`, `get_selectable_items`, `get_selectable_items_count`, `get_cell_count`, `get_cells`) are never prefixed — they always succeed. **Selection group labels** (`single-selection`, `multi-selection`) are never prefixed — they are informational labels, not directly invocable actions. The set of mutation actions is: `click`, `toggle_popup`, `increment`, `decrement`, `toggle_expand`, `set_text`, `set_value`, `close`. This set is stored as a constant (`MUTATION_ACTIONS`) in `SnapshotNode`. |
+| BR-09 | **Snapshot filtering (`filter_substring`).** When the optional `filter_substring` parameter is provided, the tool applies a post-processing filter after the four-phase pipeline completes. Each rendered line is tested with a case-insensitive substring match (`String.toLowerCase().contains()`). Only matching lines are included in the output. Root separators (`---`) are excluded from filtered output. The ref map is unaffected — filtering does not change ref assignment. If no lines match, the tool returns the message `No lines matched filter_substring 'X'` (where X is the provided value). The filter operates on the full rendered line (role, name, states, actions — everything). |
 
 ### Action Label Algorithm (BR-06)
 
@@ -367,6 +369,11 @@ For each node, collect actions by running the following checks in order. All det
 - [x] JTabbedPane shows tab items with the selected tab marked `SELECTED`; only the selected tab's content is included.
 - [x] A JTable/JList/JTree with more than `MAX_DATA_CHILDREN` rows shows only the first `MAX_DATA_CHILDREN` rows plus a `... and N more items` summary.
 - [x] Only meaningful accessible states are shown (see **Accessible States — Display Rules**).
+- [ ] When `filter_substring` is provided, only lines containing the substring (case-insensitive) are returned.
+- [ ] When `filter_substring` matches no lines, a descriptive message is returned instead of empty output.
+- [ ] Filtering does not affect ref assignment — refs remain the same as in the unfiltered snapshot.
+- [ ] Root separators (`---`) are excluded from filtered output.
+- [ ] When `filter_substring` is omitted or empty, the full snapshot is returned (no change to existing behavior).
 
 ---
 
@@ -400,6 +407,11 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [ ] Disabled component with only `!`-prefixed actions still receives a ref.
   - [x] When two roots are provided, their trees are separated by a `---` line and refs are numbered globally (not reset between roots).
   - [x] Calling `swing_snapshot` via the MCP client returns a valid text response.
+  - [ ] `filter_substring` returns only matching lines (case-insensitive substring match on full rendered line).
+  - [ ] `filter_substring` with no matches returns a descriptive message.
+  - [ ] `filter_substring` does not affect ref numbering — a filtered component has the same ref as in the unfiltered snapshot.
+  - [ ] `filter_substring` drops root separators (`---`) from the output.
+  - [ ] Omitting `filter_substring` (or passing empty/null) returns the full unfiltered snapshot.
 
 ### Screen-mode tests (`src/testSwing`) — `SwingSnapshotToolWithScreenTest`
 
