@@ -760,6 +760,21 @@ This replaces the former TODO-1 and TODO-2. The individual selection actions no 
 | `supportsSingleSelection(Accessible)` | `supportsSelection()` AND NOT `isMultiSelectable()` | Convenience: single-selection mode |
 | `supportsMultiSelection(Accessible)` | `supportsSelection()` AND `isMultiSelectable()` | Convenience: multi-selection mode |
 
+### JTable Snapshot Rendering
+
+JTable receives special rendering in the snapshot (UC-002 SC-6/SC-7) to present data in a row-oriented, human- and AI-readable format instead of a flat list of cell labels.
+
+**`SwingUtils` methods for JTable rendering:**
+
+| Method | Logic | Purpose |
+|---|---|---|
+| `isTableHeaderVisible(JTable)` | `getTableHeader()` non-null AND `isVisible()` AND table is inside a `JScrollPane` (parent is `JViewport`, grandparent is `JScrollPane`) AND header passes `isVisible(Accessible)` zero-size check | Determines whether column headers should be shown in the snapshot. Swing only renders the table header when the table is inside a JScrollPane. |
+| `getTableColumnNames(JTable)` | Iterates `TableColumnModel` in display order, calls `getHeaderValue().toString()` on each column | Returns column names respecting user column reordering. Used for the `columns:` annotation on the table node. |
+| `buildTableRowText(AccessibleTable, row, cols)` | Concatenates cell accessible names with `" \| "` separator, capped at `MAX_ROW_NAME_COLUMNS` (10) with trailing `"…"` | Builds a pipe-separated row summary for snapshot row lines. |
+| `describeTableCell(Accessible)` | Returns `cell.getAccessibleContext().getAccessibleName()`, or `"null"` if absent | Cell text description. JTable cells are virtual accessible children — renderers (even JButton renderers) are "rubber stamps" that don't appear in the accessibility tree. |
+
+**Why cells are always plain text:** JTable cell renderers are painted via `CellRendererPane` (a stamp-painting mechanism) — the renderer `Component` is never added to the real component hierarchy. The accessibility API exposes virtual `Accessible` children whose names come from `toString()` of the cell value. Even if a column uses a `JButton` renderer, the accessible child is a `LABEL` with no click action. Interactive cell editors only appear in the accessibility tree while a cell is being actively edited.
+
 ### Content Discovery (`get_cells` / `get_cell_count`)
 
 In cases where the `swing_snapshot` tool trims children of large data component, the AI

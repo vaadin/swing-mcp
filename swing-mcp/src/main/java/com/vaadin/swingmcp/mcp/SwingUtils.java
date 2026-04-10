@@ -3,11 +3,16 @@ package com.vaadin.swingmcp.mcp;
 import javax.accessibility.*;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
+import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JViewport;
 import javax.swing.ListSelectionModel;
 import javax.swing.UIManager;
 import javax.swing.WindowConstants;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableColumnModel;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dialog;
 import java.awt.Frame;
 import java.awt.KeyboardFocusManager;
@@ -15,6 +20,8 @@ import java.awt.Window;
 import java.awt.event.InputEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -549,6 +556,104 @@ public final class SwingUtils {
         return role == AccessibleRole.TABLE
                 || role == AccessibleRole.LIST
                 || role == AccessibleRole.TREE;
+    }
+
+    // ── JTable header & row helpers ──────────────────────────────────────────
+
+    /**
+     * Returns {@code true} if the given JTable's column header is effectively
+     * visible to the user.
+     * <p>
+     * A header is visible when all of the following hold:
+     * <ol>
+     *   <li>{@code table.getTableHeader()} is non-null,</li>
+     *   <li>the header component is {@linkplain Component#isVisible() visible},</li>
+     *   <li>the table is inside a {@link JScrollPane} (Swing only displays the
+     *       table header when it occupies the scroll pane's column-header viewport).</li>
+     * </ol>
+     * Zero-size headers (e.g. preferred size set to 0×0) are also treated as
+     * invisible via {@link #isVisible(Accessible)}.
+     */
+    public static boolean isTableHeaderVisible(JTable table) {
+        JTableHeader header = table.getTableHeader();
+        if (header == null) return false;
+        if (!header.isVisible()) return false;
+        // The table header is only rendered when the table sits inside a
+        // JScrollPane.  Standard Swing layout: JScrollPane → JViewport → JTable.
+        Container parent = table.getParent();
+        if (!(parent instanceof JViewport)) return false;
+        Container grandparent = parent.getParent();
+        if (!(grandparent instanceof JScrollPane)) return false;
+        // Final check: if the header has been realized with zero size, treat
+        // it as invisible (consistent with isVisible()).
+        if (header instanceof Accessible && !isVisible((Accessible) header)) return false;
+        return true;
+    }
+
+    /**
+     * Returns the column header names for the given JTable, in display order.
+     * <p>
+     * Names are read from the {@link TableColumnModel} (which respects column
+     * reordering by the user) via {@link javax.swing.table.TableColumn#getHeaderValue()}.
+     * If a column's header value is {@code null}, the string {@code "null"} is used.
+     *
+     * @return a list of column names; empty if the table has no columns
+     */
+    public static List<String> getTableColumnNames(JTable table) {
+        TableColumnModel cm = table.getColumnModel();
+        int cols = cm.getColumnCount();
+        List<String> names = new ArrayList<>(cols);
+        for (int i = 0; i < cols; i++) {
+            Object headerValue = cm.getColumn(i).getHeaderValue();
+            names.add(headerValue != null ? headerValue.toString() : "null");
+        }
+        return names;
+    }
+
+    /**
+     * Builds a pipe-separated summary of a single JTable row, suitable for
+     * snapshot rendering.
+     * <p>
+     * Each cell is represented by its accessible name.  At most
+     * {@link #MAX_ROW_NAME_COLUMNS} columns are included; if the table has
+     * more, a trailing {@code "…"} is appended.
+     * <p>
+     * Example output: {@code "1 | Acme Corp | Manufacturing | Active"}.
+     *
+     * @param at   the accessible table
+     * @param row  the 0-based row index
+     * @param cols the total number of columns in the table
+     * @return a pipe-separated summary of cell values
+     */
+    public static String buildTableRowText(AccessibleTable at, int row, int cols) {
+        int colLimit = Math.min(cols, MAX_ROW_NAME_COLUMNS);
+        StringBuilder sb = new StringBuilder();
+        for (int col = 0; col < colLimit; col++) {
+            if (col > 0) sb.append(" | ");
+            Accessible cell = at.getAccessibleAt(row, col);
+            sb.append(describeTableCell(cell));
+        }
+        if (cols > MAX_ROW_NAME_COLUMNS) {
+            sb.append(" | \u2026");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Returns a text description for a single table cell accessible.
+     * <p>
+     * JTable cells are virtual accessible children whose names come from
+     * {@code toString()} of the cell value — renderers (even JButton renderers)
+     * are just "rubber stamps" and don't appear in the accessibility tree.
+     *
+     * @return the cell's accessible name, or {@code "null"} if the cell or its name is null
+     */
+    static String describeTableCell(Accessible cell) {
+        if (cell == null) return "null";
+        AccessibleContext ac = cell.getAccessibleContext();
+        if (ac == null) return "null";
+        String name = ac.getAccessibleName();
+        return (name != null) ? name : "null";
     }
 
     public static Number serializeNumber(Number value) {
