@@ -769,7 +769,7 @@ JTable receives special rendering in the snapshot (UC-002 SC-6/SC-7) to present 
 | Method | Logic | Purpose |
 |---|---|---|
 | `isTableHeaderVisible(JTable)` | `getTableHeader()` non-null AND `isVisible()` AND table is inside a `JScrollPane` (parent is `JViewport`, grandparent is `JScrollPane`) AND header passes `isVisible(Accessible)` zero-size check | Determines whether column headers should be shown in the snapshot. Swing only renders the table header when the table is inside a JScrollPane. |
-| `getTableColumnNames(JTable)` | Iterates `TableColumnModel` in display order, calls `getHeaderValue().toString()` on each column | Returns column names respecting user column reordering. Used for the `columns:` annotation on the table node. |
+| `getTableColumnNames(JTable)` | Iterates `TableColumnModel` in display order, calls `getHeaderValue().toString()` on each column | Returns column names respecting user column reordering. Used for the `columns: [Col1, Col2, …]` annotation on the table node (placed after bracket, before `actions:`). |
 | `buildTableRowText(AccessibleTable, row, cols)` | Concatenates cell accessible names with `" \| "` separator, capped at `MAX_ROW_NAME_COLUMNS` (10) with trailing `"…"` | Builds a pipe-separated row summary for snapshot row lines. |
 | `describeTableCell(Accessible)` | Returns `cell.getAccessibleContext().getAccessibleName()`, or `"null"` if absent | Cell text description. JTable cells are virtual accessible children — renderers (even JButton renderers) are "rubber stamps" that don't appear in the accessibility tree. |
 
