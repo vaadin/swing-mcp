@@ -101,7 +101,7 @@ public class SwingSnapshotTool extends AbstractSwingTool {
             // Check if any node in any root matches
             boolean anyMatch = false;
             for (SnapshotNode root : roots) {
-                if (root.subtreeMatchesFilter(filterLower, 0)) {
+                if (root.subtreeMatchesFilter(filterLower)) {
                     anyMatch = true;
                     break;
                 }
@@ -118,7 +118,7 @@ public class SwingSnapshotTool extends AbstractSwingTool {
                     .append('\n');
 
             for (SnapshotNode root : roots) {
-                if (root.subtreeMatchesFilter(filterLower, 0)) {
+                if (root.subtreeMatchesFilter(filterLower)) {
                     root.renderFiltered(filterLower, 0, filtered);
                 }
             }

@@ -134,9 +134,9 @@ class SnapshotNode {
 
     /**
      * Numeric ref assigned during Phase 3 (assignRefs).
-     * {@code 0} means this node has no ref.
+     * {@code 0} means this node has no ref. null means ref hasn't been calculated yet.
      */
-    int ref = 0;
+    protected Integer ref = null;
 
     /**
      * True when this node's children were capped at {@link #MAX_DATA_ROW_NODES}
@@ -385,6 +385,8 @@ class SnapshotNode {
      * Depth-first traversal; assigns the next integer ref to every node that exposes
      * at least one action under the BR-06 algorithm, and stores the mapping in
      * {@code context}.
+     * <br/>
+     * The function must assign a value to {@link #ref}.
      *
      * @param nextRef the first ref value available for assignment
      * @param context the tool context that holds the ref → accessible map
@@ -395,6 +397,8 @@ class SnapshotNode {
             ref = nextRef;
             context.putRef(nextRef, accessible);
             nextRef++;
+        } else {
+            ref = 0;
         }
         for (SnapshotNode child : children) {
             nextRef = child.assignRefs(nextRef, context);
@@ -441,13 +445,27 @@ class SnapshotNode {
         renderTruncationSummary(depth, sb);
     }
 
+    private String selfLine = null;
+
     /**
      * Renders only this node's own line (no children, no truncation summary).
      */
-    void renderSelfLine(int depth, StringBuilder sb) {
+    private void renderSelfLine(int depth, StringBuilder sb) {
         String indent = "  ".repeat(depth);
         sb.append(indent).append("- ");
+        sb.append(getSelfLine());
+    }
 
+    final String getSelfLine() {
+        if (selfLine == null) {
+            Objects.requireNonNull(ref, "ref hasn't been calculated yet");
+            selfLine = calculateSelfLine();
+        }
+        return selfLine;
+    }
+
+    protected String calculateSelfLine() {
+        final StringBuilder sb = new StringBuilder();
         AccessibleContext ctx = accessible.getAccessibleContext();
         AccessibleRole role = ctx != null ? ctx.getAccessibleRole() : null;
         sb.append(role != null ? AccessibleNames.roleName(role) : "unknown");
@@ -508,6 +526,7 @@ class SnapshotNode {
         }
 
         sb.append('\n');
+        return sb.toString();
     }
 
     /**
@@ -526,22 +545,20 @@ class SnapshotNode {
      * Returns whether this node's rendered self-line contains the given
      * filter substring (case-insensitive). Used by the tree filter algorithm.
      */
-    boolean matchesFilter(String filterLower, int depth) {
-        StringBuilder line = new StringBuilder();
-        renderSelfLine(depth, line);
-        return line.toString().toLowerCase().contains(filterLower);
+    boolean matchesFilter(String filterLower) {
+        return getSelfLine().toLowerCase().contains(filterLower);
     }
 
     /**
      * Checks whether this node or any descendant matches the filter.
      * Returns {@code true} if this node should be included in filtered output.
      */
-    boolean subtreeMatchesFilter(String filterLower, int depth) {
-        if (matchesFilter(filterLower, depth)) {
+    boolean subtreeMatchesFilter(String filterLower) {
+        if (matchesFilter(filterLower)) {
             return true;
         }
         for (int i = 0; i < children.size(); i++) {
-            if (children.get(i).subtreeMatchesFilter(filterLower, depth + 1)) {
+            if (children.get(i).subtreeMatchesFilter(filterLower)) {
                 return true;
             }
         }
@@ -559,14 +576,14 @@ class SnapshotNode {
      * @param sb          the target buffer
      */
     void renderFiltered(String filterLower, int depth, StringBuilder sb) {
-        if (matchesFilter(filterLower, depth)) {
+        if (matchesFilter(filterLower)) {
             // Direct match — render this node and ALL descendants unconditionally
             render(depth, sb);
         } else {
             // Ancestor of a match — render self-line, recurse only into matching branches
             renderSelfLine(depth, sb);
             for (SnapshotNode child : children) {
-                if (child.subtreeMatchesFilter(filterLower, depth + 1)) {
+                if (child.subtreeMatchesFilter(filterLower)) {
                     child.renderFiltered(filterLower, depth + 1, sb);
                 }
             }
@@ -800,14 +817,13 @@ class SnapshotNode {
         /** No actions, no children — nothing to assign. */
         @Override
         int assignRefs(int nextRef, SwingToolContext context) {
+            ref = 0;
             return nextRef;
         }
 
         @Override
-        void renderSelfLine(int depth, StringBuilder sb) {
-            sb.append("  ".repeat(depth))
-              .append("- row ").append(rowIndex).append(": ").append(rowText)
-              .append('\n');
+        protected String calculateSelfLine() {
+            return "row " + rowIndex + ": " + rowText + '\n';
         }
     }
 }
