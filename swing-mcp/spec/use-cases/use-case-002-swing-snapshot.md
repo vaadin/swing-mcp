@@ -372,7 +372,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|

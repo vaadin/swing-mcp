@@ -1,24 +1,13 @@
 # UC-006: swing_set_text
 
----
-
-**As an** AI agent, **I want to** set the text content of a UI component by ref **so that** I can fill in text fields, text areas, and other editable text components.
-
 **Status:** Implemented
 **Date:** 2026-03-31
 
----
-
-## Main Flow
-
-- I first call `swing_snapshot` to obtain refs for the current UI state.
-- I call `swing_set_text` with the `ref` parameter identifying the component and a `text` parameter containing the new text.
-- The tool validates the ref and component, then fires `setTextContents()` asynchronously and returns `null` immediately.
-- I call `swing_snapshot` again to get fresh refs reflecting any UI changes.
+Writes text into text fields, text areas, and other editable text components.
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|

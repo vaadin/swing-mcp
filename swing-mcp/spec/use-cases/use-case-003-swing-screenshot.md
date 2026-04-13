@@ -1,25 +1,13 @@
 # UC-003: swing_screenshot
 
----
-
-**As an** AI agent, **I want to** capture a screenshot of the Swing application **so that** I can visually inspect the current state of the UI.
-
 **Status:** Implemented
 **Date:** 2026-03-26
 
----
-
-## Main Flow
-
-- I call the `swing_screenshot` tool with no parameters.
-- The tool calls `context.getConsideredComponents()` to obtain the list of components to render.
-- The tool renders each considered component to a `BufferedImage` using `component.printAll(g)` on a freshly created `BufferedImage` sized to `component.getWidth()` × `component.getHeight()`. This captures the full Swing-rendered content including menu bar and internal borders, but not OS-managed window decorations (title bar, native border).
-- If multiple components are considered, the tool arranges them vertically into a single image: composite width = max of all component widths; each component is horizontally centered; a 4 px gap separates consecutive components.
-- The tool encodes the result as PNG and returns it as `MCPProtocol.Content.image(base64, "image/png")`.
+Captures a PNG of what the user currently sees — lets the AI visually verify app state when the accessibility tree alone is ambiguous.
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|

@@ -1,27 +1,15 @@
 # UC-017: swing_get_items
 
----
-
-**As an** AI agent, **I want to** enumerate all items of a UI component by ref **so that** I can discover the available options in lists, combo boxes, and tables before making a selection — especially when the snapshot truncated the component's children.
-
 **Status:** Implemented (amended 2026-04-13 — JTable decoupled from selection-mode gate; any JTable is now a valid target. Amended 2026-04-13 per P-001 — JTabbedPane dropped as a supported target; tabs are read inline from the snapshot via UC-002 SC-2. Amended 2026-04-13 per P-001 Wave B — tool renamed from `swing_get_selectable_items` to `swing_get_items`; the old name no longer overpromises on selectability.)
 **Date:** 2026-04-08
 
----
-
-## Main Flow
-
-- I first call `swing_snapshot` to obtain refs for the current UI state.
-- I see a component marked `single-selection` or `multi-selection` in the snapshot, but the snapshot may have truncated its children (e.g. a JList with 200 items shows only the first 5).
-- I call `swing_get_items` with the `ref`, `offset`, and `length` parameters to page through the full list of items.
-- The tool returns a JSON object containing `totalCount` (total number of items) and `items` (array of objects, each with `index` and `name`).
-- I use the `index` values from the response to call `swing_set_selection` or to understand what the component contains.
+Pages through all items of a `JList` / `JComboBox` / `JTable`. Necessary when the snapshot truncated the component's children (SC-3) and the AI needs to see beyond the first few entries.
 
 **Tool description:** "List items of a UI component by ref. Supported components: JList, JComboBox, JTable. Returns a paged JSON array of items (0-based index + name). Indices are in the selection item index space — pass them directly to swing_set_selection. For JTable, this is the canonical way to page through rows regardless of selection mode: index is the row index and name is a pipe-separated summary of cell values (use this instead of swing_get_cells, which does not support JTable). For JTabbedPane, use the swing_snapshot tool — each tab already renders as `- (page_tab) N \"title\"` with its 0-based index and `[disabled]` / `[selected]` state; pass the index straight to swing_set_selection as `[N]`. Requires offset and length parameters for paging. If offset+length is bigger than the amount of data available, fewer items than requested may be returned. Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|

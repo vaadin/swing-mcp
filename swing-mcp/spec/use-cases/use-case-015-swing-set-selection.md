@@ -1,27 +1,15 @@
 # UC-015: swing_set_selection
 
----
-
-**As an** AI agent, **I want to** set the selection of a UI component by ref and item indices **so that** I can select items in lists, combo boxes, tables, and tabbed panes during Swing app migration.
-
 **Status:** Implemented
 **Date:** 2026-04-07
 
----
-
-## Main Flow
-
-- I first call `swing_snapshot` to obtain refs for the current UI state.
-- I optionally call `swing_get_selection` to learn what is currently selected.
-- I call `swing_set_selection` with the `ref` parameter identifying the component and an `indices` parameter containing an array of 0-based item indices to select.
-- The tool validates the ref, capability, enabled state, and selection mode compatibility, then clears the current selection and adds the requested indices via `AccessibleSelection` asynchronously. Returns `null` immediately.
-- I call `swing_snapshot` again to get fresh refs reflecting any UI changes.
+Replaces a component's selection with a caller-supplied array of item indices (row indices for `JTable`). Paired with `swing_get_selection` — the indices round-trip cleanly.
 
 **Tool description:** "Set the selection of a UI component by ref. Pass 0-based item indices (as returned by swing_get_selection). For single-selection components, pass at most one index. For JTable, pass row indices — the tool translates to cell indices internally. Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|

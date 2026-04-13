@@ -1,27 +1,15 @@
 # UC-018: swing_get_item_count
 
----
-
-**As an** AI agent, **I want to** get the total count of items in a UI component by ref **so that** I can decide how to page through `swing_get_items` without first requesting any items — saving a round-trip when I only need the count.
-
 **Status:** Implemented (amended 2026-04-13 — JTable decoupled from selection-mode gate; any JTable is now a valid target. Amended 2026-04-13 per P-001 — JTabbedPane dropped as a supported target; the tab count is derivable from the snapshot, which renders every tab inline per UC-002 SC-2. Amended 2026-04-13 per P-001 Wave B — tool renamed from `swing_get_selectable_items_count` to `swing_get_item_count`.)
 **Date:** 2026-04-08
 
----
-
-## Main Flow
-
-- I first call `swing_snapshot` to obtain refs for the current UI state.
-- I see a component marked `single-selection` or `multi-selection` in the snapshot, but I don't know how many items it contains (the snapshot may have truncated its children).
-- I call `swing_get_item_count` with the `ref` parameter.
-- The tool returns the total count as a plain integer string (e.g. `"200"`).
-- I use the count to decide whether and how to page through `swing_get_items`.
+Returns the total item count so the AI can plan paging through `swing_get_items` without a throwaway first fetch.
 
 **Tool description:** "Get the total number of items of a UI component by ref. Supported components: JList, JComboBox, JTable. Returns the count as a plain integer. For JTable, this is the canonical way to get the row count regardless of selection mode (use this instead of swing_get_cell_count, which does not support JTable). Note: swing_set_selection still requires the table to be in row-selection mode. For JTabbedPane, count the tabs directly from the snapshot — each tab renders as `- (page_tab) N \"title\"` with its 0-based index (UC-002 SC-2). Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|

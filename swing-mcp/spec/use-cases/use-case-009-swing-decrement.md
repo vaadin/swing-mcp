@@ -1,24 +1,13 @@
 # UC-009: swing_decrement
 
----
-
-**As an** AI agent, **I want to** decrement the value of a UI component by ref **so that** I can decrease the value of a spinner or slider one step at a time.
-
 **Status:** Implemented
 **Date:** 2026-03-31
 
----
-
-## Main Flow
-
-- I first call `swing_snapshot` to obtain refs for the current UI state.
-- I call `swing_decrement` with the `ref` parameter identifying the component.
-- The tool validates the ref and component, then fires the decrement action asynchronously and returns `null` immediately.
-- I call `swing_snapshot` again to observe the updated value, or use `swing_get_value` to read the new value without invalidating refs.
+Steps a spinner or slider down by one unit — mirror of `swing_increment`.
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|

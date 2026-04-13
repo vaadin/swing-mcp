@@ -1,11 +1,9 @@
 # UC-011: swing_close
 
----
-
-**As an** AI agent, **I want to** close a window or dialog by ref **so that** I can dismiss dialogs and frames that I've finished with.
-
 **Status:** Implemented
 **Date:** 2026-04-01
+
+Dismisses a window or dialog via `WINDOW_CLOSING` — respects the app's close handlers. See the JVM-termination hazard below.
 
 ---
 
@@ -15,16 +13,7 @@ Closing a window may terminate the application (e.g. `EXIT_ON_CLOSE` on the main
 
 `EXIT_ON_CLOSE` frames are refused proactively (BR-09), but other termination paths (custom `WindowListener` calling `System.exit()`) cannot be detected in advance.
 
-## Main Flow
-
-- I call `swing_snapshot` and see a `frame` or `dialog` node with `close` in its actions list.
-- I call `swing_close` with the `ref` parameter identifying the component to close.
-- The tool validates the ref, then fires `WindowEvent.WINDOW_CLOSING` asynchronously via `invokeLater` and returns `null` immediately.
-- I call `swing_snapshot` again to observe whether the window was dismissed.
-
----
-
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|

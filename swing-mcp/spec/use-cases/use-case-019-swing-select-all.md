@@ -1,27 +1,15 @@
 # UC-019: swing_select_all
 
----
-
-**As an** AI agent, **I want to** select all items in a multi-selection UI component by ref **so that** I can quickly select everything in a list or table without enumerating all indices manually.
-
 **Status:** Implemented
 **Date:** 2026-04-08
 
----
-
-## Main Flow
-
-- I first call `swing_snapshot` to obtain refs for the current UI state.
-- I see a component marked `multi-selection` in the snapshot (e.g. a `JList` in `MULTIPLE_INTERVAL_SELECTION` mode, or a `JTable` in multi-row-selection mode).
-- I call `swing_select_all` with the `ref` parameter identifying the component.
-- The tool validates the ref, capability, enabled state, and multi-selection support, then selects all items via `AccessibleSelection.selectAllAccessibleSelection()` (or JTable direct API) asynchronously. Returns `null` immediately.
-- I call `swing_snapshot` again to get fresh refs reflecting any UI changes.
+Selects every item in a multi-selection component — saves the AI from enumerating every index itself.
 
 **Tool description:** "Select all items in a multi-selection UI component by ref. Only works on components marked multi-selection in the snapshot (JList, JTable). Single-selection components are rejected. Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|

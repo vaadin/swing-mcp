@@ -1,24 +1,13 @@
 # UC-004: swing_click
 
----
-
-**As an** AI agent, **I want to** click a UI component by ref **so that** I can interact with buttons, checkboxes, and other clickable elements.
-
 **Status:** Implemented
 **Date:** 2026-03-31
 
----
-
-## Main Flow
-
-- I first call `swing_snapshot` to obtain refs for the current UI state.
-- I call `swing_click` with the `ref` parameter identifying the component to click.
-- The tool validates the ref and component, then fires the click action asynchronously and returns `null` immediately.
-- I call `swing_snapshot` again to observe any UI changes.
+A click primitive for buttons, checkboxes, menu items, and any other clickable element — the most common interaction in any Swing UI.
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|

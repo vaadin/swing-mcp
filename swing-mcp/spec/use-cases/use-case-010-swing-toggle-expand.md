@@ -1,24 +1,13 @@
 # UC-010: swing_toggle_expand
 
----
-
-**As an** AI agent, **I want to** expand or collapse a tree node by ref **so that** I can navigate a `JTree` hierarchy to find and interact with nested items.
-
 **Status:** Implemented
 **Date:** 2026-04-01
 
----
-
-## Main Flow
-
-- I first call `swing_snapshot` to obtain refs for the current UI state.
-- I call `swing_toggle_expand` with the `ref` parameter identifying the tree node.
-- The tool validates the ref and node, then fires the toggle-expand action asynchronously and returns `null` immediately.
-- I call `swing_snapshot` again to get fresh refs reflecting the updated tree (newly visible children will appear with refs).
+Expands or collapses a `JTree` node so the AI can navigate a hierarchy to find nested items.
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|

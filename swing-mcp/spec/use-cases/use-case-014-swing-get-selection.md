@@ -1,26 +1,15 @@
 # UC-014: swing_get_selection
 
----
-
-**As an** AI agent, **I want to** read the current selection of a UI component by ref **so that** I can understand which items are selected in lists, combo boxes, tables, and tabbed panes without relying on the snapshot (which omits selection state per UC-002 BR-03).
-
 **Status:** Implemented
 **Date:** 2026-04-07
 
----
-
-## Main Flow
-
-- I first call `swing_snapshot` to obtain refs for the current UI state.
-- I call `swing_get_selection` with the `ref` parameter identifying the component whose selection I want to read.
-- The tool looks up the component by ref and reads its selection via the accessibility API (`AccessibleSelection`).
-- The tool returns a JSON object containing `selectedCount` (integer) and `selected` (array of objects, each with `index` and `name`).
+Returns the current selection (indices + names) of lists, combo boxes, tables, and tabbed panes. Needed because the snapshot omits selection state (UC-002 BR-03).
 
 **Tool description:** "Read the current selection of a UI component by ref. Returns JSON with selectedCount and selected items (0-based index + name). For JTable, index is the row index (not cell index) and name is a pipe-separated summary of cell values. Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|

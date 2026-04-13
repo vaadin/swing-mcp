@@ -1,26 +1,15 @@
 # UC-012: swing_get_value
 
----
-
-**As an** AI agent, **I want to** read the numeric value of a UI component by ref **so that** I can understand the current value of sliders, spinners, progress bars, and split panes without relying on the snapshot (which omits field values per UC-002 BR-03).
-
 **Status:** Implemented
 **Date:** 2026-04-02
 
----
-
-## Main Flow
-
-- I first call `swing_snapshot` to obtain refs for the current UI state.
-- I call `swing_get_value` with the `ref` parameter identifying the component whose value I want to read.
-- The tool looks up the component by ref and reads its numeric value via the accessibility API (`AccessibleValue`).
-- The tool returns a JSON object containing `current`, `min`, and `max` as numbers.
+Reads the numeric value of sliders, spinners, progress bars, and split-pane dividers. Needed because the snapshot omits field values (UC-002 BR-03).
 
 **Tool description:** "Read the numeric value of a UI component by ref. Returns JSON with current, min, max. Missing min/max means unbounded. Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|

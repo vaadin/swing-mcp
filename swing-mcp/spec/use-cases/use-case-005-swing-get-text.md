@@ -1,24 +1,13 @@
 # UC-005: swing_get_text
 
----
-
-**As an** AI agent, **I want to** read the text content of a UI component by ref **so that** I can understand the current value of text fields and other text-bearing components without relying on the snapshot (which omits field values per UC-002 BR-03).
-
 **Status:** Implemented
 **Date:** 2026-03-31
 
----
-
-## Main Flow
-
-- I first call `swing_snapshot` to obtain refs for the current UI state.
-- I call `swing_get_text` with the `ref` parameter identifying the component whose text I want to read.
-- The tool looks up the component by ref and reads its text content via the accessibility API.
-- The tool returns the text as a plain string (capped at `MAX_TEXT_LENGTH` characters).
+Reads text content via the accessibility API. Needed because the snapshot deliberately omits field values (UC-002 BR-03) to keep context-window usage predictable.
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|

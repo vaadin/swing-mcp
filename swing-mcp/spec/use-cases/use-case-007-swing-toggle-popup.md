@@ -1,24 +1,13 @@
 # UC-007: swing_toggle_popup
 
----
-
-**As an** AI agent, **I want to** open or close the popup of a UI component by ref **so that** I can expand a combo box to reveal its items or collapse it after selection.
-
 **Status:** Implemented
 **Date:** 2026-03-31
 
----
-
-## Main Flow
-
-- I first call `swing_snapshot` to obtain refs for the current UI state.
-- I call `swing_toggle_popup` with the `ref` parameter identifying the component.
-- The tool validates the ref and component, then fires the toggle-popup action asynchronously and returns `null` immediately.
-- I call `swing_snapshot` again to get fresh refs reflecting any UI changes (e.g. new items visible after popup opens).
+Opens or closes a combo-box popup so the AI can reveal its items before making a selection.
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|

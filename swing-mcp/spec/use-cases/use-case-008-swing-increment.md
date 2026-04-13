@@ -1,24 +1,13 @@
 # UC-008: swing_increment
 
----
-
-**As an** AI agent, **I want to** increment the value of a UI component by ref **so that** I can increase the value of a spinner or slider one step at a time.
-
 **Status:** Implemented
 **Date:** 2026-03-31
 
----
-
-## Main Flow
-
-- I first call `swing_snapshot` to obtain refs for the current UI state.
-- I call `swing_increment` with the `ref` parameter identifying the component.
-- The tool validates the ref and component, then fires the increment action asynchronously and returns `null` immediately.
-- I call `swing_snapshot` again to observe the updated value, or use `swing_get_value` to read the new value without invalidating refs.
+Steps a spinner or slider up by one unit. The AI calls this repeatedly to reach a target value; step size and boundary behaviour are whatever the accessibility API does.
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|

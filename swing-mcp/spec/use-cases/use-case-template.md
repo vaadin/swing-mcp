@@ -1,36 +1,26 @@
-# UC-[NNN]: [Feature Title]
+# UC-[NNN]: [short-name]
 
 > Copy this template for each feature as `use-case-NNN-short-name.md`.
 > Replace all `[bracketed text]` with your content.
 
----
-
-**As a** [role/actor], **I want to** [capability] **so that** [business value/benefit].
-
 **Status:** [Draft | Approved | Implemented]
 **Date:** [YYYY-MM-DD]
 
----
+[One-sentence motivation — what this tool does and why it exists.
+Preserve any non-obvious design rationale (e.g. "needed because the snapshot
+omits X"), drop ceremony. No heading — this reads as a lead paragraph.]
 
-## Main Flow
-
-[Describe the happy path from the user's perspective. Write in first person as if you are the user.]
-
-- [I open / I navigate to...]
-- [I see...]
-- [I do X...]
-- [The system responds with Y...]
-- [Continue until completion]
+**Tool description:** "[The exact MCP description string the LLM sees — omit if not applicable]"
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|
-| BR-01 | [Business rule — e.g., "All fields are mandatory"] |
-| BR-02 | [Business rule — e.g., "Sold-out items are visible but cannot be selected"] |
-| BR-03 | [Business rule — e.g., "Maximum 6 items per transaction"] |
+| BR-01 | [Rule — e.g., the `ref` parameter is required and must be an integer.] |
+| BR-02 | [Rule — validation / error path.] |
+| BR-03 | [Rule — edge case or policy decision.] |
 
 ---
 
@@ -44,7 +34,7 @@
 
 ## Tests
 
-> Write UI tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
 - [ ] `[FeatureName]Test` (headless)
   - [ ] [What each test covers — map to acceptance criteria and business rules]
@@ -52,4 +42,3 @@
 - [ ] `[FeatureName]ScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
   - [ ] Happy-path operation on a component inside `JFrame`.
   - [ ] Happy-path operation on a component inside `JDialog`.
-

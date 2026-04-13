@@ -1,28 +1,15 @@
 # UC-020: swing_get_cells
 
----
-
-**As an** AI agent, **I want to** enumerate the accessible children of a large data component (JList, JTree) by ref **so that** I can discover content beyond the snapshot's truncation cap — e.g. find and click a specific button rendered inside a list item that was not included in the snapshot.
-
 **Status:** Implemented (amended 2026-04-13 — JTable removed)
 **Date:** 2026-04-08
 
----
-
-## Main Flow
-
-- I first call `swing_snapshot` to obtain refs for the current UI state.
-- I see a large data component (JList or JTree) with `get_cells` in its actions — this means its children were truncated by the snapshot.
-- I call `swing_get_cells` with the `ref` identifying the component, plus `offset` and `length` to page through its accessible children.
-- The tool returns an indented text tree (same format as `swing_snapshot`) rooted at the requested children. Each actionable child receives a fresh ref.
-- The tool **replaces the MCPServer ref map** with only the refs visible in the output. Refs from the prior `swing_snapshot` or `swing_get_cells` call are no longer valid.
-- I use the returned refs to interact with the discovered children (e.g. click a button inside a list cell renderer). When I need to return to the full UI, I call `swing_snapshot` again.
+Pages into the accessibility children of a large `JList` or `JTree`, with refs for actionable children inside cell renderers — the escape hatch when the snapshot's truncation (SC-3) hid the button the AI needs to click.
 
 **Tool description:** "Enumerate accessible children of a large data component (JList, JTree) by ref, returning refs for any actionable children inside. Returns a paged accessibility tree (same format as swing_snapshot) rooted at the requested children. Parameters: ref (integer), offset (0-based integer), length (integer). Indices are in the accessible children index space (not the selection item index space — use swing_get_items for selection). Use this when you need to click or otherwise interact with a component nested inside a list item or tree node. For JTable, use swing_get_items instead — table cells are plain text labels with no actionable children. WARNING: this tool replaces the ref map — refs from prior swing_snapshot or swing_get_cells calls become invalid. The parent component gets ref=1 so you can call get_cells again with a different offset. Call swing_snapshot to restore the full-tree ref map. Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|

@@ -1,27 +1,15 @@
 # UC-021: swing_get_cell_count
 
----
-
-**As an** AI agent, **I want to** get the total count of accessible children (cells) in a large data component by ref **so that** I can decide how to page through `swing_get_cells` without first requesting any cells — saving a round-trip when I only need the count.
-
 **Status:** Implemented (amended 2026-04-13 — JTable removed)
 **Date:** 2026-04-08
 
----
-
-## Main Flow
-
-- I first call `swing_snapshot` to obtain refs for the current UI state.
-- I see a large data component (JList or JTree) with `get_cells` in its actions — this means its children were truncated by the snapshot.
-- I call `swing_get_cell_count` with the `ref` parameter.
-- The tool returns the total accessible children count as a plain integer string (e.g. `"2000"`).
-- I use the count to decide whether and how to page through `swing_get_cells`.
+Returns the total cell count so the AI can plan paging through `swing_get_cells` without a throwaway first fetch.
 
 **Tool description:** "Get the total number of accessible children (cells) of a large data component (JList, JTree) by ref. Returns the count as a plain integer in the same index space as swing_get_cells. For JList, this is the item count. For JTree, this is the top-level visible node count. For JTable, use swing_get_item_count instead — table cells are plain text labels with no actionable children. Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 
-## Business Rules
+## Rules
 
 | ID | Rule |
 |----|------|
