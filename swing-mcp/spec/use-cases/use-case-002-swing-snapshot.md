@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** obtain an accessibility tree snapshot of the Swing application **so that** I can understand the current UI structure and identify components for interaction.
 
-**Status:** Implemented (amended 2026-04-13 — `get_cells` advertising narrowed to JList/JTree)
+**Status:** Implemented (amended 2026-04-13 — `get_cells` advertising narrowed to JList/JTree; component class identity prefix added — see BR-11)
 **Date:** 2026-03-26
 
 ---
@@ -14,7 +14,7 @@
 - I call the `swing_snapshot` tool with an optional `filter_substring` parameter.
 - The tool walks the `javax.accessibility` tree of each component returned by `SwingToolContext.getConsideredComponents()` (usually a Window or JFrame, but during testing it could be any component). Each considered component is an independent root — no component in the list is nested inside another.
 - The tree walker applies the **Snapshot Inclusion Rules** (below) to decide which nodes appear in the output and which are pruned.
-- The tool returns a compact indented text tree with each node showing role, name, states, and available actions.
+- The tool returns a compact indented text tree with each node showing component class identity (Swing class name + accessible role), name, states, and available actions.
   - Nodes that expose at least one `AccessibleAction` also receive a numeric ref.
   - Only include accessibility name and description if those are not blank. Description follows the name in the line format.
 - If `filter_substring` is provided, the tool applies **tree filtering** after Phase 4 (render): it walks the rendered tree and includes every node whose rendered line contains the substring (case-insensitive), plus all **ancestors** of matching nodes (for structural context) and all **descendants** of matching nodes (so children like table rows, list items, or combo-box entries are not stripped). Non-matching sibling branches are dropped. The first line of filtered output is a notice: `[filter active: only nodes matching "<filter>" and their ancestors/descendants are shown]`. Root separators (`---`) are dropped from filtered output. If no nodes match, a short message is returned instead of an empty string.
@@ -88,18 +88,18 @@ Before (raw accessibility tree):
                 - push_button "Add"
 ```
 
-After pruning:
+After pruning (component identity format per BR-11):
 ```
-- frame "Invoice Editor"
-  - tool_bar "Main"
-    - push_button "Save" [ref=1] actions: click
-  - split_pane
-    - label "Invoices"
-    - scroll_pane
-      - list [ref=2] actions: multi-selection, get_cell_count, get_cells
-    - panel "Details"
-      - text "Name" [ref=3] actions: get_text, set_text
-    - push_button "Add" [ref=4] actions: click
+- JFrame (frame) "Invoice Editor"
+  - JToolBar (tool_bar) "Main"
+    - JButton (push_button) "Save" [ref=1] actions: click
+  - JSplitPane (split_pane)
+    - JLabel (label) "Invoices"
+    - JScrollPane (scroll_pane)
+      - JList (list) [ref=2] actions: multi-selection, get_cell_count, get_cells
+    - JPanel (panel) "Details"
+      - JTextField (text) "Name" [ref=3] actions: get_text, set_text
+    - JButton (push_button) "Add" [ref=4] actions: click
 ```
 
 ### Stage 3 — Always Included
@@ -125,7 +125,7 @@ After Stages 1 and 2, any surviving node is included. The following criteria ser
 | ID | Rule | Rationale |
 |----|------|-----------|
 | SC-1 | **JMenu items: include even when menu is closed.** Walk `AccessibleContext.getAccessibleChild(i)` for menus regardless of popup visibility. | The full menu structure is needed for migration. The accessibility API exposes menu items as accessible children even when the popup is not shown. |
-| SC-2 | **JTabbedPane: include only the selected tab's content; render each tab with its 0-based index.** Walk `getAccessibleChild()` naturally — it exposes the tab items (`PAGE_TAB`) and the selected tab's content panel. Mark the selected tab via `SELECTED` state. Render each tab as `- page_tab N "title"` where `N` is the 0-based tab index, obtained from `AccessibleContext.getAccessibleIndexInParent()` (empirically verified equivalent to the JTabbedPane tab index). Mirrors the JTable row rendering pattern (`- row N: …` — SC-6). Tab-header-disabled state is covered by SC-4 (narrower semantics: `[disabled]` on a `page_tab` means only the header is non-navigable; the tab's children, when displayed, are live — Swing-fidelity, see architecture.md § 4). | The user can only see and interact with the selected tab's content; non-selected content is not accessible via the standard accessibility API anyway. Emitting the tab index inline lets the AI pass it directly to `swing_set_selection` as `[N]` without a separate enumeration call (UC-015). This is the only `PAGE_TAB`-specific rendering rule — disabled-tab semantics live in SC-4 to keep disabled behavior in one place across the spec. |
+| SC-2 | **JTabbedPane: include only the selected tab's content; render each tab with its 0-based index.** Walk `getAccessibleChild()` naturally — it exposes the tab items (`PAGE_TAB`) and the selected tab's content panel. Mark the selected tab via `SELECTED` state. Render each tab as `- (page_tab) N "title"` where `N` is the 0-based tab index, obtained from `AccessibleContext.getAccessibleIndexInParent()` (empirically verified equivalent to the JTabbedPane tab index). Tab-header accessibles are `JTabbedPane.Page` — a package-private class that is **not** a `Component` subclass, so BR-11 Case C applies: the class prefix is omitted and the identity slot is `(page_tab)` alone. Mirrors the JTable row rendering pattern (`- row N: …` — SC-6). Tab-header-disabled state is covered by SC-4 (narrower semantics: `[disabled]` on a `page_tab` means only the header is non-navigable; the tab's children, when displayed, are live — Swing-fidelity, see architecture.md § 4). | The user can only see and interact with the selected tab's content; non-selected content is not accessible via the standard accessibility API anyway. Emitting the tab index inline lets the AI pass it directly to `swing_set_selection` as `[N]` without a separate enumeration call (UC-015). This is the only `PAGE_TAB`-specific rendering rule — disabled-tab semantics live in SC-4 to keep disabled behavior in one place across the spec. |
 | SC-3 | **Large data components (JTable, JList, JTree): truncate to first N accessible children** where N is a static final constant in the tool class (initially **5**). When truncated, Phase 4 emits a render-only `... and X more items` summary line (not a `SnapshotNode`). | A table with thousands of rows would blow up the AI context window. 10 rows gives enough structural overview. |
 | SC-4 | **Disabled components: included with `disabled` state, mirroring Swing's non-propagating semantics.** The `disabled` state is derived from `SwingUtils.isEffectivelyEnabled()` — see **architecture.md § 4 — Effectively Enabled Check** for the full rule. In short: `setEnabled(false)` does not propagate through real-`Component` ancestors in Swing, and neither does `[disabled]` in the snapshot. A button inside a disabled `JPanel` is **not** marked `disabled` (and `swing_click` would accept it). Two carveouts: (a) `JTabbedPane` tabs disabled via `setEnabledAt` carry `[disabled]` on their `page_tab` line (only the header is non-navigable; the tab's children, when displayed, are live); (b) virtual accessible children (e.g. `JTable` cells) do inherit their host component's disabled state. | The AI needs to see disabled components to understand the full UI. `[disabled]` in the snapshot is consistent with what mutation tools will actually refuse — if a tool call would fail with "disabled", the snapshot shows it; if a tool call would succeed, the snapshot does not lie by propagating `[disabled]` to its parents. See `feedback_swing_fidelity.md` — MCP mirrors what Swing allows, not what would be "cleaner". |
 | SC-5 | **JInternalFrame: include all, mark iconified ones** via `ICONIFIED` state. | Iconified internal frames are minimized but not invisible. |
@@ -158,9 +158,9 @@ survives pruning, and what it looks like in the snapshot output.
 
 | Swing Component | `AccessibleRole` | Pruned? | Snapshot Example |
 |---|---|---|---|
-| `JFrame` | `FRAME` | No | `- frame "My App" [ref=1] actions: close` |
-| `JDialog` | `DIALOG` | No | `- dialog "Confirm" [ref=1, modal] actions: close` |
-| `JInternalFrame` | `INTERNAL_FRAME` | No | `- internal_frame "Document" [ref=1] actions: close` |
+| `JFrame` | `FRAME` | No | `- JFrame (frame) "My App" [ref=1] actions: close` |
+| `JDialog` | `DIALOG` | No | `- JDialog (dialog) "Confirm" [ref=1, modal] actions: close` |
+| `JInternalFrame` | `INTERNAL_FRAME` | No | `- JInternalFrame (internal_frame) "Document" [ref=1] actions: close` |
 | `JRootPane` | `ROOT_PANE` | Transparent (TP-1) | *(children promoted to parent)* |
 
 ### Framework-Internal (Always Pruned)
@@ -177,70 +177,84 @@ survives pruning, and what it looks like in the snapshot output.
 | Swing Component | `AccessibleRole` | Pruned? | Snapshot Example |
 |---|---|---|---|
 | `JPanel` (unnamed) | `PANEL` | Transparent (TP-5) | *(children promoted to parent)* |
-| `JPanel` (named / titled border) | `PANEL` | No | `- panel "Details"` |
-| `JScrollPane` | `SCROLL_PANE` | No | `- scroll_pane` |
-| `JSplitPane` | `SPLIT_PANE` | No | `- split_pane` |
-| `JTabbedPane` | `PAGE_TAB_LIST` | No | `- page_tab_list "General" [ref=1] actions: single-selection` |
-| *(tab within JTabbedPane)* | `PAGE_TAB` | No | `- page_tab 0 "General" [selected]` (index is 0-based, emitted inline — SC-2) |
-| `JToolBar` | `TOOL_BAR` | No | `- tool_bar "Main"` |
-| `JOptionPane` | `OPTION_PANE` | No | `- option_pane` |
+| `JPanel` (named / titled border) | `PANEL` | No | `- JPanel (panel) "Details"` |
+| `JScrollPane` | `SCROLL_PANE` | No | `- JScrollPane (scroll_pane)` |
+| `JSplitPane` | `SPLIT_PANE` | No | `- JSplitPane (split_pane)` |
+| `JTabbedPane` | `PAGE_TAB_LIST` | No | `- JTabbedPane (page_tab_list) "General" [ref=1] actions: single-selection` |
+| *(tab within JTabbedPane)* | `PAGE_TAB` | No | `- (page_tab) 0 "General" [selected]` — non-Component accessible (`JTabbedPane.Page`), BR-11 Case C; index is 0-based, emitted inline (SC-2) |
+| `JToolBar` | `TOOL_BAR` | No | `- JToolBar (tool_bar) "Main"` |
+| `JOptionPane` | `OPTION_PANE` | No | `- JOptionPane (option_pane)` |
 
 ### Buttons
 
 | Swing Component | `AccessibleRole` | Pruned? | Snapshot Example |
 |---|---|---|---|
-| `JButton` | `PUSH_BUTTON` | No | `- push_button "Save" [ref=1] actions: click` |
-| `JToggleButton` | `TOGGLE_BUTTON` | No | `- toggle_button "Bold" [ref=1] actions: click` |
-| `JCheckBox` | `CHECK_BOX` | No | `- check_box "Remember me" [ref=1, checked] actions: click` |
-| `JRadioButton` | `RADIO_BUTTON` | No | `- radio_button "Option A" [ref=1] actions: click` |
+| `JButton` | `PUSH_BUTTON` | No | `- JButton (push_button) "Save" [ref=1] actions: click` |
+| `JToggleButton` | `TOGGLE_BUTTON` | No | `- JToggleButton (toggle_button) "Bold" [ref=1] actions: click` |
+| `JCheckBox` | `CHECK_BOX` | No | `- JCheckBox (check_box) "Remember me" [ref=1, checked] actions: click` |
+| `JRadioButton` | `RADIO_BUTTON` | No | `- JRadioButton (radio_button) "Option A" [ref=1] actions: click` |
 
 ### Text Input
 
 | Swing Component | `AccessibleRole` | Pruned? | Snapshot Example |
 |---|---|---|---|
-| `JTextField` | `TEXT` | No | `- text "Name" [ref=1, editable] actions: get_text, set_text` |
-| `JPasswordField` | `PASSWORD_TEXT` | No | `- password_text "Password" [ref=1, editable] actions: get_text, set_text` |
-| `JTextArea` | `TEXT` | No | `- text "Notes" [ref=1, editable, multi_line] actions: get_text, set_text` |
-| `JEditorPane` | `TEXT` | No | `- text "Content" [ref=1, editable, multi_line] actions: get_text, set_text` |
+| `JTextField` | `TEXT` | No | `- JTextField (text) "Name" [ref=1, editable] actions: get_text, set_text` |
+| `JPasswordField` | `PASSWORD_TEXT` | No | `- JPasswordField (password_text) "Password" [ref=1, editable] actions: get_text, set_text` |
+| `JTextArea` | `TEXT` | No | `- JTextArea (text) "Notes" [ref=1, editable, multi_line] actions: get_text, set_text` |
+| `JEditorPane` | `TEXT` | No | `- JEditorPane (text) "Content" [ref=1, editable, multi_line] actions: get_text, set_text` |
 
 ### Selection & Data Components
 
 | Swing Component | `AccessibleRole` | Pruned? | Snapshot Example |
 |---|---|---|---|
-| `JComboBox` | `COMBO_BOX` | No | `- combo_box "Country" [ref=1, collapsed] actions: toggle_popup, single-selection` |
-| `JList` | `LIST` | No | `- list [ref=1] actions: multi-selection, get_cell_count, get_cells` |
-| *(child of JList)* | `LABEL` | No | `  - label "Item 1" [ref=2] actions: click` |
-| `JTree` | `TREE` | No | `- tree [ref=1] actions: get_cell_count, get_cells` |
-| *(non-leaf tree node)* | varies | No | `  - label "Folder" [ref=2] actions: toggle_expand, click` |
-| `JTable` | `TABLE` | No | `- table [ref=1] columns: [ID, Name, City] actions: multi-selection` (with row children: `- row 0: 1 \| Alice \| NY`). Row-level access is via `swing_get_items` (implicit from `single-selection`/`multi-selection`); JTable does NOT advertise `get_cell_count` or `get_cells`. |
+| `JComboBox` | `COMBO_BOX` | No | `- JComboBox (combo_box) "Country" [ref=1, collapsed] actions: toggle_popup, single-selection` |
+| `JList` | `LIST` | No | `- JList (list) [ref=1] actions: multi-selection, get_cell_count, get_cells` |
+| *(child of JList)* | `LABEL` | No | `  - (label) "Item 1" [ref=2] actions: click` — non-Component accessible (`JList.AccessibleJListChild`), BR-11 Case C |
+| `JTree` | `TREE` | No | `- JTree (tree) [ref=1] actions: get_cell_count, get_cells` |
+| *(non-leaf tree node)* | varies | No | `  - (label) "Folder" [ref=2] actions: toggle_expand, click` — non-Component accessible (`JTree.AccessibleJTreeNode`), BR-11 Case C |
+| `JTable` | `TABLE` | No | `- JTable (table) [ref=1] columns: [ID, Name, City] actions: multi-selection` (with row children: `- row 0: 1 \| Alice \| NY` — row rendering per SC-6 does not use the component-identity slot). Row-level access is via `swing_get_items` (implicit from `single-selection`/`multi-selection`); JTable does NOT advertise `get_cell_count` or `get_cells`. |
 
 ### Value Components
 
 | Swing Component | `AccessibleRole` | Pruned? | Snapshot Example |
 |---|---|---|---|
-| `JSlider` | `SLIDER` | No | `- slider "Volume" [ref=1, horizontal] actions: increment, decrement, get_value, set_value` |
-| `JSpinner` | `SPIN_BOX` | No | `- spin_box "Quantity" [ref=1] actions: increment, decrement, get_value, set_value` |
-| `JProgressBar` | `PROGRESS_BAR` | No | `- progress_bar "Loading" [horizontal] actions: get_value` |
+| `JSlider` | `SLIDER` | No | `- JSlider (slider) "Volume" [ref=1, horizontal] actions: increment, decrement, get_value, set_value` |
+| `JSpinner` | `SPIN_BOX` | No | `- JSpinner (spin_box) "Quantity" [ref=1] actions: increment, decrement, get_value, set_value` |
+| `JProgressBar` | `PROGRESS_BAR` | No | `- JProgressBar (progress_bar) "Loading" [horizontal] actions: get_value` |
 
 ### Display Components
 
 | Swing Component | `AccessibleRole` | Pruned? | Snapshot Example |
 |---|---|---|---|
-| `JLabel` | `LABEL` | No | `- label "Status: OK"` |
-| `JToolTip` | `TOOL_TIP` | No | `- tool_tip "Click to save"` |
-| `JSeparator` | `SEPARATOR` | No | `- separator` |
-| `JScrollBar` | `SCROLL_BAR` | No | `- scroll_bar [ref=1, vertical] actions: increment, decrement, get_value, set_value` |
+| `JLabel` | `LABEL` | No | `- JLabel (label) "Status: OK"` |
+| `JToolTip` | `TOOL_TIP` | No | `- JToolTip (tool_tip) "Click to save"` |
+| `JSeparator` | `SEPARATOR` | No | `- JSeparator (separator)` |
+| `JScrollBar` | `SCROLL_BAR` | No | `- JScrollBar (scroll_bar) [ref=1, vertical] actions: increment, decrement, get_value, set_value` |
 
 ### Menu Components
 
 | Swing Component | `AccessibleRole` | Pruned? | Snapshot Example |
 |---|---|---|---|
-| `JMenuBar` | `MENU_BAR` | No | `- menu_bar` |
-| `JMenu` | `MENU` | No | `- menu "File" [ref=1] actions: click` |
-| `JMenuItem` | `MENU_ITEM` | No | `- menu_item "Open" [ref=2] actions: click` |
-| `JCheckBoxMenuItem` | `CHECK_BOX` | No | `- check_box "Word Wrap" [ref=3, checked] actions: click` |
-| `JRadioButtonMenuItem` | `RADIO_BUTTON` | No | `- radio_button "Light Theme" [ref=4] actions: click` |
-| `JPopupMenu` | `POPUP_MENU` | No | `- popup_menu` |
+| `JMenuBar` | `MENU_BAR` | No | `- JMenuBar (menu_bar)` |
+| `JMenu` | `MENU` | No | `- JMenu (menu) "File" [ref=1] actions: click` |
+| `JMenuItem` | `MENU_ITEM` | No | `- JMenuItem (menu_item) "Open" [ref=2] actions: click` |
+| `JCheckBoxMenuItem` | `CHECK_BOX` | No | `- JCheckBoxMenuItem (check_box) "Word Wrap" [ref=3, checked] actions: click` |
+| `JRadioButtonMenuItem` | `RADIO_BUTTON` | No | `- JRadioButtonMenuItem (radio_button) "Light Theme" [ref=4] actions: click` |
+| `JPopupMenu` | `POPUP_MENU` | No | `- JPopupMenu (popup_menu)` |
+
+### Custom Subclasses and Non-Component Accessibles
+
+Beyond the standard Swing components above, two additional identity-slot forms arise (see BR-11):
+
+| Scenario | Accessible | Snapshot Example |
+|---|---|---|
+| User subclass of a standard Swing component (e.g. a company component library's `SearchField extends JTextField`) | concrete subclass, `Component` | `- SearchField -> JTextField (text) "search the catalog" [ref=1] actions: get_text, set_text` (BR-11 Case B) |
+| Third-party subclass (e.g. SwingX `JXTable extends JTable`) | concrete subclass, `Component` | `- JXTable -> JTable (table) [ref=1] columns: [Name, Email] actions: multi-selection` (BR-11 Case B) |
+| Anonymous subclass (`new JButton() { ... }`) | anonymous, `Component` | `- JButton (push_button) "OK" [ref=1] actions: click` — anonymous class name stripped (BR-11) |
+| CGLIB / ByteBuddy / Hibernate runtime proxy wrapping a user subclass | proxy, `Component` | `- SearchField -> JTextField (text) [ref=1] actions: get_text, set_text` — proxy name stripped (BR-11) |
+| `JTabbedPane` tab | `JTabbedPane.Page`, **not** a `Component` | `- (page_tab) 0 "General" [selected]` (BR-11 Case C; SC-2) |
+| `JList` item | `JList.AccessibleJListChild`, **not** a `Component` | `- (label) "Item 1" [ref=2] actions: click` (BR-11 Case C) |
+| `JTree` node | `JTree.AccessibleJTreeNode`, **not** a `Component` | `- (label) "Folder" [ref=2] actions: toggle_expand, click` (BR-11 Case C) |
 
 **Notes:**
 - `JLabel` has no actions and therefore no ref — it appears in the snapshot for context but is not interactable.
@@ -261,6 +275,53 @@ Because Swing's accessibility tree is read-only (owned by the framework), the to
 ### Role and State Name Resolution
 
 `AccessibleRole` and `AccessibleState` are classes with public static final instances, not enums, so there is no built-in way to get a field name from an instance. For both, a static `Map<T, String>` is populated once at class-load time via reflection over the class's declared fields, mapping each instance to its field name lowercased (e.g. `PUSH_BUTTON` → `"push_button"`, `DISABLED` → `"disabled"`). Unknown instances (custom subclasses) fall back to `"unknown"`. These maps live in a dedicated utility class (e.g. `AccessibleNames`).
+
+This reflection-based mapping is deliberate: `AccessibleRole.toDisplayString()` is locale-sensitive (returns `"Drucktaste"` on a German JVM) and unsuitable for an LLM-facing stable vocabulary. Field-name lowercasing produces the same English identifier on every JVM.
+
+### Component Identity Resolution
+
+Per BR-11, every node's rendered line begins with a component-identity slot of the form `JClass (role)`, `ConcreteClass -> JClass (role)`, or `(role)`. The algorithm for computing this slot operates on the node's `Accessible` instance:
+
+**Step 1 — Concrete class.** `concrete = accessible.getClass()`.
+
+**Step 2 — Display-class selection (strip runtime artefacts).** Starting at `concrete`, walk `getSuperclass()` while the current class is one of:
+
+- `isAnonymousClass()` — anonymous subclass like `new JButton() { ... }` whose simple name is empty
+- `isSynthetic()` — compiler-generated classes
+- `isLocalClass()` — classes declared inside a method body
+- a runtime-generated proxy: `className.chars().filter(c -> c == '$').count() >= 2 && getEnclosingClass() == null`. This catches CGLIB (`$$EnhancerBySpringCGLIB$$`), Hibernate (`$HibernateProxy$`), ByteBuddy (`$ByteBuddy$`), Mockito, and similar frameworks. Named nested classes (`MyApp$Panel$CloseButton`) are preserved because they have a non-null `getEnclosingClass()`.
+
+The first class that is not one of the above is the **display class**. (If every ancestor up to `Object` is stripped, fall through to Case C below — but in practice at least one non-stripped superclass always exists because proxies and anonymous/synthetic/local classes always extend a real class by construction.)
+
+**Step 3 — Qualifying-ancestor walk-up.** Starting at the display class, walk `getSuperclass()` until a class is found that satisfies **all** of:
+
+- `public`
+- not nested (the class is a top-level class — not an inner, static nested, local, or anonymous class)
+- package is `javax.swing`, OR package starts with `javax.swing.` but does **not** start with `javax.swing.plaf` (plaf classes like `BasicArrowButton` are L&F implementation details; walking up past them lands on the real Swing widget the LLM should see), OR package is `java.awt`
+- assignable to `java.awt.Component` OR `java.awt.MenuComponent` (AWT menu classes extend `MenuComponent`, not `Component`; including them preserves identity for the old-AWT corner of ancient Swing apps)
+
+Abstract classes qualify: `AbstractButton` and `JTextComponent` are the canonical cases. Instantiability is not a requirement — what matters is that the class is recognisable to an LLM trained on Swing.
+
+The first class that satisfies every criterion is the **qualifying ancestor**. If no ancestor qualifies (the walk reaches `Object`), there is no qualifying ancestor — Case C applies.
+
+**Step 4 — Format selection.** Let `role` be the lowercased-underscore role name (per Role and State Name Resolution).
+
+- **Case A — standard component.** Display class equals qualifying ancestor. Identity slot: `JClass (role)`.
+  *Example:* standard `JButton` → `JButton (push_button)`.
+- **Case B — meaningful custom subclass.** Display class differs from qualifying ancestor. Identity slot: `ConcreteSimpleName -> JClass (role)`, using `displayClass.getSimpleName()` for the concrete side.
+  *Example:* `com.acme.ui.SearchField extends JTextField` → `SearchField -> JTextField (text)`.
+- **Case C — non-Component accessible.** No qualifying ancestor (the accessible does not extend `Component` or `MenuComponent`). Identity slot: `(role)` — parentheses preserved, class name omitted.
+  *Example:* `JTabbedPane.Page` → `(page_tab)`; `JList.AccessibleJListChild` → `(label)`.
+
+**Display-class name format.** `displayClass.getSimpleName()` is used for the concrete side (Case B), not `getCanonicalName()`. Nested classes collapse to the innermost simple name (`MyApp.Panel.CloseButton` → `"CloseButton"`), which trades uniqueness for readability. Collisions are disambiguated by accessible name and context in practice; if real-world usage shows confusion, revisit with a fully-qualified form.
+
+**Why walk past `javax.swing.plaf.*`.** L&F implementation classes like `BasicArrowButton`, `BasicComboPopup`, and `MetalComboBoxButton` are public and qualify under every other rule, but they are Swing *implementation detail* rather than the widget vocabulary the LLM knows. Walking up past them to `JButton`/`JPopupMenu`/`JComboBox` yields the name the LLM can actually reason about.
+
+**Why abstract classes qualify.** Users occasionally subclass `AbstractButton` or `JTextComponent` directly to implement a new button/text widget without the appearance chrome of `JButton`/`JTextField`. Excluding abstracts would send the walk-up all the way to `JComponent`, losing the "button-family" or "text-component-family" signal.
+
+**Unknown-fallback policy.** If the concrete `Accessible` has no `AccessibleContext` or the role cannot be resolved, the role slot falls back to `"unknown"` (same fallback as Role Name Resolution). Class resolution proceeds normally.
+
+A dedicated utility class (e.g. `ComponentClassResolver`) implements steps 1–4; `SnapshotNode.calculateSelfLine()` consumes its output at the start of the line. An **audit test** in `src/test` enumerates every class in `javax.swing` and its subpackages (excluding `javax.swing.plaf`) plus `java.awt`, applies the qualifying-ancestor predicate, and asserts the resulting set matches a checked-in fixture. This test fails on JDK drift (new or removed classes), forcing a deliberate update rather than silent behaviour change.
 
 ### Four-Phase Pipeline
 
@@ -315,7 +376,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 |----|------|
 | BR-01 | Refs are short integers starting from 1, assigned fresh with each snapshot call, globally across all roots. Only nodes that expose at least one action under the BR-06/BR-07 algorithm receive a ref. |
 | BR-02 | The entire four-phase pipeline runs on the EDT via `runInEDT()` (which uses `SwingUtilities.invokeLater()` + a `CountDownLatch`). All phases — including prune, assignRefs, and render — execute inside that single call. Off-EDT optimisation is deferred until a performance problem is demonstrated. Tool calls always arrive from an HTTP thread (via `TinyMCPServer`) — never from the EDT — so `runInEDT()` will never deadlock. Do **not** add EDT detection (`SwingUtilities.isEventDispatchThread()`) as a "helpful" fallback; it would mask bugs and is not needed. |
-| BR-03 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. Line format: `- role "name" "description" [ref=N, state1, state2] additional-info actions: action1, !action2`. Role is the `AccessibleRole` field name lowercased with underscores (e.g. `push_button`, `text`, `scroll_pane`) — never `toDisplayString()`, which is locale-sensitive. Omit `"name"` if blank; omit `"description"` if blank — see BR-10 for the description's source resolution (tooltip fallback) and 120-character cap. Ref and states share one bracket, comma-separated, lowercase. Omit the bracket entirely if there is no ref and no states. Additional component-specific info (e.g. `columns: [ID, Name, City]` for JTable) appears after the bracket and before `actions:`; omitted when empty. Omit `actions:` if none. Mutation actions that would fail validation are prefixed with `!` (see BR-08). Field values (`AccessibleText` content, `AccessibleValue`) are **not** shown in the output — only name and description are shown, consistent with Playwright MCP's approach. Revisit if the AI needs field values in future. |
+| BR-03 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. Line format: `- <component-identity> "name" "description" [ref=N, state1, state2] additional-info actions: action1, !action2`. The `<component-identity>` slot is defined in BR-11 and renders as `JClass (role)`, `ConcreteClass -> JClass (role)`, or `(role)` depending on the case. Role is the `AccessibleRole` field name lowercased with underscores (e.g. `push_button`, `text`, `scroll_pane`) — never `toDisplayString()`, which is locale-sensitive. Omit `"name"` if blank; omit `"description"` if blank — see BR-10 for the description's source resolution (tooltip fallback) and 120-character cap. Ref and states share one bracket, comma-separated, lowercase. Omit the bracket entirely if there is no ref and no states. Additional component-specific info (e.g. `columns: [ID, Name, City]` for JTable) appears after the bracket and before `actions:`; omitted when empty. Omit `actions:` if none. Mutation actions that would fail validation are prefixed with `!` (see BR-08). Field values (`AccessibleText` content, `AccessibleValue`) are **not** shown in the output — only name and description are shown, consistent with Playwright MCP's approach. Revisit if the AI needs field values in future. |
 | BR-04 | The tree walker walks the `javax.accessibility` tree via `AccessibleContext.getAccessibleChild(i)`, **not** the `Component.getComponents()` component tree. The accessibility tree provides virtual children for complex components (table cells, list items, tree nodes). |
 | BR-05 | Large data components (JTable, JList, JTree) are truncated to `MAX_DATA_ROW_NODES` accessible children (static final constant, initially 5). When truncated, a synthetic `... and N more items` node is appended. For JTable, truncation is by **rows** and the summary reads `... and N more rows` (SC-6). |
 | BR-06 | Action labels displayed in the snapshot are determined by the **Action Label Algorithm** below. Detection methods, Java mechanisms, and MCP tool names are defined in **architecture.md §6**. All action names use lower-case underscore-separated format. |
@@ -323,6 +384,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 | BR-08 | **Unavailable action prefix (`!`).** After the BR-06 algorithm produces the action list, each **mutation action** is checked: if the action would fail validation when invoked, it is prefixed with `!` (e.g. `!click`, `!set_text`). A mutation action is unavailable when: (a) `SwingUtils.isEffectivelyEnabled()` returns `false` (component or an ancestor is disabled), or (b) the action is `set_text` and the component is read-only (has `AccessibleEditableText` but lacks the `EDITABLE` state). **Read-only actions** (`get_text`, `get_value`, `get_selection`, `get_items`, `get_item_count`, `get_cell_count`, `get_cells`) are never prefixed — they always succeed. **Selection group labels** (`single-selection`, `multi-selection`) are never prefixed — they are informational labels, not directly invocable actions. The set of mutation actions is: `click`, `toggle_popup`, `increment`, `decrement`, `toggle_expand`, `set_text`, `set_value`, `close`. This set is stored as a constant (`MUTATION_ACTIONS`) in `SnapshotNode`. |
 | BR-09 | **Snapshot filtering (`filter_substring`).** When the optional `filter_substring` parameter is provided, the tool applies **tree filtering** after Phase 4 (render). The algorithm walks the rendered tree (split into lines, using indentation depth to reconstruct parent/child relationships) and marks every node whose rendered line contains the substring (case-insensitive `String.toLowerCase().contains()`) as a **match**. The output includes: (a) every matched node, (b) every **ancestor** of a matched node (to preserve structural context / path from root), and (c) every **descendant** of a matched node (so children like table rows, list items, combo-box entries are always shown with their parent). Non-matching sibling branches are dropped entirely. The first line of filtered output is a notice: `[filter active: only nodes matching "<filter>" and their ancestors/descendants are shown]`. Root separators (`---`) are excluded from filtered output. The ref map is unaffected — filtering does not change ref assignment. If no nodes match, the tool returns the message `No lines matched filter_substring 'X'` (where X is the provided value). |
 | BR-10 | **Description source resolution, HTML cleanup, and 120-character cap.** The `"description"` slot in the BR-03 line format is filled from the following sources, in order: (a) `AccessibleContext.getAccessibleDescription()` if non-blank after HTML cleanup, else (b) the tooltip via `SwingUtils.getTooltipAsText()` if non-blank — which resolves the tooltip from the JComponent or, for `PAGE_TAB` nodes, from `JTabbedPane.getToolTipTextAt(index)`. **HTML cleanup applies to both sources** via `SwingUtils.htmlToPlainText()`: any value starting with `<html>` (case-insensitive) has each tag replaced by a single space, the four standard entities (`&amp;`, `&lt;`, `&gt;`, `&nbsp;`) decoded, runs of whitespace collapsed, and the result trimmed; non-HTML strings pass through verbatim so a literal value like `"List<String>"` is preserved. **Why cleanup applies to (a):** `JComponent.AccessibleJComponent.getAccessibleDescription()` already auto-falls-back to `getToolTipText()` inside the JDK when no explicit description is set — so an "explicit-looking" value returned from (a) may in fact be a (potentially HTML) tooltip. The resolved description is then capped at **120 characters**, with truncation indicated by a trailing `…` (U+2026). The cap applies symmetrically to all sources so the AI cannot distinguish a real description from a tooltip-fallback. Per-cell, per-row, per-node and per-item tooltips on `JTable`, `JList`, `JTree` and `JTableHeader` are **not** exposed — those are computed on the fly by the cell renderer in response to a `MouseEvent`, which is not available during snapshot building. **Rationale:** older Swing apps frequently never set `accessibleDescription`; the tooltip is often the only descriptive signal available. Symmetric capping prevents long tooltips/descriptions from bloating the snapshot while preserving the most useful prefix. |
+| BR-11 | **Component identity slot (class prefix + role).** Every node's rendered line begins with a component-identity slot computed by the algorithm in **Implementation Notes — Component Identity Resolution**. Three cases, exhaustive: **Case A** — standard Swing component, slot is `JClass (role)` (e.g. `JButton (push_button)`). **Case B** — meaningful custom subclass, slot is `ConcreteSimpleName -> JClass (role)` (e.g. `SearchField -> JTextField (text)`); the concrete class is stripped of anonymous, synthetic, local, and proxy artefacts (`$$`-containing runtime classes with no enclosing class) before display. **Case C** — non-Component accessible (e.g. `JTabbedPane.Page`, `JList.AccessibleJListChild`, `JTree.AccessibleJTreeNode`), slot is `(role)` alone — class name omitted, parentheses retained so the role still reads as "type info in parens." The parenthesised role is unconditional across all three cases, including when the role is a tautological lowercasing of the class (`JButton (push_button)`), so that a non-standard role override (`JButton (button_with_dropdown)`) becomes a clean attention signal. Qualifying-ancestor criteria (public, non-nested, in `javax.swing` or its subpackages except `javax.swing.plaf.*`, or in `java.awt`; assignable to `Component` or `MenuComponent`; abstract classes qualify) and the full walk-up/strip algorithm are specified in the Component Identity Resolution section. |
 
 ### Action Label Algorithm (BR-06)
 
@@ -382,7 +444,7 @@ Tree filtering fixes both problems: ancestors give the AI a path from the root (
 - [x] `CellRendererPane` instances and their descendants are excluded.
 - [x] Menu items are included even when the menu is closed.
 - [x] JTabbedPane shows tab items with the selected tab marked `SELECTED`; only the selected tab's content is included.
-- [ ] Each JTabbedPane tab renders with its 0-based index: `- page_tab N "title"` (SC-2).
+- [ ] Each JTabbedPane tab renders with its 0-based index: `- (page_tab) N "title"` (SC-2; BR-11 Case C).
 - [ ] A tab disabled via `JTabbedPane.setEnabledAt(i, false)` shows `[disabled]` on its `page_tab` line (SC-2 + SC-4; architecture.md § 4 Quirk 1).
 - [ ] A child component on a disabled-but-selected tab is NOT marked `disabled` (tab-header-only semantics — SC-4, mirrors Swing).
 - [x] A JTable/JList/JTree with more than `MAX_DATA_ROW_NODES` rows shows only the first `MAX_DATA_ROW_NODES` rows plus a `... and N more items` summary.
@@ -399,6 +461,18 @@ Tree filtering fixes both problems: ancestors give the AI a path from the root (
 - [x] When `filter_substring` is omitted or empty, the full snapshot is returned (no change to existing behavior).
 - [x] Ancestors of a matched node are included (with their own line) but their non-matching children are omitted.
 - [x] All descendants of a matched node are included unconditionally.
+- [ ] A standard `JButton` renders as `- JButton (push_button) "..."` — BR-11 Case A (class name equals qualifying ancestor, parenthesised role unconditional).
+- [ ] A user subclass `class SearchField extends JTextField` renders as `- SearchField -> JTextField (text) "..."` — BR-11 Case B (concrete-class prefix with `->` arrow to the qualifying ancestor).
+- [ ] A third-party subclass (e.g. SwingX `JXTable extends JTable`) renders as `- JXTable -> JTable (table) ...` — BR-11 Case B applies identically to user and third-party subclasses.
+- [ ] An anonymous subclass `new JButton() { ... }` renders as `- JButton (push_button) ...` — the anonymous name is stripped and the walk-up lands on `JButton` (BR-11 strip rule).
+- [ ] A CGLIB / ByteBuddy / Hibernate runtime proxy whose concrete class name contains `$$` (or ≥2 `$` with a null `getEnclosingClass()`) is stripped; the display class is the first non-proxy superclass. A proxy of `SearchField extends JTextField` renders as `- SearchField -> JTextField (text) ...`.
+- [ ] A user class extending an abstract Swing class directly — `class MyButton extends AbstractButton` — renders as `- MyButton -> AbstractButton (push_button) ...`. Abstract classes qualify as ancestors (BR-11).
+- [ ] A user class extending a `javax.swing.plaf.*` L&F class (e.g. `class MyArrow extends BasicArrowButton`) walks past the plaf class to the real Swing widget: `- MyArrow -> JButton (push_button) ...` (BR-11 — `javax.swing.plaf.*` excluded from qualifying).
+- [ ] `JTabbedPane` tab accessibles (`JTabbedPane.Page`, not a `Component`) render as `- (page_tab) N "..."` — BR-11 Case C (role in parens, no class prefix).
+- [ ] `JList` items (`JList.AccessibleJListChild`, not a `Component`) render as `- (label) "..." ...` — BR-11 Case C.
+- [ ] `JTree` non-leaf nodes (`JTree.AccessibleJTreeNode`, not a `Component`) render as `- (label) "..." ...` — BR-11 Case C.
+- [ ] An unnamed component renders with no quoted-name segment after the identity slot (e.g. `- JScrollPane (scroll_pane)` rather than `- JScrollPane (scroll_pane) ""`).
+- [ ] `ComponentClassResolver` audit test: the set of qualifying-ancestor classes enumerated from `javax.swing.*` (excluding `javax.swing.plaf.*`) and `java.awt.*` on the current JDK matches a checked-in fixture — any JDK drift (new or removed classes) fails the test and forces a deliberate fixture update.
 - [x] A JTable inside a JScrollPane shows `columns: [Col1, Col2, …]` on the table node line, after the bracket and before `actions:` (SC-6).
 - [x] A JTable NOT inside a JScrollPane (header not visible) does NOT show `columns:` (SC-6).
 - [x] JTable children are rendered as pipe-separated row lines with 0-based index (`- row 0: Val1 | Val2 | Val3`), not individual cell labels (SC-6).
@@ -436,7 +510,7 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [x] A JTable with more than `MAX_DATA_ROW_NODES` rows is truncated with a summary node.
   - [x] Menu items appear in the tree even when the menu is not open.
   - [x] JTabbedPane shows tab items; selected tab has `SELECTED` state; non-selected tab content is not included.
-  - [ ] JTabbedPane tabs render with 0-based index: `- page_tab N "title"` (SC-2). Locked in by multi-tab, selected-tab, and nested-content tests.
+  - [ ] JTabbedPane tabs render with 0-based index: `- (page_tab) N "title"` (SC-2; BR-11 Case C). Locked in by multi-tab, selected-tab, and nested-content tests.
   - [x] A tab disabled via `setEnabledAt(i, false)` renders as `[disabled]` on the `page_tab` line (`tabbedPane_tabDisabledViaSetEnabledAt_marksOnlyThatTabDisabled` — commit 043a71b).
   - [x] A child button on a disabled-but-selected tab retains unprefixed `click` and no `[disabled]` state (`tabbedPane_buttonOnDisabledTab_isStillClickable` — commit 043a71b).
   - [x] Only meaningful states are shown (e.g., `disabled` appears, `visible`/`enabled` do not).
@@ -474,6 +548,16 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [x] A `JTabbedPane` tab with `setToolTipTextAt(i, "…")` and no per-tab description renders the tab tooltip in the description slot of the `page_tab` line (BR-10).
   - [x] A tab-content `JComponent` inside a `JTabbedPane` uses its own tooltip (or none) — never the surrounding tab's tooltip — for description fallback (BR-10 regression guard).
   - [x] A tooltip such as `"List<String>"` (no `<html>` prefix) is rendered verbatim in the description slot — angle brackets are preserved (BR-10).
+  - [ ] A standard `JButton` renders as `- JButton (push_button) "Save" ...` (BR-11 Case A).
+  - [ ] A user subclass `class FancyButton extends JButton {}` renders as `- FancyButton -> JButton (push_button) ...` (BR-11 Case B).
+  - [ ] An anonymous subclass `new JButton("X") {}` renders as `- JButton (push_button) "X" ...` — anonymous class stripped (BR-11 strip rule).
+  - [ ] A user subclass extending an abstract Swing class — `class BareButton extends AbstractButton` — renders as `- BareButton -> AbstractButton (push_button) ...` (BR-11 — abstract classes qualify).
+  - [ ] A class with a simulated proxy-style name (contains `$$`, null `getEnclosingClass()`) is stripped; walk-up starts at its superclass. Verified with a synthetic proxy-named class in the test harness, not a real Spring/Hibernate proxy.
+  - [ ] A `JTabbedPane` tab renders with `(page_tab)` as its identity slot (no class prefix) — BR-11 Case C.
+  - [ ] A `JList` item renders with `(label)` as its identity slot — BR-11 Case C.
+  - [ ] A named `JPanel` renders as `- JPanel (panel) "Details"` (BR-11 Case A).
+  - [ ] `JScrollPane` with no accessible name renders as `- JScrollPane (scroll_pane)` — no empty quotes after the identity slot.
+- [ ] `ComponentClassResolverTest` (new) — enumerates `javax.swing.*` (excluding `javax.swing.plaf.*`) and `java.awt.*`, applies the BR-11 qualifying-ancestor predicate, and asserts the resulting class set equals a checked-in fixture (e.g. `qualifying-ancestors.txt`). Failing on JDK drift forces a deliberate fixture update.
 
 ### Screen-mode tests (`src/testSwing`) — `SwingSnapshotToolWithScreenTest`
 
