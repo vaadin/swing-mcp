@@ -24,8 +24,8 @@ public class SwingClearSelectionTool extends AbstractSwingTool {
     @Override
     public String getDescription() {
         return "Clear the selection of a UI component by ref. "
-                + "Works with multi-select components (list, table) and some single-select "
-                + "components (combo_box). page_tab_list with tabs does not allow an empty "
+                + "Works with multi-select components (JList, JTable) and some single-select "
+                + "components (JComboBox). JTabbedPane does not allow an empty "
                 + "selection. Requires a ref obtained from swing_snapshot or swing_get_cells.";
     }
 

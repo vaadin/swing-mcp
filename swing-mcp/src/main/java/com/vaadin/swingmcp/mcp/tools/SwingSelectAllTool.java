@@ -32,7 +32,7 @@ public class SwingSelectAllTool extends AbstractSwingTool {
     public String getDescription() {
         return "Select all items in a multi-selection UI component by ref. "
                 + "Only works on components marked multi-selection in the snapshot "
-                + "(list, table). Single-selection components are rejected. "
+                + "(JList, JTable). Single-selection components are rejected. "
                 + "Requires a ref obtained from swing_snapshot or swing_get_cells.";
     }
 

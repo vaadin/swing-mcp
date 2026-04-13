@@ -30,7 +30,7 @@ public class SwingGetItemCountTool extends AbstractSwingTool {
                 + "regardless of selection mode (use this instead of swing_get_cell_count, "
                 + "which does not support JTable). Note: swing_set_selection still requires "
                 + "the table to be in row-selection mode. For JTabbedPane, count the tabs "
-                + "directly from the snapshot \u2014 each tab renders as `- page_tab N "
+                + "directly from the snapshot \u2014 each tab renders as `- (page_tab) N "
                 + "\"title\"` with its 0-based index. Requires a ref obtained from "
                 + "swing_snapshot or swing_get_cells.";
     }

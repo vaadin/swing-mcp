@@ -44,7 +44,7 @@ public class SwingGetItemsTool extends AbstractSwingTool {
                 + "regardless of selection mode: index is the row index and name is a pipe-separated "
                 + "summary of cell values (use this instead of swing_get_cells, which does not "
                 + "support JTable). For JTabbedPane, use the swing_snapshot tool \u2014 each tab already "
-                + "renders as `- page_tab N \"title\"` with its 0-based index and [disabled] / "
+                + "renders as `- (page_tab) N \"title\"` with its 0-based index and [disabled] / "
                 + "[selected] state; pass the index straight to swing_set_selection as [N]. "
                 + "Requires offset and length parameters for paging. If offset+length is bigger "
                 + "than the amount of data available, fewer items than requested may be returned. "
