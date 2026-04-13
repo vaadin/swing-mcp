@@ -25,8 +25,11 @@ public class SwingGetSelectableItemsCountTool extends AbstractSwingTool {
     @Override
     public String getDescription() {
         return "Get the total number of selectable items of a UI component by ref. "
-                + "Returns the count as a plain integer. For JTable, this is the row count "
-                + "(only row-selection mode is supported). Requires a ref obtained from swing_snapshot or swing_get_cells.";
+                + "Returns the count as a plain integer. For JTable, this is the canonical "
+                + "way to get the row count regardless of selection mode (use this instead "
+                + "of swing_get_cell_count, which does not support JTable). Note: "
+                + "swing_set_selection still requires the table to be in row-selection mode. "
+                + "Requires a ref obtained from swing_snapshot or swing_get_cells.";
     }
 
     @Override
@@ -44,8 +47,9 @@ public class SwingGetSelectableItemsCountTool extends AbstractSwingTool {
         // Step 2 (BR-02): ref lookup
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // Step 3 (BR-03): selection support check with JTable-specific error
-        requireSelectable(accessible, "swing_get_selectable_items_count");
+        // Step 3 (BR-03): read-only gate — any JTable passes (regardless of
+        // selection mode); other components must satisfy supportsSelection.
+        requireGetSelectableItemsSupported(accessible, "swing_get_selectable_items_count");
 
         // Step 4 (BR-07): compute count
         int totalCount = SwingUtils.getSelectableItemsCount(accessible);

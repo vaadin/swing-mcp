@@ -220,42 +220,47 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JTable — unsupported modes
+    // JTable — all selection modes succeed (UC-017 BR-03 decouples read path
+    // from the row-selection gate that swing_set_selection still enforces)
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void jTable_columnSelectionMode_returnsError() throws Exception {
+    void jTable_columnSelectionMode_returnsRows() throws Exception {
         JTable table = new JTable(new DefaultTableModel(
-                new Object[][]{{"a"}}, new Object[]{"col"}));
+                new Object[][]{{"a", "b"}, {"c", "d"}}, new Object[]{"col1", "col2"}));
         table.setRowSelectionAllowed(false);
         table.setColumnSelectionAllowed(true);
         context.putRef(99, table);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getItems(99, 0, 10));
-        assertTrue(ex.getMessage().contains("row-selection mode"));
+        String json = getItems(99, 0, 10);
+        assertTrue(json.startsWith("{\"totalCount\":2,\"items\":["),
+                "Expected totalCount=2, got: " + json);
+        assertTrue(json.contains("{\"index\":0,\"name\":\"a | b\"}"), json);
+        assertTrue(json.contains("{\"index\":1,\"name\":\"c | d\"}"), json);
     }
 
     @Test
-    void jTable_cellSelectionMode_returnsError() throws Exception {
+    void jTable_cellSelectionMode_returnsRows() throws Exception {
         JTable table = new JTable(new DefaultTableModel(
-                new Object[][]{{"a"}}, new Object[]{"col"}));
+                new Object[][]{{"a", "b"}, {"c", "d"}}, new Object[]{"col1", "col2"}));
         table.setCellSelectionEnabled(true);
         context.putRef(99, table);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getItems(99, 0, 10));
-        assertTrue(ex.getMessage().contains("row-selection mode"));
+        String json = getItems(99, 0, 10);
+        assertTrue(json.startsWith("{\"totalCount\":2,\"items\":["), json);
+        assertTrue(json.contains("{\"index\":0,\"name\":\"a | b\"}"), json);
+        assertTrue(json.contains("{\"index\":1,\"name\":\"c | d\"}"), json);
     }
 
     @Test
-    void jTable_noSelectionAllowed_returnsError() throws Exception {
+    void jTable_noSelectionAllowed_returnsRows() throws Exception {
         JTable table = new JTable(new DefaultTableModel(
-                new Object[][]{{"a"}}, new Object[]{"col"}));
+                new Object[][]{{"a", "b"}, {"c", "d"}}, new Object[]{"col1", "col2"}));
         table.setRowSelectionAllowed(false);
         table.setColumnSelectionAllowed(false);
         context.putRef(99, table);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getItems(99, 0, 10));
-        assertTrue(ex.getMessage().contains("row-selection mode"));
+        String json = getItems(99, 0, 10);
+        assertTrue(json.startsWith("{\"totalCount\":2,\"items\":["), json);
+        assertTrue(json.contains("{\"index\":0,\"name\":\"a | b\"}"), json);
+        assertTrue(json.contains("{\"index\":1,\"name\":\"c | d\"}"), json);
     }
 
     // ══════════════════════════════════════════════════════════════════════════

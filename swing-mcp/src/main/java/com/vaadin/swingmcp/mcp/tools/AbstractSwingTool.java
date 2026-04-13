@@ -108,6 +108,31 @@ public abstract class AbstractSwingTool {
     }
 
     /**
+     * Validates that the accessible is a valid target for the read-only
+     * selection-item tools ({@code swing_get_selectable_items} and
+     * {@code swing_get_selectable_items_count}). Throws an
+     * {@link MCPErrorResponseException} if it is not.
+     *
+     * <p>Delegates to {@link SwingUtils#supportsGetSelectableItems}: every
+     * {@code JTable} passes regardless of selection mode; other components must
+     * satisfy the standard {@code supportsSelection} gate.</p>
+     *
+     * @param accessible the component to check
+     * @param toolName   the tool name for the error message
+     *                   (e.g. {@code "get_selectable_items"})
+     * @throws MCPErrorResponseException if the component does not support the tool
+     */
+    protected static void requireGetSelectableItemsSupported(Accessible accessible, String toolName)
+            throws MCPErrorResponseException {
+        if (SwingUtils.supportsGetSelectableItems(accessible)) {
+            return;
+        }
+        throw new MCPErrorResponseException(
+                "Component does not support " + toolName
+                        + ". Call swing_snapshot or swing_get_cells to verify the list of actions.");
+    }
+
+    /**
      * Validates that the accessible is a valid target for {@code swing_get_cells}
      * or {@code swing_get_cell_count} — i.e. its role is LIST or TREE. Throws an
      * {@link MCPErrorResponseException} otherwise.

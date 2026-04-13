@@ -274,6 +274,35 @@ public final class SwingUtils {
     }
 
     /**
+     * Returns {@code true} if the accessible is a valid target for the read-only
+     * selection-item tools {@code swing_get_selectable_items} and
+     * {@code swing_get_selectable_items_count}.
+     *
+     * <p>Equivalent to {@link #supportsSelection} for every component
+     * <em>except</em> {@code JTable}: any JTable passes, regardless of selection
+     * mode (row / column / cell / none). Rationale: row enumeration is a
+     * read-only observation that does not require a working selection model, and
+     * after UC-020's JTable ban on {@code swing_get_cells} these two tools are
+     * the only paged content-access path for JTables in column-selection,
+     * cell-selection or no-selection modes.</p>
+     *
+     * <p>The write-path selection tools ({@code swing_set_selection},
+     * {@code swing_clear_selection}, {@code swing_select_all}) keep the strict
+     * {@link #supportsSelection} gate — they genuinely need a working row
+     * selection model.</p>
+     *
+     * @see <a href="use-case-017-swing-get-selectable-items.md">UC-017 BR-03</a>
+     * @see <a href="use-case-018-swing-get-selectable-items-count.md">UC-018 BR-03</a>
+     */
+    public static boolean supportsGetSelectableItems(Accessible a) {
+        if (a instanceof JTable) {
+            AccessibleContext ac = a.getAccessibleContext();
+            return ac != null;
+        }
+        return supportsSelection(a);
+    }
+
+    /**
      * Returns {@code true} if the accessible supports multi-selection.
      * <p>
      * Detection: {@link AccessibleState#MULTISELECTABLE} in the state set,

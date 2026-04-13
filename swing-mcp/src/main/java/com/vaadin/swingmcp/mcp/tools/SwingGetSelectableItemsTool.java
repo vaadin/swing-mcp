@@ -38,10 +38,13 @@ public class SwingGetSelectableItemsTool extends AbstractSwingTool {
     public String getDescription() {
         return "List selectable items of a UI component by ref. Returns a paged JSON array "
                 + "of items (0-based index + name). Indices are in the selection item index "
-                + "space \u2014 pass them directly to swing_set_selection. For JTable, index is "
-                + "the row index and name is a pipe-separated summary of cell values. Requires "
-                + "offset and length parameters for paging. If offset+length is bigger than the "
-                + "amount of data available, fewer items than requested may be returned. "
+                + "space \u2014 pass them directly to swing_set_selection. For JTable, this is "
+                + "the canonical way to page through rows regardless of selection mode: index "
+                + "is the row index and name is a pipe-separated summary of cell values (use "
+                + "this instead of swing_get_cells, which does not support JTable). Note: "
+                + "swing_set_selection still requires the table to be in row-selection mode. "
+                + "Requires offset and length parameters for paging. If offset+length is bigger "
+                + "than the amount of data available, fewer items than requested may be returned. "
                 + "Requires a ref obtained from swing_snapshot or swing_get_cells.";
     }
 
@@ -70,8 +73,9 @@ public class SwingGetSelectableItemsTool extends AbstractSwingTool {
         // Step 2 (BR-02): ref lookup
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // Step 3 (BR-03): selection support check with JTable-specific error
-        requireSelectable(accessible, "swing_get_selectable_items");
+        // Step 3 (BR-03): read-only gate — any JTable passes (regardless of
+        // selection mode); other components must satisfy supportsSelection.
+        requireGetSelectableItemsSupported(accessible, "swing_get_selectable_items");
 
         // BR-04: all access on EDT (guaranteed by MCPServer.registerTool)
         AccessibleContext ac = accessible.getAccessibleContext();

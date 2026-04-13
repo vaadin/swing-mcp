@@ -128,42 +128,36 @@ class SwingGetSelectableItemsCountTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JTable — unsupported modes
+    // JTable — all selection modes succeed (UC-018 BR-03)
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void jTable_columnSelectionMode_returnsError() throws Exception {
+    void jTable_columnSelectionMode_returnsRowCount() throws Exception {
         JTable table = new JTable(new DefaultTableModel(
-                new Object[][]{{"a"}}, new Object[]{"col"}));
+                new Object[][]{{"a"}, {"b"}, {"c"}}, new Object[]{"col"}));
         table.setRowSelectionAllowed(false);
         table.setColumnSelectionAllowed(true);
         context.putRef(99, table);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getCount(99));
-        assertTrue(ex.getMessage().contains("row-selection mode"));
+        assertEquals("3", getCount(99));
     }
 
     @Test
-    void jTable_cellSelectionMode_returnsError() throws Exception {
+    void jTable_cellSelectionMode_returnsRowCount() throws Exception {
         JTable table = new JTable(new DefaultTableModel(
-                new Object[][]{{"a"}}, new Object[]{"col"}));
+                new Object[][]{{"a"}, {"b"}, {"c"}, {"d"}}, new Object[]{"col"}));
         table.setCellSelectionEnabled(true);
         context.putRef(99, table);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getCount(99));
-        assertTrue(ex.getMessage().contains("row-selection mode"));
+        assertEquals("4", getCount(99));
     }
 
     @Test
-    void jTable_noSelectionAllowed_returnsError() throws Exception {
+    void jTable_noSelectionAllowed_returnsRowCount() throws Exception {
         JTable table = new JTable(new DefaultTableModel(
-                new Object[][]{{"a"}}, new Object[]{"col"}));
+                new Object[][]{{"a"}, {"b"}}, new Object[]{"col"}));
         table.setRowSelectionAllowed(false);
         table.setColumnSelectionAllowed(false);
         context.putRef(99, table);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getCount(99));
-        assertTrue(ex.getMessage().contains("row-selection mode"));
+        assertEquals("2", getCount(99));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
