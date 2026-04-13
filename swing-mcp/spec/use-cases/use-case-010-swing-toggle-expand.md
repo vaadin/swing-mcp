@@ -34,21 +34,7 @@
 
 ### Algorithm: detecting and invoking the toggle-expand action
 
-`SwingUtils.supportsToggleExpand(Accessible a)` — scans `AccessibleAction` descriptions for `AccessibleAction.TOGGLE_EXPAND`:
-
-```java
-int supportsToggleExpand(Accessible a) {
-    AccessibleContext ac = a.getAccessibleContext();
-    if (ac == null) return -1;
-    AccessibleAction aa = ac.getAccessibleAction();
-    if (aa == null) return -1;
-    for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
-        if (AccessibleAction.TOGGLE_EXPAND.equals(aa.getAccessibleActionDescription(i)))
-            return i;
-    }
-    return -1;
-}
-```
+`SwingUtils.supportsToggleExpand(Accessible a)` scans `AccessibleAction` descriptions for `AccessibleAction.TOGGLE_EXPAND` and returns the action index or `-1`.
 
 Execution order:
 1. **BR-02** — ref lookup (fail fast if ref is invalid).

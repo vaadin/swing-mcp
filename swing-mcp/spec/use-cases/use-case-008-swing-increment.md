@@ -34,21 +34,7 @@
 
 ### Algorithm: detecting and invoking the increment action
 
-`SwingUtils.supportsIncrement(Accessible a)` is a utility method on `SwingUtils` (alongside `supportsClick`, `supportsTogglePopup`, etc.) that scans `AccessibleAction` descriptions for `AccessibleAction.INCREMENT` and returns the action index or `-1`:
-
-```java
-public static int supportsIncrement(Accessible a) {
-    AccessibleContext ac = a.getAccessibleContext();
-    if (ac == null) return -1;
-    AccessibleAction aa = ac.getAccessibleAction();
-    if (aa == null) return -1;
-    for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
-        if (AccessibleAction.INCREMENT.equals(aa.getAccessibleActionDescription(i)))
-            return i;
-    }
-    return -1;
-}
-```
+`SwingUtils.supportsIncrement(Accessible a)` scans `AccessibleAction` descriptions for `AccessibleAction.INCREMENT` and returns the action index or `-1`.
 
 Execution order:
 1. **BR-02** — ref lookup (fail fast if ref is invalid).

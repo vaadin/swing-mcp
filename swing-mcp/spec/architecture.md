@@ -138,24 +138,7 @@ them to the expected type. This is necessary because LLM clients frequently send
 tool arguments as strings, ignoring the `"type": "integer"` declared in the JSON schema.
 Non-parseable strings still produce `INVALID_PARAMS` errors.
 
-```java
-class Parameters {
-    Parameters(Map<String, Object> raw);
-
-    // Required — throws MCPServerException(INVALID_PARAMS) if key is missing or value is not a String
-    String getString(String key);
-    // Optional — returns null if key is missing; throws if present but not a String
-    String getStringOrNull(String key);
-
-    // Required — throws MCPServerException(INVALID_PARAMS) if key is missing or value is not a Number/numeric string.
-    // Converts to int via Number.intValue() or Integer.parseInt().
-    int getInt(String key);
-    // Optional — returns null if key is missing; throws if present but not a Number/numeric string
-    Integer getIntOrNull(String key);
-}
-```
-
-Error messages must name the parameter and the expected type, e.g.:
+See `Parameters.java` for the full API. Error messages must name the parameter and the expected type, e.g.:
 `"Required parameter 'ref' is missing"`, `"Parameter 'ref' must be an integer"`.
 
 `AbstractSwingTool.execute` receives `Parameters` (constructed by `MCPServer.registerTool`
@@ -281,21 +264,7 @@ All `supports*` methods that detect an `AccessibleAction` return the **action in
 on success, or **-1** if the action is not found. The caller can pass the returned index
 directly to `doAccessibleAction(i)`, avoiding a second scan.
 
-```java
-int supportsTogglePopup(Accessible a) {
-    AccessibleContext ac = a.getAccessibleContext();
-    if (ac == null) return -1;
-    AccessibleAction aa = ac.getAccessibleAction();
-    if (aa == null) return -1;
-    for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
-        String desc = aa.getAccessibleActionDescription(i);
-        if (AccessibleAction.TOGGLE_POPUP.equals(desc) ||
-            UIManager.getString("ComboBox.togglePopupText").equals(desc))
-            return i;
-    }
-    return -1;
-}
-```
+Implemented in `SwingUtils.supportsTogglePopup(Accessible)`:
 
 - `AccessibleAction.TOGGLE_POPUP` (`"toggle popup"`) covers any component that uses the constant directly.
 - `UIManager.getString("ComboBox.togglePopupText")` covers `JComboBox`, which uses a potentially localized lookup.
@@ -313,54 +282,7 @@ execute the click (the `AccessibleAction` + index for Tier 1, or the `Component`
 so callers never need to know which tier was used. The snapshot checks `!= null` to decide
 whether to add the `click` action; `swing_click` calls `run()` inside `invokeLater()`.
 
-```java
-Runnable supportsClick(Accessible a) {
-    // --- Tier 1: AccessibleAction ---
-    AccessibleContext ac = a.getAccessibleContext();
-    if (ac != null) {
-        AccessibleAction aa = ac.getAccessibleAction();
-        if (aa != null) {
-            for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
-                String desc = aa.getAccessibleActionDescription(i);
-                if (AccessibleAction.CLICK.equals(desc) ||
-                    UIManager.getString("AbstractButton.clickText").equals(desc)) {
-                    final int idx = i;
-                    return () -> aa.doAccessibleAction(idx);
-                }
-            }
-        }
-    }
-    // --- Tier 2: MouseListener fallback ---
-    // Skip for interactive roles — these should use AccessibleAction (Tier 1).
-    // See INTERACTIVE_ROLES constant below.
-    AccessibleRole role = (ac != null) ? ac.getAccessibleRole() : null;
-    if (role != null && INTERACTIVE_ROLES.contains(role)) return null;
-
-    if (a instanceof Component) {
-        Component c = (Component) a;
-        for (MouseListener ml : c.getMouseListeners()) {
-            String cls = ml.getClass().getName();
-            if (!cls.startsWith("javax.swing.") &&
-                !cls.startsWith("java.awt.") &&
-                !cls.startsWith("sun.") &&
-                !cls.startsWith("com.sun.")) {
-                return () -> {
-                    int x = c.getWidth() / 2;
-                    int y = c.getHeight() / 2;
-                    long now = System.currentTimeMillis();
-                    c.dispatchEvent(new MouseEvent(c, MouseEvent.MOUSE_PRESSED,
-                        now, InputEvent.BUTTON1_DOWN_MASK, x, y, 1, false, MouseEvent.BUTTON1));
-                    c.dispatchEvent(new MouseEvent(c, MouseEvent.MOUSE_RELEASED,
-                        now + 1, 0, x, y, 1, false, MouseEvent.BUTTON1));
-                    c.dispatchEvent(new MouseEvent(c, MouseEvent.MOUSE_CLICKED,
-                        now + 2, 0, x, y, 1, false, MouseEvent.BUTTON1));
-                };
-            }
-        }
-    }
-    return null;
-}
-```
+Implemented in `SwingUtils.supportsClick(Accessible)`. `INTERACTIVE_ROLES` (referenced by Tier 2 below) is a constant in the same class.
 
 #### Tier 1 — AccessibleAction
 
@@ -459,34 +381,7 @@ Two Swing quirks need explicit handling:
    happen to do this correctly already, but the recursion is uniformly safe and costs
    nothing.)
 
-```java
-boolean isEffectivelyEnabled(Accessible a) {
-    AccessibleContext ac = a.getAccessibleContext();
-    if (ac == null) return false;
-    if (!ac.getAccessibleStateSet().contains(AccessibleState.ENABLED)) return false;
-
-    Accessible parent = ac.getAccessibleParent();
-
-    // Quirk 1: JTabbedPane.setEnabledAt is not reflected in the AccessiblePage state set.
-    if (parent instanceof JTabbedPane) {
-        JTabbedPane tp = (JTabbedPane) parent;
-        int idx = ac.getAccessibleIndexInParent();
-        if (idx >= 0 && idx < tp.getTabCount() && !tp.isEnabledAt(idx)) {
-            return false;
-        }
-    }
-
-    // Quirk 2: virtual children (e.g. JTable cells) may not reflect the host's disabled
-    // state — walk up until we reach a real Component ancestor.
-    if (!(a instanceof Component) && parent != null) {
-        return isEffectivelyEnabled(parent);
-    }
-
-    // Real Components: trust the component's own ENABLED state. Swing's setEnabled
-    // does not propagate to children, so neither do we.
-    return true;
-}
-```
+Implemented in `SwingUtils.isEffectivelyEnabled(Accessible)`.
 
 The disabled-`Window` case (an OS-level peer dropping input on `Frame.setEnabled(false)`)
 is intentionally **not** handled here — its visual behaviour is platform/L&F-dependent
@@ -523,17 +418,7 @@ exactly what the OS close button does and allows the app's `WindowListener`s and
 `JDialog` is itself a `Window` and will already expose `close` directly, so the AI can always
 dismiss the dialog via the `dialog` node ref.
 
-```java
-boolean supportsClose(Accessible a) {
-    if (!(a instanceof Window window)) return false;
-    if (!window.isShowing()) return false;
-    if (window instanceof Frame f && f.isUndecorated()) return false;
-    if (window instanceof Dialog d && d.isUndecorated()) return false;
-    if (window instanceof JFrame jf &&
-            jf.getDefaultCloseOperation() == WindowConstants.EXIT_ON_CLOSE) return false;
-    return true;
-}
-```
+Implemented in `SwingUtils.supportsClose(Accessible)`:
 
 - Returns `true` for JFrame/JDialog when the window is showing, has decorations, and will not
   terminate the JVM on close.
@@ -566,73 +451,11 @@ All action names follow lower-case underscore-separated format.
 
 ### Detection
 
-```java
-boolean supportsGetText(Accessible a) {
-    AccessibleContext ac = a.getAccessibleContext();
-    return ac != null && ac.getAccessibleText() != null;
-}
+Implemented in `SwingUtils`: `supportsGetText`, `supportsSetText`, `supportsGetValue`, `supportsSetValue`, `supportsSelection`, and the `SUPPRESSED_VALUE_ROLES` / `READ_ONLY_VALUE_ROLES` / `SUPPRESSED_SELECTION_ROLES` constants. Notable semantics that are not obvious from the getters alone:
 
-boolean supportsSetText(Accessible a) {
-    AccessibleContext ac = a.getAccessibleContext();
-    return ac != null && ac.getAccessibleEditableText() != null;
-}
-
-// JSpinner exposes AccessibleValue.getAccessibleValue() == non-null for ALL model types
-// (SpinnerNumberModel, SpinnerDateModel, SpinnerListModel), because AccessibleJSpinner
-// always returns `this`. However, getCurrentAccessibleValue() returns null when the
-// model's current value is not a Number (e.g. Date, String). The extra null-check below
-// suppresses get_value / set_value for non-number spinners.
-boolean supportsGetValue(Accessible a) {
-    AccessibleContext ac = a.getAccessibleContext();
-    if (ac == null) return false;
-    AccessibleValue av = ac.getAccessibleValue();
-    if (av == null) return false;
-    if (SUPPRESSED_VALUE_ROLES.contains(ac.getAccessibleRole())) return false;
-    return av.getCurrentAccessibleValue() != null;
-}
-
-// Roles whose AccessibleValue is read-only (value changes programmatically, not by the user).
-// The MCP server must only perform actions a real user can perform — exposing set_value on a
-// read-only component risks putting the Swing app into an undefined state.
-//
-// Membership criterion: the component displays a value via AccessibleValue (non-null), but
-// a real user fundamentally cannot edit that value. Add roles here as they are discovered.
-//
-// Components that return null from getAccessibleValue() (e.g. JInternalFrame) are excluded
-// automatically by the null-check above — they never reach this set.
-//
-// Explicitly NOT in this set (intentional):
-//   - SCROLL_BAR (JScrollBar): a user can drag the scrollbar, so set_value is a legitimate
-//     action even when the scrollbar is inside a JScrollPane.
-//
-// Note: JProgressBar.setCurrentAccessibleValue() actually returns true and mutates the bar
-// (confirmed by test). It is still in READ_ONLY_VALUE_ROLES because the bar represents
-// progress controlled by the application, not a value a user can edit. Allowing set_value
-// here would risk putting the app into an inconsistent state.
-private static final Set<AccessibleRole> READ_ONLY_VALUE_ROLES = Set.of(
-    AccessibleRole.PROGRESS_BAR
-);
-
-boolean supportsSetValue(Accessible a) {
-    AccessibleContext ac = a.getAccessibleContext();
-    if (ac == null) return false;
-    AccessibleValue av = ac.getAccessibleValue();
-    if (av == null) return false;
-    AccessibleRole role = ac.getAccessibleRole();
-    if (SUPPRESSED_VALUE_ROLES.contains(role)) return false;
-    if (READ_ONLY_VALUE_ROLES.contains(role)) return false;
-    return av.getCurrentAccessibleValue() != null;
-}
-
-boolean supportsSelection(Accessible a) {
-    AccessibleContext ac = a.getAccessibleContext();
-    return ac != null && ac.getAccessibleSelection() != null;
-}
-```
-
-Note: `supportsSetText` implies `supportsGetText` (since `AccessibleEditableText` extends
-`AccessibleText`), so only one check is needed — check editable first, then fall back to
-read-only.
+- **JSpinner false-positive:** `AccessibleJSpinner` returns `this` from `getAccessibleValue()` for every model type, so `supportsGetValue` also null-checks `getCurrentAccessibleValue()` — this returns `null` for `SpinnerDateModel` / `SpinnerListModel` and correctly suppresses the action.
+- **`READ_ONLY_VALUE_ROLES` — `PROGRESS_BAR` only.** A user can drag a `JScrollBar`, so it stays writable. `JProgressBar.setCurrentAccessibleValue()` actually mutates the bar at the JDK level (verified by test), but we suppress `set_value` at the tool level because progress is application-controlled, not user-controlled.
+- **`supportsSetText` implies `supportsGetText`** since `AccessibleEditableText extends AccessibleText` — check editable first, fall back to read-only.
 
 ### AccessibleValue — Component Behaviour
 
