@@ -199,3 +199,58 @@ row-dumping tools — do not resurrect cell-indexed access.
   (`"X"`, `"Close"`, `"✕"`).** Rejected as fragile and locale-dependent.
 - **Fixed-interval PostVerification polling (e.g. 100 ms × 10).** Rejected —
   wastes budget on the fast path, no additional coverage of slow path.
+
+---
+
+## DR-006 — Mutation tools use fire-and-forget dispatch
+
+**Status:** Accepted
+**Applies to:** `AbstractSwingTool`, every mutation tool
+(`isMutation() == true`)
+
+**Decision.** Mutation tools validate on the EDT inside `runInEDT()`, then
+post the action via `SwingUtilities.invokeLater()` and return `null`
+immediately. The HTTP thread returns the response to the client; the action
+executes on a subsequent EDT turn. The client observes the outcome by
+calling `swing_snapshot` or `swing_screenshot`, not by waiting on the action's
+return value. **Read-only tools** are unaffected — they do their full work
+inside `runInEDT()` and return synchronously.
+
+**Why.** If a mutation's action listener opens a modal dialog, the EDT
+enters a secondary event loop (`WaitDispatchSupport`). The secondary loop
+still processes `invokeLater` tasks — so the MCP server continues to service
+subsequent tool calls — but an `invokeAndWait` dispatch from the HTTP thread
+would block indefinitely waiting for the original EDT task to return,
+deadlocking the HTTP thread until the modal dialog is dismissed. Fire-and-
+forget avoids that trap entirely: the HTTP thread never waits on action
+completion.
+
+Model bonus: this mirrors how a real user interacts with a Swing app — click
+a button, observe the result — rather than "gluing" the client to the EDT
+until paint completes.
+
+**Trade-offs accepted.**
+- `AccessibleAction.doAccessibleAction()` returns a boolean indicating
+  whether the action was performed. Under fire-and-forget this return value
+  is discarded. Accepted because pre-condition failures (unknown ref,
+  disabled component, unsupported action) are still caught synchronously
+  in the validation phase and returned as MCP errors — and a follow-up
+  snapshot gives the AI richer outcome information than a single boolean
+  anyway.
+- The residual deadlock risk in read-only tools (which still use
+  `runInEDT()` synchronously) is mitigated by an `EDT_TIMEOUT_MS` (10 s)
+  watchdog on `runInEDT()` that throws with the EDT's stack trace — enough
+  to diagnose unexpected blockages without masking them.
+
+**Alternatives considered.**
+- **Synchronous `invokeAndWait` dispatch.** Rejected — deadlocks on any
+  mutation that opens a modal dialog (or triggers any other blocking EDT
+  operation). The deadlock path is the *common* case for dialog-opening
+  mutations, not an exception.
+- **Hybrid: `invokeAndWait` with a timeout, fall back to fire-and-forget
+  on timeout.** Rejected — adds complexity without closing the deadlock
+  window; the HTTP thread still sits blocked for the timeout duration on
+  every modal-dialog mutation.
+- **Return `doAccessibleAction()`'s boolean via best-effort echo.**
+  Rejected — the only mechanism to read it is `invokeAndWait`; with that
+  off the table, the boolean is unreachable.

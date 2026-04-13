@@ -86,15 +86,7 @@ The wrapper-level `toolLock` closes that gap.
 
 ### Fire-and-Forget Mutation Dispatch
 
-Mutation tools (those where `isMutation()` returns `true`) use a **fire-and-forget** dispatch
-model that mirrors how a real user interacts with a Swing app: the user clicks a button but is
-not "glued" to it waiting for the EDT to finish painting.
-
-**Why this matters:** if a mutation's action listener opens a modal dialog, the EDT enters a
-secondary event loop (`WaitDispatchSupport`). Because the secondary loop still processes
-`invokeLater` tasks, the MCP server continues to respond to subsequent tool calls. However,
-if the action were dispatched via `invokeAndWait`, the HTTP thread would block indefinitely
-waiting for the EDT task to return — a deadlock.
+Mutation tools (those where `isMutation()` returns `true`) use a **fire-and-forget** dispatch model — rationale (modal-dialog deadlock; alternatives rejected) is **DR-006**.
 
 **Dispatch model:**
 
@@ -107,14 +99,6 @@ waiting for the EDT task to return — a deadlock.
 
 The client observes the outcome — new dialog appeared, field changed, window closed — by
 calling `swing_snapshot` or `swing_screenshot` after the mutation tool returns.
-
-**Feedback loss vs. benefit:** `doAccessibleAction()` returns a boolean indicating whether
-the action was performed. Under fire-and-forget this return value is discarded; the client
-uses observation instead. This trade-off is acceptable because:
-- Pre-condition errors (unknown ref, disabled component, unsupported action) are still
-  caught synchronously in the validation phase and returned as MCP errors.
-- The fire-and-forget model is robust against any blocking EDT operation triggered by the
-  action, which `invokeAndWait` would deadlock on.
 
 **Deadlock detection:** `runInEDT()` uses `SwingUtilities.invokeLater()` + `CountDownLatch`
 rather than `SwingUtilities.invokeAndWait()`. If the EDT does not complete the task within
