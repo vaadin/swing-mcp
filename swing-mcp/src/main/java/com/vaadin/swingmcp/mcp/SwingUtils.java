@@ -276,8 +276,8 @@ public final class SwingUtils {
 
     /**
      * Returns {@code true} if the accessible is a valid target for the read-only
-     * selection-item tools {@code swing_get_selectable_items} and
-     * {@code swing_get_selectable_items_count}.
+     * selection-item tools {@code swing_get_items} and
+     * {@code swing_get_item_count}.
      *
      * <p>Accepts {@code JList}, {@code JComboBox}, and any {@code JTable} only.
      * Two deliberate deviations from {@link #supportsSelection}:</p>
@@ -302,7 +302,7 @@ public final class SwingUtils {
      * @see <a href="use-case-017-swing-get-selectable-items.md">UC-017 BR-03</a>
      * @see <a href="use-case-018-swing-get-selectable-items-count.md">UC-018 BR-03</a>
      */
-    public static boolean supportsGetSelectableItems(Accessible a) {
+    public static boolean supportsGetItems(Accessible a) {
         if (a instanceof JTabbedPane) {
             return false;
         }
@@ -583,14 +583,14 @@ public final class SwingUtils {
      * </ul>
      * <p>
      * The caller must verify that the accessible is a valid target
-     * ({@link #supportsGetSelectableItems}) before calling this method.
+     * ({@link #supportsGetItems}) before calling this method.
      * {@code JTabbedPane} is not a supported target (dropped per P-001);
      * its tab count is derivable from the snapshot instead.
      *
-     * @param a an accessible that passes {@link #supportsGetSelectableItems}
+     * @param a an accessible that passes {@link #supportsGetItems}
      * @return the number of selectable items
      */
-    public static int getSelectableItemsCount(Accessible a) {
+    public static int getItemCount(Accessible a) {
         AccessibleContext ac = a.getAccessibleContext();
         if (a instanceof JTable) {
             return ac.getAccessibleTable().getAccessibleRowCount();
@@ -634,8 +634,8 @@ public final class SwingUtils {
      * via {@code CellRendererPane} and surface as plain text {@code LABEL}s
      * with no {@code AccessibleAction}, so {@code get_cells} can never return
      * an actionable ref for a JTable. The canonical row-access tools for
-     * JTable are {@code swing_get_selectable_items} /
-     * {@code swing_get_selectable_items_count} (UC-017 BR-09).</p>
+     * JTable are {@code swing_get_items} /
+     * {@code swing_get_item_count} (UC-017 BR-09).</p>
      *
      * @see <a href="use-case-020-swing-get-cells.md">UC-020 BR-03</a>
      * @see <a href="use-case-021-swing-get-cell-count.md">UC-021 BR-03</a>

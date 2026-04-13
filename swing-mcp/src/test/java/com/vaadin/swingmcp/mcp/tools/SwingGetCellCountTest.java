@@ -45,12 +45,12 @@ class SwingGetCellCountTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JTable — rejected (UC-021 BR-03): redirected to swing_get_selectable_items_count
+    // JTable — rejected (UC-021 BR-03): redirected to swing_get_item_count
     // ══════════════════════════════════════════════════════════════════════════
 
     private static final String JTABLE_REDIRECT_MESSAGE =
             "JTable does not support swing_get_cell_count. Table cells are plain text labels \u2014 "
-                    + "use swing_get_selectable_items_count to page through rows.";
+                    + "use swing_get_item_count to page through rows.";
 
     @Test
     void jtable_returnsRedirectError() throws Exception {

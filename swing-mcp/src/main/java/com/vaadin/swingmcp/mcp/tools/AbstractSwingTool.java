@@ -35,8 +35,8 @@ public abstract class AbstractSwingTool {
     public static final String TOOL_SWING_GET_SELECTION = "swing_get_selection";
     public static final String TOOL_SWING_SET_SELECTION = "swing_set_selection";
     public static final String TOOL_SWING_CLEAR_SELECTION = "swing_clear_selection";
-    public static final String TOOL_SWING_GET_SELECTABLE_ITEMS = "swing_get_selectable_items";
-    public static final String TOOL_SWING_GET_SELECTABLE_ITEMS_COUNT = "swing_get_selectable_items_count";
+    public static final String TOOL_SWING_GET_ITEMS = "swing_get_items";
+    public static final String TOOL_SWING_GET_ITEM_COUNT = "swing_get_item_count";
     public static final String TOOL_SWING_SELECT_ALL = "swing_select_all";
     public static final String TOOL_SWING_GET_CELLS = "swing_get_cells";
     public static final String TOOL_SWING_GET_CELL_COUNT = "swing_get_cell_count";
@@ -109,22 +109,22 @@ public abstract class AbstractSwingTool {
 
     /**
      * Validates that the accessible is a valid target for the read-only
-     * selection-item tools ({@code swing_get_selectable_items} and
-     * {@code swing_get_selectable_items_count}). Throws an
+     * selection-item tools ({@code swing_get_items} and
+     * {@code swing_get_item_count}). Throws an
      * {@link MCPErrorResponseException} if it is not.
      *
-     * <p>Delegates to {@link SwingUtils#supportsGetSelectableItems}: every
+     * <p>Delegates to {@link SwingUtils#supportsGetItems}: every
      * {@code JTable} passes regardless of selection mode; other components must
      * satisfy the standard {@code supportsSelection} gate.</p>
      *
      * @param accessible the component to check
      * @param toolName   the tool name for the error message
-     *                   (e.g. {@code "get_selectable_items"})
+     *                   (e.g. {@code "get_items"})
      * @throws MCPErrorResponseException if the component does not support the tool
      */
-    protected static void requireGetSelectableItemsSupported(Accessible accessible, String toolName)
+    protected static void requireGetItemsSupported(Accessible accessible, String toolName)
             throws MCPErrorResponseException {
-        if (SwingUtils.supportsGetSelectableItems(accessible)) {
+        if (SwingUtils.supportsGetItems(accessible)) {
             return;
         }
         throw new MCPErrorResponseException(
@@ -138,8 +138,8 @@ public abstract class AbstractSwingTool {
      * {@link MCPErrorResponseException} otherwise.
      *
      * <p>JTable targets receive a dedicated error that redirects the AI to
-     * {@code swing_get_selectable_items} (for {@code swing_get_cells}) or
-     * {@code swing_get_selectable_items_count} (for {@code swing_get_cell_count}).
+     * {@code swing_get_items} (for {@code swing_get_cells}) or
+     * {@code swing_get_item_count} (for {@code swing_get_cell_count}).
      * Table cells are stamp-painted plain text labels with no actionable children,
      * so these tools can never return a useful ref for a JTable.</p>
      *
@@ -147,7 +147,7 @@ public abstract class AbstractSwingTool {
      * @param toolName         the tool name for the generic error message
      *                         (e.g. {@code "get_cells"})
      * @param jtableRedirectTo the name of the tool the AI should use instead for
-     *                         JTable (e.g. {@code "swing_get_selectable_items"})
+     *                         JTable (e.g. {@code "swing_get_items"})
      * @throws MCPErrorResponseException if the component does not support the tool
      */
     protected static void requireGetCellsSupported(Accessible accessible,

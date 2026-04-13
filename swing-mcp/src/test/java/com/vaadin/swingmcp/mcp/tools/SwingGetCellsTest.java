@@ -24,7 +24,7 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
     private SwingSnapshotTool snapshotTool;
     private SwingGetCellsTool tool;
     private SwingClickTool clickTool;
-    private SwingGetSelectableItemsTool getSelectableItemsTool;
+    private SwingGetItemsTool getItemsTool;
     private SwingToolContext context;
 
     @BeforeEach
@@ -32,7 +32,7 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         snapshotTool = new SwingSnapshotTool();
         tool = new SwingGetCellsTool();
         clickTool = new SwingClickTool();
-        getSelectableItemsTool = new SwingGetSelectableItemsTool();
+        getItemsTool = new SwingGetItemsTool();
         context = new SwingToolContext();
     }
 
@@ -51,7 +51,7 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
 
     // ══════════════════════════════════════════════════════════════════════════
     // JTable — rejected (UC-020 BR-03): table cells are plain text labels, so
-    // swing_get_cells is refused; AI is redirected to swing_get_selectable_items.
+    // swing_get_cells is refused; AI is redirected to swing_get_items.
     // ══════════════════════════════════════════════════════════════════════════
 
     private JTable createTable(int rows, int cols) {
@@ -72,7 +72,7 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
                 () -> getCells(context.getRefOf(table), 0, 5));
         assertEquals(
                 "JTable does not support swing_get_cells. Table cells are plain text labels \u2014 "
-                        + "use swing_get_selectable_items to page through rows.",
+                        + "use swing_get_items to page through rows.",
                 ex.getMessage());
     }
 
@@ -163,14 +163,14 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void getCells_thenGetSelectableItems_withRef1() throws Exception {
+    void getCells_thenGetItems_withRef1() throws Exception {
         String[] items = new String[20];
         for (int i = 0; i < 20; i++) items[i] = "Item-" + i;
         JList<String> list = new JList<>(items);
         snapshot(list);
         getCells(context.getRefOf(list), 0, 3);
-        // Call swing_get_selectable_items with ref=1
-        MCPProtocol.Content result = getSelectableItemsTool.execute(
+        // Call swing_get_items with ref=1
+        MCPProtocol.Content result = getItemsTool.execute(
                 new Parameters(Map.of("ref", 1, "offset", 0, "length", 3)),
                 context);
         String json = result.getText();
@@ -434,7 +434,7 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
                 () -> getCells(ref, 0, 5));
         assertEquals(
                 "JTable does not support swing_get_cells. Table cells are plain text labels \u2014 "
-                        + "use swing_get_selectable_items to page through rows.",
+                        + "use swing_get_items to page through rows.",
                 ex.getMessage());
     }
     @Test void componentMatrix_JButton() throws Exception { assertNotSupported(new JButton("B")); }

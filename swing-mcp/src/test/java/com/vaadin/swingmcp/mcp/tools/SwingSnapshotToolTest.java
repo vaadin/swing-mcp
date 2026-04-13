@@ -271,7 +271,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(root);
 
         // UC-002 step 6b / UC-020 BR-03: JTable does NOT advertise
-        // get_cell_count / get_cells — use swing_get_selectable_items instead.
+        // get_cell_count / get_cells — use swing_get_items instead.
         assertEquals(
                 "- panel\n"
                 + "  - table [ref=1] actions: multi-selection\n"

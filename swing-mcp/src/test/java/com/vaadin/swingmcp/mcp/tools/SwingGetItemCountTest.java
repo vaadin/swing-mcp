@@ -18,18 +18,18 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
+class SwingGetItemCountTest extends AbstractHeadlessTest {
 
     private SwingSnapshotTool snapshotTool;
-    private SwingGetSelectableItemsTool tool;
-    private SwingGetSelectionTool getSelectionTool;
+    private SwingGetItemCountTool tool;
+    private SwingGetItemsTool itemsTool;
     private SwingToolContext context;
 
     @BeforeEach
     void setUp() {
         snapshotTool = new SwingSnapshotTool();
-        tool = new SwingGetSelectableItemsTool();
-        getSelectionTool = new SwingGetSelectionTool();
+        tool = new SwingGetItemCountTool();
+        itemsTool = new SwingGetItemsTool();
         context = new SwingToolContext();
     }
 
@@ -38,10 +38,9 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
         snapshotTool.execute(new Parameters(Map.of()), context);
     }
 
-    private String getItems(int ref, int offset, int length) throws Exception {
+    private String getCount(int ref) throws Exception {
         MCPProtocol.Content result = tool.execute(
-                new Parameters(Map.of("ref", ref, "offset", offset, "length", length)),
-                context);
+                new Parameters(Map.of("ref", ref)), context);
         return result == null ? null : result.getText();
     }
 
@@ -50,90 +49,46 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void jList_allItems() throws Exception {
+    void jList_5items() throws Exception {
         JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma", "Delta", "Echo"});
         snapshot(list);
-        String json = getItems(context.getRefOf(list), 0, 5);
-        assertEquals("{\"totalCount\":5,\"items\":["
-                + "{\"index\":0,\"name\":\"Alpha\"},"
-                + "{\"index\":1,\"name\":\"Beta\"},"
-                + "{\"index\":2,\"name\":\"Gamma\"},"
-                + "{\"index\":3,\"name\":\"Delta\"},"
-                + "{\"index\":4,\"name\":\"Echo\"}"
-                + "]}", json);
+        assertEquals("5", getCount(context.getRefOf(list)));
     }
 
     @Test
-    void jList_200items_firstPage() throws Exception {
+    void jList_200items() throws Exception {
         String[] items = new String[200];
         for (int i = 0; i < 200; i++) items[i] = "Item-" + i;
         JList<String> list = new JList<>(items);
         snapshot(list);
-        String json = getItems(context.getRefOf(list), 0, 50);
-        assertTrue(json.startsWith("{\"totalCount\":200,\"items\":["));
-        assertTrue(json.contains("{\"index\":0,\"name\":\"Item-0\"}"));
-        assertTrue(json.contains("{\"index\":49,\"name\":\"Item-49\"}"));
-        assertFalse(json.contains("\"index\":50"));
+        assertEquals("200", getCount(context.getRefOf(list)));
     }
 
     @Test
-    void jList_200items_secondPage() throws Exception {
-        String[] items = new String[200];
-        for (int i = 0; i < 200; i++) items[i] = "Item-" + i;
-        JList<String> list = new JList<>(items);
+    void jList_empty() throws Exception {
+        JList<String> list = new JList<>();
         snapshot(list);
-        String json = getItems(context.getRefOf(list), 50, 50);
-        assertTrue(json.startsWith("{\"totalCount\":200,\"items\":["));
-        assertTrue(json.contains("{\"index\":50,\"name\":\"Item-50\"}"));
-        assertTrue(json.contains("{\"index\":99,\"name\":\"Item-99\"}"));
-        assertFalse(json.contains("\"index\":100"));
-    }
-
-    @Test
-    void jList_offsetBeyondCount_emptyItems() throws Exception {
-        JList<String> list = new JList<>(new String[]{"A", "B", "C"});
-        snapshot(list);
-        String json = getItems(context.getRefOf(list), 10, 5);
-        assertEquals("{\"totalCount\":3,\"items\":[]}", json);
-    }
-
-    @Test
-    void jList_lengthZero_emptyItems() throws Exception {
-        JList<String> list = new JList<>(new String[]{"A", "B", "C"});
-        snapshot(list);
-        String json = getItems(context.getRefOf(list), 0, 0);
-        assertEquals("{\"totalCount\":3,\"items\":[]}", json);
-    }
-
-    @Test
-    void jList_lengthExceedsRemaining() throws Exception {
-        JList<String> list = new JList<>(new String[]{"A", "B", "C"});
-        snapshot(list);
-        // Request more items than available from offset 1
-        String json = getItems(context.getRefOf(list), 1, 100);
-        assertEquals("{\"totalCount\":3,\"items\":["
-                + "{\"index\":1,\"name\":\"B\"},"
-                + "{\"index\":2,\"name\":\"C\"}"
-                + "]}", json);
+        assertEquals("0", getCount(context.getRefOf(list)));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
     // JTabbedPane — dropped as a supported target per P-001 Wave A.
-    // The three former positive tests (all-tabs, disabled-tab, enabled-tab)
-    // are replaced by a single regression guard below + componentMatrix_JTabbedPane.
-    // Tabs are now read inline from the snapshot per UC-002 SC-2.
+    // The two former positive tests (3-tabs, empty) are replaced by a single
+    // regression guard below + componentMatrix_JTabbedPane. The tab count is
+    // now derivable from the snapshot, which renders every tab inline per
+    // UC-002 SC-2.
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void jTabbedPane_isRejected() throws Exception {
         JTabbedPane tp = new JTabbedPane();
-        tp.addTab("Tab0", new JPanel());
-        tp.addTab("Tab1", new JPanel());
+        tp.addTab("General", new JPanel());
+        tp.addTab("Advanced", new JPanel());
         snapshot(tp);
         int ref = context.getRefOf(tp);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getItems(ref, 0, 10));
-        assertTrue(ex.getMessage().contains("does not support swing_get_selectable_items"),
+                () -> getCount(ref));
+        assertTrue(ex.getMessage().contains("does not support swing_get_item_count"),
                 "Expected not-supported error for JTabbedPane, got: " + ex.getMessage());
     }
 
@@ -142,23 +97,17 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void jComboBox_allItems() throws Exception {
+    void jComboBox_3items() throws Exception {
         JComboBox<String> combo = new JComboBox<>(new String[]{"Red", "Green", "Blue"});
         snapshot(combo);
-        String json = getItems(context.getRefOf(combo), 0, 3);
-        assertEquals("{\"totalCount\":3,\"items\":["
-                + "{\"index\":0,\"name\":\"Red\"},"
-                + "{\"index\":1,\"name\":\"Green\"},"
-                + "{\"index\":2,\"name\":\"Blue\"}"
-                + "]}", json);
+        assertEquals("3", getCount(context.getRefOf(combo)));
     }
 
     @Test
     void jComboBox_empty() throws Exception {
         JComboBox<String> combo = new JComboBox<>();
         snapshot(combo);
-        String json = getItems(context.getRefOf(combo), 0, 10);
-        assertEquals("{\"totalCount\":0,\"items\":[]}", json);
+        assertEquals("0", getCount(context.getRefOf(combo)));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -166,77 +115,49 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void jTable_allRows() throws Exception {
-        DefaultTableModel model = new DefaultTableModel(
-                new Object[][]{{"Alice", "30"}, {"Bob", "25"}, {"Carol", "35"}},
-                new Object[]{"Name", "Age"});
-        JTable table = new JTable(model);
-        snapshot(table);
-        String json = getItems(context.getRefOf(table), 0, 3);
-        assertEquals("{\"totalCount\":3,\"items\":["
-                + "{\"index\":0,\"name\":\"Alice | 30\"},"
-                + "{\"index\":1,\"name\":\"Bob | 25\"},"
-                + "{\"index\":2,\"name\":\"Carol | 35\"}"
-                + "]}", json);
-    }
-
-    @Test
-    void jTable_paging() throws Exception {
-        Object[][] data = new Object[100][2];
-        for (int i = 0; i < 100; i++) {
-            data[i] = new Object[]{"Name-" + i, String.valueOf(i)};
-        }
-        JTable table = new JTable(new DefaultTableModel(data, new Object[]{"Name", "Value"}));
-        snapshot(table);
-        String json = getItems(context.getRefOf(table), 10, 5);
-        assertTrue(json.startsWith("{\"totalCount\":100,\"items\":["));
-        assertTrue(json.contains("{\"index\":10,\"name\":\"Name-10 | 10\"}"));
-        assertTrue(json.contains("{\"index\":14,\"name\":\"Name-14 | 14\"}"));
-        assertFalse(json.contains("\"index\":15"));
-    }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // JTable — all selection modes succeed (UC-017 BR-03 decouples read path
-    // from the row-selection gate that swing_set_selection still enforces)
-    // ══════════════════════════════════════════════════════════════════════════
-
-    @Test
-    void jTable_columnSelectionMode_returnsRows() throws Exception {
+    void jTable_rowSelectionMode() throws Exception {
         JTable table = new JTable(new DefaultTableModel(
-                new Object[][]{{"a", "b"}, {"c", "d"}}, new Object[]{"col1", "col2"}));
+                new Object[][]{
+                        {"Alice", "30"}, {"Bob", "25"}, {"Carol", "35"},
+                        {"Dave", "40"}, {"Eve", "28"}, {"Frank", "33"},
+                        {"Grace", "45"}, {"Hank", "29"}, {"Ivy", "31"}, {"Jack", "27"}
+                },
+                new Object[]{"Name", "Age"}));
+        snapshot(table);
+        assertEquals("10", getCount(context.getRefOf(table)));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JTable — all selection modes succeed (UC-018 BR-03)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jTable_columnSelectionMode_returnsRowCount() throws Exception {
+        JTable table = new JTable(new DefaultTableModel(
+                new Object[][]{{"a"}, {"b"}, {"c"}}, new Object[]{"col"}));
         table.setRowSelectionAllowed(false);
         table.setColumnSelectionAllowed(true);
         context.putRef(99, table);
-        String json = getItems(99, 0, 10);
-        assertTrue(json.startsWith("{\"totalCount\":2,\"items\":["),
-                "Expected totalCount=2, got: " + json);
-        assertTrue(json.contains("{\"index\":0,\"name\":\"a | b\"}"), json);
-        assertTrue(json.contains("{\"index\":1,\"name\":\"c | d\"}"), json);
+        assertEquals("3", getCount(99));
     }
 
     @Test
-    void jTable_cellSelectionMode_returnsRows() throws Exception {
+    void jTable_cellSelectionMode_returnsRowCount() throws Exception {
         JTable table = new JTable(new DefaultTableModel(
-                new Object[][]{{"a", "b"}, {"c", "d"}}, new Object[]{"col1", "col2"}));
+                new Object[][]{{"a"}, {"b"}, {"c"}, {"d"}}, new Object[]{"col"}));
         table.setCellSelectionEnabled(true);
         context.putRef(99, table);
-        String json = getItems(99, 0, 10);
-        assertTrue(json.startsWith("{\"totalCount\":2,\"items\":["), json);
-        assertTrue(json.contains("{\"index\":0,\"name\":\"a | b\"}"), json);
-        assertTrue(json.contains("{\"index\":1,\"name\":\"c | d\"}"), json);
+        assertEquals("4", getCount(99));
     }
 
     @Test
-    void jTable_noSelectionAllowed_returnsRows() throws Exception {
+    void jTable_noSelectionAllowed_returnsRowCount() throws Exception {
         JTable table = new JTable(new DefaultTableModel(
-                new Object[][]{{"a", "b"}, {"c", "d"}}, new Object[]{"col1", "col2"}));
+                new Object[][]{{"a"}, {"b"}}, new Object[]{"col"}));
         table.setRowSelectionAllowed(false);
         table.setColumnSelectionAllowed(false);
         context.putRef(99, table);
-        String json = getItems(99, 0, 10);
-        assertTrue(json.startsWith("{\"totalCount\":2,\"items\":["), json);
-        assertTrue(json.contains("{\"index\":0,\"name\":\"a | b\"}"), json);
-        assertTrue(json.contains("{\"index\":1,\"name\":\"c | d\"}"), json);
+        assertEquals("2", getCount(99));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -248,7 +169,7 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
         JList<String> list = new JList<>(new String[]{"A"});
         snapshot(list);
         MCPServerException ex = assertThrows(MCPServerException.class,
-                () -> getItems(999, 0, 10));
+                () -> getCount(999));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
         assertTrue(ex.getMessage().contains("swing_snapshot"));
     }
@@ -259,8 +180,8 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
         snapshot(button);
         int ref = context.getRefOf(button);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getItems(ref, 0, 10));
-        assertTrue(ex.getMessage().contains("does not support swing_get_selectable_items"));
+                () -> getCount(ref));
+        assertTrue(ex.getMessage().contains("does not support swing_get_item_count"));
         assertTrue(ex.getMessage().contains("swing_snapshot"));
     }
 
@@ -271,48 +192,8 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
         JTree tree = new JTree(root);
         context.putRef(99, tree);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getItems(99, 0, 10));
-        assertTrue(ex.getMessage().contains("does not support swing_get_selectable_items"));
-    }
-
-    @Test
-    void negativeOffset_returnsError() throws Exception {
-        JList<String> list = new JList<>(new String[]{"A"});
-        snapshot(list);
-        int ref = context.getRefOf(list);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getItems(ref, -1, 10));
-        assertTrue(ex.getMessage().contains("offset"));
-    }
-
-    @Test
-    void negativeLength_returnsError() throws Exception {
-        JList<String> list = new JList<>(new String[]{"A"});
-        snapshot(list);
-        int ref = context.getRefOf(list);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getItems(ref, 0, -1));
-        assertTrue(ex.getMessage().contains("length"));
-    }
-
-    @Test
-    void missingOffset_returnsError() throws Exception {
-        JList<String> list = new JList<>(new String[]{"A"});
-        snapshot(list);
-        int ref = context.getRefOf(list);
-        MCPServerException ex = assertThrows(MCPServerException.class,
-                () -> tool.execute(new Parameters(Map.of("ref", ref, "length", 10)), context));
-        assertTrue(ex.getMessage().contains("offset"));
-    }
-
-    @Test
-    void missingLength_returnsError() throws Exception {
-        JList<String> list = new JList<>(new String[]{"A"});
-        snapshot(list);
-        int ref = context.getRefOf(list);
-        MCPServerException ex = assertThrows(MCPServerException.class,
-                () -> tool.execute(new Parameters(Map.of("ref", ref, "offset", 0)), context));
-        assertTrue(ex.getMessage().contains("length"));
+                () -> getCount(99));
+        assertTrue(ex.getMessage().contains("does not support swing_get_item_count"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -324,65 +205,47 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
         JList<String> list = new JList<>(new String[]{"A", "B"});
         snapshot(list);
         int ref = context.getRefOf(list);
-        // Call twice with same ref — should not fail
-        String json1 = getItems(ref, 0, 2);
-        String json2 = getItems(ref, 0, 2);
-        assertEquals(json1, json2);
+        String count1 = getCount(ref);
+        String count2 = getCount(ref);
+        assertEquals(count1, count2);
     }
 
     @Test
-    void disabledList_stillReturnsItems() throws Exception {
-        JList<String> list = new JList<>(new String[]{"A", "B"});
+    void disabledList_stillReturnsCount() throws Exception {
+        JList<String> list = new JList<>(new String[]{"A", "B", "C"});
         list.setEnabled(false);
         snapshot(list);
-        String json = getItems(context.getRefOf(list), 0, 2);
-        assertTrue(json.contains("\"totalCount\":2"));
-        assertTrue(json.contains("\"name\":\"A\""));
-        assertTrue(json.contains("\"name\":\"B\""));
+        assertEquals("3", getCount(context.getRefOf(list)));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Index round-trip with swing_set_selection / swing_get_selection
+    // Consistency with swing_get_items
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void jList_indexRoundTrip() throws Exception {
-        JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma"});
-        snapshot(list);
-        int ref = context.getRefOf(list);
-
-        // Get items to learn indices
-        String itemsJson = getItems(ref, 0, 3);
-        assertTrue(itemsJson.contains("{\"index\":1,\"name\":\"Beta\"}"));
-
-        // Select index 1 directly (fire-and-forget from swing_set_selection
-        // may not execute in headless mode without an EDT pump)
-        list.setSelectedIndex(1);
-
-        // Verify via swing_get_selection that the index from get_selectable_items works
-        MCPProtocol.Content selResult = getSelectionTool.execute(
-                new Parameters(Map.of("ref", ref)), context);
-        String selJson = selResult.getText();
-        assertEquals("{\"selectedCount\":1,\"selected\":[{\"index\":1,\"name\":\"Beta\"}]}", selJson);
-    }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // totalCount accuracy
-    // ══════════════════════════════════════════════════════════════════════════
-
-    @Test
-    void totalCount_reflectsTotalRegardlessOfPaging() throws Exception {
-        String[] items = new String[100];
-        for (int i = 0; i < 100; i++) items[i] = "X" + i;
+    void countMatchesGetItems_JList() throws Exception {
+        String[] items = new String[50];
+        for (int i = 0; i < 50; i++) items[i] = "Item-" + i;
         JList<String> list = new JList<>(items);
         snapshot(list);
         int ref = context.getRefOf(list);
+        String count = getCount(ref);
+        String itemsJson = itemsTool.execute(
+                new Parameters(Map.of("ref", ref, "offset", 0, "length", 0)), context).getText();
+        assertTrue(itemsJson.contains("\"totalCount\":" + count));
+    }
 
-        // Different pages should all report totalCount: 100
-        assertTrue(getItems(ref, 0, 10).contains("\"totalCount\":100"));
-        assertTrue(getItems(ref, 50, 10).contains("\"totalCount\":100"));
-        assertTrue(getItems(ref, 99, 1).contains("\"totalCount\":100"));
-        assertTrue(getItems(ref, 100, 10).contains("\"totalCount\":100"));
+    @Test
+    void countMatchesGetItems_JTable() throws Exception {
+        JTable table = new JTable(new DefaultTableModel(
+                new Object[][]{{"A", "1"}, {"B", "2"}, {"C", "3"}},
+                new Object[]{"Name", "Val"}));
+        snapshot(table);
+        int ref = context.getRefOf(table);
+        String count = getCount(ref);
+        String itemsJson = itemsTool.execute(
+                new Parameters(Map.of("ref", ref, "offset", 0, "length", 0)), context).getText();
+        assertTrue(itemsJson.contains("\"totalCount\":" + count));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -393,9 +256,7 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
     void componentMatrix_JList() throws Exception {
         JList<String> list = new JList<>(new String[]{"A", "B"});
         snapshot(list);
-        String json = getItems(context.getRefOf(list), 0, 2);
-        assertTrue(json.contains("\"totalCount\":2"));
-        assertTrue(json.contains("\"name\":\"A\""));
+        assertEquals("2", getCount(context.getRefOf(list)));
     }
 
     @Test
@@ -411,9 +272,7 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
     void componentMatrix_JComboBox() throws Exception {
         JComboBox<String> combo = new JComboBox<>(new String[]{"X", "Y"});
         snapshot(combo);
-        String json = getItems(context.getRefOf(combo), 0, 2);
-        assertTrue(json.contains("\"totalCount\":2"));
-        assertTrue(json.contains("\"name\":\"X\""));
+        assertEquals("2", getCount(context.getRefOf(combo)));
     }
 
     @Test
@@ -421,9 +280,7 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
         JTable table = new JTable(new DefaultTableModel(
                 new Object[][]{{"A", "1"}, {"B", "2"}}, new Object[]{"Col1", "Col2"}));
         snapshot(table);
-        String json = getItems(context.getRefOf(table), 0, 2);
-        assertTrue(json.contains("\"totalCount\":2"));
-        assertTrue(json.contains("\"name\":\"A | 1\""));
+        assertEquals("2", getCount(context.getRefOf(table)));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -439,8 +296,8 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
             return; // No ref — acceptable
         }
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getItems(ref, 0, 10));
-        assertTrue(ex.getMessage().contains("does not support swing_get_selectable_items")
+                () -> getCount(ref));
+        assertTrue(ex.getMessage().contains("does not support swing_get_item_count")
                         || ex.getMessage().contains("row-selection mode"),
                 "Expected not-supported error for " + component.getClass().getSimpleName()
                         + ", got: " + ex.getMessage());
@@ -476,8 +333,8 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
         snapshot(mb);
         int ref = context.getRefOf(menu);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getItems(ref, 0, 10));
-        assertTrue(ex.getMessage().contains("does not support swing_get_selectable_items"));
+                () -> getCount(ref));
+        assertTrue(ex.getMessage().contains("does not support swing_get_item_count"));
     }
 
     @Test
@@ -490,8 +347,8 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
         snapshot(mb);
         int ref = context.getRefOf(item);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getItems(ref, 0, 10));
-        assertTrue(ex.getMessage().contains("does not support swing_get_selectable_items"));
+                () -> getCount(ref));
+        assertTrue(ex.getMessage().contains("does not support swing_get_item_count"));
     }
 
     @Test
@@ -501,8 +358,8 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
         JTree tree = new JTree(root);
         context.putRef(99, tree);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getItems(99, 0, 10));
-        assertTrue(ex.getMessage().contains("does not support swing_get_selectable_items"));
+                () -> getCount(99));
+        assertTrue(ex.getMessage().contains("does not support swing_get_item_count"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -510,23 +367,19 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void swingGetSelectableItemsViaMcpClient() {
+    void swingGetItemCountViaMcpClient() {
         JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma"});
         mcpServer.setConsideredComponents(List.of(list));
 
         mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
 
         McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_get_selectable_items",
-                        Map.of("ref", 1, "offset", 0, "length", 3)));
+                new McpSchema.CallToolRequest("swing_get_item_count",
+                        Map.of("ref", 1)));
 
-        assertNotEquals(Boolean.TRUE, result.isError(), "get_selectable_items should succeed");
+        assertNotEquals(Boolean.TRUE, result.isError(), "get_item_count should succeed");
         assertFalse(result.content().isEmpty(), "Result should have content");
-        String json = ((McpSchema.TextContent) result.content().get(0)).text();
-        assertEquals("{\"totalCount\":3,\"items\":["
-                + "{\"index\":0,\"name\":\"Alpha\"},"
-                + "{\"index\":1,\"name\":\"Beta\"},"
-                + "{\"index\":2,\"name\":\"Gamma\"}"
-                + "]}", json);
+        String text = ((McpSchema.TextContent) result.content().get(0)).text();
+        assertEquals("3", text);
     }
 }

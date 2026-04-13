@@ -10,7 +10,7 @@ import java.util.List;
  * A test helper: editable JComboBox that filters its items by a case-insensitive
  * starts-with match on the editor text. Used to verify that the AI client can
  * interact with filterable combo boxes via {@code set_text} on the editor child
- * followed by {@code get_selectable_items} / {@code get_selectable_items_count}
+ * followed by {@code get_items} / {@code get_item_count}
  * on the combo ref.
  */
 public class JFilterableComboBox extends JComboBox<String> {

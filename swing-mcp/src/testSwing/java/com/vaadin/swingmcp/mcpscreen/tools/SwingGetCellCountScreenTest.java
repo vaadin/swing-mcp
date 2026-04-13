@@ -61,7 +61,7 @@ class SwingGetCellCountScreenTest extends AbstractScreenTest {
                 "Expected MCPErrorResponseException, got: " + ex);
         assertEquals(
                 "JTable does not support swing_get_cell_count. Table cells are plain text labels \u2014 "
-                        + "use swing_get_selectable_items_count to page through rows.",
+                        + "use swing_get_item_count to page through rows.",
                 cause.getMessage());
     }
 

@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * MCP tool {@code swing_get_selectable_items}: lists selectable items of a UI
+ * MCP tool {@code swing_get_items}: lists selectable items of a UI
  * component by ref, with paging support.
  *
  * <p>Supported components: {@code JList}, {@code JComboBox}, {@code JTable}.
@@ -26,13 +26,13 @@ import java.util.Map;
  * {@code JTabbedPane} is not a supported target (dropped per P-001); tabs are
  * rendered inline in the snapshot.</p>
  *
- * @see <a href="use-case-017-swing-get-selectable-items.md">UC-017</a>
+ * @see <a href="use-case-017-swing-get-items.md">UC-017</a>
  */
-public class SwingGetSelectableItemsTool extends AbstractSwingTool {
+public class SwingGetItemsTool extends AbstractSwingTool {
 
     @Override
     public String getName() {
-        return TOOL_SWING_GET_SELECTABLE_ITEMS;
+        return TOOL_SWING_GET_ITEMS;
     }
 
     @Override
@@ -79,13 +79,13 @@ public class SwingGetSelectableItemsTool extends AbstractSwingTool {
 
         // Step 3 (BR-03): read-only gate — any JTable passes (regardless of
         // selection mode); other components must satisfy supportsSelection.
-        requireGetSelectableItemsSupported(accessible, "swing_get_selectable_items");
+        requireGetItemsSupported(accessible, "swing_get_items");
 
         // BR-04: all access on EDT (guaranteed by MCPServer.registerTool)
         AccessibleContext ac = accessible.getAccessibleContext();
 
         // Step 4: determine totalCount and enumerate items
-        int totalCount = SwingUtils.getSelectableItemsCount(accessible);
+        int totalCount = SwingUtils.getItemCount(accessible);
 
         // BR-07: offset beyond totalCount → empty items
         // Integer overflow guard: use long arithmetic for end bound

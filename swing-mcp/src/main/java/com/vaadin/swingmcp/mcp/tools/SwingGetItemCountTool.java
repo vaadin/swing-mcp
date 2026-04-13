@@ -7,19 +7,19 @@ import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import javax.accessibility.Accessible;
 
 /**
- * MCP tool {@code swing_get_selectable_items_count}: returns the total number
+ * MCP tool {@code swing_get_item_count}: returns the total number
  * of selectable items of a UI component by ref, as a plain integer.
  *
- * <p>This is a thin wrapper around {@link SwingUtils#getSelectableItemsCount}
+ * <p>This is a thin wrapper around {@link SwingUtils#getItemCount}
  * that lets the AI client learn the item count without fetching any items.</p>
  *
- * @see <a href="use-case-018-swing-get-selectable-items-count.md">UC-018</a>
+ * @see <a href="use-case-018-swing-get-item-count.md">UC-018</a>
  */
-public class SwingGetSelectableItemsCountTool extends AbstractSwingTool {
+public class SwingGetItemCountTool extends AbstractSwingTool {
 
     @Override
     public String getName() {
-        return TOOL_SWING_GET_SELECTABLE_ITEMS_COUNT;
+        return TOOL_SWING_GET_ITEM_COUNT;
     }
 
     @Override
@@ -52,10 +52,10 @@ public class SwingGetSelectableItemsCountTool extends AbstractSwingTool {
 
         // Step 3 (BR-03): read-only gate — any JTable passes (regardless of
         // selection mode); other components must satisfy supportsSelection.
-        requireGetSelectableItemsSupported(accessible, "swing_get_selectable_items_count");
+        requireGetItemsSupported(accessible, "swing_get_item_count");
 
         // Step 4 (BR-07): compute count
-        int totalCount = SwingUtils.getSelectableItemsCount(accessible);
+        int totalCount = SwingUtils.getItemCount(accessible);
 
         // Step 5: return as plain text integer
         return MCPProtocol.Content.text(String.valueOf(totalCount));

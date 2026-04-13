@@ -9,9 +9,9 @@ import javax.swing.table.DefaultTableModel;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Headless tests for {@link SwingUtils#getSelectableItemsCount}.
+ * Headless tests for {@link SwingUtils#getItemCount}.
  */
-class SwingUtilsSelectableItemsTest {
+class SwingUtilsGetItemCountTest {
 
     @BeforeAll
     static void checkHeadless() {
@@ -19,31 +19,31 @@ class SwingUtilsSelectableItemsTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // getSelectableItemsCount
+    // getItemCount
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void jList_returnsItemCount() {
         JList<String> list = new JList<>(new String[]{"A", "B", "C"});
-        assertEquals(3, SwingUtils.getSelectableItemsCount(list));
+        assertEquals(3, SwingUtils.getItemCount(list));
     }
 
     @Test
     void jList_empty_returnsZero() {
         JList<String> list = new JList<>();
-        assertEquals(0, SwingUtils.getSelectableItemsCount(list));
+        assertEquals(0, SwingUtils.getItemCount(list));
     }
 
     @Test
     void jComboBox_returnsItemCount() {
         JComboBox<String> combo = new JComboBox<>(new String[]{"Red", "Green", "Blue"});
-        assertEquals(3, SwingUtils.getSelectableItemsCount(combo));
+        assertEquals(3, SwingUtils.getItemCount(combo));
     }
 
     @Test
     void jComboBox_empty_returnsZero() {
         JComboBox<String> combo = new JComboBox<>();
-        assertEquals(0, SwingUtils.getSelectableItemsCount(combo));
+        assertEquals(0, SwingUtils.getItemCount(combo));
     }
 
     @Test
@@ -52,13 +52,13 @@ class SwingUtilsSelectableItemsTest {
         tp.addTab("Tab1", new JPanel());
         tp.addTab("Tab2", new JPanel());
         tp.addTab("Tab3", new JPanel());
-        assertEquals(3, SwingUtils.getSelectableItemsCount(tp));
+        assertEquals(3, SwingUtils.getItemCount(tp));
     }
 
     @Test
     void jTabbedPane_empty_returnsZero() {
         JTabbedPane tp = new JTabbedPane();
-        assertEquals(0, SwingUtils.getSelectableItemsCount(tp));
+        assertEquals(0, SwingUtils.getItemCount(tp));
     }
 
     @Test
@@ -66,7 +66,7 @@ class SwingUtilsSelectableItemsTest {
         JTable table = new JTable(new DefaultTableModel(
                 new Object[][]{{"a", "1"}, {"b", "2"}, {"c", "3"}},
                 new Object[]{"Name", "Value"}));
-        assertEquals(3, SwingUtils.getSelectableItemsCount(table));
+        assertEquals(3, SwingUtils.getItemCount(table));
     }
 
     @Test
@@ -74,7 +74,7 @@ class SwingUtilsSelectableItemsTest {
         JTable table = new JTable(new DefaultTableModel(
                 new Object[][]{},
                 new Object[]{"Name", "Value"}));
-        assertEquals(0, SwingUtils.getSelectableItemsCount(table));
+        assertEquals(0, SwingUtils.getItemCount(table));
     }
 
     @Test
@@ -84,7 +84,7 @@ class SwingUtilsSelectableItemsTest {
             data[i] = new Object[]{"item" + i, i};
         }
         JTable table = new JTable(new DefaultTableModel(data, new Object[]{"Name", "Value"}));
-        assertEquals(200, SwingUtils.getSelectableItemsCount(table));
+        assertEquals(200, SwingUtils.getItemCount(table));
     }
 
 }

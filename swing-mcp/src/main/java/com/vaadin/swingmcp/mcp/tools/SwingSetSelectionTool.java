@@ -89,7 +89,7 @@ public class SwingSetSelectionTool extends AbstractSwingTool {
         }
 
         // Step 9: determine item count for bounds checking
-        int itemCount = SwingUtils.getSelectableItemsCount(accessible);
+        int itemCount = SwingUtils.getItemCount(accessible);
 
         // Step 10 (BR-11/BR-12): bounds validation
         for (int index : deduplicated) {

@@ -28,7 +28,7 @@ public class SwingGetCellCountTool extends AbstractSwingTool {
                 + "(JList, JTree) by ref. Returns the count as a plain integer in the same "
                 + "index space as swing_get_cells. For JList, this is the item count. For "
                 + "JTree, this is the top-level visible node count. For JTable, use "
-                + "swing_get_selectable_items_count instead \u2014 table cells are plain text "
+                + "swing_get_item_count instead \u2014 table cells are plain text "
                 + "labels with no actionable children. Requires a ref obtained from "
                 + "swing_snapshot or swing_get_cells.";
     }
@@ -49,8 +49,8 @@ public class SwingGetCellCountTool extends AbstractSwingTool {
         Accessible accessible = context.getAccessibleByRef(ref);
 
         // Step 3 (BR-03): eligibility check — role must be LIST or TREE. JTable
-        // is rejected with a redirect to swing_get_selectable_items_count.
-        requireGetCellsSupported(accessible, "swing_get_cell_count", "swing_get_selectable_items_count");
+        // is rejected with a redirect to swing_get_item_count.
+        requireGetCellsSupported(accessible, "swing_get_cell_count", "swing_get_item_count");
 
         // Step 4 (BR-07): compute count
         int totalChildren = accessible.getAccessibleContext().getAccessibleChildrenCount();
