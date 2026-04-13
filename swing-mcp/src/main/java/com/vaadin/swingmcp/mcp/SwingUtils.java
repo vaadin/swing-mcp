@@ -5,6 +5,7 @@ import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JTabbedPane;
 import javax.swing.JViewport;
 import javax.swing.ListSelectionModel;
 import javax.swing.UIManager;
@@ -435,6 +436,12 @@ public final class SwingUtils {
      * Virtual accessible children (e.g. JList items, JTable cells) may not
      * propagate the parent component's disabled state, so this method walks
      * the entire parent chain.
+     * <p>
+     * Special case: {@link JTabbedPane} tabs disabled via
+     * {@link JTabbedPane#setEnabledAt(int, boolean)} are not reflected in
+     * the {@code AccessiblePage} state set, so we also consult
+     * {@link JTabbedPane#isEnabledAt(int)} for any accessible whose parent
+     * is a {@code JTabbedPane}.
      *
      * @see <a href="architecture.md">architecture.md § 4 — Effectively Enabled Check</a>
      */
@@ -443,6 +450,13 @@ public final class SwingUtils {
         if (ac == null) return false;
         if (!ac.getAccessibleStateSet().contains(AccessibleState.ENABLED)) return false;
         Accessible parent = ac.getAccessibleParent();
+        if (parent instanceof JTabbedPane) {
+            JTabbedPane tp = (JTabbedPane) parent;
+            int idx = ac.getAccessibleIndexInParent();
+            if (idx >= 0 && idx < tp.getTabCount() && !tp.isEnabledAt(idx)) {
+                return false;
+            }
+        }
         return parent == null || isEffectivelyEnabled(parent);
     }
 

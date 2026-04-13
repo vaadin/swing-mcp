@@ -381,6 +381,54 @@ class SwingUtilsIsEffectivelyEnabledTest {
                 "JList virtual child should be effectively disabled when list is disabled");
     }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // JTabbedPane — individual tabs disabled via setEnabledAt
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jTabbedPane_disabledTab_isEffectivelyDisabled() {
+        JTabbedPane tp = new JTabbedPane();
+        tp.addTab("Enabled", new JPanel());
+        tp.addTab("Disabled", new JPanel());
+        tp.setEnabledAt(1, false);
+
+        AccessibleContext ac = tp.getAccessibleContext();
+        Accessible disabledTab = ac.getAccessibleChild(1);
+        assertNotNull(disabledTab);
+        assertFalse(SwingUtils.isEffectivelyEnabled(disabledTab),
+                "Tab disabled via setEnabledAt(1, false) should be effectively disabled");
+    }
+
+    @Test
+    void jTabbedPane_enabledTab_isEffectivelyEnabled() {
+        JTabbedPane tp = new JTabbedPane();
+        tp.addTab("Enabled", new JPanel());
+        tp.addTab("Disabled", new JPanel());
+        tp.setEnabledAt(1, false);
+
+        AccessibleContext ac = tp.getAccessibleContext();
+        Accessible enabledTab = ac.getAccessibleChild(0);
+        assertNotNull(enabledTab);
+        assertTrue(SwingUtils.isEffectivelyEnabled(enabledTab),
+                "Tab not disabled via setEnabledAt should be effectively enabled");
+    }
+
+    @Test
+    void jTabbedPane_disabledPane_makesAllTabsEffectivelyDisabled() {
+        JTabbedPane tp = new JTabbedPane();
+        tp.addTab("A", new JPanel());
+        tp.addTab("B", new JPanel());
+        tp.setEnabled(false);
+
+        AccessibleContext ac = tp.getAccessibleContext();
+        for (int i = 0; i < ac.getAccessibleChildrenCount(); i++) {
+            Accessible tab = ac.getAccessibleChild(i);
+            assertNotNull(tab);
+            assertFalse(SwingUtils.isEffectivelyEnabled(tab),
+                    "Tab " + i + " should be effectively disabled because the JTabbedPane is disabled");
+        }
+    }
+
     @Test
     void buttonInDisabledToolBar_isEffectivelyDisabled() {
         JToolBar tb = new JToolBar();
