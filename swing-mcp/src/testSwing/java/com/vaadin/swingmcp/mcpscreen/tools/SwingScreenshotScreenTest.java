@@ -38,6 +38,7 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         frame.setSize(width, height);
         SwingUtilities.invokeAndWait(() -> frame.setVisible(true));
         createdWindows.add(frame);
+        awaitSizeSettled(frame);
         return frame;
     }
 
@@ -47,15 +48,17 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         frame.setSize(width, height);
         SwingUtilities.invokeAndWait(() -> frame.setVisible(true));
         createdWindows.add(frame);
+        awaitSizeSettled(frame);
         return frame;
     }
 
-    private JDialog showDialog(Frame owner, int width, int height) throws InterruptedException {
+    private JDialog showDialog(Frame owner, int width, int height) throws Exception {
         JDialog dialog = new JDialog(owner, "Dialog", false);
         dialog.setSize(width, height);
         SwingUtilities.invokeLater(() -> dialog.setVisible(true));
         awaitVisibility(dialog, true);
         createdWindows.add(dialog);
+        awaitSizeSettled(dialog);
         return dialog;
     }
 
@@ -66,6 +69,35 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         }
         assertEquals(expected, w.isVisible(),
                 "Window visibility did not reach " + expected + " within 2 s");
+    }
+
+    /**
+     * Waits until the window's reported size stops changing — i.e. the WM has
+     * delivered any ConfigureNotify events and the frame has settled at its
+     * final decorated size. Swing's {@code setVisible(true)} returns before
+     * this X11 round-trip completes, so without this wait a decorated frame
+     * can grow by the title-bar height <i>after</i> the test has proceeded,
+     * leading to an image dimension / frame dimension mismatch at assertion
+     * time. Polled on the EDT because {@code Component.getWidth/getHeight}
+     * are updated there in response to reshape events.
+     */
+    private static void awaitSizeSettled(Window w) throws Exception {
+        long deadline = System.currentTimeMillis() + 2_000;
+        Dimension last = null;
+        int stableTicks = 0;
+        while (System.currentTimeMillis() < deadline) {
+            Dimension[] holder = new Dimension[1];
+            SwingUtilities.invokeAndWait(() -> holder[0] = w.getSize());
+            Dimension now = holder[0];
+            if (now.width > 0 && now.height > 0 && now.equals(last)) {
+                if (++stableTicks >= 3) return; // unchanged for ~150 ms
+            } else {
+                stableTicks = 0;
+            }
+            last = now;
+            Thread.sleep(50);
+        }
+        // Timeout — proceed anyway so the assertion surfaces any real breakage.
     }
 
     private BufferedImage decodeResult(McpSchema.CallToolResult result) throws Exception {
