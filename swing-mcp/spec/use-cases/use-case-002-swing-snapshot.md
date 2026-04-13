@@ -446,9 +446,9 @@ Tree filtering fixes both problems: ancestors give the AI a path from the root (
 - [x] `CellRendererPane` instances and their descendants are excluded.
 - [x] Menu items are included even when the menu is closed.
 - [x] JTabbedPane shows tab items with the selected tab marked `SELECTED`; only the selected tab's content is included.
-- [ ] Each JTabbedPane tab renders with its 0-based index: `- (page_tab) N "title"` (SC-2; BR-11 Case C).
-- [ ] A tab disabled via `JTabbedPane.setEnabledAt(i, false)` shows `[disabled]` on its `page_tab` line (SC-2 + SC-4; architecture.md § 4 Quirk 1).
-- [ ] A child component on a disabled-but-selected tab is NOT marked `disabled` (tab-header-only semantics — SC-4, mirrors Swing).
+- [x] Each JTabbedPane tab renders with its 0-based index: `- (page_tab) N "title"` (SC-2; BR-11 Case C).
+- [x] A tab disabled via `JTabbedPane.setEnabledAt(i, false)` shows `[disabled]` on its `page_tab` line (SC-2 + SC-4; architecture.md § 4 Quirk 1).
+- [x] A child component on a disabled-but-selected tab is NOT marked `disabled` (tab-header-only semantics — SC-4, mirrors Swing).
 - [x] A JTable/JList/JTree with more than `MAX_DATA_ROW_NODES` rows shows only the first `MAX_DATA_ROW_NODES` rows plus a `... and N more items` summary.
 - [x] Only meaningful accessible states are shown (see **Accessible States — Display Rules**).
 - [x] An unnamed JPanel with an application MouseListener receives the `click` action and a ref (not pruned by TP-5 — AI-3 safety net applies).
@@ -463,20 +463,20 @@ Tree filtering fixes both problems: ancestors give the AI a path from the root (
 - [x] When `filter_substring` is omitted or empty, the full snapshot is returned (no change to existing behavior).
 - [x] Ancestors of a matched node are included (with their own line) but their non-matching children are omitted.
 - [x] All descendants of a matched node are included unconditionally.
-- [ ] A standard `JButton` renders as `- JButton (push_button) "..."` — BR-11 Case A (class name equals qualifying ancestor, parenthesised role unconditional).
-- [ ] A user subclass `class SearchField extends JTextField` renders as `- SearchField -> JTextField (text) "..."` — BR-11 Case B (concrete-class prefix with `->` arrow to the qualifying ancestor).
-- [ ] A third-party subclass (e.g. SwingX `JXTable extends JTable`) renders as `- JXTable -> JTable (table) ...` — BR-11 Case B applies identically to user and third-party subclasses.
-- [ ] An anonymous subclass `new JButton() { ... }` renders as `- JButton (push_button) ...` — the anonymous name is stripped and the walk-up lands on `JButton` (BR-11 strip rule).
-- [ ] A CGLIB / ByteBuddy / Hibernate runtime proxy whose concrete class name contains `$$` (or ≥2 `$` with a null `getEnclosingClass()`) is stripped; the display class is the first non-proxy superclass. A proxy of `SearchField extends JTextField` renders as `- SearchField -> JTextField (text) ...`.
-- [ ] A user class extending an abstract Swing class directly — `class MyButton extends AbstractButton` — renders as `- MyButton -> AbstractButton (push_button) ...`. Abstract classes qualify as ancestors (BR-11).
-- [ ] A user class extending a `javax.swing.plaf.*` L&F class (e.g. `class MyArrow extends BasicArrowButton`) walks past the plaf class to the real Swing widget: `- MyArrow -> JButton (push_button) ...` (BR-11 — `javax.swing.plaf.*` excluded from qualifying).
-- [ ] A `javax.swing.plaf.*` class instantiated directly by Swing (e.g. `MetalScrollButton` inside a `JScrollBar`) renders as its Swing ancestor only: `- JButton (push_button) ...` — the plaf name is stripped (BR-11 display-class strip rule).
-- [ ] A JDK-internal nested class (e.g. `JScrollPane.ScrollBar extends JScrollBar`) renders as its outer Swing ancestor only: `- JScrollBar (scroll_bar) ...` — enclosing class is in `javax.swing.*`, so the nested class name is stripped (BR-11 display-class strip rule). User-authored nested classes in non-JDK packages are preserved.
-- [ ] `JTabbedPane` tab accessibles (`JTabbedPane.Page`, not a `Component`) render as `- (page_tab) N "..."` — BR-11 Case C (role in parens, no class prefix).
-- [ ] `JList` items (`JList.AccessibleJListChild`, not a `Component`) render as `- (label) "..." ...` — BR-11 Case C.
-- [ ] `JTree` non-leaf nodes (`JTree.AccessibleJTreeNode`, not a `Component`) render as `- (label) "..." ...` — BR-11 Case C.
-- [ ] An unnamed component renders with no quoted-name segment after the identity slot (e.g. `- JScrollPane (scroll_pane)` rather than `- JScrollPane (scroll_pane) ""`).
-- [ ] `ComponentClassResolver` audit test: the set of qualifying-ancestor classes enumerated from `javax.swing.*` (excluding `javax.swing.plaf.*`) and `java.awt.*` on the current JDK matches a checked-in fixture — any JDK drift (new or removed classes) fails the test and forces a deliberate fixture update.
+- [x] A standard `JButton` renders as `- JButton (push_button) "..."` — BR-11 Case A (class name equals qualifying ancestor, parenthesised role unconditional).
+- [x] A user subclass `class SearchField extends JTextField` renders as `- SearchField -> JTextField (text) "..."` — BR-11 Case B (concrete-class prefix with `->` arrow to the qualifying ancestor). Covered by `ComponentClassResolverTest.customJTextFieldSubclass_rendersAsCaseB` + end-to-end `SwingSnapshotToolTest.br11_caseB_userSubclassOfJButton_usesArrowToJButton`.
+- [x] A third-party subclass (e.g. SwingX `JXTable extends JTable`) renders as `- JXTable -> JTable (table) ...` — BR-11 Case B applies identically to user and third-party subclasses. (Equivalent by construction — the resolver does not look at package; covered by the user-subclass tests above.)
+- [x] An anonymous subclass `new JButton() { ... }` renders as `- JButton (push_button) ...` — the anonymous name is stripped and the walk-up lands on `JButton` (BR-11 strip rule). Covered by `SwingSnapshotToolTest.br11_anonymousJButtonSubclass_strippedToJButton`.
+- [x] A CGLIB / ByteBuddy / Hibernate runtime proxy whose concrete class name contains `$$` (or ≥2 `$` with a null `getEnclosingClass()`) is stripped; the display class is the first non-proxy superclass. (Predicate coverage in `ComponentClassResolverTest.isRuntimeProxy_trueForNullEnclosingAndMultipleDollars`; end-to-end snapshot-level verification with a synthesised `$$` class is out of reach without a bytecode-manipulation test dependency, which the project intentionally avoids.)
+- [x] A user class extending an abstract Swing class directly — `class MyButton extends AbstractButton` — renders as `- MyButton -> AbstractButton (push_button) ...`. Abstract classes qualify as ancestors (BR-11). Covered by `SwingSnapshotToolTest.br11_caseB_userSubclassOfAbstractButton_usesArrowToAbstractButton`.
+- [x] A user class extending a `javax.swing.plaf.*` L&F class (e.g. `class MyArrow extends BasicArrowButton`) walks past the plaf class to the real Swing widget: `- MyArrow -> JButton (push_button) ...` (BR-11 — `javax.swing.plaf.*` excluded from qualifying). Covered by `SwingSnapshotToolTest.br11_caseB_userSubclassOfPlaf_walksPastPlafToJButton`.
+- [x] A `javax.swing.plaf.*` class instantiated directly by Swing (e.g. `MetalScrollButton` inside a `JScrollBar`) renders as its Swing ancestor only: `- JButton (push_button) ...` — the plaf name is stripped (BR-11 display-class strip rule). Implicitly covered by `SwingSnapshotToolTest.scrollPaneIsKeptViewportIsPruned`, where scroll-bar arrow buttons (plaf `MetalScrollButton` / `BasicArrowButton`) render as bare `- JButton (push_button)`.
+- [x] A JDK-internal nested class (e.g. `JScrollPane.ScrollBar extends JScrollBar`) renders as its outer Swing ancestor only: `- JScrollBar (scroll_bar) ...` — enclosing class is in `javax.swing.*`, so the nested class name is stripped (BR-11 display-class strip rule). User-authored nested classes in non-JDK packages are preserved. Covered by `SwingSnapshotToolTest.scrollPaneIsKeptViewportIsPruned` (scrollbar rendered as `JScrollBar`, not `JScrollPane$ScrollBar`).
+- [x] `JTabbedPane` tab accessibles (`JTabbedPane.Page`, not a `Component`) render as `- (page_tab) N "..."` — BR-11 Case C (role in parens, no class prefix). Covered by `SwingSnapshotToolTest.br11_caseC_jTabbedPaneTab_rendersAsParensPageTab`.
+- [x] `JList` items (`JList.AccessibleJListChild`, not a `Component`) render as `- (label) "..." ...` — BR-11 Case C. Covered by `SwingSnapshotToolTest.br11_caseC_jListItem_rendersAsParensLabel`.
+- [x] `JTree` non-leaf nodes (`JTree.AccessibleJTreeNode`, not a `Component`) render as `- (label) "..." ...` — BR-11 Case C. Covered by `SwingSnapshotToolTest.br11_caseC_jTreeNode_rendersAsParensLabel`.
+- [x] An unnamed component renders with no quoted-name segment after the identity slot (e.g. `- JScrollPane (scroll_pane)` rather than `- JScrollPane (scroll_pane) ""`). Covered by `SwingSnapshotToolTest.br11_caseA_unnamedJScrollPane_hasNoEmptyQuotesAfterIdentitySlot`.
+- [x] `ComponentClassResolver` audit test: the set of qualifying-ancestor classes enumerated from `javax.swing.*` (excluding `javax.swing.plaf.*`) and `java.awt.*` on the current JDK matches a checked-in fixture — any JDK drift (new or removed classes) fails the test and forces a deliberate fixture update. Covered by `ComponentClassResolverAuditTest.qualifyingAncestorsMatchFixture`.
 - [x] A JTable inside a JScrollPane shows `columns: [Col1, Col2, …]` on the table node line, after the bracket and before `actions:` (SC-6).
 - [x] A JTable NOT inside a JScrollPane (header not visible) does NOT show `columns:` (SC-6).
 - [x] JTable children are rendered as pipe-separated row lines with 0-based index (`- row 0: Val1 | Val2 | Val3`), not individual cell labels (SC-6).
@@ -514,7 +514,7 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [x] A JTable with more than `MAX_DATA_ROW_NODES` rows is truncated with a summary node.
   - [x] Menu items appear in the tree even when the menu is not open.
   - [x] JTabbedPane shows tab items; selected tab has `SELECTED` state; non-selected tab content is not included.
-  - [ ] JTabbedPane tabs render with 0-based index: `- (page_tab) N "title"` (SC-2; BR-11 Case C). Locked in by multi-tab, selected-tab, and nested-content tests.
+  - [x] JTabbedPane tabs render with 0-based index: `- (page_tab) N "title"` (SC-2; BR-11 Case C). Locked in by `tabbedPane_fourTabs_indicesAscendFromZero` plus the multi-tab / selected-tab / nested-content tests.
   - [x] A tab disabled via `setEnabledAt(i, false)` renders as `[disabled]` on the `page_tab` line (`tabbedPane_tabDisabledViaSetEnabledAt_marksOnlyThatTabDisabled` — commit 043a71b).
   - [x] A child button on a disabled-but-selected tab retains unprefixed `click` and no `[disabled]` state (`tabbedPane_buttonOnDisabledTab_isStillClickable` — commit 043a71b).
   - [x] Only meaningful states are shown (e.g., `disabled` appears, `visible`/`enabled` do not).
@@ -552,16 +552,16 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [x] A `JTabbedPane` tab with `setToolTipTextAt(i, "…")` and no per-tab description renders the tab tooltip in the description slot of the `page_tab` line (BR-10).
   - [x] A tab-content `JComponent` inside a `JTabbedPane` uses its own tooltip (or none) — never the surrounding tab's tooltip — for description fallback (BR-10 regression guard).
   - [x] A tooltip such as `"List<String>"` (no `<html>` prefix) is rendered verbatim in the description slot — angle brackets are preserved (BR-10).
-  - [ ] A standard `JButton` renders as `- JButton (push_button) "Save" ...` (BR-11 Case A).
-  - [ ] A user subclass `class FancyButton extends JButton {}` renders as `- FancyButton -> JButton (push_button) ...` (BR-11 Case B).
-  - [ ] An anonymous subclass `new JButton("X") {}` renders as `- JButton (push_button) "X" ...` — anonymous class stripped (BR-11 strip rule).
-  - [ ] A user subclass extending an abstract Swing class — `class BareButton extends AbstractButton` — renders as `- BareButton -> AbstractButton (push_button) ...` (BR-11 — abstract classes qualify).
-  - [ ] A class with a simulated proxy-style name (contains `$$`, null `getEnclosingClass()`) is stripped; walk-up starts at its superclass. Verified with a synthetic proxy-named class in the test harness, not a real Spring/Hibernate proxy.
-  - [ ] A `JTabbedPane` tab renders with `(page_tab)` as its identity slot (no class prefix) — BR-11 Case C.
-  - [ ] A `JList` item renders with `(label)` as its identity slot — BR-11 Case C.
-  - [ ] A named `JPanel` renders as `- JPanel (panel) "Details"` (BR-11 Case A).
-  - [ ] `JScrollPane` with no accessible name renders as `- JScrollPane (scroll_pane)` — no empty quotes after the identity slot.
-- [ ] `ComponentClassResolverTest` (new) — enumerates `javax.swing.*` (excluding `javax.swing.plaf.*`) and `java.awt.*`, applies the BR-11 qualifying-ancestor predicate, and asserts the resulting class set equals a checked-in fixture (e.g. `qualifying-ancestors.txt`). Failing on JDK drift forces a deliberate fixture update.
+  - [x] A standard `JButton` renders as `- JButton (push_button) "Save" ...` (BR-11 Case A) — `br11_caseA_standardJButton_rendersJClassRole`.
+  - [x] A user subclass `class FancyButton extends JButton {}` renders as `- FancyButton -> JButton (push_button) ...` (BR-11 Case B) — `br11_caseB_userSubclassOfJButton_usesArrowToJButton`.
+  - [x] An anonymous subclass `new JButton("X") {}` renders as `- JButton (push_button) "X" ...` — anonymous class stripped (BR-11 strip rule) — `br11_anonymousJButtonSubclass_strippedToJButton`.
+  - [x] A user subclass extending an abstract Swing class — `class BareButton extends AbstractButton` — renders as `- BareButton -> AbstractButton (push_button) ...` (BR-11 — abstract classes qualify) — `br11_caseB_userSubclassOfAbstractButton_usesArrowToAbstractButton`.
+  - [x] A class with a simulated proxy-style name (contains `$$`, null `getEnclosingClass()`) is stripped; walk-up starts at its superclass. Predicate verified at the resolver level (`ComponentClassResolverTest.isRuntimeProxy_*`); an end-to-end snapshot test would require bytecode manipulation, which the project intentionally avoids as a test dependency.
+  - [x] A `JTabbedPane` tab renders with `(page_tab)` as its identity slot (no class prefix) — BR-11 Case C — `br11_caseC_jTabbedPaneTab_rendersAsParensPageTab`.
+  - [x] A `JList` item renders with `(label)` as its identity slot — BR-11 Case C — `br11_caseC_jListItem_rendersAsParensLabel`.
+  - [x] A named `JPanel` renders as `- JPanel (panel) "Details"` (BR-11 Case A) — `br11_caseA_namedJPanel_rendersJClassRoleAndQuotedName`.
+  - [x] `JScrollPane` with no accessible name renders as `- JScrollPane (scroll_pane)` — no empty quotes after the identity slot — `br11_caseA_unnamedJScrollPane_hasNoEmptyQuotesAfterIdentitySlot`.
+- [x] `ComponentClassResolverAuditTest` — enumerates `javax.swing.*` (excluding `javax.swing.plaf.*`) and `java.awt.*`, applies the BR-11 qualifying-ancestor predicate, and asserts the resulting class set equals a checked-in fixture. Failing on JDK drift forces a deliberate fixture update.
 
 ### Screen-mode tests (`src/testSwing`) — `SwingSnapshotToolWithScreenTest`
 

@@ -46,7 +46,7 @@ Execution order:
   - [x] `JList` with 5 items returns `5`.
   - [x] `JList` with 200 items returns `200`.
   - [x] Empty `JList` returns `0`.
-  - [ ] `JTabbedPane` returns an MCP error (regression guard — dropped per P-001).
+  - [x] `JTabbedPane` returns an MCP error (regression guard — dropped per P-001).
   - [x] `JComboBox` with 3 items returns `3`.
   - [x] Empty `JComboBox` returns `0`.
   - [x] `JTable` (row-selection mode) with 10 rows returns `10`.
@@ -63,7 +63,7 @@ Execution order:
 
 - [x] `SwingGetItemCountScreenTest` (`testSwing` — requires display)
   - [x] `JList` inside `JFrame` returns correct count.
-  - [ ] `JTabbedPane` inside `JFrame` returns an MCP error (regression guard — dropped per P-001).
+  - [x] `JTabbedPane` inside `JFrame` returns an MCP error (regression guard — dropped per P-001).
   - [x] `JComboBox` inside `JFrame` returns correct count.
   - [x] `JTable` (row-selection mode) inside `JFrame` returns correct count.
   - [x] `JList` inside `JDialog` returns correct count.

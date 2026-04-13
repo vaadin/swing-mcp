@@ -1544,8 +1544,194 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    // BR-11 — component identity slot (Case A / B / C rendering)
+    //
+    // End-to-end snapshot-level assertions that pin the three BR-11 rendering
+    // shapes in the tree output. Unit-level coverage of the resolver lives in
+    // ComponentClassResolverTest.
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void br11_caseA_standardJButton_rendersJClassRole() throws Exception {
+        assertEquals(
+                "- JButton (push_button) \"Save\" [ref=1] actions: click",
+                snapshot(new JButton("Save")));
+    }
+
+    @Test
+    void br11_caseA_namedJPanel_rendersJClassRoleAndQuotedName() throws Exception {
+        JPanel panel = new JPanel();
+        panel.getAccessibleContext().setAccessibleName("Details");
+
+        assertEquals("- JPanel (panel) \"Details\"", snapshot(panel));
+    }
+
+    @Test
+    void br11_caseA_unnamedJScrollPane_hasNoEmptyQuotesAfterIdentitySlot()
+            throws Exception {
+        // BR-11: an unnamed component must not emit an empty "" segment after
+        // the identity slot. Regression guard — see spec line 478.
+        JScrollPane scrollPane = new JScrollPane(new JPanel(),
+                JScrollPane.VERTICAL_SCROLLBAR_NEVER,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+
+        String output = snapshot(scrollPane);
+        assertTrue(output.startsWith("- JScrollPane (scroll_pane)\n")
+                        || output.equals("- JScrollPane (scroll_pane)"),
+                "Expected leading '- JScrollPane (scroll_pane)' without empty quotes; got: "
+                        + output);
+        assertFalse(output.contains("(scroll_pane) \"\""),
+                "Unnamed scroll pane must not render empty quotes; got: " + output);
+    }
+
+    @Test
+    void br11_caseB_userSubclassOfJButton_usesArrowToJButton() throws Exception {
+        assertEquals(
+                "- FancyButton -> JButton (push_button) \"Fancy\" [ref=1] actions: click",
+                snapshot(new FancyButton()));
+    }
+
+    @Test
+    void br11_caseB_userSubclassOfAbstractButton_usesArrowToAbstractButton()
+            throws Exception {
+        // BR-11: AbstractButton qualifies (abstract Swing classes do). Role is
+        // driven by the subclass's AccessibleContext — BareButtonAccessible
+        // reports PUSH_BUTTON so we can assert the full rendered line.
+        BareButton btn = new BareButton();
+        btn.setAccessibleName("Bare");
+        assertEquals(
+                "- BareButton -> AbstractButton (push_button) \"Bare\" [ref=1] actions: click",
+                snapshot(btn));
+    }
+
+    @Test
+    void br11_caseB_userSubclassOfPlaf_walksPastPlafToJButton() throws Exception {
+        // class MyArrow extends BasicArrowButton → plaf BasicArrowButton is
+        // stripped from the qualifying-ancestor walk; nearest qualifying
+        // ancestor is JButton. Concrete display class remains MyArrow.
+        MyArrow arrow = new MyArrow();
+        assertEquals(
+                "- MyArrow -> JButton (push_button) [ref=1] actions: click",
+                snapshot(arrow));
+    }
+
+    @Test
+    void br11_anonymousJButtonSubclass_strippedToJButton() throws Exception {
+        // Anonymous subclass must be stripped; walk-up lands on JButton.
+        JButton anon = new JButton("Anon") { };
+        assertTrue(anon.getClass().isAnonymousClass(),
+                "precondition: fixture is an anonymous subclass");
+        assertEquals(
+                "- JButton (push_button) \"Anon\" [ref=1] actions: click",
+                snapshot(anon));
+    }
+
+    @Test
+    void br11_caseC_jTreeNode_rendersAsParensLabel() throws Exception {
+        // JTree.AccessibleJTreeNode is not a Component, so Case C applies —
+        // identity slot is just `(label)` with no class prefix.
+        javax.swing.tree.DefaultMutableTreeNode root =
+                new javax.swing.tree.DefaultMutableTreeNode("Root");
+        root.add(new javax.swing.tree.DefaultMutableTreeNode("Leaf"));
+        JTree tree = new JTree(root);
+
+        String output = snapshot(tree);
+        assertTrue(output.contains("  - (label) \"Root\""),
+                "expected Case C '(label) \"Root\"' for JTree node; got:\n" + output);
+    }
+
+    @Test
+    void br11_caseC_jListItem_rendersAsParensLabel() throws Exception {
+        // JList.AccessibleJListChild is not a Component → Case C.
+        JList<String> list = new JList<>(new String[]{"Apple", "Banana"});
+
+        String output = snapshot(list);
+        assertTrue(output.contains("  - (label) \"Apple\""),
+                "expected Case C '(label) \"Apple\"' for JList item; got:\n" + output);
+        assertTrue(output.contains("  - (label) \"Banana\""),
+                "expected Case C '(label) \"Banana\"' for JList item; got:\n" + output);
+    }
+
+    @Test
+    void br11_caseC_jTabbedPaneTab_rendersAsParensPageTab() throws Exception {
+        // JTabbedPane.Page is not a Component → Case C with 0-based index.
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.addTab("First", new JPanel());
+
+        String output = snapshot(tabs);
+        assertTrue(output.contains("  - (page_tab) 0 \"First\""),
+                "expected Case C '(page_tab) 0 \"First\"'; got:\n" + output);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // Helpers
     // ══════════════════════════════════════════════════════════════════════════
+
+    /** BR-11 Case B fixture — user subclass of a concrete Swing widget. */
+    public static class FancyButton extends JButton {
+        public FancyButton() { super("Fancy"); }
+    }
+
+    /**
+     * BR-11 Case B fixture — user subclass of an abstract Swing widget.
+     * AbstractButton does not declare {@code implements Accessible} itself;
+     * concrete subclasses like JButton add it. The fixture adds it explicitly
+     * and supplies a minimal AccessibleContext so the role renders as
+     * {@code push_button} rather than {@code unknown}.
+     */
+    public static class BareButton extends AbstractButton implements Accessible {
+        public BareButton() {
+            setModel(new javax.swing.DefaultButtonModel());
+        }
+
+        void setAccessibleName(String name) {
+            getAccessibleContext().setAccessibleName(name);
+        }
+
+        @Override
+        public AccessibleContext getAccessibleContext() {
+            if (accessibleContext == null) {
+                accessibleContext = new AccessibleAbstractButton();
+            }
+            return accessibleContext;
+        }
+
+        // Inner class mirrors javax.swing.AbstractButton.AccessibleAbstractButton
+        // role semantics without depending on JDK-internal accessible classes.
+        private class AccessibleAbstractButton extends AccessibleContext
+                implements AccessibleAction {
+            @Override public AccessibleRole getAccessibleRole() {
+                return AccessibleRole.PUSH_BUTTON;
+            }
+            @Override public AccessibleStateSet getAccessibleStateSet() {
+                AccessibleStateSet set = new AccessibleStateSet();
+                if (isEnabled()) set.add(AccessibleState.ENABLED);
+                if (isVisible()) set.add(AccessibleState.VISIBLE);
+                if (isShowing()) set.add(AccessibleState.SHOWING);
+                return set;
+            }
+            @Override public int getAccessibleIndexInParent() { return -1; }
+            @Override public int getAccessibleChildrenCount() { return 0; }
+            @Override public Accessible getAccessibleChild(int i) { return null; }
+            @Override public java.util.Locale getLocale() {
+                return java.util.Locale.getDefault();
+            }
+            @Override public AccessibleAction getAccessibleAction() { return this; }
+            @Override public int getAccessibleActionCount() { return 1; }
+            @Override public String getAccessibleActionDescription(int i) {
+                return i == 0 ? AccessibleAction.CLICK : null;
+            }
+            @Override public boolean doAccessibleAction(int i) {
+                if (i == 0) { doClick(); return true; }
+                return false;
+            }
+        }
+    }
+
+    /** BR-11 fixture — user subclass of a javax.swing.plaf.* class. */
+    public static class MyArrow extends javax.swing.plaf.basic.BasicArrowButton {
+        public MyArrow() { super(javax.swing.plaf.basic.BasicArrowButton.NORTH); }
+    }
 
     private static class AccessibleCellRendererPane extends CellRendererPane implements Accessible {
         @Override

@@ -97,7 +97,7 @@ Execution order:
   - [x] Reading a `JList` with 200 items (`offset: 0, length: 50`) returns first 50 items with `totalCount: 200`.
   - [x] Reading a `JList` with `offset: 50, length: 50` returns items 50–99.
   - [x] Reading a `JList` with `offset` beyond item count returns empty `items` array.
-  - [ ] Reading a `JTabbedPane` returns an MCP error (regression guard — tabs are no longer a supported target; dropped per P-001).
+  - [x] Reading a `JTabbedPane` returns an MCP error (regression guard — tabs are no longer a supported target; dropped per P-001).
   - [x] Reading a `JComboBox` returns all items with correct indices and names.
   - [x] Reading an empty `JComboBox` returns `totalCount: 0` and empty `items`.
   - [x] Reading a `JTable` (row-selection mode) returns rows with pipe-separated cell names.
@@ -118,7 +118,7 @@ Execution order:
 
 - [x] `SwingGetItemsScreenTest` (`testSwing` — requires display)
   - [x] Reading a `JList` with items inside `JFrame` returns all items.
-  - [ ] Reading a `JTabbedPane` inside `JFrame` returns an MCP error (regression guard — dropped per P-001).
+  - [x] Reading a `JTabbedPane` inside `JFrame` returns an MCP error (regression guard — dropped per P-001).
   - [x] Reading a `JComboBox` inside `JFrame` returns items.
   - [x] Reading a `JTable` (row-selection mode) inside `JFrame` returns rows.
   - [x] Reading a `JList` inside `JDialog` returns items.
