@@ -437,26 +437,60 @@ it via `SwingUtilities.invokeLater()`. No branching on which tier was used.
 
 ### Effectively Enabled Check
 
-Virtual accessible children (e.g. `JList` items, `JTable` cells) may not propagate the
-parent component's disabled state into their own `AccessibleStateSet`. A mutation tool must
-therefore walk the accessible parent chain to determine whether the target is *effectively*
-enabled:
+Swing's `Component.setEnabled(false)` **does not propagate to children** — this is the
+documented, by-design behaviour (see the `Component.setEnabled` javadoc and
+[JDK-4177727](https://bugs.openjdk.org/browse/JDK-4177727), closed as won't-fix). A button
+inside a disabled `JPanel`, `JScrollPane`, or `JToolBar` is still mechanically clickable.
+Our MCP layer must **mirror Swing's semantics exactly**: a tool that refused to click a
+button just because its container was disabled would be lying about what the running app
+allows. `isEffectivelyEnabled()` therefore does **not** walk the parent chain for real
+`Component` instances — it trusts each component's own `ENABLED` state set bit.
+
+Two Swing quirks need explicit handling:
+
+1. **`JTabbedPane` tabs disabled via `setEnabledAt(i, false)`** — the `AccessiblePage`
+   virtual child does NOT omit `ENABLED` from its state set even though the tab is
+   disabled. We consult `JTabbedPane.isEnabledAt(idx)` directly when the accessible's
+   parent is a `JTabbedPane`.
+2. **Virtual accessible children** (not `Component` instances) — some virtual children
+   (notably `JTable` cells) keep `ENABLED` in their state set even when the host
+   component is disabled. For any accessible that is not itself a `Component`, we recurse
+   into its accessible parent until a `Component` ancestor is found. (`JList` items
+   happen to do this correctly already, but the recursion is uniformly safe and costs
+   nothing.)
 
 ```java
 boolean isEffectivelyEnabled(Accessible a) {
     AccessibleContext ac = a.getAccessibleContext();
     if (ac == null) return false;
     if (!ac.getAccessibleStateSet().contains(AccessibleState.ENABLED)) return false;
+
     Accessible parent = ac.getAccessibleParent();
-    return parent == null || isEffectivelyEnabled(parent);
+
+    // Quirk 1: JTabbedPane.setEnabledAt is not reflected in the AccessiblePage state set.
+    if (parent instanceof JTabbedPane) {
+        JTabbedPane tp = (JTabbedPane) parent;
+        int idx = ac.getAccessibleIndexInParent();
+        if (idx >= 0 && idx < tp.getTabCount() && !tp.isEnabledAt(idx)) {
+            return false;
+        }
+    }
+
+    // Quirk 2: virtual children (e.g. JTable cells) may not reflect the host's disabled
+    // state — walk up until we reach a real Component ancestor.
+    if (!(a instanceof Component) && parent != null) {
+        return isEffectivelyEnabled(parent);
+    }
+
+    // Real Components: trust the component's own ENABLED state. Swing's setEnabled
+    // does not propagate to children, so neither do we.
+    return true;
 }
 ```
 
-- The accessible itself must have `ENABLED` in its state set.
-- If it has a parent (`getAccessibleParent()` non-null), the parent must also be effectively
-  enabled — recursively up to the root.
-- A `null` parent means the root of the accessible hierarchy has been reached; the chain is
-  considered enabled.
+The disabled-`Window` case (an OS-level peer dropping input on `Frame.setEnabled(false)`)
+is intentionally **not** handled here — its visual behaviour is platform/L&F-dependent
+and unreliable across OSes.
 
 All mutation tools (`swing_click`, `swing_set_text`, `swing_set_value`, etc.) must use
 `isEffectivelyEnabled()` rather than checking only the target's own state set. If the check
@@ -464,8 +498,17 @@ returns `false`, the tool returns an MCP-level error (`isError: true`) explainin
 component is disabled.
 
 The `swing_snapshot` tool also uses `isEffectivelyEnabled()` in two ways:
-1. **`disabled` state in bracket** — shown when `isEffectivelyEnabled()` returns `false`, replacing the previous local `ENABLED` check. This ensures a locally-enabled component inside a disabled ancestor is correctly marked `disabled`.
-2. **`!` prefix on mutation actions** — mutation actions (`click`, `toggle_popup`, `increment`, `decrement`, `toggle_expand`, `set_text`, `set_value`, `close`) are prefixed with `!` when the component is not effectively enabled. Read-only actions and selection group labels are never prefixed. See **UC-002 BR-08** for the full rule.
+1. **`disabled` state in bracket** — shown when `isEffectivelyEnabled()` returns `false`,
+   replacing the previous local `ENABLED` check. Because disabled state does not propagate
+   through real-`Component` ancestors, a button inside a disabled `JPanel` is **not**
+   marked `disabled` in the snapshot — consistent with the fact that `swing_click` will
+   accept it. Only the `JPanel` itself carries `[disabled]`, and only virtual children
+   (e.g. `JTable` cells) inherit their host's disabled state. `JTabbedPane` tabs
+   disabled via `setEnabledAt` do carry `[disabled]` via the Quirk 1 carveout above.
+2. **`!` prefix on mutation actions** — mutation actions (`click`, `toggle_popup`,
+   `increment`, `decrement`, `toggle_expand`, `set_text`, `set_value`, `close`) are
+   prefixed with `!` when the component is not effectively enabled. Read-only actions
+   and selection group labels are never prefixed. See **UC-002 BR-08** for the full rule.
 
 ### Detecting Close Support
 
