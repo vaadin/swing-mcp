@@ -477,7 +477,9 @@ class SnapshotNode {
         final StringBuilder sb = new StringBuilder();
         AccessibleContext ctx = accessible.getAccessibleContext();
         AccessibleRole role = ctx != null ? ctx.getAccessibleRole() : null;
-        sb.append(role != null ? AccessibleNames.roleName(role) : "unknown");
+        // UC-002 BR-11: component identity slot is "JClass (role)",
+        // "Concrete -> JClass (role)", or "(role)" for non-Component accessibles.
+        sb.append(ComponentClassResolver.resolveIdentitySlot(accessible));
 
         // UC-002 SC-2: emit the 0-based tab index inline for JTabbedPane pages,
         // so an AI client can pass it straight to swing_set_selection as [N]

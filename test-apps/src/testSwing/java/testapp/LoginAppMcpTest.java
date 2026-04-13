@@ -66,29 +66,29 @@ class LoginAppMcpTest {
     void loginAndQuitViaMcp() throws Exception {
         // "Select Application" dialog — Login App is pre-selected, just click Run
         waitForWindow("Select Application", 5_000);
-        int runRef = findRef(snapshot(), "push_button \"Run\" \\[ref=(\\d+)");
+        int runRef = findRef(snapshot(), "push_button\\) \"Run\" \\[ref=(\\d+)");
         call("swing_click", Map.of("ref", runRef));
 
         // Login dialog appears
         waitForWindow("Login", 5_000);
 
         String snap = snapshot();
-        int usernameRef = findRef(snap, "\\btext \\[ref=(\\d+)");
+        int usernameRef = findRef(snap, "\\(text\\) \\[ref=(\\d+)");
         call("swing_set_text", Map.of("ref", usernameRef, "text", "admin"));
 
         snap = snapshot();
-        int passwordRef = findRef(snap, "password_text \\[ref=(\\d+)");
+        int passwordRef = findRef(snap, "password_text\\) \\[ref=(\\d+)");
         call("swing_set_text", Map.of("ref", passwordRef, "text", "admin"));
 
         snap = snapshot();
-        int loginRef = findRef(snap, "push_button \"Login\" \\[ref=(\\d+)");
+        int loginRef = findRef(snap, "push_button\\) \"Login\" \\[ref=(\\d+)");
         call("swing_click", Map.of("ref", loginRef));
 
         // Main window appears
         waitForWindow("Login App", 5_000);
 
         snap = snapshot();
-        int quitRef = findRef(snap, "menu_item \"Quit\" \\[ref=(\\d+)");
+        int quitRef = findRef(snap, "menu_item\\) \"Quit\" \\[ref=(\\d+)");
         call("swing_click", Map.of("ref", quitRef));
 
         waitForWindowToClose("Login App", 5_000);

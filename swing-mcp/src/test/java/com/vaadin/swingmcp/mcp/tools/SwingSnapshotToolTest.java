@@ -62,9 +62,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(panel);
 
         assertEquals(
-                "- panel\n"
-                + "  - push_button \"Save\" [ref=1] actions: click\n"
-                + "  - text [ref=2] actions: get_text, set_text",
+                "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"Save\" [ref=1] actions: click\n"
+                + "  - JTextField (text) [ref=2] actions: get_text, set_text",
                 output);
     }
 
@@ -77,9 +77,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(panel);
 
         assertEquals(
-                "- panel\n"
-                + "  - push_button \"First\" [ref=1] actions: click\n"
-                + "  - push_button \"Second\" [ref=2] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"First\" [ref=1] actions: click\n"
+                + "  - JButton (push_button) \"Second\" [ref=2] actions: click",
                 output);
     }
 
@@ -97,9 +97,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(outer);
 
         assertEquals(
-                "- panel \"Outer\"\n"
-                + "  - panel \"Inner\"\n"
-                + "    - push_button \"Go\" [ref=1] actions: click",
+                "- JPanel (panel) \"Outer\"\n"
+                + "  - JPanel (panel) \"Inner\"\n"
+                + "    - JButton (push_button) \"Go\" [ref=1] actions: click",
                 output);
     }
 
@@ -115,8 +115,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(panel);
 
         assertEquals(
-                "- panel\n"
-                + "  - push_button \"Visible\" [ref=1] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"Visible\" [ref=1] actions: click",
                 output);
     }
 
@@ -134,8 +134,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         // The button should appear directly under root (depth 1), not at depth 2
         assertEquals(
-                "- panel \"Root\"\n"
-                + "  - push_button \"Click\" [ref=1] actions: click",
+                "- JPanel (panel) \"Root\"\n"
+                + "  - JButton (push_button) \"Click\" [ref=1] actions: click",
                 output);
     }
 
@@ -152,9 +152,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         // The titled panel has a TitledBorder → must be kept, button at depth 2
         assertEquals(
-                "- panel\n"
-                + "  - panel \"Details\"\n"
-                + "    - push_button \"OK\" [ref=1] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JPanel (panel) \"Details\"\n"
+                + "    - JButton (push_button) \"OK\" [ref=1] actions: click",
                 output);
     }
 
@@ -170,9 +170,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(root);
 
         assertEquals(
-                "- panel\n"
-                + "  - panel \"FormSection\"\n"
-                + "    - push_button \"Submit\" [ref=1] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JPanel (panel) \"FormSection\"\n"
+                + "    - JButton (push_button) \"Submit\" [ref=1] actions: click",
                 output);
     }
 
@@ -191,8 +191,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         // The CellRendererPane should be excluded (HE-2); only the real button appears
         assertEquals(
-                "- panel\n"
-                + "  - push_button \"Real\" [ref=1] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"Real\" [ref=1] actions: click",
                 output);
     }
 
@@ -209,8 +209,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(wrapper);
 
         assertEquals(
-                "- panel\n"
-                + "  - push_button \"Action\" [ref=1] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"Action\" [ref=1] actions: click",
                 output);
     }
 
@@ -227,8 +227,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(root);
 
         assertEquals(
-                "- panel \"Root\"\n"
-                + "  - push_button \"OK\" [ref=1] actions: click",
+                "- JPanel (panel) \"Root\"\n"
+                + "  - JButton (push_button) \"OK\" [ref=1] actions: click",
                 output);
     }
 
@@ -244,17 +244,17 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(root);
 
         assertEquals(
-                "- panel\n"
-                + "  - scroll_pane\n"
-                + "    - list [ref=1] actions: multi-selection\n"
-                + "      - label \"A\" [ref=2] actions: click\n"
-                + "      - label \"B\" [ref=3] actions: click\n"
-                + "    - scroll_bar [ref=4, vertical] actions: get_value, set_value\n"
-                + "      - push_button [ref=5] actions: click\n"
-                + "      - push_button [ref=6] actions: click\n"
-                + "    - scroll_bar [ref=7, horizontal] actions: get_value, set_value\n"
-                + "      - push_button [ref=8] actions: click\n"
-                + "      - push_button [ref=9] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JScrollPane (scroll_pane)\n"
+                + "    - JList (list) [ref=1] actions: multi-selection\n"
+                + "      - (label) \"A\" [ref=2] actions: click\n"
+                + "      - (label) \"B\" [ref=3] actions: click\n"
+                + "    - JScrollBar (scroll_bar) [ref=4, vertical] actions: get_value, set_value\n"
+                + "      - JButton (push_button) [ref=5] actions: click\n"
+                + "      - JButton (push_button) [ref=6] actions: click\n"
+                + "    - JScrollBar (scroll_bar) [ref=7, horizontal] actions: get_value, set_value\n"
+                + "      - JButton (push_button) [ref=8] actions: click\n"
+                + "      - JButton (push_button) [ref=9] actions: click",
                 output);
     }
 
@@ -273,8 +273,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         // UC-002 step 6b / UC-020 BR-03: JTable does NOT advertise
         // get_cell_count / get_cells — use swing_get_items instead.
         assertEquals(
-                "- panel\n"
-                + "  - table [ref=1] actions: multi-selection\n"
+                "- JPanel (panel)\n"
+                + "  - JTable (table) [ref=1] actions: multi-selection\n"
                 + "    - row 0: row0\n"
                 + "    - row 1: row1\n"
                 + "    - row 2: row2\n"
@@ -334,8 +334,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         // No JScrollPane → no columns: annotation
         assertEquals(
-                "- panel\n"
-                + "  - table [ref=1] actions: multi-selection\n"
+                "- JPanel (panel)\n"
+                + "  - JTable (table) [ref=1] actions: multi-selection\n"
                 + "    - row 0: 1 | Alice | NY\n"
                 + "    - row 1: 2 | Bob | LA",
                 output);
@@ -356,17 +356,17 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         // In JScrollPane → columns: annotation, header suppressed (SC-6/SC-7)
         assertEquals(
-                "- panel\n"
-                + "  - scroll_pane\n"
-                + "    - table [ref=1] columns: [ID, Name, City] actions: multi-selection\n"
+                "- JPanel (panel)\n"
+                + "  - JScrollPane (scroll_pane)\n"
+                + "    - JTable (table) [ref=1] columns: [ID, Name, City] actions: multi-selection\n"
                 + "      - row 0: 1 | Alice | NY\n"
                 + "      - row 1: 2 | Bob | LA\n"
-                + "    - scroll_bar [ref=2, vertical] actions: get_value, set_value\n"
-                + "      - push_button [ref=3] actions: click\n"
-                + "      - push_button [ref=4] actions: click\n"
-                + "    - scroll_bar [ref=5, horizontal] actions: get_value, set_value\n"
-                + "      - push_button [ref=6] actions: click\n"
-                + "      - push_button [ref=7] actions: click",
+                + "    - JScrollBar (scroll_bar) [ref=2, vertical] actions: get_value, set_value\n"
+                + "      - JButton (push_button) [ref=3] actions: click\n"
+                + "      - JButton (push_button) [ref=4] actions: click\n"
+                + "    - JScrollBar (scroll_bar) [ref=5, horizontal] actions: get_value, set_value\n"
+                + "      - JButton (push_button) [ref=6] actions: click\n"
+                + "      - JButton (push_button) [ref=7] actions: click",
                 output);
     }
 
@@ -381,8 +381,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(root);
 
         assertEquals(
-                "- panel\n"
-                + "  - table [ref=1] actions: multi-selection\n"
+                "- JPanel (panel)\n"
+                + "  - JTable (table) [ref=1] actions: multi-selection\n"
                 + "    - row 0: Alice",
                 output);
     }
@@ -399,15 +399,15 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(root);
 
         assertEquals(
-                "- panel\n"
-                + "  - scroll_pane\n"
-                + "    - table [ref=1] columns: [] actions: multi-selection\n"
-                + "    - scroll_bar [ref=2, vertical] actions: get_value, set_value\n"
-                + "      - push_button [ref=3] actions: click\n"
-                + "      - push_button [ref=4] actions: click\n"
-                + "    - scroll_bar [ref=5, horizontal] actions: get_value, set_value\n"
-                + "      - push_button [ref=6] actions: click\n"
-                + "      - push_button [ref=7] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JScrollPane (scroll_pane)\n"
+                + "    - JTable (table) [ref=1] columns: [] actions: multi-selection\n"
+                + "    - JScrollBar (scroll_bar) [ref=2, vertical] actions: get_value, set_value\n"
+                + "      - JButton (push_button) [ref=3] actions: click\n"
+                + "      - JButton (push_button) [ref=4] actions: click\n"
+                + "    - JScrollBar (scroll_bar) [ref=5, horizontal] actions: get_value, set_value\n"
+                + "      - JButton (push_button) [ref=6] actions: click\n"
+                + "      - JButton (push_button) [ref=7] actions: click",
                 output);
     }
 
@@ -420,8 +420,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(root);
 
         assertEquals(
-                "- panel\n"
-                + "  - table [ref=1] actions: multi-selection\n"
+                "- JPanel (panel)\n"
+                + "  - JTable (table) [ref=1] actions: multi-selection\n"
                 + "    - row 0: \n"
                 + "    - row 1: \n"
                 + "    - row 2: ",
@@ -443,16 +443,16 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         // SC-7: JTableHeader suppressed, columns: annotation present instead
         assertEquals(
-                "- panel\n"
-                + "  - scroll_pane\n"
-                + "    - table [ref=1] columns: [Name] actions: multi-selection\n"
+                "- JPanel (panel)\n"
+                + "  - JScrollPane (scroll_pane)\n"
+                + "    - JTable (table) [ref=1] columns: [Name] actions: multi-selection\n"
                 + "      - row 0: Alice\n"
-                + "    - scroll_bar [ref=2, vertical] actions: get_value, set_value\n"
-                + "      - push_button [ref=3] actions: click\n"
-                + "      - push_button [ref=4] actions: click\n"
-                + "    - scroll_bar [ref=5, horizontal] actions: get_value, set_value\n"
-                + "      - push_button [ref=6] actions: click\n"
-                + "      - push_button [ref=7] actions: click",
+                + "    - JScrollBar (scroll_bar) [ref=2, vertical] actions: get_value, set_value\n"
+                + "      - JButton (push_button) [ref=3] actions: click\n"
+                + "      - JButton (push_button) [ref=4] actions: click\n"
+                + "    - JScrollBar (scroll_bar) [ref=5, horizontal] actions: get_value, set_value\n"
+                + "      - JButton (push_button) [ref=6] actions: click\n"
+                + "      - JButton (push_button) [ref=7] actions: click",
                 output);
     }
 
@@ -472,11 +472,11 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(root);
 
         assertEquals(
-                "- panel\n"
-                + "  - menu_bar\n"
-                + "    - menu \"File\" [ref=1] actions: click\n"
-                + "      - menu_item \"Open\" [ref=2] actions: click\n"
-                + "      - menu_item \"Save\" [ref=3] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JMenuBar (menu_bar)\n"
+                + "    - JMenu (menu) \"File\" [ref=1] actions: click\n"
+                + "      - JMenuItem (menu_item) \"Open\" [ref=2] actions: click\n"
+                + "      - JMenuItem (menu_item) \"Save\" [ref=3] actions: click",
                 output);
     }
 
@@ -497,11 +497,11 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(panel);
 
         assertEquals(
-                "- panel\n"
-                + "  - page_tab_list \"Tab1\" [ref=1] actions: single-selection\n"
-                + "    - page_tab 0 \"Tab1\" [selected]\n"
-                + "      - push_button \"InTab1\" [ref=2] actions: click\n"
-                + "    - page_tab 1 \"Tab2\"",
+                "- JPanel (panel)\n"
+                + "  - JTabbedPane (page_tab_list) \"Tab1\" [ref=1] actions: single-selection\n"
+                + "    - (page_tab) 0 \"Tab1\" [selected]\n"
+                + "      - JButton (push_button) \"InTab1\" [ref=2] actions: click\n"
+                + "    - (page_tab) 1 \"Tab2\"",
                 output);
     }
 
@@ -521,10 +521,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(panel);
 
         assertEquals(
-                "- panel\n"
-                + "  - page_tab_list \"Tab1\" [ref=1] actions: single-selection\n"
-                + "    - page_tab 0 \"Tab1\" [selected]\n"
-                + "    - page_tab 1 \"Tab2\" [disabled]",
+                "- JPanel (panel)\n"
+                + "  - JTabbedPane (page_tab_list) \"Tab1\" [ref=1] actions: single-selection\n"
+                + "    - (page_tab) 0 \"Tab1\" [selected]\n"
+                + "    - (page_tab) 1 \"Tab2\" [disabled]",
                 output);
     }
 
@@ -547,10 +547,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(panel);
 
         assertEquals(
-                "- panel\n"
-                + "  - page_tab_list \"OnlyTab\" [ref=1] actions: single-selection\n"
-                + "    - page_tab 0 \"OnlyTab\" [disabled, selected]\n"
-                + "      - push_button \"OnDisabled\" [ref=2] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JTabbedPane (page_tab_list) \"OnlyTab\" [ref=1] actions: single-selection\n"
+                + "    - (page_tab) 0 \"OnlyTab\" [disabled, selected]\n"
+                + "      - JButton (push_button) \"OnDisabled\" [ref=2] actions: click",
                 output);
     }
 
@@ -572,12 +572,12 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(tabbedPane);
 
         assertEquals(
-                "- panel\n"
-                + "  - page_tab_list \"Gamma\" [ref=1] actions: single-selection\n"
-                + "    - page_tab 0 \"Alpha\"\n"
-                + "    - page_tab 1 \"Beta\" [disabled]\n"
-                + "    - page_tab 2 \"Gamma\" [selected]\n"
-                + "    - page_tab 3 \"Delta\" [disabled]",
+                "- JPanel (panel)\n"
+                + "  - JTabbedPane (page_tab_list) \"Gamma\" [ref=1] actions: single-selection\n"
+                + "    - (page_tab) 0 \"Alpha\"\n"
+                + "    - (page_tab) 1 \"Beta\" [disabled]\n"
+                + "    - (page_tab) 2 \"Gamma\" [selected]\n"
+                + "    - (page_tab) 3 \"Delta\" [disabled]",
                 snapshot(panel));
     }
 
@@ -591,8 +591,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         // Only ref is shown; visible/enabled/showing/opaque are omitted
         assertEquals(
-                "- panel\n"
-                + "  - push_button \"Normal\" [ref=1] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"Normal\" [ref=1] actions: click",
                 output);
     }
 
@@ -606,8 +606,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(panel);
 
         assertEquals(
-                "- panel\n"
-                + "  - push_button \"Disabled\" [ref=1, disabled] actions: !click",
+                "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"Disabled\" [ref=1, disabled] actions: !click",
                 output);
     }
 
@@ -621,8 +621,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(panel);
 
         assertEquals(
-                "- panel\n"
-                + "  - slider [ref=1, disabled, horizontal] actions: !increment, !decrement, get_value, !set_value",
+                "- JPanel (panel)\n"
+                + "  - JSlider (slider) [ref=1, disabled, horizontal] actions: !increment, !decrement, get_value, !set_value",
                 output);
     }
 
@@ -640,8 +640,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(parent);
 
         assertEquals(
-                "- panel [disabled]\n"
-                + "  - push_button \"Click Me\" [ref=1] actions: click",
+                "- JPanel (panel) [disabled]\n"
+                + "  - JButton (push_button) \"Click Me\" [ref=1] actions: click",
                 output);
     }
 
@@ -655,8 +655,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(panel);
 
         assertEquals(
-                "- panel\n"
-                + "  - push_button \"Disabled\" [ref=1, disabled] actions: !click",
+                "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"Disabled\" [ref=1, disabled] actions: !click",
                 output);
     }
 
@@ -672,11 +672,11 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         // Roots separated by "---"; refs are globally numbered across roots
         assertEquals(
-                "- panel\n"
-                + "  - push_button \"A\" [ref=1] actions: click\n"
+                "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"A\" [ref=1] actions: click\n"
                 + "---\n"
-                + "- panel\n"
-                + "  - push_button \"B\" [ref=2] actions: click",
+                + "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"B\" [ref=2] actions: click",
                 output);
     }
 
@@ -690,8 +690,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(new JButton("Save"));
 
         assertEquals(
-                "- panel\n"
-                + "  - push_button \"Save\" [ref=1] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"Save\" [ref=1] actions: click",
                 snapshot(panel));
     }
 
@@ -701,8 +701,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(new JTextField());
 
         assertEquals(
-                "- panel\n"
-                + "  - text [ref=1] actions: get_text, set_text",
+                "- JPanel (panel)\n"
+                + "  - JTextField (text) [ref=1] actions: get_text, set_text",
                 snapshot(panel));
     }
 
@@ -712,8 +712,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(new JPasswordField());
 
         assertEquals(
-                "- panel\n"
-                + "  - password_text [ref=1] actions: get_text, set_text",
+                "- JPanel (panel)\n"
+                + "  - JPasswordField (password_text) [ref=1] actions: get_text, set_text",
                 snapshot(panel));
     }
 
@@ -723,8 +723,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(new JTextArea());
 
         assertEquals(
-                "- panel\n"
-                + "  - text [ref=1, multi_line] actions: get_text, set_text",
+                "- JPanel (panel)\n"
+                + "  - JTextArea (text) [ref=1, multi_line] actions: get_text, set_text",
                 snapshot(panel));
     }
 
@@ -736,8 +736,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(tf);
 
         assertEquals(
-                "- panel\n"
-                + "  - text [ref=1, read_only] actions: get_text, !set_text",
+                "- JPanel (panel)\n"
+                + "  - JTextField (text) [ref=1, read_only] actions: get_text, !set_text",
                 snapshot(panel));
     }
 
@@ -749,8 +749,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(ta);
 
         assertEquals(
-                "- panel\n"
-                + "  - text [ref=1, read_only, multi_line] actions: get_text, !set_text",
+                "- JPanel (panel)\n"
+                + "  - JTextArea (text) [ref=1, read_only, multi_line] actions: get_text, !set_text",
                 snapshot(panel));
     }
 
@@ -760,8 +760,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(new JCheckBox("Accept"));
 
         assertEquals(
-                "- panel\n"
-                + "  - check_box \"Accept\" [ref=1] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JCheckBox (check_box) \"Accept\" [ref=1] actions: click",
                 snapshot(panel));
     }
 
@@ -777,9 +777,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(optionB);
 
         assertEquals(
-                "- panel\n"
-                + "  - radio_button \"Option A\" [ref=1] actions: click\n"
-                + "  - radio_button \"Option B\" [ref=2] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JRadioButton (radio_button) \"Option A\" [ref=1] actions: click\n"
+                + "  - JRadioButton (radio_button) \"Option B\" [ref=2] actions: click",
                 snapshot(panel));
     }
 
@@ -789,8 +789,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(new JComboBox<>(new String[]{"One", "Two", "Three"}));
 
         assertEquals(
-                "- panel\n"
-                + "  - combo_box [ref=1, collapsed] actions: toggle_popup, single-selection",
+                "- JPanel (panel)\n"
+                + "  - JComboBox (combo_box) [ref=1, collapsed] actions: toggle_popup, single-selection",
                 snapshot(panel));
     }
 
@@ -800,8 +800,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(new JToggleButton("Bold"));
 
         assertEquals(
-                "- panel\n"
-                + "  - toggle_button \"Bold\" [ref=1] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JToggleButton (toggle_button) \"Bold\" [ref=1] actions: click",
                 snapshot(panel));
     }
 
@@ -811,9 +811,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(new JSpinner(new SpinnerNumberModel(1, 0, 10, 1)));
 
         assertEquals(
-                "- panel\n"
-                + "  - spin_box [ref=1] actions: increment, decrement, get_text, get_value, set_value\n"
-                + "    - text [ref=2] actions: get_text, set_text",
+                "- JPanel (panel)\n"
+                + "  - JSpinner (spin_box) [ref=1] actions: increment, decrement, get_text, get_value, set_value\n"
+                + "    - JFormattedTextField (text) [ref=2] actions: get_text, set_text",
                 snapshot(panel));
     }
 
@@ -823,8 +823,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(new JSlider(0, 100, 50));
 
         assertEquals(
-                "- panel\n"
-                + "  - slider [ref=1, horizontal] actions: increment, decrement, get_value, set_value",
+                "- JPanel (panel)\n"
+                + "  - JSlider (slider) [ref=1, horizontal] actions: increment, decrement, get_value, set_value",
                 snapshot(panel));
     }
 
@@ -836,10 +836,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(splitPane);
 
         assertEquals(
-                "- panel\n"
-                + "  - split_pane [ref=1, horizontal] actions: get_value, set_value\n"
-                + "    - label \"Left\"\n"
-                + "    - label \"Right\"",
+                "- JPanel (panel)\n"
+                + "  - JSplitPane (split_pane) [ref=1, horizontal] actions: get_value, set_value\n"
+                + "    - JLabel (label) \"Left\"\n"
+                + "    - JLabel (label) \"Right\"",
                 snapshot(panel));
     }
 
@@ -849,8 +849,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(new JLabel("Status"));
 
         assertEquals(
-                "- panel\n"
-                + "  - label \"Status\"",
+                "- JPanel (panel)\n"
+                + "  - JLabel (label) \"Status\"",
                 snapshot(panel));
     }
 
@@ -862,8 +862,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(bar);
 
         assertEquals(
-                "- panel\n"
-                + "  - progress_bar [ref=1, horizontal] actions: get_value",
+                "- JPanel (panel)\n"
+                + "  - JProgressBar (progress_bar) [ref=1, horizontal] actions: get_value",
                 snapshot(panel));
     }
 
@@ -875,9 +875,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(toolBar);
 
         assertEquals(
-                "- panel\n"
-                + "  - tool_bar\n"
-                + "    - push_button \"Save\" [ref=1] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JToolBar (tool_bar)\n"
+                + "    - JButton (push_button) \"Save\" [ref=1] actions: click",
                 snapshot(panel));
     }
 
@@ -887,7 +887,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         root.getAccessibleContext().setAccessibleName("Form");
 
         assertEquals(
-                "- panel \"Form\"",
+                "- JPanel (panel) \"Form\"",
                 snapshot(root));
     }
 
@@ -902,15 +902,15 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         // scroll_pane is kept even without a name; label is its direct child (viewport pruned)
         assertEquals(
-                "- panel\n"
-                + "  - scroll_pane\n"
-                + "    - label \"Content\"\n"
-                + "    - scroll_bar [ref=1, vertical] actions: get_value, set_value\n"
-                + "      - push_button [ref=2] actions: click\n"
-                + "      - push_button [ref=3] actions: click\n"
-                + "    - scroll_bar [ref=4, horizontal] actions: get_value, set_value\n"
-                + "      - push_button [ref=5] actions: click\n"
-                + "      - push_button [ref=6] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JScrollPane (scroll_pane)\n"
+                + "    - JLabel (label) \"Content\"\n"
+                + "    - JScrollBar (scroll_bar) [ref=1, vertical] actions: get_value, set_value\n"
+                + "      - JButton (push_button) [ref=2] actions: click\n"
+                + "      - JButton (push_button) [ref=3] actions: click\n"
+                + "    - JScrollBar (scroll_bar) [ref=4, horizontal] actions: get_value, set_value\n"
+                + "      - JButton (push_button) [ref=5] actions: click\n"
+                + "      - JButton (push_button) [ref=6] actions: click",
                 output);
     }
 
@@ -923,10 +923,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(tabbedPane);
 
         assertEquals(
-                "- panel\n"
-                + "  - page_tab_list \"General\" [ref=1] actions: single-selection\n"
-                + "    - page_tab 0 \"General\" [selected]\n"
-                + "    - page_tab 1 \"Advanced\"",
+                "- JPanel (panel)\n"
+                + "  - JTabbedPane (page_tab_list) \"General\" [ref=1] actions: single-selection\n"
+                + "    - (page_tab) 0 \"General\" [selected]\n"
+                + "    - (page_tab) 1 \"Advanced\"",
                 snapshot(panel));
     }
 
@@ -939,9 +939,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(menuBar);
 
         assertEquals(
-                "- panel\n"
-                + "  - menu_bar\n"
-                + "    - menu \"File\" [ref=1] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JMenuBar (menu_bar)\n"
+                + "    - JMenu (menu) \"File\" [ref=1] actions: click",
                 snapshot(panel));
     }
 
@@ -955,10 +955,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(menuBar);
 
         assertEquals(
-                "- panel\n"
-                + "  - menu_bar\n"
-                + "    - menu \"Edit\" [ref=1] actions: click\n"
-                + "      - menu_item \"Cut\" [ref=2] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JMenuBar (menu_bar)\n"
+                + "    - JMenu (menu) \"Edit\" [ref=1] actions: click\n"
+                + "      - JMenuItem (menu_item) \"Cut\" [ref=2] actions: click",
                 snapshot(panel));
     }
 
@@ -973,10 +973,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(menuBar);
 
         assertEquals(
-                "- panel\n"
-                + "  - menu_bar\n"
-                + "    - menu \"Actions\" [ref=1] actions: click\n"
-                + "      - menu_item \"Delete\" [ref=2] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JMenuBar (menu_bar)\n"
+                + "    - JMenu (menu) \"Actions\" [ref=1] actions: click\n"
+                + "      - JMenuItem (menu_item) \"Delete\" [ref=2] actions: click",
                 snapshot(panel));
     }
 
@@ -997,11 +997,11 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         // Leaf nodes "A" and "B" are kept because they have accessible names,
         // but they have no actions so carry no ref.
         assertEquals(
-                "- panel\n"
-                + "  - tree\n"
-                + "    - label \"Root\" [ref=1, expanded] actions: toggle_expand, single-selection\n"
-                + "      - label \"A\" [collapsed]\n"
-                + "      - label \"B\" [collapsed]",
+                "- JPanel (panel)\n"
+                + "  - JTree (tree)\n"
+                + "    - (label) \"Root\" [ref=1, expanded] actions: toggle_expand, single-selection\n"
+                + "      - (label) \"A\" [collapsed]\n"
+                + "      - (label) \"B\" [collapsed]",
                 output);
     }
 
@@ -1011,10 +1011,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(new JList<>(new String[]{"Alpha", "Beta"}));
 
         assertEquals(
-                "- panel\n"
-                + "  - list [ref=1] actions: multi-selection\n"
-                + "    - label \"Alpha\" [ref=2] actions: click\n"
-                + "    - label \"Beta\" [ref=3] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JList (list) [ref=1] actions: multi-selection\n"
+                + "    - (label) \"Alpha\" [ref=2] actions: click\n"
+                + "    - (label) \"Beta\" [ref=3] actions: click",
                 snapshot(panel));
     }
 
@@ -1054,15 +1054,15 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         root.add(loginPanel);
 
         assertEquals(
-                "- panel\n"
-                + "  - panel \"Login\"\n"
-                + "    - label \"Username\"\n"
-                + "    - text \"Username\" [ref=1] actions: get_text, set_text\n"
-                + "    - label \"Password\"\n"
-                + "    - password_text \"Password\" [ref=2] actions: get_text, set_text\n"
-                + "    - check_box \"Remember me\" [ref=3] actions: click\n"
-                + "    - push_button \"Sign In\" [ref=4] actions: click\n"
-                + "    - push_button \"Cancel\" [ref=5] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JPanel (panel) \"Login\"\n"
+                + "    - JLabel (label) \"Username\"\n"
+                + "    - JTextField (text) \"Username\" [ref=1] actions: get_text, set_text\n"
+                + "    - JLabel (label) \"Password\"\n"
+                + "    - JPasswordField (password_text) \"Password\" [ref=2] actions: get_text, set_text\n"
+                + "    - JCheckBox (check_box) \"Remember me\" [ref=3] actions: click\n"
+                + "    - JButton (push_button) \"Sign In\" [ref=4] actions: click\n"
+                + "    - JButton (push_button) \"Cancel\" [ref=5] actions: click",
                 snapshot(root));
     }
 
@@ -1085,8 +1085,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         McpSchema.TextContent textContent = (McpSchema.TextContent) result.content().get(0);
         assertEquals(
-                "- panel\n"
-                + "  - push_button \"MCP\" [ref=1] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"MCP\" [ref=1] actions: click",
                 textContent.text());
     }
 
@@ -1114,8 +1114,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 filterHeader("Save") + "\n"
-                + "- panel\n"
-                + "  - push_button \"Save\" [ref=1] actions: click",
+                + "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"Save\" [ref=1] actions: click",
                 output);
     }
 
@@ -1128,8 +1128,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 filterHeader("save") + "\n"
-                + "- panel\n"
-                + "  - push_button \"Save\" [ref=1] actions: click",
+                + "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"Save\" [ref=1] actions: click",
                 output);
     }
 
@@ -1155,8 +1155,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 filterHeader("Third") + "\n"
-                + "- panel\n"
-                + "  - push_button \"Third\" [ref=3] actions: click",
+                + "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"Third\" [ref=3] actions: click",
                 output);
     }
 
@@ -1173,10 +1173,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 filterHeader("push_button") + "\n"
-                + "- panel\n"
-                + "  - push_button \"A\" [ref=1] actions: click\n"
-                + "- panel\n"
-                + "  - push_button \"B\" [ref=2] actions: click",
+                + "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"A\" [ref=1] actions: click\n"
+                + "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"B\" [ref=2] actions: click",
                 output);
     }
 
@@ -1189,8 +1189,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot(panel);
 
         assertEquals(
-                "- panel\n"
-                + "  - push_button \"Save\" [ref=1] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"Save\" [ref=1] actions: click",
                 output);
     }
 
@@ -1206,8 +1206,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         // Panel (ancestor) is included; "Drop" button and text field are not
         assertEquals(
                 filterHeader("Keep") + "\n"
-                + "- panel\n"
-                + "  - push_button \"Keep\" [ref=1] actions: click",
+                + "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"Keep\" [ref=1] actions: click",
                 output);
     }
 
@@ -1230,10 +1230,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         // even though they don't contain "Toolbar"
         assertEquals(
                 filterHeader("Toolbar") + "\n"
-                + "- panel\n"
-                + "  - panel \"Toolbar\"\n"
-                + "    - push_button \"Open\" [ref=1] actions: click\n"
-                + "    - push_button \"Close\" [ref=2] actions: click",
+                + "- JPanel (panel)\n"
+                + "  - JPanel (panel) \"Toolbar\"\n"
+                + "    - JButton (push_button) \"Open\" [ref=1] actions: click\n"
+                + "    - JButton (push_button) \"Close\" [ref=2] actions: click",
                 output);
     }
 
@@ -1248,7 +1248,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         // "text" also matches push_button's "set_text" in actions... but let's
         // check that the text field is definitely included with its ancestor
-        assertTrue(output.contains("- text [ref=2] actions: get_text, set_text"),
+        assertTrue(output.contains("- JTextField (text) [ref=2] actions: get_text, set_text"),
                 "Text field should be in output");
         assertTrue(output.startsWith(filterHeader("text")),
                 "Output should start with filter header");
@@ -1263,7 +1263,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot("set_text", panel);
 
         // "set_text" matches the text field's actions line
-        assertTrue(output.contains("- text [ref=2] actions: get_text, set_text"),
+        assertTrue(output.contains("- JTextField (text) [ref=2] actions: get_text, set_text"),
                 "Text field should be in output");
         assertTrue(output.startsWith(filterHeader("set_text")),
                 "Output should start with filter header");
@@ -1292,7 +1292,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         // "Save" button should be excluded
         assertTrue(output.startsWith(filterHeader("Customers")),
                 "Should start with filter header");
-        assertTrue(output.contains("table \"Customers\""),
+        assertTrue(output.contains("JTable (table) \"Customers\""),
                 "Table should be in output");
         assertTrue(output.contains("- row 0:"),
                 "First row should be in output");
@@ -1341,9 +1341,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 filterHeader("Target") + "\n"
-                + "- panel\n"
-                + "  - panel \"Right\"\n"
-                + "    - push_button \"Target\" [ref=2] actions: click",
+                + "- JPanel (panel)\n"
+                + "  - JPanel (panel) \"Right\"\n"
+                + "    - JButton (push_button) \"Target\" [ref=2] actions: click",
                 output);
     }
 
@@ -1364,7 +1364,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         ClickRecordingPanel panel = new ClickRecordingPanel();
 
         assertEquals(
-                "- panel [ref=1] actions: click",
+                "- ClickRecordingPanel -> JPanel (panel) [ref=1] actions: click",
                 snapshot(panel));
     }
 
@@ -1376,7 +1376,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.addMouseListener(javax.swing.ToolTipManager.sharedInstance());
 
         assertEquals(
-                "- panel",
+                "- JPanel (panel)",
                 snapshot(panel));
     }
 
@@ -1390,7 +1390,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         // Tier 1 (AccessibleAction) wins — click appears exactly once
         assertEquals(
-                "- push_button \"OK\" [ref=1] actions: click",
+                "- JButton (push_button) \"OK\" [ref=1] actions: click",
                 snapshot(button));
     }
 
@@ -1400,7 +1400,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.setEnabled(false);
 
         assertEquals(
-                "- panel [ref=1, disabled] actions: !click",
+                "- ClickRecordingPanel -> JPanel (panel) [ref=1, disabled] actions: !click",
                 snapshot(panel));
     }
 
@@ -1414,7 +1414,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         // Slider has interactive role — Tier 2 skipped. No click action.
         assertEquals(
-                "- slider [ref=1, horizontal] actions: increment, decrement, get_value, set_value",
+                "- JSlider (slider) [ref=1, horizontal] actions: increment, decrement, get_value, set_value",
                 snapshot(slider));
     }
 
@@ -1428,7 +1428,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         button.setToolTipText("Save the document");
 
         assertEquals(
-                "- push_button \"OK\" \"Save the document\" [ref=1] actions: click",
+                "- JButton (push_button) \"OK\" \"Save the document\" [ref=1] actions: click",
                 snapshot(button));
     }
 
@@ -1439,7 +1439,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         button.setToolTipText("Tooltip should be ignored");
 
         assertEquals(
-                "- push_button \"OK\" \"Real description\" [ref=1] actions: click",
+                "- JButton (push_button) \"OK\" \"Real description\" [ref=1] actions: click",
                 snapshot(button));
     }
 
@@ -1449,7 +1449,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         button.setToolTipText("<html><b>Save</b><br>Persists changes</html>");
 
         assertEquals(
-                "- push_button \"OK\" \"Save Persists changes\" [ref=1] actions: click",
+                "- JButton (push_button) \"OK\" \"Save Persists changes\" [ref=1] actions: click",
                 snapshot(button));
     }
 
@@ -1462,7 +1462,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String expectedDesc = "x".repeat(120) + "\u2026";
         assertEquals(
-                "- push_button \"OK\" \"" + expectedDesc + "\" [ref=1] actions: click",
+                "- JButton (push_button) \"OK\" \"" + expectedDesc + "\" [ref=1] actions: click",
                 snapshot(button));
     }
 
@@ -1476,7 +1476,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String expectedDesc = "y".repeat(120) + "\u2026";
         assertEquals(
-                "- push_button \"OK\" \"" + expectedDesc + "\" [ref=1] actions: click",
+                "- JButton (push_button) \"OK\" \"" + expectedDesc + "\" [ref=1] actions: click",
                 snapshot(button));
     }
 
@@ -1489,7 +1489,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         button.getAccessibleContext().setAccessibleDescription(exactly120);
 
         assertEquals(
-                "- push_button \"OK\" \"" + exactly120 + "\" [ref=1] actions: click",
+                "- JButton (push_button) \"OK\" \"" + exactly120 + "\" [ref=1] actions: click",
                 snapshot(button));
     }
 
@@ -1502,9 +1502,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(tabbedPane);
 
         assertEquals(
-                "- panel\n"
-                + "  - page_tab_list \"General\" [ref=1] actions: single-selection\n"
-                + "    - page_tab 0 \"General\" \"Common settings\" [selected]",
+                "- JPanel (panel)\n"
+                + "  - JTabbedPane (page_tab_list) \"General\" [ref=1] actions: single-selection\n"
+                + "    - (page_tab) 0 \"General\" \"Common settings\" [selected]",
                 snapshot(panel));
     }
 
@@ -1524,10 +1524,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(tabbedPane);
 
         assertEquals(
-                "- panel\n"
-                + "  - page_tab_list \"General\" [ref=1] actions: single-selection\n"
-                + "    - page_tab 0 \"General\" \"Tab tooltip\" [selected]\n"
-                + "      - push_button \"ContentBtn\" \"Content tooltip\" [ref=2] actions: click",
+                "- JPanel (panel)\n"
+                + "  - JTabbedPane (page_tab_list) \"General\" [ref=1] actions: single-selection\n"
+                + "    - (page_tab) 0 \"General\" \"Tab tooltip\" [selected]\n"
+                + "      - JButton (push_button) \"ContentBtn\" \"Content tooltip\" [ref=2] actions: click",
                 snapshot(panel));
     }
 
@@ -1539,7 +1539,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         button.setToolTipText("List<String>");
 
         assertEquals(
-                "- push_button \"OK\" \"List<String>\" [ref=1] actions: click",
+                "- JButton (push_button) \"OK\" \"List<String>\" [ref=1] actions: click",
                 snapshot(button));
     }
 

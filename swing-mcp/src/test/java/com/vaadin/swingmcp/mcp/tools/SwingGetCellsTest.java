@@ -99,9 +99,9 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         String output = getCells(context.getRefOf(list), 5, 3);
         assertEquals(
                 "Showing 3 children from offset 5 (total 20) for list [ref=1]\n"
-                + "- label \"Item-5\" [ref=2] actions: click\n"
-                + "- label \"Item-6\" [ref=3] actions: click\n"
-                + "- label \"Item-7\" [ref=4] actions: click",
+                + "- (label) \"Item-5\" [ref=2] actions: click\n"
+                + "- (label) \"Item-6\" [ref=3] actions: click\n"
+                + "- (label) \"Item-7\" [ref=4] actions: click",
                 output);
     }
 
@@ -156,9 +156,9 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         String output2 = getCells(1, 10, 3);
         assertEquals(
                 "Showing 3 children from offset 10 (total 20) for list [ref=1]\n"
-                + "- label \"Item-10\" [ref=2] actions: click\n"
-                + "- label \"Item-11\" [ref=3] actions: click\n"
-                + "- label \"Item-12\" [ref=4] actions: click",
+                + "- (label) \"Item-10\" [ref=2] actions: click\n"
+                + "- (label) \"Item-11\" [ref=3] actions: click\n"
+                + "- (label) \"Item-12\" [ref=4] actions: click",
                 output2);
     }
 
@@ -273,9 +273,9 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         String output = getCells(context.getRefOf(list), 0, 10);
         assertEquals(
                 "Showing 3 children from offset 0 (total 3) for list [ref=1]\n"
-                + "- label \"A\" [ref=2] actions: click\n"
-                + "- label \"B\" [ref=3] actions: click\n"
-                + "- label \"C\" [ref=4] actions: click",
+                + "- (label) \"A\" [ref=2] actions: click\n"
+                + "- (label) \"B\" [ref=3] actions: click\n"
+                + "- (label) \"C\" [ref=4] actions: click",
                 output);
     }
 
