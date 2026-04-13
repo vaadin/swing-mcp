@@ -2,6 +2,7 @@ package com.vaadin.swingmcp.mcp;
 
 import javax.accessibility.*;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -436,6 +437,88 @@ public final class SwingUtils {
         if (window instanceof JFrame &&
                 ((JFrame) window).getDefaultCloseOperation() == WindowConstants.EXIT_ON_CLOSE) return false;
         return true;
+    }
+
+    /**
+     * Returns the tooltip text associated with the given accessible as plain
+     * text, or {@code null} if none is available.
+     * <p>
+     * Two sources are consulted:
+     * <ol>
+     *   <li><b>JTabbedPane per-tab tooltips</b> — when {@code a} is a tab
+     *       (role {@link AccessibleRole#PAGE_TAB}) whose accessible parent is
+     *       a {@link JTabbedPane}, the tooltip stored via
+     *       {@link JTabbedPane#setToolTipTextAt(int, String)} is returned.
+     *       These per-tab tooltips are not reachable via
+     *       {@link JComponent#getToolTipText()} — they live in a separate
+     *       per-index map on the tabbed pane.</li>
+     *   <li><b>JComponent component-level tooltip</b> — for any other
+     *       {@link JComponent}, the value of
+     *       {@link JComponent#getToolTipText()} is returned.</li>
+     * </ol>
+     * <p>
+     * If the resolved tooltip starts with {@code <html>} (case-insensitive,
+     * Swing's HTML rendering trigger), the result is converted to plain text:
+     * each tag is replaced with a single space, the four standard entities
+     * ({@code &amp;}, {@code &lt;}, {@code &gt;}, {@code &nbsp;}) are decoded,
+     * runs of whitespace are collapsed, and the string is trimmed. Tooltips
+     * without the {@code <html>} prefix are returned verbatim — Swing only
+     * renders strings starting with {@code <html>} as HTML, so a literal
+     * tooltip such as {@code "List<String>"} must be preserved unchanged.
+     * <p>
+     * The result is not truncated — callers that need a length cap apply it
+     * themselves.
+     * <p>
+     * Per-cell, per-row, per-node and per-item tooltips on
+     * {@link JTable}, {@link javax.swing.JList}, {@link javax.swing.JTree}
+     * and {@link JTableHeader} are <strong>not</strong> exposed: those are
+     * computed on the fly by the cell renderer in response to a
+     * {@link MouseEvent}, and there is no MouseEvent available here.
+     */
+    public static String getTooltipAsText(Accessible a) {
+        if (a == null) return null;
+        AccessibleContext ctx = a.getAccessibleContext();
+
+        String raw = null;
+
+        // JTabbedPane per-tab tooltip. The tab itself is exposed as an
+        // Accessible child (the package-private JTabbedPane$Page) with role
+        // PAGE_TAB; its tooltip is stored by index on the parent JTabbedPane.
+        // We gate on the role so a tab-content JComponent (whose accessible
+        // parent is also the JTabbedPane) is NOT misidentified as a tab.
+        if (ctx != null && ctx.getAccessibleRole() == AccessibleRole.PAGE_TAB) {
+            Accessible parent = ctx.getAccessibleParent();
+            if (parent instanceof JTabbedPane) {
+                int index = ctx.getAccessibleIndexInParent();
+                if (index >= 0) {
+                    raw = ((JTabbedPane) parent).getToolTipTextAt(index);
+                }
+            }
+        } else if (a instanceof JComponent) {
+            raw = ((JComponent) a).getToolTipText();
+        }
+
+        if (raw == null) return null;
+
+        // Swing only treats the string as HTML when it starts with "<html>"
+        // (case-insensitive). For any other string, return it verbatim — a
+        // literal tooltip like "List<String>" must not have its angle
+        // brackets stripped.
+        if (!raw.regionMatches(true, 0, "<html>", 0, 6)) {
+            return raw;
+        }
+
+        // Tag → space (so "Save<br>file" becomes "Save file" rather than
+        // "Savefile"). Then decode the four standard entities. &amp; is
+        // decoded last so source text like "&amp;lt;" round-trips to the
+        // literal "&lt;" rather than being double-decoded to "<".
+        String text = raw.replaceAll("<[^>]*>", " ");
+        text = text.replace("&nbsp;", " ")
+                   .replace("&lt;", "<")
+                   .replace("&gt;", ">")
+                   .replace("&amp;", "&");
+        text = text.replaceAll("\\s+", " ").trim();
+        return text;
     }
 
     /**
