@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * MCP tool {@code swing_get_items}: lists selectable items of a UI
+ * MCP tool {@code swing_get_items}: lists items of a UI
  * component by ref, with paging support.
  *
  * <p>Supported components: {@code JList}, {@code JComboBox}, {@code JTable}.
@@ -37,7 +37,7 @@ public class SwingGetItemsTool extends AbstractSwingTool {
 
     @Override
     public String getDescription() {
-        return "List selectable items of a UI component by ref. Supported components: JList, "
+        return "List items of a UI component by ref. Supported components: JList, "
                 + "JComboBox, JTable. Returns a paged JSON array of items (0-based index + name). "
                 + "Indices are in the selection item index space \u2014 pass them directly to "
                 + "swing_set_selection. For JTable, this is the canonical way to page through rows "

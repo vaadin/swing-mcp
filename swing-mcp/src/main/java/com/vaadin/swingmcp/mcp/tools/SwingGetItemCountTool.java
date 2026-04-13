@@ -8,7 +8,7 @@ import javax.accessibility.Accessible;
 
 /**
  * MCP tool {@code swing_get_item_count}: returns the total number
- * of selectable items of a UI component by ref, as a plain integer.
+ * of items of a UI component by ref, as a plain integer.
  *
  * <p>This is a thin wrapper around {@link SwingUtils#getItemCount}
  * that lets the AI client learn the item count without fetching any items.</p>
@@ -24,7 +24,7 @@ public class SwingGetItemCountTool extends AbstractSwingTool {
 
     @Override
     public String getDescription() {
-        return "Get the total number of selectable items of a UI component by ref. "
+        return "Get the total number of items of a UI component by ref. "
                 + "Supported components: JList, JComboBox, JTable. Returns the count as a "
                 + "plain integer. For JTable, this is the canonical way to get the row count "
                 + "regardless of selection mode (use this instead of swing_get_cell_count, "

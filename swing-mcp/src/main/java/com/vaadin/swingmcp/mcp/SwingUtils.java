@@ -299,8 +299,8 @@ public final class SwingUtils {
      *       index straight to {@code swing_set_selection}.</li>
      * </ul>
      *
-     * @see <a href="use-case-017-swing-get-selectable-items.md">UC-017 BR-03</a>
-     * @see <a href="use-case-018-swing-get-selectable-items-count.md">UC-018 BR-03</a>
+     * @see <a href="use-case-017-swing-get-items.md">UC-017 BR-03</a>
+     * @see <a href="use-case-018-swing-get-item-count.md">UC-018 BR-03</a>
      */
     public static boolean supportsGetItems(Accessible a) {
         if (a instanceof JTabbedPane) {
@@ -572,7 +572,7 @@ public final class SwingUtils {
     public static final int MAX_ROW_NAME_COLUMNS = 10;
 
     /**
-     * Returns the number of selectable items for the given accessible.
+     * Returns the number of items for the given accessible.
      * <p>
      * The count depends on the component type:
      * <ul>
@@ -588,7 +588,7 @@ public final class SwingUtils {
      * its tab count is derivable from the snapshot instead.
      *
      * @param a an accessible that passes {@link #supportsGetItems}
-     * @return the number of selectable items
+     * @return the number of items
      */
     public static int getItemCount(Accessible a) {
         AccessibleContext ac = a.getAccessibleContext();
