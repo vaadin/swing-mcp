@@ -76,10 +76,8 @@ Execution order:
 
 ### Component matrix
 
-Each component from the verification matrix gets a dedicated test method.
+Each matrix component from `verification.md` gets a dedicated test method.
 
-**Expected to succeed (`get_text` supported):**
-`JTextField`, `JPasswordField`, `JTextArea`, `JSpinner` (delegates to its inner `JFormattedTextField` editor via `AccessibleJSpinner`)
+**Succeed (`get_text` supported):** `JTextField`, `JPasswordField`, `JTextArea`, `JSpinner` (delegates to its inner `JFormattedTextField` editor via `AccessibleJSpinner`).
 
-**Expected to fail with "Component does not support get_text" error:**
-`JButton`, `JCheckBox`, `JRadioButton`, `JComboBox`, `JToggleButton`, `JSlider`, `JPanel`, `JScrollPane`, `JTabbedPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`, `JList`
+All other matrix components return `Component does not support get_text`.

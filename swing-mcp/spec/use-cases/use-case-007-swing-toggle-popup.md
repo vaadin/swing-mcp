@@ -56,10 +56,8 @@ Execution order:
 
 ### Component matrix
 
-Each component from the verification matrix gets a dedicated test method.
+Each matrix component from `verification.md` gets a dedicated test method.
 
-**Expected to succeed (`toggle_popup` supported):**
-`JComboBox`
+**Succeed (`toggle_popup` supported):** `JComboBox`.
 
-**Expected to fail with "Component does not support toggle_popup" error:**
-`JButton`, `JTextField`, `JPasswordField`, `JTextArea`, `JCheckBox`, `JRadioButton`, `JToggleButton`, `JSpinner`, `JSlider`, `JPanel`, `JScrollPane`, `JTabbedPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`, `JList`
+All other matrix components return `Component does not support toggle_popup`.

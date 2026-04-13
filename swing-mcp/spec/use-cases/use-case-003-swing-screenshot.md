@@ -43,30 +43,7 @@ sized via `panel.setSize(w, h)` + `panel.doLayout()` (never shown on screen).
 
 #### Component matrix (headless)
 
-Each component is placed inside a 200×100 `JPanel` (sized via `setSize` + `doLayout`) and rendered.
-All components are expected to render successfully to a valid 200×100 PNG.
-
-- [x] `JButton`
-- [x] `JTextField`
-- [x] `JPasswordField`
-- [x] `JTextArea`
-- [x] `JCheckBox`
-- [x] `JRadioButton` (with `ButtonGroup`)
-- [x] `JComboBox`
-- [x] `JToggleButton`
-- [x] `JSpinner`
-- [x] `JSlider`
-- [x] `JPanel`
-- [x] `JScrollPane`
-- [x] `JTabbedPane`
-- [x] `JSplitPane`
-- [x] `JLabel`
-- [x] `JProgressBar`
-- [x] `JMenuBar`
-- [x] `JMenu`
-- [x] `JMenuItem`
-- [x] `JToolBar`
-- [x] `JList`
+- [x] Every matrix component from `verification.md` is placed inside a 200×100 `JPanel` (sized via `setSize` + `doLayout`) and renders to a valid 200×100 PNG.
 
 ### Screen-mode tests (`src/testSwing`) — `SwingScreenshotScreenTest`
 
@@ -78,8 +55,4 @@ Uses real `JFrame`/`JDialog` instances on an actual display.
 
 #### Component matrix (screen-mode)
 
-Each top-level window is shown on screen, sized to 200×100, and rendered.
-All are expected to produce a valid 200×100 PNG.
-
-- [x] `JFrame`
-- [x] `JDialog`
+- [x] Every top-level window in the matrix (`JFrame`, `JDialog`) is shown on screen at 200×100 and renders to a valid 200×100 PNG.

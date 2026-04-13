@@ -144,12 +144,11 @@ Verified empirically on Java 21 OpenJDK in headless mode (`AccessibleSelectionPr
 
 ### Component matrix
 
-Each component from the verification matrix gets a dedicated test method.
-Validated by probe tests (`AccessibleSelectionProbeTest`, `AccessibleSelectionProbeTest2`,
-`AccessibleSelectionProbeTreeTest`) on 2026-04-07.
+Each matrix component from `verification.md` gets a dedicated test method. Selection behaviour validated by probe tests (`AccessibleSelectionProbeTest`, `AccessibleSelectionProbeTest2`, `AccessibleSelectionProbeTreeTest`) on 2026-04-07.
 
-**Expected to succeed (`get_selection` supported):**
-`JList`, `JTabbedPane`, `JComboBox`, `JTable` (row-selection mode only — the default)
+**Succeed (`get_selection` supported):** `JList`, `JTabbedPane`, `JComboBox`, `JTable` (row-selection mode only — the default).
 
-**Expected to fail with "Component does not support get_selection" error:**
-`JTree` (suppressed — tree-level `AccessibleSelection` is non-functional; see design notes), `JTable` (column/cell/no-selection modes — suppressed by BR-10), `JButton`, `JCheckBox`, `JRadioButton`, `JTextField`, `JTextArea`, `JToggleButton`, `JSlider`, `JPanel`, `JScrollPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JSpinner`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`
+**Fail with "Component does not support get_selection":**
+- `JTree` — suppressed; tree-level `AccessibleSelection` is non-functional (see design notes).
+- `JTable` in column/cell/no-selection modes — suppressed by BR-10.
+- All other matrix components.

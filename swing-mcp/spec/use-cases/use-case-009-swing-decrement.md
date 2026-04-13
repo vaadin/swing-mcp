@@ -60,10 +60,8 @@ Execution order:
 
 ### Component matrix
 
-Each component from the verification matrix gets a dedicated test method.
+Each matrix component from `verification.md` gets a dedicated test method.
 
-**Expected to succeed (`decrement` supported):**
-`JSpinner`, `JSlider`
+**Succeed (`decrement` supported):** `JSpinner`, `JSlider`.
 
-**Expected to fail with "Component does not support decrement" error:**
-`JButton`, `JTextField`, `JPasswordField`, `JTextArea`, `JCheckBox`, `JRadioButton`, `JComboBox`, `JToggleButton`, `JPanel`, `JScrollPane`, `JTabbedPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`, `JList`
+All other matrix components return `Component does not support decrement`.

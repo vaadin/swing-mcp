@@ -70,10 +70,11 @@ Execution order:
 
 ### Component matrix
 
-Each component from the verification matrix gets a dedicated test method.
+Each matrix component from `verification.md` gets a dedicated test method.
 
-**Expected to succeed (`get_item_count` supported):**
-`JList`, `JComboBox`, `JTable` (any selection mode — row / column / cell / no-selection — since the read path is selection-mode agnostic per BR-03)
+**Succeed (`get_item_count` supported):** `JList`, `JComboBox`, `JTable` (any selection mode — read path is selection-mode agnostic per BR-03).
 
-**Expected to fail with "Component does not support get_item_count" error:**
-`JTabbedPane` (dropped per P-001 — tabs are inline in the snapshot), `JTree` (suppressed), `JButton`, `JCheckBox`, `JRadioButton`, `JTextField`, `JTextArea`, `JToggleButton`, `JSlider`, `JPanel`, `JScrollPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JSpinner`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`
+**Fail with "Component does not support get_item_count":**
+- `JTabbedPane` — dropped per P-001.
+- `JTree` — suppressed.
+- All other matrix components.

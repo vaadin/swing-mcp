@@ -56,10 +56,8 @@ Execution order:
 
 ### Component matrix
 
-`JTree` is not part of the standard 20-component verification matrix (see `verification.md`), but is the primary target for this tool. The standard 20 components all fail.
+`JTree` is the primary target for this tool — the only matrix component that supports `toggle_expand`.
 
-**Expected to succeed (`toggle_expand` supported):**
-`JTree` non-leaf nodes only
+**Succeed (`toggle_expand` supported):** `JTree` non-leaf nodes only.
 
-**Expected to fail with "Component does not support toggle_expand" error:**
-`JTree` leaf nodes, `JButton`, `JTextField`, `JPasswordField`, `JTextArea`, `JCheckBox`, `JRadioButton`, `JComboBox`, `JToggleButton`, `JSpinner`, `JSlider`, `JPanel`, `JScrollPane`, `JTabbedPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`, `JList`
+**Fail with "Component does not support toggle_expand":** `JTree` leaf nodes; all other matrix components.

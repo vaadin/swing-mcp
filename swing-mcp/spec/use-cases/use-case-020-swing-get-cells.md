@@ -100,13 +100,10 @@ Execution order:
 
 ### Component matrix
 
-Each component from the verification matrix gets a dedicated test method.
+Each matrix component from `verification.md` gets a dedicated test method.
 
-**Expected to succeed (`get_cells` supported — any supported large data component regardless of child count):**
-`JList`, `JTree`
+**Succeed (`get_cells` supported):** `JList`, `JTree` — any supported large data component regardless of child count.
 
-**Expected to fail with a JTable-specific error redirecting to `swing_get_items`:**
-`JTable`
+**Fail with a JTable-specific error redirecting to `swing_get_items`:** `JTable`.
 
-**Expected to fail with "Component does not support get_cells" error:**
-`JButton`, `JCheckBox`, `JRadioButton`, `JTextField`, `JTextArea`, `JComboBox`, `JToggleButton`, `JSlider`, `JPanel`, `JScrollPane`, `JTabbedPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JSpinner`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`
+**Fail with "Component does not support get_cells":** all other matrix components.

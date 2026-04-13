@@ -160,10 +160,11 @@ Execution order:
 
 ### Component matrix
 
-Each component from the verification matrix gets a dedicated test method.
+Each matrix component from `verification.md` gets a dedicated test method.
 
-**Expected to succeed (`set_selection` supported):**
-`JList`, `JTabbedPane`, `JComboBox`, `JTable` (row-selection mode only — the default)
+**Succeed (`set_selection` supported):** `JList`, `JTabbedPane`, `JComboBox`, `JTable` (row-selection mode only — the default).
 
-**Expected to fail with "Component does not support set_selection" error:**
-`JTree` (suppressed), `JTable` (column/cell/no-selection modes — suppressed by row-selection gate), `JButton`, `JCheckBox`, `JRadioButton`, `JTextField`, `JTextArea`, `JToggleButton`, `JSlider`, `JPanel`, `JScrollPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JSpinner`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`
+**Fail with "Component does not support set_selection":**
+- `JTree` — suppressed.
+- `JTable` in column/cell/no-selection modes — suppressed by row-selection gate.
+- All other matrix components.

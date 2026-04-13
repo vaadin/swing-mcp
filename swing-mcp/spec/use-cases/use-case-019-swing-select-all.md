@@ -126,13 +126,13 @@ Verified empirically on Java 21 OpenJDK in headless mode (`JTableSelectAllProbeT
 
 ### Component matrix
 
-Each component from the verification matrix gets a dedicated test method.
+Each matrix component from `verification.md` gets a dedicated test method.
 
-**Expected to succeed (`select_all` supported):**
-`JList` (multi-selection), `JTable` (row-selection, multi-selection mode)
+**Succeed (`select_all` supported):** `JList` (multi-selection), `JTable` (row-selection, multi-selection mode).
 
-**Expected to fail with "single-selection mode" error:**
-`JList` (single-selection), `JTabbedPane`, `JComboBox`, `JTable` (single-row-selection)
+**Fail with "single-selection mode" error:** `JList` (single-selection), `JTabbedPane`, `JComboBox`, `JTable` (single-row-selection).
 
-**Expected to fail with "Component does not support select_all" error:**
-`JTree` (suppressed), `JTable` (column/cell/no-selection modes — suppressed by row-selection gate), `JButton`, `JCheckBox`, `JRadioButton`, `JTextField`, `JTextArea`, `JToggleButton`, `JSlider`, `JPanel`, `JScrollPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JSpinner`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`
+**Fail with "Component does not support select_all":**
+- `JTree` — suppressed.
+- `JTable` in column/cell/no-selection modes — suppressed by row-selection gate.
+- All other matrix components.

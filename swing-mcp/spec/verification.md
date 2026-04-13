@@ -44,7 +44,7 @@ Every use case must have unit tests before it is considered implemented. See `ar
 
 ### Component Matrix
 
-Every tool must be tested against a standard set of 20 Swing components. Some
+Every tool must be tested against the standard Swing components listed below. Some
 tools will succeed on a given component (e.g., `swing_click` on a `JButton`),
 while others will correctly fail (e.g., `swing_click` on a `JLabel`). Both
 outcomes are valuable test data.

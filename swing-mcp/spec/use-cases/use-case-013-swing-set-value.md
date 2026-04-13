@@ -96,10 +96,11 @@ Execution order:
 
 ### Component matrix
 
-Each component from the verification matrix gets a dedicated test method.
+Each matrix component from `verification.md` gets a dedicated test method.
 
-**Expected to succeed (`set_value` supported):**
-`JSlider`, `JSpinner(SpinnerNumberModel)`, `JSplitPane`
+**Succeed (`set_value` supported):** `JSlider`, `JSpinner(SpinnerNumberModel)`, `JSplitPane`.
 
-**Expected to fail with "Component does not support set_value" error:**
-`JProgressBar` (read-only value), `JSpinner(SpinnerDateModel)`, `JSpinner(SpinnerListModel)`, `JButton`, `JCheckBox`, `JRadioButton`, `JTextField`, `JTextArea`, `JComboBox`, `JToggleButton`, `JLabel`, `JPanel`, `JScrollPane`, `JTabbedPane`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`, `JList`
+**Fail with "Component does not support set_value":**
+- `JProgressBar` — read-only value role.
+- `JSpinner(SpinnerDateModel)`, `JSpinner(SpinnerListModel)` — non-Number models.
+- All other matrix components.

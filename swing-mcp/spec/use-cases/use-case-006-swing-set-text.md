@@ -75,10 +75,8 @@ Execution order:
 
 ### Component matrix
 
-Each component from the verification matrix gets a dedicated test method.
+Each matrix component from `verification.md` gets a dedicated test method.
 
-**Expected to succeed (`set_text` supported):**
-`JTextField`, `JPasswordField`, `JTextArea`
+**Succeed (`set_text` supported):** `JTextField`, `JPasswordField`, `JTextArea`.
 
-**Expected to fail with "Component does not support set_text" error:**
-`JButton`, `JCheckBox`, `JRadioButton`, `JComboBox`, `JToggleButton`, `JSpinner`, `JSlider`, `JPanel`, `JScrollPane`, `JTabbedPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`, `JList`
+All other matrix components return `Component does not support set_text`.

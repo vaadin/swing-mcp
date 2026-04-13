@@ -81,10 +81,11 @@ Execution order:
 
 ### Component matrix
 
-Each component from the verification matrix gets a dedicated test method.
+Each matrix component from `verification.md` gets a dedicated test method.
 
-**Expected to succeed (`get_value` supported):**
-`JSlider`, `JSpinner(SpinnerNumberModel)`, `JProgressBar`, `JSplitPane`
+**Succeed (`get_value` supported):** `JSlider`, `JSpinner(SpinnerNumberModel)`, `JProgressBar`, `JSplitPane`.
 
-**Expected to fail with "Component does not support get_value" error:**
-`JSpinner(SpinnerDateModel)`, `JSpinner(SpinnerListModel)`, `JButton`, `JCheckBox`, `JRadioButton`, `JTextField`, `JTextArea`, `JComboBox`, `JToggleButton`, `JLabel`, `JPanel`, `JScrollPane`, `JTabbedPane` (role `PAGE_TAB_LIST` — `getAccessibleValue()` returns `null`; verified by probe test), `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`, `JList`
+**Fail with "Component does not support get_value":**
+- `JSpinner(SpinnerDateModel)`, `JSpinner(SpinnerListModel)` — non-Number models (see architecture.md § 5).
+- `JTabbedPane` — role `PAGE_TAB_LIST`; `getAccessibleValue()` returns `null` (verified by probe test).
+- All other matrix components.
