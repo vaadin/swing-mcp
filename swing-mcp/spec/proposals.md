@@ -230,16 +230,8 @@ renames.
    two snapshot tests in commit 043a71b lock the contract: a disabled tab
    emits `[disabled]`, and a child button on a disabled-but-selected tab
    does NOT inherit `[disabled]` (Swing fidelity — see Semantics note).
-2. **Phase A.2 — snapshot enhancement.** **Scope reduced to tab-index
-   emission only** — `[disabled]` emission is done (see A.1). Add the
-   `role == PAGE_TAB` branch to `SnapshotNode.calculateSelfLine()` that
-   emits `ctx.getAccessibleIndexInParent()` as `- page_tab N "title"`
-   (mirrors the JTable `- row N: ...` pattern). Add tests covering:
-   enabled tab, selected tab, tab with nested content, multi-tab pane.
-   Also update the two existing tests from commit 043a71b (which currently
-   assert `- page_tab "Tab1"`) to assert the new `- page_tab 0 "Tab1"`
-   form — verify `[disabled, selected]` ordering stays stable.
-3. **Phase A.3 — spec.**
+2. **Phase A.2 — spec.** Spec the two upcoming code changes in full before
+   any code is written (per CLAUDE.md § "Ways of Working" — specs first).
    - **UC-002**: document the new `- page_tab N "title"` rendering (example
      + the Swing-fidelity-everywhere `[disabled]` semantics note near SC-2).
    - **UC-017**: remove JTabbedPane from the component matrix; remove
@@ -255,7 +247,17 @@ renames.
      `[disabled]` marker on a `page_tab` accurately foreshadows UC-015
      BR-14's refusal of disabled-tab selection, so an AI reading the
      snapshot no longer needs out-of-band policy knowledge.
-4. **Phase A.4 — implement.**
+3. **Phase A.3 — snapshot enhancement (code).** Implement the rendering
+   spec'd in A.2 (UC-002). Add the `role == PAGE_TAB` branch to
+   `SnapshotNode.calculateSelfLine()` that emits
+   `ctx.getAccessibleIndexInParent()` as `- page_tab N "title"` (mirrors
+   the JTable `- row N: ...` pattern). Add tests covering: enabled tab,
+   selected tab, tab with nested content, multi-tab pane. Also update the
+   two existing tests from commit 043a71b (which currently assert
+   `- page_tab "Tab1"`) to assert the new `- page_tab 0 "Tab1"` form —
+   verify `[disabled, selected]` ordering stays stable.
+4. **Phase A.4 — drop JTabbedPane from enumerate (code).** Implement the
+   removal spec'd in A.2 (UC-017, UC-018).
    - Update `SwingUtils.supportsGetSelectableItems` and
      `SwingUtils.getSelectableItemsCount` to exclude JTabbedPane.
    - Remove the `instanceof JTabbedPane` branch from
