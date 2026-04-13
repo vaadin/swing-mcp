@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** obtain an accessibility tree snapshot of the Swing application **so that** I can understand the current UI structure and identify components for interaction.
 
-**Status:** Implemented
+**Status:** Approved (amended 2026-04-13 — `get_cells` advertising narrowed to JList/JTree; re-implementation pending)
 **Date:** 2026-03-26
 
 ---
@@ -110,7 +110,7 @@ After Stages 1 and 2, any surviving node is included. The following criteria ser
 |----|-----------|-----------------|
 | AI-1 | Has a non-structural accessible role | See **semantic roles** list below |
 | AI-2 | Has an accessible name | `getAccessibleName()` non-null and non-empty |
-| AI-3 | Has at least one action | Any action detected by the BR-06 algorithm (click, toggle_popup, increment, decrement, toggle_expand, get_text, set_text, get_value, set_value, single-selection, multi-selection, get_cell_count, get_cells, close) |
+| AI-3 | Has at least one action | Any action detected by the BR-06 algorithm (click, toggle_popup, increment, decrement, toggle_expand, get_text, set_text, get_value, set_value, single-selection, multi-selection, get_cell_count, get_cells, close). Note: `get_cell_count`/`get_cells` are only advertised for JList/JTree (not JTable) — see step 6b. |
 | AI-4 | Has `AccessibleText` with content, or `AccessibleValue` | Component carries meaningful data |
 | AI-5 | Is focused | `AccessibleState.FOCUSED` in state set |
 
@@ -212,7 +212,7 @@ survives pruning, and what it looks like in the snapshot output.
 | *(child of JList)* | `LABEL` | No | `  - label "Item 1" [ref=2] actions: click` |
 | `JTree` | `TREE` | No | `- tree [ref=1] actions: get_cell_count, get_cells` |
 | *(non-leaf tree node)* | varies | No | `  - label "Folder" [ref=2] actions: toggle_expand, click` |
-| `JTable` | `TABLE` | No | `- table [ref=1] columns: [ID, Name, City] actions: multi-selection, get_cell_count, get_cells` (with row children: `- row 0: 1 \| Alice \| NY`) |
+| `JTable` | `TABLE` | No | `- table [ref=1] columns: [ID, Name, City] actions: multi-selection` (with row children: `- row 0: 1 \| Alice \| NY`). Row-level access is via `swing_get_selectable_items` (implicit from `single-selection`/`multi-selection`); JTable does NOT advertise `get_cell_count` or `get_cells`. |
 
 ### Value Components
 
@@ -338,7 +338,7 @@ For each node, collect actions by running the following checks in order. All det
    
    These are **group labels**, not individual actions. The AI learns which individual selection tools are available from the tool descriptions (sent once at MCP session start). `single-selection` means `swing_get_selection`, `swing_set_selection`, `swing_clear_selection`, `swing_get_selectable_items`, `swing_get_selectable_items_count` are callable. `multi-selection` means all of those plus `swing_select_all`. See **architecture.md § 6 "Selection Action Groups"** for detection methods and `SwingUtils` API.
 
-6b. **Content discovery (cells):** If the component is a large data component (`isLargeDataComponent`: role is `TABLE`, `LIST`, or `TREE`) **and** its accessible children count exceeds `MAX_DATA_ROW_NODES` (i.e. the snapshot truncated its children) → add `get_cell_count`, `get_cells`. These are independent of selection — they operate in the accessible children index space for discovering content beyond the snapshot cap.
+6b. **Content discovery (cells):** If the component's role is `LIST` or `TREE` (`isGetCellsSupported`) **and** its accessible children count exceeds `MAX_DATA_ROW_NODES` (i.e. the snapshot truncated its children) → add `get_cell_count`, `get_cells`. These are independent of selection — they operate in the accessible children index space for discovering content beyond the snapshot cap and returning refs for actionable children inside cell renderers. **JTable is excluded** from this rule: table cells are stamp-painted via `CellRendererPane` and surface as plain text `LABEL`s with no actions, so `get_cells` can never return an actionable ref on a JTable; the canonical row-access tool for JTable is `swing_get_selectable_items` (UC-017 BR-09), which is always implicitly available via the `single-selection`/`multi-selection` group labels.
 
 7. `supportsClose()` → add `close`
 
@@ -398,6 +398,8 @@ Tree filtering fixes both problems: ancestors give the AI a path from the root (
 - [x] A JTable NOT inside a JScrollPane (header not visible) does NOT show `columns:` (SC-6).
 - [x] JTable children are rendered as pipe-separated row lines with 0-based index (`- row 0: Val1 | Val2 | Val3`), not individual cell labels (SC-6).
 - [x] JTable truncation summary reads `... and N more rows` (not `... and N more items`) (SC-6).
+- [ ] A truncated JTable node does NOT advertise `get_cell_count` or `get_cells` in its action list (step 6b — JTable excluded).
+- [x] A truncated JList/JTree node advertises `get_cell_count` and `get_cells` in its action list (step 6b).
 - [x] The JTableHeader panel (with column name labels) is suppressed from the snapshot tree when SC-6 applies (SC-7).
 
 ---

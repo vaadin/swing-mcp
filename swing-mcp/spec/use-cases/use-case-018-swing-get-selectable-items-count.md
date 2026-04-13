@@ -17,7 +17,7 @@
 - The tool returns the total count as a plain integer string (e.g. `"200"`).
 - I use the count to decide whether and how to page through `swing_get_selectable_items`.
 
-**Tool description:** "Get the total number of selectable items of a UI component by ref. Returns the count as a plain integer. For JTable, this is the row count (only row-selection mode is supported). Requires a ref obtained from swing_snapshot or swing_get_cells."
+**Tool description:** "Get the total number of selectable items of a UI component by ref. Returns the count as a plain integer. For JTable, this is the canonical way to get the row count (only row-selection mode is supported; use this instead of swing_get_cell_count, which does not support JTable). Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 

@@ -708,8 +708,8 @@ Other specs reference this table instead of duplicating detection logic.
 | `set_value` | `supportsSetValue()` | `getAccessibleValue()` non-null AND `getCurrentAccessibleValue()` non-null AND role not in `READ_ONLY_VALUE_ROLES` | `swing_set_value` | Only exposed for components a user can actually modify. `JProgressBar` is explicitly excluded (writable at the JDK level, suppressed by policy). `JSpinner` with non-Number model is excluded by the `getCurrentAccessibleValue()` null-check. For `JSpinner(SpinnerNumberModel)`, prefer the text-path over `setCurrentAccessibleValue` to avoid type corruption — see § 5 "JSpinner — special handling required". |
 | `single-selection` | `supportsSingleSelection()` | `supportsSelection()` AND NOT `isMultiSelectable()` | *(group label)* | Snapshot action group label. Signals that selection tools (`swing_get_selection`, `swing_set_selection`, `swing_clear_selection`, `swing_get_selectable_items`, `swing_get_selectable_items_count`) work on this component, but `swing_select_all` does not. |
 | `multi-selection` | `supportsMultiSelection()` | `supportsSelection()` AND `isMultiSelectable()` | *(group label)* | Snapshot action group label. Signals that all selection tools work on this component, including `swing_select_all`. |
-| `get_cell_count` | `isLargeDataComponent` AND `childCount > MAX_DATA_ROW_NODES` | `getAccessibleChildrenCount()` | `swing_get_cell_count` | Returns the total number of accessible children. Only advertised when the snapshot truncated the component's children. |
-| `get_cells` | `isLargeDataComponent` AND `childCount > MAX_DATA_ROW_NODES` | `getAccessibleChild(int i)` | `swing_get_cells` | Returns a paged accessibility tree dump of the component's accessible children. Parameters: `ref` (integer), `offset` (integer, 0-based), `length` (integer, max children to return). The output format mirrors `swing_snapshot` — the same indented text tree — but rooted at the requested children rather than the full UI. Each child receives a ref, and `get_cells` **replaces the MCPServer ref map** with only the refs in its output window. This is analogous to scrolling a JTable: children outside the `offset`/`length` window are not interactable. The AI must call `swing_snapshot` again to return to the full-tree ref map. Only advertised when the snapshot truncated the component's children. |
+| `get_cell_count` | `isGetCellsSupported` (role is LIST or TREE) AND `childCount > MAX_DATA_ROW_NODES` | `getAccessibleChildrenCount()` | `swing_get_cell_count` | Returns the total number of accessible children. Only advertised on JList/JTree when the snapshot truncated the component's children. **JTable is excluded** — use `swing_get_selectable_items_count` for row counts. |
+| `get_cells` | `isGetCellsSupported` (role is LIST or TREE) AND `childCount > MAX_DATA_ROW_NODES` | `getAccessibleChild(int i)` | `swing_get_cells` | Returns a paged accessibility tree dump of the component's accessible children, with refs for actionable children inside cell renderers. Parameters: `ref` (integer), `offset` (integer, 0-based), `length` (integer, max children to return). The output format mirrors `swing_snapshot` — the same indented text tree — but rooted at the requested children rather than the full UI. Each child receives a ref, and `get_cells` **replaces the MCPServer ref map** with only the refs in its output window. Children outside the `offset`/`length` window are not interactable. The AI must call `swing_snapshot` again to return to the full-tree ref map. Only advertised on JList/JTree when the snapshot truncated the component's children. **JTable is excluded** — table cells are stamp-painted plain text labels with no actionable children; use `swing_get_selectable_items` for row access. |
 | `close` | `supportsClose()` | Synthetic — dispatches `WindowEvent.WINDOW_CLOSING` to the window | `swing_close` | Not from `AccessibleAction`. Exposed for `Window` instances (JFrame, JDialog) only — `JOptionPane` is excluded because its containing JDialog already exposes `close`. Respects the app's `WindowListener`s and `defaultCloseOperation`; does **not** bypass `DO_NOTHING_ON_CLOSE`. `isEffectivelyEnabled()` is **not** checked — closing is a window-level action, not a component-level one. |
 
 ### Selection Index Spaces
@@ -777,21 +777,23 @@ JTable receives special rendering in the snapshot (UC-002 SC-6/SC-7) to present 
 
 ### Content Discovery (`get_cells` / `get_cell_count`)
 
-In cases where the `swing_snapshot` tool trims children of large data component, the AI
-may need to enumerate certain cells of a component (e.g. JTable) when it's searching for a particular button
-(e.g. "Edit" button on the 200th line). That's where these tools come handy.
-These tools only operate on large data components - there is no need to support them for e.g. JFrame since
-JFrame children are discovered via the `swing_snapshot` tool.
+In cases where the `swing_snapshot` tool trims children of a large data component, the AI
+may need to enumerate cells of a component when it's searching for a particular actionable
+child (e.g. an "Edit" button inside a list cell renderer on the 200th item). That's where
+these tools come in handy. They only operate on large data components — there is no need to
+support them on e.g. JFrame since JFrame children are discovered via `swing_snapshot`.
 
-`get_cells` and `get_cell_count` are **decoupled from selection** — they operate in the accessible children index space, not the selection item index space. They are advertised in the snapshot only when **both** conditions hold:
+`get_cells` and `get_cell_count` are **decoupled from selection** — they operate in the accessible children index space, not the selection item index space. They are advertised in the snapshot only when **all** conditions hold:
 This important distinction must be mentioned in tool description, so that the AI client understands the distinction fully.
 
-1. The component is a **large data component** (`isLargeDataComponent`: role is `TABLE`, `LIST`, or `TREE`).
+1. The component's role is `LIST` or `TREE` (`isGetCellsSupported`).
 2. The component's accessible children count exceeds `MAX_DATA_ROW_NODES` (i.e. the snapshot actually truncated its children).
 
 This avoids action list noise for small lists where all children are already visible in the snapshot.
 
-**`get_selectable_items` / `get_selectable_items_count`** operate in the **selection item index space** — the same 0-based index that `addAccessibleSelection(i)` expects. They are not listed as snapshot actions; their availability is documented in the tool descriptions and they are callable on any component marked `single-selection` or `multi-selection`.
+**Why `TABLE` is excluded.** JTable cell renderers are painted via `CellRendererPane` (stamp painting) — renderer `Component`s are never added to the real component hierarchy and never expose actions through the accessibility API. Every JTable cell surfaces as a `LABEL` with no `AccessibleAction`, so `get_cells` on a JTable can only ever return text without refs — a strict subset of what `swing_get_selectable_items` already provides, and worse, in a flat cell-index space (`row*cols + col`) that conflicts with the row-based index space of the snapshot (UC-002 SC-6) and selection tools (UC-014, UC-017 BR-09). Interactive cell editors only appear in the accessibility tree while a cell is being actively edited — reaching them through `get_cells` is not a supported workflow. Therefore JTable is unconditionally rejected by `swing_get_cells` / `swing_get_cell_count` with an error that redirects the AI to `swing_get_selectable_items` / `swing_get_selectable_items_count`.
+
+**`get_selectable_items` / `get_selectable_items_count`** operate in the **selection item index space** — the same 0-based index that `addAccessibleSelection(i)` expects. They are not listed as snapshot actions; their availability is documented in the tool descriptions and they are callable on any component marked `single-selection` or `multi-selection`. For JTable specifically, these are the **canonical row-access tools** (UC-017 BR-09) and replace what `get_cells` would otherwise have offered.
 
 ### Editable JComboBox
 
