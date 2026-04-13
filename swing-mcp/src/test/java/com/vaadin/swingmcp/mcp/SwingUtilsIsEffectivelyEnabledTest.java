@@ -322,19 +322,22 @@ class SwingUtilsIsEffectivelyEnabledTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Parent chain — disabled parent makes child effectively disabled
+    // Parent chain — Swing does NOT propagate setEnabled(false) to children, so
+    // neither do we. A button inside a disabled container is still clickable in
+    // Swing, and must therefore still be reported as effectively enabled.
+    // (See Component.setEnabled javadoc; JDK-4177727 closed as won't-fix.)
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void enabledButtonInDisabledPanel_isEffectivelyDisabled() {
+    void enabledButtonInDisabledPanel_isStillEffectivelyEnabled() {
         JPanel panel = new JPanel();
         JButton button = new JButton("Child");
         panel.add(button);
         panel.setEnabled(false);
 
         assertTrue(button.isEnabled(), "Button itself is still enabled");
-        assertFalse(SwingUtils.isEffectivelyEnabled(button),
-                "Button should be effectively disabled because parent is disabled");
+        assertTrue(SwingUtils.isEffectivelyEnabled(button),
+                "Swing setEnabled(false) does not propagate — button stays clickable");
     }
 
     @Test
@@ -347,7 +350,7 @@ class SwingUtilsIsEffectivelyEnabledTest {
     }
 
     @Test
-    void disabledGrandparentMakesGrandchildEffectivelyDisabled() {
+    void disabledGrandparent_doesNotMakeGrandchildEffectivelyDisabled() {
         JPanel grandparent = new JPanel();
         JPanel parent = new JPanel();
         JButton button = new JButton("Grandchild");
@@ -357,8 +360,8 @@ class SwingUtilsIsEffectivelyEnabledTest {
 
         assertTrue(parent.isEnabled());
         assertTrue(button.isEnabled());
-        assertFalse(SwingUtils.isEffectivelyEnabled(button),
-                "Button should be effectively disabled because grandparent is disabled");
+        assertTrue(SwingUtils.isEffectivelyEnabled(button),
+                "Swing setEnabled(false) on grandparent does not propagate — button stays clickable");
     }
 
     @Test
@@ -430,14 +433,43 @@ class SwingUtilsIsEffectivelyEnabledTest {
     }
 
     @Test
-    void buttonInDisabledToolBar_isEffectivelyDisabled() {
+    void buttonInDisabledToolBar_isStillEffectivelyEnabled() {
         JToolBar tb = new JToolBar();
         JButton button = new JButton("Tool");
         tb.add(button);
         tb.setEnabled(false);
 
         assertTrue(button.isEnabled(), "Button itself is still enabled");
-        assertFalse(SwingUtils.isEffectivelyEnabled(button),
-                "Button should be effectively disabled because parent toolbar is disabled");
+        assertTrue(SwingUtils.isEffectivelyEnabled(button),
+                "Swing setEnabled(false) does not propagate — toolbar button stays clickable");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JTable virtual cells — host's disabled state is NOT reflected in the
+    // cell's own state set (Swing quirk), so isEffectivelyEnabled must walk up.
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jTable_virtualCell_disabledWhenTableDisabled() {
+        javax.swing.JTable table = new javax.swing.JTable(
+                new Object[][]{{"a", "b"}, {"c", "d"}},
+                new Object[]{"col1", "col2"});
+        table.setEnabled(false);
+        AccessibleContext ac = table.getAccessibleContext();
+        Accessible cell = ac.getAccessibleTable().getAccessibleAt(0, 0);
+        assertNotNull(cell);
+        assertFalse(SwingUtils.isEffectivelyEnabled(cell),
+                "JTable virtual cell should be effectively disabled when table is disabled");
+    }
+
+    @Test
+    void jTable_virtualCell_enabledWhenTableEnabled() {
+        javax.swing.JTable table = new javax.swing.JTable(
+                new Object[][]{{"a", "b"}, {"c", "d"}},
+                new Object[]{"col1", "col2"});
+        AccessibleContext ac = table.getAccessibleContext();
+        Accessible cell = ac.getAccessibleTable().getAccessibleAt(0, 0);
+        assertNotNull(cell);
+        assertTrue(SwingUtils.isEffectivelyEnabled(cell));
     }
 }

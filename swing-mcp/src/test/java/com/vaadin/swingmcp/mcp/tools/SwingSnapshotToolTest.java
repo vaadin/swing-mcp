@@ -551,18 +551,21 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void enabledButtonInsideDisabledPanelShowsDisabledAndPrefixedClick() throws Exception {
+    void enabledButtonInsideDisabledPanelStaysEnabled() throws Exception {
+        // Swing's setEnabled(false) does not propagate to children
+        // (Component.setEnabled javadoc; JDK-4177727 closed as won't-fix). The
+        // button is mechanically clickable in Swing, so the snapshot must
+        // report it as enabled even though its panel is disabled.
         JPanel parent = new JPanel();
         parent.setEnabled(false);
         JButton button = new JButton("Click Me");
-        // Button is locally enabled, but parent is disabled
         parent.add(button);
 
         String output = snapshot(parent);
 
         assertEquals(
                 "- panel [disabled]\n"
-                + "  - push_button \"Click Me\" [ref=1, disabled] actions: !click",
+                + "  - push_button \"Click Me\" [ref=1] actions: click",
                 output);
     }
 

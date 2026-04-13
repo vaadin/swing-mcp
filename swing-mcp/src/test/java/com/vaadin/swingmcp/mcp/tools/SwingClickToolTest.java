@@ -165,18 +165,23 @@ class SwingClickToolTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void disabledParentPreventsClick() throws Exception {
+    void disabledParentDoesNotPreventClick() throws Exception {
+        // Swing's setEnabled(false) does not propagate to children
+        // (Component.setEnabled javadoc; JDK-4177727 closed as won't-fix), so a
+        // button inside a disabled JPanel is still mechanically clickable —
+        // and Swing-MCP must mirror that exactly.
         JPanel panel = new JPanel();
         JButton button = new JButton("Child");
+        AtomicBoolean clicked = new AtomicBoolean(false);
+        button.addActionListener(e -> clicked.set(true));
         panel.add(button);
         panel.setEnabled(false);
-        // Button itself is still enabled, but parent is disabled
 
         snapshot(panel);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> click(context.getRefOf(button)));
-        assertTrue(ex.getMessage().contains("disabled"),
-                "Error should mention disabled when parent is disabled");
+        click(context.getRefOf(button));
+        SwingUtilities.invokeAndWait(() -> {});
+        assertTrue(clicked.get(),
+                "Click on a button inside a disabled panel must still fire (Swing semantics)");
     }
 
     // ══════════════════════════════════════════════════════════════════════════

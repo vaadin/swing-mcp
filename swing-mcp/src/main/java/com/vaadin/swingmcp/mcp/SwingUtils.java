@@ -429,23 +429,43 @@ public final class SwingUtils {
     }
 
     /**
-     * Returns whether the given accessible is effectively enabled: whether
-     * the user may interact with this accessible or not - whether the user can click
-     * this accessible for example.
+     * Returns whether the given accessible is effectively enabled — i.e.
+     * whether the user (or AI client) may actually interact with it in the
+     * running Swing app.
      * <p>
-     * The
-     * accessible itself must have {@link AccessibleState#ENABLED} in its
-     * state set, and its parent (if any) must also be effectively enabled.
+     * Swing's {@link Component#setEnabled(boolean) setEnabled(false)}
+     * <em>does not propagate to children</em> — this is the documented,
+     * by-design behaviour (see the Component.setEnabled javadoc and
+     * <a href="https://bugs.openjdk.org/browse/JDK-4177727">JDK-4177727</a>,
+     * closed as won't-fix). A button inside a disabled {@code JPanel},
+     * {@code JScrollPane}, {@code JToolBar} or even a disabled
+     * {@code JTabbedPane} tab is still mechanically clickable. We therefore
+     * do <strong>not</strong> walk the parent chain for real
+     * {@link Component} accessibles — we trust each component's own
+     * {@link AccessibleState#ENABLED} state.
      * <p>
-     * Virtual accessible children (e.g. JList items, JTable cells) may not
-     * propagate the parent component's disabled state, so this method walks
-     * the entire parent chain.
+     * Two Swing quirks need explicit handling:
+     * <ul>
+     *   <li><b>{@link JTabbedPane} tabs disabled via
+     *       {@link JTabbedPane#setEnabledAt(int, boolean)}</b> — the
+     *       {@code AccessiblePage} virtual child does NOT omit
+     *       {@code ENABLED} from its state set even though the tab is
+     *       disabled. We consult {@link JTabbedPane#isEnabledAt(int)}
+     *       directly when the parent is a {@code JTabbedPane}.</li>
+     *   <li><b>Virtual accessible children (not {@link Component}
+     *       instances)</b> — some virtual children (notably
+     *       {@code JTable} cells) keep {@code ENABLED} in their state set
+     *       even when the host component is disabled. For any accessible
+     *       that is not itself a {@code Component}, we recurse into its
+     *       accessible parent until a {@code Component} ancestor is found.
+     *       ({@code JList} items happen to do this correctly already, but
+     *       the recursion costs nothing and is uniformly safe.)</li>
+     * </ul>
      * <p>
-     * Special case: {@link JTabbedPane} tabs disabled via
-     * {@link JTabbedPane#setEnabledAt(int, boolean)} are not reflected in
-     * the {@code AccessiblePage} state set, so we also consult
-     * {@link JTabbedPane#isEnabledAt(int)} for any accessible whose parent
-     * is a {@code JTabbedPane}.
+     * The disabled-{@code Window} case (an {@code OS}-level peer dropping
+     * input on a {@code Frame.setEnabled(false)}) is intentionally
+     * <strong>not</strong> handled here — its visual behaviour is
+     * platform/L&amp;F-dependent and unreliable across OSes.
      *
      * @see <a href="architecture.md">architecture.md § 4 — Effectively Enabled Check</a>
      */
@@ -453,7 +473,10 @@ public final class SwingUtils {
         AccessibleContext ac = a.getAccessibleContext();
         if (ac == null) return false;
         if (!ac.getAccessibleStateSet().contains(AccessibleState.ENABLED)) return false;
+
         Accessible parent = ac.getAccessibleParent();
+
+        // Quirk 1: JTabbedPane.setEnabledAt is not reflected in the AccessiblePage state set.
         if (parent instanceof JTabbedPane) {
             JTabbedPane tp = (JTabbedPane) parent;
             int idx = ac.getAccessibleIndexInParent();
@@ -461,7 +484,17 @@ public final class SwingUtils {
                 return false;
             }
         }
-        return parent == null || isEffectivelyEnabled(parent);
+
+        // Quirk 2: virtual children (e.g. JTable cells) may not reflect the host's disabled
+        // state — walk up until we reach a real Component ancestor.
+        if (!(a instanceof Component) && parent != null) {
+            return isEffectivelyEnabled(parent);
+        }
+
+        // Real Components: trust the component's own ENABLED state. Swing's setEnabled
+        // does not propagate to children (source: Component.setEnabled() javadoc), so neither do we.
+        // Also: JDK-4177727 closed as won't-fix.
+        return true;
     }
 
     /**
