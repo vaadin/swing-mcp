@@ -429,7 +429,11 @@ public final class SwingUtils {
     }
 
     /**
-     * Returns whether the given accessible is effectively enabled: the
+     * Returns whether the given accessible is effectively enabled: whether
+     * the user may interact with this accessible or not - whether the user can click
+     * this accessible for example.
+     * <p>
+     * The
      * accessible itself must have {@link AccessibleState#ENABLED} in its
      * state set, and its parent (if any) must also be effectively enabled.
      * <p>
