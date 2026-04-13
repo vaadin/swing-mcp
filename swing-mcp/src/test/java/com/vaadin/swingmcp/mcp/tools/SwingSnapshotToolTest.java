@@ -1419,6 +1419,131 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    // BR-10 — description source resolution and 120-char cap
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void br10_noDescription_tooltipFillsDescriptionSlot() throws Exception {
+        JButton button = new JButton("OK");
+        button.setToolTipText("Save the document");
+
+        assertEquals(
+                "- push_button \"OK\" \"Save the document\" [ref=1] actions: click",
+                snapshot(button));
+    }
+
+    @Test
+    void br10_realDescriptionTakesPrecedenceOverTooltip() throws Exception {
+        JButton button = new JButton("OK");
+        button.getAccessibleContext().setAccessibleDescription("Real description");
+        button.setToolTipText("Tooltip should be ignored");
+
+        assertEquals(
+                "- push_button \"OK\" \"Real description\" [ref=1] actions: click",
+                snapshot(button));
+    }
+
+    @Test
+    void br10_htmlTooltip_isCleanedToPlainText() throws Exception {
+        JButton button = new JButton("OK");
+        button.setToolTipText("<html><b>Save</b><br>Persists changes</html>");
+
+        assertEquals(
+                "- push_button \"OK\" \"Save Persists changes\" [ref=1] actions: click",
+                snapshot(button));
+    }
+
+    @Test
+    void br10_tooltipLongerThan120Chars_isTruncatedWithEllipsis() throws Exception {
+        // 150 'x's → 120 'x's + U+2026
+        String longTooltip = "x".repeat(150);
+        JButton button = new JButton("OK");
+        button.setToolTipText(longTooltip);
+
+        String expectedDesc = "x".repeat(120) + "\u2026";
+        assertEquals(
+                "- push_button \"OK\" \"" + expectedDesc + "\" [ref=1] actions: click",
+                snapshot(button));
+    }
+
+    @Test
+    void br10_descriptionLongerThan120Chars_isTruncatedWithEllipsis_symmetricCap()
+            throws Exception {
+        // Symmetric cap: real accessibleDescription is also truncated.
+        String longDesc = "y".repeat(150);
+        JButton button = new JButton("OK");
+        button.getAccessibleContext().setAccessibleDescription(longDesc);
+
+        String expectedDesc = "y".repeat(120) + "\u2026";
+        assertEquals(
+                "- push_button \"OK\" \"" + expectedDesc + "\" [ref=1] actions: click",
+                snapshot(button));
+    }
+
+    @Test
+    void br10_descriptionExactly120Chars_isNotTruncated() throws Exception {
+        // Boundary: a string of exactly MAX_DESCRIPTION_LENGTH chars must
+        // pass through unchanged (no trailing ellipsis).
+        String exactly120 = "z".repeat(120);
+        JButton button = new JButton("OK");
+        button.getAccessibleContext().setAccessibleDescription(exactly120);
+
+        assertEquals(
+                "- push_button \"OK\" \"" + exactly120 + "\" [ref=1] actions: click",
+                snapshot(button));
+    }
+
+    @Test
+    void br10_jTabbedPaneTab_perTabTooltipAppearsOnPageTabLine() throws Exception {
+        JPanel panel = new JPanel();
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.addTab("General", new JPanel());
+        tabbedPane.setToolTipTextAt(0, "Common settings");
+        panel.add(tabbedPane);
+
+        assertEquals(
+                "- panel\n"
+                + "  - page_tab_list \"General\" [ref=1] actions: single-selection\n"
+                + "    - page_tab 0 \"General\" \"Common settings\" [selected]",
+                snapshot(panel));
+    }
+
+    @Test
+    void br10_tabContentJComponent_usesItsOwnTooltip_notTheTabsTooltip()
+            throws Exception {
+        // Regression guard for the PAGE_TAB role gate in
+        // SwingUtils.getTooltipAsText. The tab-content button shares the
+        // JTabbedPane as its accessible parent — without the role check the
+        // button would inherit the tab's tooltip.
+        JPanel panel = new JPanel();
+        JTabbedPane tabbedPane = new JTabbedPane();
+        JButton content = new JButton("ContentBtn");
+        content.setToolTipText("Content tooltip");
+        tabbedPane.addTab("General", content);
+        tabbedPane.setToolTipTextAt(0, "Tab tooltip");
+        panel.add(tabbedPane);
+
+        assertEquals(
+                "- panel\n"
+                + "  - page_tab_list \"General\" [ref=1] actions: single-selection\n"
+                + "    - page_tab 0 \"General\" \"Tab tooltip\" [selected]\n"
+                + "      - push_button \"ContentBtn\" \"Content tooltip\" [ref=2] actions: click",
+                snapshot(panel));
+    }
+
+    @Test
+    void br10_nonHtmlTooltipWithAngleBrackets_renderedVerbatim() throws Exception {
+        // "List<String>" doesn't start with <html> — angle brackets must
+        // not be stripped.
+        JButton button = new JButton("OK");
+        button.setToolTipText("List<String>");
+
+        assertEquals(
+                "- push_button \"OK\" \"List<String>\" [ref=1] actions: click",
+                snapshot(button));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // Helpers
     // ══════════════════════════════════════════════════════════════════════════
 

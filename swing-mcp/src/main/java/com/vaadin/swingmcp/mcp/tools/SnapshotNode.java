@@ -31,6 +31,15 @@ class SnapshotNode {
     /** Maximum child SnapshotNodes for large data components (JTable rows, JList items, JTree nodes). */
     static final int MAX_DATA_ROW_NODES = 5;
 
+    /**
+     * Maximum length of a rendered description (BR-10). Strings longer than
+     * this are truncated to this many characters and a trailing U+2026
+     * appended. Applies symmetrically to real {@code accessibleDescription}
+     * values and tooltip-fallback values so the AI cannot distinguish the
+     * two sources from the rendered output.
+     */
+    static final int MAX_DESCRIPTION_LENGTH = 120;
+
     // ── Roles that are always included (AI-1) ──────────────────────────────────
 
     private static final Set<AccessibleRole> SEMANTIC_ROLES;
@@ -481,14 +490,29 @@ class SnapshotNode {
             }
         }
 
-        // Name and description (omit if blank)
+        // Name (omit if blank)
         String name = ctx != null ? ctx.getAccessibleName() : null;
-        String desc = ctx != null ? ctx.getAccessibleDescription() : null;
         if (name != null && !name.isEmpty()) {
             sb.append(" \"").append(name).append('"');
         }
-        if (desc != null && !desc.isEmpty()) {
-            sb.append(" \"").append(desc).append('"');
+
+        // Description (BR-10): real accessibleDescription if non-blank,
+        // else the tooltip via getTooltipAsText (covers JTabbedPane per-tab
+        // tooltips and other cases the JDK's auto-fallback misses). HTML
+        // cleanup is applied unconditionally because
+        // JComponent.AccessibleJComponent.getAccessibleDescription() already
+        // auto-falls-back to getToolTipText() inside the JDK — so an
+        // "explicit-looking" description may actually be a (potentially HTML)
+        // tooltip. Result is capped at MAX_DESCRIPTION_LENGTH chars
+        // symmetrically across all sources.
+        String desc = ctx != null
+                ? SwingUtils.htmlToPlainText(ctx.getAccessibleDescription())
+                : null;
+        if (desc == null) {
+            desc = SwingUtils.getTooltipAsText(accessible);
+        }
+        if (desc != null) {
+            sb.append(" \"").append(capDescription(desc)).append('"');
         }
 
         // Bracket: [ref=N, state1, state2, ...]
@@ -741,6 +765,17 @@ class SnapshotNode {
             }
         }
         return false;
+    }
+
+    /**
+     * Caps a description string at {@link #MAX_DESCRIPTION_LENGTH} characters,
+     * appending a trailing U+2026 ('…') when truncation occurs (BR-10).
+     */
+    static String capDescription(String s) {
+        if (s.length() <= MAX_DESCRIPTION_LENGTH) {
+            return s;
+        }
+        return s.substring(0, MAX_DESCRIPTION_LENGTH) + "\u2026";
     }
 
     /**

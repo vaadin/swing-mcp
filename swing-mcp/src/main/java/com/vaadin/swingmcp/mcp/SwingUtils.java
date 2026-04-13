@@ -502,18 +502,38 @@ public final class SwingUtils {
             raw = ((JComponent) a).getToolTipText();
         }
 
+        return htmlToPlainText(raw);
+    }
+
+    /**
+     * Converts a Swing-style HTML string to plain text, or returns the
+     * argument verbatim if it is not HTML. Blank results are normalized to
+     * {@code null}.
+     * <p>
+     * Swing only renders a string as HTML when it starts with {@code <html>}
+     * (case-insensitive — this is the
+     * {@link javax.swing.plaf.basic.BasicHTML#isHTMLString} check). For any
+     * other string, the input is returned verbatim — a literal value such as
+     * {@code "List<String>"} must not have its angle brackets stripped.
+     * <p>
+     * For HTML strings, every tag is replaced by a single space (so
+     * {@code "Save<br>file"} becomes {@code "Save file"} rather than
+     * {@code "Savefile"}), the four standard entities — {@code &amp;},
+     * {@code &lt;}, {@code &gt;}, {@code &nbsp;} — are decoded, runs of
+     * whitespace are collapsed, and the result is trimmed. {@code &amp;} is
+     * decoded last so source text like {@code "&amp;lt;"} round-trips to the
+     * literal {@code "&lt;"} rather than being double-decoded to {@code "<"}.
+     * Numeric and exotic entities are left as-is.
+     * <p>
+     * If the input is {@code null}, or the cleanup produces an empty or
+     * whitespace-only result, returns {@code null} so callers need only a
+     * single null check.
+     */
+    public static String htmlToPlainText(String raw) {
         if (raw == null) return null;
 
         String text;
-        // Swing only treats the string as HTML when it starts with "<html>"
-        // (case-insensitive). For any other string, keep it verbatim — a
-        // literal tooltip like "List<String>" must not have its angle
-        // brackets stripped.
         if (raw.regionMatches(true, 0, "<html>", 0, 6)) {
-            // Tag → space (so "Save<br>file" becomes "Save file" rather than
-            // "Savefile"). Then decode the four standard entities. &amp; is
-            // decoded last so source text like "&amp;lt;" round-trips to the
-            // literal "&lt;" rather than being double-decoded to "<".
             text = raw.replaceAll("<[^>]*>", " ");
             text = text.replace("&nbsp;", " ")
                        .replace("&lt;", "<")
@@ -524,8 +544,6 @@ public final class SwingUtils {
             text = raw;
         }
 
-        // Blank → null, so callers don't need to distinguish "no tooltip"
-        // from "empty/whitespace tooltip".
         return text.isBlank() ? null : text;
     }
 
