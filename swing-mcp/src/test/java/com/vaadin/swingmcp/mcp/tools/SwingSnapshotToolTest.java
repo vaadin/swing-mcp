@@ -1543,6 +1543,77 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 snapshot(button));
     }
 
+    @Test
+    void br10_perCellPerRowPerNodePerItemTooltips_notSurfacedInSnapshot()
+            throws Exception {
+        // Regression guard (UC-002 BR-10): per-cell / per-row / per-node /
+        // per-item tooltips on JTable, JList, JTree, JTableHeader are
+        // delivered via the MouseEvent-aware overload
+        // getToolTipText(MouseEvent). The snapshot walker has no
+        // MouseEvent and calls the no-arg getToolTipText() (see
+        // SwingUtils#getTooltipAsText), so these tooltips must not appear
+        // in the output. A future change that synthesises a fake
+        // MouseEvent to probe per-cell tooltips would bloat snapshots
+        // with potentially hundreds of strings per data component — this
+        // test catches that.
+        //
+        // Each sentinel is distinct so a failure pinpoints which
+        // component type leaked.
+
+        final String tableCellTip = "SENTINEL_TABLE_CELL_TOOLTIP";
+        final String listItemTip = "SENTINEL_LIST_ITEM_TOOLTIP";
+        final String treeNodeTip = "SENTINEL_TREE_NODE_TOOLTIP";
+        final String headerColTip = "SENTINEL_TABLE_HEADER_TOOLTIP";
+
+        JTable table = new JTable(new DefaultTableModel(
+                new Object[][]{{"Alice"}},
+                new Object[]{"Name"})) {
+            @Override
+            public String getToolTipText(java.awt.event.MouseEvent e) {
+                return tableCellTip;
+            }
+        };
+
+        javax.swing.table.JTableHeader header = new javax.swing.table.JTableHeader() {
+            @Override
+            public String getToolTipText(java.awt.event.MouseEvent e) {
+                return headerColTip;
+            }
+        };
+
+        JList<String> list = new JList<String>(new String[]{"Item0"}) {
+            @Override
+            public String getToolTipText(java.awt.event.MouseEvent e) {
+                return listItemTip;
+            }
+        };
+
+        JTree tree = new JTree() {
+            @Override
+            public String getToolTipText(java.awt.event.MouseEvent e) {
+                return treeNodeTip;
+            }
+        };
+
+        JPanel root = new JPanel();
+        root.add(table);
+        root.add(header);
+        root.add(list);
+        root.add(tree);
+
+        String output = snapshot(root);
+
+        assertFalse(output.contains(tableCellTip),
+                "Per-cell JTable tooltip leaked into snapshot. Output:\n" + output);
+        assertFalse(output.contains(listItemTip),
+                "Per-item JList tooltip leaked into snapshot. Output:\n" + output);
+        assertFalse(output.contains(treeNodeTip),
+                "Per-node JTree tooltip leaked into snapshot. Output:\n" + output);
+        assertFalse(output.contains(headerColTip),
+                "Per-column JTableHeader tooltip leaked into snapshot. Output:\n"
+                        + output);
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // BR-11 — component identity slot (Case A / B / C rendering)
     //
