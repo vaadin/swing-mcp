@@ -44,24 +44,9 @@ Execution order:
 
 ---
 
-## Acceptance Criteria
-
-- [x] Calling `swing_set_text` with a valid ref for a `JTextField` and a `text` parameter replaces the field's text.
-- [x] Calling `swing_set_text` with a valid ref for a `JTextArea` and a multi-line `text` parameter sets the full content.
-- [x] Calling `swing_set_text` with `text = ""` clears the text content.
-- [x] Calling `swing_set_text` with an invalid ref returns an MCP error with a recovery message.
-- [x] Calling `swing_set_text` on a component that does not support `set_text` (e.g. `JLabel`) returns an MCP error suggesting to call `swing_snapshot`.
-- [x] Calling `swing_set_text` on a disabled component returns an MCP error explaining the component is disabled.
-- [x] Calling `swing_set_text` on a non-editable text component (`setEditable(false)`) returns an MCP error saying the component is not editable.
-- [x] The ref map is cleared after a successful `swing_set_text` call (mutation tool).
-- [x] The ref map is cleared even after a failed `swing_set_text` call that passed ref lookup (e.g. disabled component).
-- [x] The tool returns `null` (empty content array) on success, consistent with `swing_click`.
-
----
-
 ## Tests
 
-> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+> See `architecture.md` § Testing for conventions.
 
 - [x] `SwingSetTextTest`
   - [x] Setting text on a `JTextField` replaces its content.

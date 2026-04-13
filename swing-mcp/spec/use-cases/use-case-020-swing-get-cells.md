@@ -62,37 +62,9 @@ Execution order:
 
 ---
 
-## Acceptance Criteria
-
-- [x] Calling `swing_get_cells` on a `JTable` returns an MCP error whose message redirects the AI to `swing_get_items`.
-- [x] Calling `swing_get_cells` with `offset` beyond the total children count returns an empty result (not an error) with a header showing the total count.
-- [x] Calling `swing_get_cells` on a truncated `JList` returns the expected children with correct roles and names.
-- [x] Calling `swing_get_cells` with `offset: 10, length: 5` on a truncated `JList` returns children 10–14.
-- [x] Calling `swing_get_cells` on a truncated `JTree` returns the expected top-level tree nodes.
-- [x] The output format matches `swing_snapshot` — same indented text tree with roles, names, states, and actions.
-- [x] Pruning rules (Stages 1–3 from UC-002) are applied to each child's subtree.
-- [x] The parent component receives ref=1 in the new ref map. Child refs start from 2.
-- [x] After `swing_get_cells`, calling `swing_get_cells` again with `ref=1` (the parent) and a different offset works without calling `swing_snapshot` first.
-- [x] After `swing_get_cells`, calling `swing_get_items` with `ref=1` (the parent) succeeds.
-- [x] After `swing_get_cells`, the MCPServer ref map contains only the parent ref and the child refs from the output — refs from a prior `swing_snapshot` are no longer valid.
-- [x] After `swing_get_cells`, calling `swing_click` with a child ref from the output succeeds (e.g. clicking a button inside a table cell).
-- [x] After `swing_get_cells`, calling `swing_snapshot` replaces the ref map with the full-tree refs again.
-- [x] The header line shows the parent's new ref (e.g. `table [ref=1]`).
-- [x] Calling `swing_get_cells` on a non-truncated large data component (e.g. a `JList` with 3 items) succeeds — returns those 3 children normally (no child count threshold enforced at runtime).
-- [x] Calling `swing_get_cells` on an empty large data component (e.g. a `JList` with 0 items, `offset: 0, length: 10`) succeeds — returns empty output with header showing total count 0 and parent ref=1.
-- [x] Calling `swing_get_cells` on a non-supported component (e.g. `JButton`, `JPanel`, `JTable`) returns an MCP error.
-- [x] Calling `swing_get_cells` with an invalid ref returns an MCP error with a recovery message.
-- [x] Calling `swing_get_cells` on a disabled component succeeds (no enabled check).
-- [x] The ref map is replaced even if the output window is empty (offset beyond end).
-- [x] Negative `offset` returns an MCP error.
-- [x] Negative `length` returns an MCP error.
-- [x] Missing `offset` or `length` returns an MCP error.
-
----
-
 ## Tests
 
-> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+> See `architecture.md` § Testing for conventions.
 
 - [x] `SwingGetCellsTest` (headless)
   - [x] Reading a `JTable` returns an MCP error whose message redirects the AI to `swing_get_items`.

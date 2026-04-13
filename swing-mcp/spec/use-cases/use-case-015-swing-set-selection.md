@@ -107,38 +107,9 @@ Execution order:
 
 ---
 
-## Acceptance Criteria
-
-- [x] Calling `swing_set_selection` with a valid ref for a `JList` and a single index selects that item.
-- [x] Calling `swing_set_selection` with a valid ref for a `JList` (multi-selection) and multiple indices selects all specified items.
-- [x] Calling `swing_set_selection` with an empty `indices` array on a `JList` clears the selection.
-- [x] Calling `swing_set_selection` with an empty `indices` array on a `JComboBox` clears the selection (`selectedIndex=-1`).
-- [x] Calling `swing_set_selection` with an empty `indices` array on a `JTable` clears the selection.
-- [x] Calling `swing_set_selection` with an empty `indices` array on a `JTabbedPane` (with tabs) returns an MCP error: *"This component does not allow the selection to be empty."*
-- [x] Calling `swing_set_selection` with an empty `indices` array on an empty `JTabbedPane` (0 tabs) succeeds.
-- [x] Calling `swing_set_selection` with a valid ref for a `JTabbedPane` and one index switches to that tab.
-- [x] Calling `swing_set_selection` with a valid ref for a `JComboBox` and one index selects that item.
-- [x] Calling `swing_set_selection` with a valid ref for a `JTable` (row-selection mode) and row indices selects those rows (all cells in each row).
-- [x] Calling `swing_set_selection` with multiple indices on a single-selection component (e.g. `JTabbedPane`) returns an MCP error.
-- [x] Calling `swing_set_selection` with an out-of-bounds index returns an MCP error naming the invalid index and the valid range.
-- [x] Calling `swing_set_selection` with a negative index returns an MCP error.
-- [x] Calling `swing_set_selection` with an invalid ref returns an MCP error with a recovery message.
-- [x] Calling `swing_set_selection` on a component that does not support selection (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [x] Calling `swing_set_selection` on a `JTree` returns an MCP error (suppressed).
-- [x] Calling `swing_set_selection` on a `JTable` in column-selection mode returns an MCP error.
-- [x] Calling `swing_set_selection` on a disabled component returns an MCP error explaining the component is disabled.
-- [x] Calling `swing_set_selection` on a `JTabbedPane` with a disabled tab index returns an MCP error: *"Tab at index N is disabled."*
-- [x] The ref map is cleared after a successful `swing_set_selection` call (mutation tool).
-- [x] The ref map is cleared even after a failed `swing_set_selection` call that passed ref lookup.
-- [x] The tool returns `null` (empty content array) on success.
-- [x] Duplicate indices are silently deduplicated (selecting the same index twice does not cause an error).
-- [x] The selection set by `swing_set_selection` matches what `swing_get_selection` subsequently returns (round-trip).
-
----
-
 ## Tests
 
-> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+> See `architecture.md` § Testing for conventions.
 
 - [x] `ParametersTest` update (implemented)
   - [x] `getIntArray()` returns a list of integers for a valid JSON array of whole numbers (from `Double` and `Integer`).

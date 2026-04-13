@@ -30,24 +30,11 @@ Execution order:
 
 ---
 
-## Acceptance Criteria
-
-- [x] Calling `swing_click` with a valid ref for a button fires the click action (fire-and-forget) and returns `null`.
-- [x] Calling `swing_click` with a valid ref for a checkbox fires the click action (fire-and-forget) and returns `null`.
-- [x] Calling `swing_click` with an invalid ref returns an MCP error with a recovery message.
-- [x] Calling `swing_click` on a disabled component returns an MCP error explaining the component is disabled.
-- [x] Calling `swing_click` on a component that does not support click returns an MCP error suggesting to call `swing_snapshot`.
-- [x] Calling `swing_click` on a JPanel with an application MouseListener fires the synthetic mouse event sequence and returns `null`.
-- [x] Calling `swing_click` on a disabled JPanel with an application MouseListener returns an MCP error explaining the component is disabled.
-- [x] Calling `swing_click` on a component with no AccessibleAction click and no application MouseListener returns an MCP error.
-
----
-
 ## Tests
 
-> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+> See `architecture.md` § Testing for conventions.
 
-- [x] `SwingClickTest`
+- [x] `SwingClickTest` (headless)
   - [x] Clicking a button ref fires the action (verified by observing the button's action listener was called after the EDT drains).
   - [x] Clicking a checkbox ref fires the action (verified by observing state change after EDT drains).
   - [x] Clicking an invalid ref returns an MCP error with `isError: true`.

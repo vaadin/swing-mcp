@@ -38,30 +38,9 @@ Execution order:
 
 ---
 
-## Acceptance Criteria
-
-- [x] Calling `swing_get_item_count` with a valid ref for a `JList` with 5 items returns `5`.
-- [x] Calling `swing_get_item_count` with a valid ref for a `JList` with 200 items returns `200`.
-- [x] Calling `swing_get_item_count` with a valid ref for an empty `JList` returns `0`.
-- [ ] Calling `swing_get_item_count` on a `JTabbedPane` returns an MCP error ("Component does not support get_item_count") — regression guard: the tab count is derivable from the snapshot, which renders every tab inline per UC-002 SC-2.
-- [x] Calling `swing_get_item_count` with a valid ref for a `JComboBox` with 3 items returns `3`.
-- [x] Calling `swing_get_item_count` with a valid ref for an empty `JComboBox` returns `0`.
-- [x] Calling `swing_get_item_count` with a valid ref for a `JTable` (row-selection mode) with 10 rows returns `10`.
-- [x] Calling `swing_get_item_count` on a `JTable` in column-selection mode succeeds and returns the row count (read path is selection-mode agnostic — BR-03).
-- [x] Calling `swing_get_item_count` on a `JTable` in cell-selection mode succeeds and returns the row count.
-- [x] Calling `swing_get_item_count` on a `JTable` with no selection allowed succeeds and returns the row count.
-- [x] Calling `swing_get_item_count` on a `JTree` returns an MCP error (suppressed).
-- [x] Calling `swing_get_item_count` with an invalid ref returns an MCP error with a recovery message.
-- [x] Calling `swing_get_item_count` on a component that does not support selection (e.g. `JButton`) returns an MCP error.
-- [x] The ref map is **not** cleared after a `swing_get_item_count` call (read-only tool).
-- [x] Calling `swing_get_item_count` on a disabled component succeeds.
-- [x] The returned count matches the `totalCount` field from `swing_get_items` for the same component.
-
----
-
 ## Tests
 
-> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+> See `architecture.md` § Testing for conventions.
 
 - [x] `SwingGetItemCountTest` (headless)
   - [x] `JList` with 5 items returns `5`.

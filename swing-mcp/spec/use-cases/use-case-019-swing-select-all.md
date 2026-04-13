@@ -93,30 +93,9 @@ Verified empirically on Java 21 OpenJDK in headless mode (`JTableSelectAllProbeT
 
 ---
 
-## Acceptance Criteria
-
-- [x] Calling `swing_select_all` with a valid ref for a `JList` (multi-selection) selects all items.
-- [x] Calling `swing_select_all` with a valid ref for a `JTable` (row-selection, multi-selection) selects all rows.
-- [x] Calling `swing_select_all` on an empty `JList` (0 items) succeeds without error.
-- [x] Calling `swing_select_all` on an empty `JTable` (0 rows) succeeds without error.
-- [x] Calling `swing_select_all` on a single-selection `JList` returns an MCP error: *"Component is in single-selection mode. select_all requires multi-selection."*
-- [x] Calling `swing_select_all` on a `JTabbedPane` returns an MCP error (single-selection).
-- [x] Calling `swing_select_all` on a `JComboBox` returns an MCP error (single-selection).
-- [x] Calling `swing_select_all` on a `JTable` in column-selection mode returns an MCP error (unsupported).
-- [x] Calling `swing_select_all` on a `JTree` returns an MCP error (suppressed).
-- [x] Calling `swing_select_all` with an invalid ref returns an MCP error with a recovery message.
-- [x] Calling `swing_select_all` on a component that does not support selection (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [x] Calling `swing_select_all` on a disabled component returns an MCP error explaining the component is disabled.
-- [x] The ref map is cleared after a successful `swing_select_all` call (mutation tool).
-- [x] The ref map is cleared even after a failed `swing_select_all` call that passed ref lookup.
-- [x] The tool returns `null` (empty content array) on success.
-- [x] After `swing_select_all`, `swing_get_selection` returns all items as selected (round-trip verification).
-
----
-
 ## Tests
 
-> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+> See `architecture.md` § Testing for conventions.
 
 - [x] `SwingSelectAllTest` (headless)
   - [x] `JList` (multi-selection) with 5 items: after `select_all`, all 5 items are selected.

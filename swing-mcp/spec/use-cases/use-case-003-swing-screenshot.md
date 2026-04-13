@@ -23,20 +23,9 @@ Captures a PNG of what the user currently sees — lets the AI visually verify a
 
 ---
 
-## Acceptance Criteria
-
-- [x] Calling `swing_screenshot` returns MCP image content with `mimeType=image/png`.
-- [x] The returned PNG is a valid image decodable by `ImageIO.read()`.
-- [x] A single component produces an image with that component's exact dimensions (`getWidth()` × `getHeight()`).
-- [x] Multiple visible components produce a single image with components stacked vertically, each horizontally centered, composite width = max of component widths, composite height = sum of component heights + 4 px gap between each pair.
-- [x] If a modal window is visible, only that window appears in the image.
-- [x] If no components are considered, the tool returns an MCP error response (`isError: true`).
-
----
-
 ## Tests
 
-> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+> See `architecture.md` § Testing for conventions.
 
 ### Headless tests (`src/test`) — `SwingScreenshotTest`
 

@@ -50,23 +50,9 @@ Execution order:
 
 ---
 
-## Acceptance Criteria
-
-- [x] Calling `swing_get_value` with a valid ref for a `JSlider` returns the current slider position, min, and max.
-- [x] Calling `swing_get_value` with a valid ref for a `JSpinner(SpinnerNumberModel)` returns the current spinner value, min, and max.
-- [x] Calling `swing_get_value` with a valid ref for a `JProgressBar` returns the current progress value, min, and max.
-- [x] Calling `swing_get_value` with a valid ref for a `JSplitPane` returns the current divider location plus min and max.
-- [x] Calling `swing_get_value` with an invalid ref returns an MCP error with a recovery message.
-- [x] Calling `swing_get_value` on a component that does not support `get_value` (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [x] The ref map is **not** cleared after a `swing_get_value` call (read-only tool).
-- [x] Calling `swing_get_value` on a disabled but value-readable component succeeds (no enabled check).
-- [x] If `getMinimumAccessibleValue()` or `getMaximumAccessibleValue()` returns `null`, the corresponding field is absent from the JSON result.
-
----
-
 ## Tests
 
-> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+> See `architecture.md` § Testing for conventions.
 
 - [x] `SwingUtilsSupportsValueTest` updates (headless) — triggered by `supportsGetValue()` fix
   - [x] `JSpinner(SpinnerDateModel)` returns `false` for `supportsGetValue()`.

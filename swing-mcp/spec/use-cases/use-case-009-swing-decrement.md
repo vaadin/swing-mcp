@@ -33,22 +33,9 @@ Execution order:
 
 ---
 
-## Acceptance Criteria
-
-- [x] Calling `swing_decrement` on a `JSpinner` fires the decrement action; the value decreases (verified after EDT drains).
-- [x] Calling `swing_decrement` on a `JSlider` fires the decrement action; the value decreases (verified after EDT drains).
-- [x] Calling `swing_decrement` with an invalid ref returns an MCP error with a recovery message.
-- [x] Calling `swing_decrement` on a component that does not support decrement (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [x] Calling `swing_decrement` on a disabled component returns an MCP error explaining the component is disabled.
-- [x] The tool returns `null` on success.
-- [x] The ref map is cleared after every `swing_decrement` call (mutation tool).
-- [x] Calling `swing_decrement` on a `JSpinner` at its minimum silently does nothing (no MCP error — the client observes the unchanged value via `swing_snapshot`).
-
----
-
 ## Tests
 
-> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+> See `architecture.md` § Testing for conventions.
 
 - [x] `SwingDecrementTest` (headless — all happy-path tests can run headless; `HeadlessException` does not occur for decrement)
   - [x] Decrementing a `JSpinner` (`SpinnerNumberModel`) fires the action; value decreases (verified after EDT drains).

@@ -88,34 +88,9 @@ Execution order:
 
 ---
 
-## Acceptance Criteria
-
-- [x] Calling `swing_get_items` with a valid ref for a `JList`, `offset: 0`, `length: 5` returns all 5 items with correct indices and names.
-- [x] Calling `swing_get_items` with `offset: 0, length: 50` on a 200-item `JList` returns the first 50 items and `totalCount: 200`.
-- [x] Calling `swing_get_items` with `offset: 50, length: 50` on a 200-item `JList` returns items 50–99.
-- [x] Calling `swing_get_items` with `offset` beyond `totalCount` returns an empty `items` array (not an error).
-- [ ] Calling `swing_get_items` on a `JTabbedPane` returns an MCP error ("Component does not support get_items") — regression guard: tabs are read inline from the snapshot per UC-002 SC-2, not via this tool.
-- [x] Calling `swing_get_items` with a valid ref for a `JComboBox` returns all items with correct indices and names.
-- [x] Calling `swing_get_items` with a valid ref for a `JTable` (row-selection mode) returns rows with pipe-separated cell values as names.
-- [x] Calling `swing_get_items` on a `JTable` in column-selection mode succeeds and returns rows (read path is selection-mode agnostic — BR-03).
-- [x] Calling `swing_get_items` on a `JTable` in cell-selection mode succeeds and returns rows.
-- [x] Calling `swing_get_items` on a `JTable` with no selection allowed (`rowSelectionAllowed=false, columnSelectionAllowed=false`) succeeds and returns rows.
-- [x] Calling `swing_get_items` on a `JTree` returns an MCP error (suppressed).
-- [x] Calling `swing_get_items` with an invalid ref returns an MCP error with a recovery message.
-- [x] Calling `swing_get_items` on a component that does not support selection (e.g. `JButton`) returns an MCP error.
-- [x] The ref map is **not** cleared after a `swing_get_items` call (read-only tool).
-- [x] Calling `swing_get_items` on a disabled component succeeds (no enabled check).
-- [x] The `index` values are in the selection item index space: passing them to `swing_set_selection` selects the expected item.
-- [x] Negative `offset` returns an MCP error.
-- [x] Negative `length` returns an MCP error.
-- [x] Missing `offset` or `length` returns an MCP error.
-- [x] The `totalCount` field correctly reflects the total number of items regardless of paging.
-
----
-
 ## Tests
 
-> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+> See `architecture.md` § Testing for conventions.
 
 - [x] `SwingGetItemsTest` (headless)
   - [x] Reading a `JList` with 5 items (`offset: 0, length: 5`) returns all 5 items with correct indices and names.

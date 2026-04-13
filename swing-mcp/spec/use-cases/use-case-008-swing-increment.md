@@ -33,22 +33,9 @@ Execution order:
 
 ---
 
-## Acceptance Criteria
-
-- [x] Calling `swing_increment` on a `JSpinner` fires the increment action; the value increases (verified after EDT drains).
-- [x] Calling `swing_increment` on a `JSlider` fires the increment action; the value increases (verified after EDT drains).
-- [x] Calling `swing_increment` with an invalid ref returns an MCP error with a recovery message.
-- [x] Calling `swing_increment` on a component that does not support increment (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [x] Calling `swing_increment` on a disabled component returns an MCP error explaining the component is disabled.
-- [x] The tool returns `null` on success.
-- [x] The ref map is cleared after every `swing_increment` call (mutation tool).
-- [x] Calling `swing_increment` on a `JSpinner` at its maximum silently does nothing (no MCP error — the client observes the unchanged value via `swing_snapshot`).
-
----
-
 ## Tests
 
-> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+> See `architecture.md` § Testing for conventions.
 
 - [x] `SwingIncrementTest` (headless — all happy-path tests can run headless; `HeadlessException` does not occur for increment/decrement)
   - [x] Incrementing a `JSpinner` (`SpinnerNumberModel`) fires the action; value increases (verified after EDT drains).

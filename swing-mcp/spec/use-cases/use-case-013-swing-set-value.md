@@ -59,30 +59,9 @@ Execution order:
 
 ---
 
-## Acceptance Criteria
-
-- [x] Calling `swing_set_value` with a valid ref for a `JSlider` and a value within range changes the slider position.
-- [x] Calling `swing_set_value` with a valid ref for a `JSpinner(SpinnerNumberModel)` changes the spinner value.
-- [x] Calling `swing_set_value` with a valid ref for a `JSplitPane` changes the divider location.
-- [x] Calling `swing_set_value` with an invalid ref returns an MCP error with a recovery message.
-- [x] Calling `swing_set_value` on a component that does not support `set_value` (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [x] Calling `swing_set_value` on a `JProgressBar` returns an MCP error (read-only value).
-- [x] Calling `swing_set_value` on a disabled component returns an MCP error explaining the component is disabled.
-- [x] Calling `swing_set_value` with a value below the component's minimum returns a range error.
-- [x] Calling `swing_set_value` with a value above the component's maximum returns a range error.
-- [x] Calling `swing_set_value` on an unbounded `JSpinner` with any numeric value succeeds (no range error).
-- [x] The ref map is cleared after a successful `swing_set_value` call (mutation tool).
-- [x] The ref map is cleared even after a failed `swing_set_value` call that passed ref lookup.
-- [x] The tool returns `null` (empty content array) on success.
-- [x] Type preservation: setting a value on a `JSpinner` whose model holds `Integer` passes an `Integer` to the accessibility API.
-- [x] Type preservation: setting a value on a `JSpinner` whose model holds `BigDecimal` passes a `BigDecimal` to the accessibility API.
-- [x] Setting a fractional value (e.g. `42.5`) on a component whose model holds `Integer` returns an MCP error saying the component requires a whole number.
-
----
-
 ## Tests
 
-> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+> See `architecture.md` § Testing for conventions.
 
 - [x] `ParametersTest` update
   - [x] `getNumber()` returns the raw `Number` for a numeric value.

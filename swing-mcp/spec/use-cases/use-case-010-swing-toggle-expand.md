@@ -33,22 +33,9 @@ Execution order:
 
 ---
 
-## Acceptance Criteria
-
-- [x] Calling `swing_toggle_expand` on a collapsed `JTree` non-leaf node expands it.
-- [x] Calling `swing_toggle_expand` on an expanded `JTree` non-leaf node collapses it.
-- [x] Calling `swing_toggle_expand` with an invalid ref returns an MCP error with a recovery message.
-- [x] Calling `swing_toggle_expand` on a `JTree` leaf node returns an MCP error suggesting to call `swing_snapshot`.
-- [x] Calling `swing_toggle_expand` on a component that does not support toggle-expand (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [x] Calling `swing_toggle_expand` on a disabled `JTree` node returns an MCP error explaining the component is disabled.
-- [x] The tool returns `null` on success.
-- [x] The ref map is cleared after every `swing_toggle_expand` call (mutation tool).
-
----
-
 ## Tests
 
-> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+> See `architecture.md` § Testing for conventions.
 
 - [x] `SwingToggleExpandTest`
   - [x] Toggling a collapsed non-leaf node expands it (verified via `JTree.isExpanded()`).

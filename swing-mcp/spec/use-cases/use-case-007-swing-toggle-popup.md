@@ -34,21 +34,9 @@ Execution order:
 
 ---
 
-## Acceptance Criteria
-
-- [x] Calling `swing_toggle_popup` with a valid ref for a `JComboBox` opens the popup (requires display — verified in `SwingTogglePopupScreenTest`).
-- [x] Calling `swing_toggle_popup` again on the same `JComboBox` closes the popup (requires display — verified in `SwingTogglePopupScreenTest`).
-- [x] Calling `swing_toggle_popup` with an invalid ref returns an MCP error with a recovery message.
-- [x] Calling `swing_toggle_popup` on a component that does not support toggle-popup (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [x] Calling `swing_toggle_popup` on a disabled `JComboBox` returns an MCP error explaining the component is disabled.
-- [x] The tool returns `null` on success.
-- [x] The ref map is cleared after every `swing_toggle_popup` call (mutation tool).
-
----
-
 ## Tests
 
-> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+> See `architecture.md` § Testing for conventions.
 
 - [x] `SwingTogglePopupTest` (headless — error cases only; see BR-10)
   - [x] Invalid ref returns an MCP error with `isError: true`.

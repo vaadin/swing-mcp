@@ -42,23 +42,9 @@ sees it in the snapshot and can decide how to proceed.
 
 ---
 
-## Acceptance Criteria
-
-- [x] Calling `swing_close` on a JFrame with `DISPOSE_ON_CLOSE` fires the close event; the frame is dismissed (verified via snapshot after EDT drains).
-- [x] Calling `swing_close` on a JDialog fires the close event; the dialog is dismissed (verified via snapshot after EDT drains).
-- [x] Calling `swing_close` on a window with `DO_NOTHING_ON_CLOSE` fires the close event and returns `null`; the window remains visible (verified via snapshot — no MCP error).
-- [x] Calling `swing_close` on an undecorated window returns an MCP error (`isError: true`).
-- [x] A JFrame with `EXIT_ON_CLOSE` does not receive a `close` action in the snapshot and has no ref assigned for it.
-- [x] Calling `swing_close` on a JFrame with `EXIT_ON_CLOSE` (via a stale ref) returns an MCP error (`isError: true`).
-- [x] Calling `swing_close` with an invalid ref returns an MCP error with a recovery message suggesting to call `swing_snapshot`.
-- [x] Calling `swing_close` on a component that does not support close (e.g. `JButton`) returns an MCP error suggesting to call `swing_snapshot`.
-- [x] The tool returns `null` on success (fire-and-forget).
-
----
-
 ## Tests
 
-> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+> See `architecture.md` § Testing for conventions.
 
 - [x] `SwingCloseTest` (headless)
   - [x] Each non-window component from the component matrix returns an MCP error (`isError: true`) when `swing_close` is called on it.

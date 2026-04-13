@@ -40,24 +40,9 @@ Execution order:
 
 ---
 
-## Acceptance Criteria
-
-- [x] Calling `swing_get_cell_count` on a `JTable` returns an MCP error whose message redirects the AI to `swing_get_item_count`.
-- [x] Calling `swing_get_cell_count` with a valid ref for a `JList` with 200 items returns `200`.
-- [x] Calling `swing_get_cell_count` with a valid ref for an empty `JList` returns `0`.
-- [x] Calling `swing_get_cell_count` with a valid ref for a `JTree` returns the top-level visible node count.
-- [x] Calling `swing_get_cell_count` with a valid ref for a non-truncated `JList` (e.g. 3 items) succeeds — no child count threshold enforced.
-- [x] Calling `swing_get_cell_count` on a non-supported component (e.g. `JButton`, `JPanel`, `JTable`) returns an MCP error.
-- [x] Calling `swing_get_cell_count` with an invalid ref returns an MCP error with a recovery message.
-- [x] The ref map is **not** cleared after a `swing_get_cell_count` call (read-only tool).
-- [x] Calling `swing_get_cell_count` on a disabled component succeeds.
-- [x] The returned count matches the `total` from `swing_get_cells`'s header line for the same component.
-
----
-
 ## Tests
 
-> Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
+> See `architecture.md` § Testing for conventions.
 
 - [x] `SwingGetCellCountTest` (headless)
   - [x] `JTable` returns an MCP error redirecting to `swing_get_item_count`.
