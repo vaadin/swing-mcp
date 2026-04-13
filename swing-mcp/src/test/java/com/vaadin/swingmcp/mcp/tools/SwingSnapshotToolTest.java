@@ -1627,6 +1627,34 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     @Test
+    void br11_runtimeProxyWithDoubleDollarName_isStrippedToRealSuperclass()
+            throws Exception {
+        // Simulate a CGLIB / ByteBuddy / Hibernate runtime proxy:
+        // top-level class (null enclosingClass) whose name contains "$$".
+        // findDisplayClass must strip it and land on FancyButton, yielding
+        // a Case B line (FancyButton → JButton).
+        Class<? extends FancyButton> proxyClass = new net.bytebuddy.ByteBuddy()
+                .subclass(FancyButton.class)
+                .name("com.vaadin.swingmcp.test.FancyButton$$EnhancerByCGLIB$$abc123")
+                .make()
+                .load(getClass().getClassLoader(),
+                        net.bytebuddy.dynamic.loading.ClassLoadingStrategy.Default.WRAPPER)
+                .getLoaded();
+
+        // Preconditions: fixture actually trips the isRuntimeProxy heuristic.
+        assertTrue(proxyClass.getName().contains("$$"),
+                "precondition: proxy class name must contain '$$'");
+        assertNull(proxyClass.getEnclosingClass(),
+                "precondition: proxy class must be top-level (no enclosing)");
+
+        FancyButton proxy = proxyClass.getDeclaredConstructor().newInstance();
+
+        assertEquals(
+                "- FancyButton -> JButton (push_button) \"Fancy\" [ref=1] actions: click",
+                snapshot(proxy));
+    }
+
+    @Test
     void br11_caseC_jTreeNode_rendersAsParensLabel() throws Exception {
         // JTree.AccessibleJTreeNode is not a Component, so Case C applies —
         // identity slot is just `(label)` with no class prefix.

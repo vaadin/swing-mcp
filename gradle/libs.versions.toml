@@ -6,4 +6,5 @@ junit = "org.junit.jupiter:junit-jupiter-engine:6.0.1"
 mcp-client = { module = "io.modelcontextprotocol.sdk:mcp", version.ref = "mcp" }
 mcp-json-jackson3 = { module = "io.modelcontextprotocol.sdk:mcp-json-jackson3", version.ref = "mcp" }
 gson = "com.google.code.gson:gson:2.13.2"
+bytebuddy = "net.bytebuddy:byte-buddy:1.14.19"
 

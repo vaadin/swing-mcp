@@ -8,6 +8,7 @@ dependencies {
     testImplementation(libs.mcp.client)
     testImplementation(libs.mcp.json.jackson3)
     testImplementation(libs.junit)
+    testImplementation(libs.bytebuddy)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
