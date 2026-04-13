@@ -9,7 +9,6 @@ import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleTable;
 import javax.swing.JComboBox;
-import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -20,10 +19,12 @@ import java.util.Map;
  * MCP tool {@code swing_get_selectable_items}: lists selectable items of a UI
  * component by ref, with paging support.
  *
- * <p>Returns a JSON object with {@code totalCount} and {@code items} (array of
- * objects, each with {@code index} and {@code name}). For JTable, index is the
- * row index and name is a pipe-separated summary of cell values. For
- * JTabbedPane, disabled tabs include {@code "enabled": false}.</p>
+ * <p>Supported components: {@code JList}, {@code JComboBox}, {@code JTable}.
+ * Returns a JSON object with {@code totalCount} and {@code items} (array of
+ * objects, each with {@code index} and {@code name}). For JTable, index is
+ * the row index and name is a pipe-separated summary of cell values.
+ * {@code JTabbedPane} is not a supported target (dropped per P-001); tabs are
+ * rendered inline in the snapshot.</p>
  *
  * @see <a href="use-case-017-swing-get-selectable-items.md">UC-017</a>
  */
@@ -36,13 +37,16 @@ public class SwingGetSelectableItemsTool extends AbstractSwingTool {
 
     @Override
     public String getDescription() {
-        return "List selectable items of a UI component by ref. Returns a paged JSON array "
-                + "of items (0-based index + name). Indices are in the selection item index "
-                + "space \u2014 pass them directly to swing_set_selection. For JTable, this is "
-                + "the canonical way to page through rows regardless of selection mode: index "
-                + "is the row index and name is a pipe-separated summary of cell values (use "
-                + "this instead of swing_get_cells, which does not support JTable). Note: "
-                + "swing_set_selection still requires the table to be in row-selection mode. "
+        return "List selectable items of a UI component by ref. Supported components: JList, "
+                + "JComboBox, JTable. Returns a paged JSON array of items (0-based index + name). "
+                + "Indices are in the selection item index space \u2014 pass them directly to "
+                + "swing_set_selection. For JTable, this is the canonical way to page through rows "
+                + "regardless of selection mode: index is the row index and name is a pipe-separated "
+                + "summary of cell values (use this instead of swing_get_cells, which does not "
+                + "support JTable). Note: swing_set_selection still requires the table to be in "
+                + "row-selection mode. For JTabbedPane, use the snapshot \u2014 each tab already "
+                + "renders as `- page_tab N \"title\"` with its 0-based index and [disabled] / "
+                + "[selected] state; pass the index straight to swing_set_selection as [N]. "
                 + "Requires offset and length parameters for paging. If offset+length is bigger "
                 + "than the amount of data available, fewer items than requested may be returned. "
                 + "Requires a ref obtained from swing_snapshot or swing_get_cells.";
@@ -110,22 +114,9 @@ public class SwingGetSelectableItemsTool extends AbstractSwingTool {
                 item.put("name", obj != null ? obj.toString() : null);
                 items.add(item);
             }
-        } else if (accessible instanceof JTabbedPane) {
-            // BR-11 + BR-12: JTabbedPane enumeration with disabled indicator
-            JTabbedPane tp = (JTabbedPane) accessible;
-            for (int i = start; i < end; i++) {
-                Accessible child = ac.getAccessibleChild(i);
-                Map<String, Object> item = new LinkedHashMap<>();
-                item.put("index", i);
-                item.put("name", child != null ? child.getAccessibleContext().getAccessibleName() : null);
-                // BR-12: only emit enabled when false
-                if (!tp.isEnabledAt(i)) {
-                    item.put("enabled", false);
-                }
-                items.add(item);
-            }
         } else {
-            // BR-11: generic enumeration (JList)
+            // BR-11: JList enumeration (only non-JTable, non-JComboBox target
+            // left after JTabbedPane was dropped per P-001 Wave A).
             for (int i = start; i < end; i++) {
                 Accessible child = ac.getAccessibleChild(i);
                 Map<String, Object> item = new LinkedHashMap<>();

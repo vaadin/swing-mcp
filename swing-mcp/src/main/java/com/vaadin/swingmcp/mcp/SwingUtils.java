@@ -279,23 +279,33 @@ public final class SwingUtils {
      * selection-item tools {@code swing_get_selectable_items} and
      * {@code swing_get_selectable_items_count}.
      *
-     * <p>Equivalent to {@link #supportsSelection} for every component
-     * <em>except</em> {@code JTable}: any JTable passes, regardless of selection
-     * mode (row / column / cell / none). Rationale: row enumeration is a
-     * read-only observation that does not require a working selection model, and
-     * after UC-020's JTable ban on {@code swing_get_cells} these two tools are
-     * the only paged content-access path for JTables in column-selection,
-     * cell-selection or no-selection modes.</p>
-     *
-     * <p>The write-path selection tools ({@code swing_set_selection},
-     * {@code swing_clear_selection}, {@code swing_select_all}) keep the strict
-     * {@link #supportsSelection} gate — they genuinely need a working row
-     * selection model.</p>
+     * <p>Accepts {@code JList}, {@code JComboBox}, and any {@code JTable} only.
+     * Two deliberate deviations from {@link #supportsSelection}:</p>
+     * <ul>
+     *   <li><b>{@code JTable} is accepted in any selection mode</b> (row /
+     *       column / cell / no-selection). Rationale: row enumeration is a
+     *       read-only observation that does not require a working selection
+     *       model, and after UC-020's JTable ban on {@code swing_get_cells}
+     *       these two tools are the only paged content-access path for
+     *       JTables in non-row-selection modes. The write-path selection
+     *       tools ({@code swing_set_selection}, {@code swing_clear_selection},
+     *       {@code swing_select_all}) keep the strict
+     *       {@link #supportsSelection} gate — they genuinely need a working
+     *       row selection model.</li>
+     *   <li><b>{@code JTabbedPane} is rejected</b> (dropped per P-001 Wave A).
+     *       Tabs are UI structure, not data, and are already rendered in the
+     *       snapshot with their 0-based index and {@code [selected]} /
+     *       {@code [disabled]} state (UC-002 SC-2). The AI passes the inline
+     *       index straight to {@code swing_set_selection}.</li>
+     * </ul>
      *
      * @see <a href="use-case-017-swing-get-selectable-items.md">UC-017 BR-03</a>
      * @see <a href="use-case-018-swing-get-selectable-items-count.md">UC-018 BR-03</a>
      */
     public static boolean supportsGetSelectableItems(Accessible a) {
+        if (a instanceof JTabbedPane) {
+            return false;
+        }
         if (a instanceof JTable) {
             AccessibleContext ac = a.getAccessibleContext();
             return ac != null;
@@ -569,13 +579,15 @@ public final class SwingUtils {
      *   <li><b>JTable</b> — number of rows ({@code AccessibleTable.getAccessibleRowCount()}).</li>
      *   <li><b>JComboBox</b> — {@code JComboBox.getItemCount()} (not
      *       {@code getAccessibleChildrenCount()}, which returns 1 — the popup menu).</li>
-     *   <li><b>All others</b> (JList, JTabbedPane) — {@code getAccessibleChildrenCount()}.</li>
+     *   <li><b>JList</b> — {@code getAccessibleChildrenCount()}.</li>
      * </ul>
      * <p>
-     * The caller must verify that the accessible supports selection
-     * ({@link #supportsSelection}) before calling this method.
+     * The caller must verify that the accessible is a valid target
+     * ({@link #supportsGetSelectableItems}) before calling this method.
+     * {@code JTabbedPane} is not a supported target (dropped per P-001);
+     * its tab count is derivable from the snapshot instead.
      *
-     * @param a an accessible that supports selection
+     * @param a an accessible that passes {@link #supportsGetSelectableItems}
      * @return the number of selectable items
      */
     public static int getSelectableItemsCount(Accessible a) {

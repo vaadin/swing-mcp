@@ -7,6 +7,7 @@ import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
 import com.vaadin.swingmcp.mcpscreen.JFilterableComboBox;
+import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -67,7 +68,9 @@ class SwingGetSelectableItemsCountScreenTest extends AbstractScreenTest {
     }
 
     @Test
-    void jTabbedPaneInsideJFrame() throws Exception {
+    void jTabbedPaneInsideJFrame_isRejected() throws Exception {
+        // Regression guard for P-001 Wave A — JTabbedPane dropped as a
+        // supported target; tab count is derivable from the snapshot (UC-002 SC-2).
         JFrame frame = new JFrame("Test");
         JTabbedPane tp = new JTabbedPane();
         tp.addTab("Tab1", new JPanel());
@@ -75,7 +78,11 @@ class SwingGetSelectableItemsCountScreenTest extends AbstractScreenTest {
         frame.getContentPane().add(tp);
 
         snapshot(frame);
-        assertEquals("2", getCount(context.getRefOf(tp)));
+        int ref = context.getRefOf(tp);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getCount(ref));
+        assertTrue(ex.getMessage().contains("does not support swing_get_selectable_items_count"),
+                "Expected not-supported error for JTabbedPane, got: " + ex.getMessage());
     }
 
     @Test

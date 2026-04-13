@@ -7,6 +7,7 @@ import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
 import com.vaadin.swingmcp.mcpscreen.JFilterableComboBox;
+import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -73,20 +74,21 @@ class SwingGetSelectableItemsScreenTest extends AbstractScreenTest {
     }
 
     @Test
-    void readJTabbedPaneItemsInsideJFrame() throws Exception {
+    void jTabbedPaneInsideJFrame_isRejected() throws Exception {
+        // Regression guard for P-001 Wave A — JTabbedPane dropped as a
+        // supported target; tabs are read inline from the snapshot (UC-002 SC-2).
         JFrame frame = new JFrame("Test");
         JTabbedPane tp = new JTabbedPane();
         tp.addTab("Tab1", new JPanel());
         tp.addTab("Tab2", new JPanel());
-        tp.setEnabledAt(1, false);
         frame.getContentPane().add(tp);
 
         snapshot(frame);
-        String json = getItems(context.getRefOf(tp), 0, 2);
-        assertEquals("{\"totalCount\":2,\"items\":["
-                + "{\"index\":0,\"name\":\"Tab1\"},"
-                + "{\"index\":1,\"name\":\"Tab2\",\"enabled\":false}"
-                + "]}", json);
+        int ref = context.getRefOf(tp);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getItems(ref, 0, 2));
+        assertTrue(ex.getMessage().contains("does not support swing_get_selectable_items"),
+                "Expected not-supported error for JTabbedPane, got: " + ex.getMessage());
     }
 
     @Test

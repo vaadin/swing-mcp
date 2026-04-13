@@ -118,47 +118,23 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JTabbedPane
+    // JTabbedPane — dropped as a supported target per P-001 Wave A.
+    // The three former positive tests (all-tabs, disabled-tab, enabled-tab)
+    // are replaced by a single regression guard below + componentMatrix_JTabbedPane.
+    // Tabs are now read inline from the snapshot per UC-002 SC-2.
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void jTabbedPane_allTabs() throws Exception {
-        JTabbedPane tp = new JTabbedPane();
-        tp.addTab("General", new JPanel());
-        tp.addTab("Advanced", new JPanel());
-        tp.addTab("Hidden", new JPanel());
-        snapshot(tp);
-        String json = getItems(context.getRefOf(tp), 0, 3);
-        assertEquals("{\"totalCount\":3,\"items\":["
-                + "{\"index\":0,\"name\":\"General\"},"
-                + "{\"index\":1,\"name\":\"Advanced\"},"
-                + "{\"index\":2,\"name\":\"Hidden\"}"
-                + "]}", json);
-    }
-
-    @Test
-    void jTabbedPane_disabledTab_hasEnabledFalse() throws Exception {
+    void jTabbedPane_isRejected() throws Exception {
         JTabbedPane tp = new JTabbedPane();
         tp.addTab("Tab0", new JPanel());
         tp.addTab("Tab1", new JPanel());
-        tp.addTab("Tab2", new JPanel());
-        tp.setEnabledAt(1, false);
         snapshot(tp);
-        String json = getItems(context.getRefOf(tp), 0, 3);
-        assertEquals("{\"totalCount\":3,\"items\":["
-                + "{\"index\":0,\"name\":\"Tab0\"},"
-                + "{\"index\":1,\"name\":\"Tab1\",\"enabled\":false},"
-                + "{\"index\":2,\"name\":\"Tab2\"}"
-                + "]}", json);
-    }
-
-    @Test
-    void jTabbedPane_enabledTab_omitsEnabledField() throws Exception {
-        JTabbedPane tp = new JTabbedPane();
-        tp.addTab("Only", new JPanel());
-        snapshot(tp);
-        String json = getItems(context.getRefOf(tp), 0, 1);
-        assertFalse(json.contains("enabled"), "Enabled tabs should not have the enabled field");
+        int ref = context.getRefOf(tp);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getItems(ref, 0, 10));
+        assertTrue(ex.getMessage().contains("does not support swing_get_selectable_items"),
+                "Expected not-supported error for JTabbedPane, got: " + ex.getMessage());
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -424,13 +400,11 @@ class SwingGetSelectableItemsTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JTabbedPane() throws Exception {
+        // Dropped per P-001 — JTabbedPane is no longer a supported target.
         JTabbedPane tp = new JTabbedPane();
         tp.addTab("First", new JPanel());
         tp.addTab("Second", new JPanel());
-        snapshot(tp);
-        String json = getItems(context.getRefOf(tp), 0, 2);
-        assertTrue(json.contains("\"totalCount\":2"));
-        assertTrue(json.contains("\"name\":\"First\""));
+        assertNotSupported(tp);
     }
 
     @Test

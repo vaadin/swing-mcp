@@ -72,24 +72,24 @@ class SwingGetSelectableItemsCountTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JTabbedPane
+    // JTabbedPane — dropped as a supported target per P-001 Wave A.
+    // The two former positive tests (3-tabs, empty) are replaced by a single
+    // regression guard below + componentMatrix_JTabbedPane. The tab count is
+    // now derivable from the snapshot, which renders every tab inline per
+    // UC-002 SC-2.
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void jTabbedPane_3tabs() throws Exception {
+    void jTabbedPane_isRejected() throws Exception {
         JTabbedPane tp = new JTabbedPane();
         tp.addTab("General", new JPanel());
         tp.addTab("Advanced", new JPanel());
-        tp.addTab("Hidden", new JPanel());
         snapshot(tp);
-        assertEquals("3", getCount(context.getRefOf(tp)));
-    }
-
-    @Test
-    void jTabbedPane_empty() throws Exception {
-        JTabbedPane tp = new JTabbedPane();
-        snapshot(tp);
-        assertEquals("0", getCount(context.getRefOf(tp)));
+        int ref = context.getRefOf(tp);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getCount(ref));
+        assertTrue(ex.getMessage().contains("does not support swing_get_selectable_items_count"),
+                "Expected not-supported error for JTabbedPane, got: " + ex.getMessage());
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -261,11 +261,11 @@ class SwingGetSelectableItemsCountTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JTabbedPane() throws Exception {
+        // Dropped per P-001 — JTabbedPane is no longer a supported target.
         JTabbedPane tp = new JTabbedPane();
         tp.addTab("First", new JPanel());
         tp.addTab("Second", new JPanel());
-        snapshot(tp);
-        assertEquals("2", getCount(context.getRefOf(tp)));
+        assertNotSupported(tp);
     }
 
     @Test
