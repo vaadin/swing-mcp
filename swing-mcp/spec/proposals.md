@@ -14,8 +14,8 @@
 
 ## P-001: Rename `get_selectable_items` → `get_items`; drop `JTabbedPane` from the enumeration tool
 
-**Date:** 2026-04-13
-**Status:** Proposed, grilled
+**Date:** 2026-04-13 (re-grilled 2026-04-13 post-`isEffectivelyEnabled` rewrite)
+**Status:** Proposed, grilled twice
 **Touches:** UC-002, UC-017, UC-018, architecture.md § Selection Action Groups.
 
 ### Motivation
@@ -44,20 +44,24 @@
    deeper reason — **tabs are UI structure, not data.**
 
    **Deciding principle for enumerate tools (worth stating generally):**
-   enumerate tools exist for *value collections* (often database-backed,
-   potentially large, unbounded by UI layout). They do not exist for *UI
-   structure* (layout-bounded by human factors, already visible in the
-   snapshot). This test auto-excludes JTabbedPane tabs, JSplitPane panes,
-   JMenu children, etc., from ever justifying an enumerate tool. If a future
-   counter-example shows up (e.g. a legacy Swing app misusing a structural
-   container as data storage), document the use case and revisit.
+   enumerate tools exist for collections whose **cardinality is bounded by
+   data, not by UI layout**. JList items, JComboBox items, and JTable rows
+   are bounded by data (often database-backed, potentially thousands).
+   JTabbedPane tabs, JSplitPane panes, JMenu children, JToolBar items are
+   bounded by UI layout (human-factors caps: essentially never >20, because
+   a user can't navigate more). The bounded-by-what test is the load-bearing
+   property — "UI structure vs. value" invites category arguments, but
+   "what caps the count" is crisp. If a future counter-example shows up
+   (e.g. a legacy Swing app using a JMenu as a recent-files list with
+   hundreds of dynamic items), document the use case and revisit.
 
 5. **JTabbedPane tabs are already in the snapshot.** UC-002 SC-2 + the
    `PAGE_TAB` semantic role mean every tab renders as a direct child of the
-   `page_tab_list`, with `[selected]` state on the active one. The only
-   enumeration gaps are (a) explicit tab index and (b) disabled-tab indicator.
-   Both can be closed with a small snapshot rendering change — cheaper than a
-   new tool.
+   `page_tab_list`, with `[selected]` state on the active one. As of
+   commit c5feda3, disabled tabs also render with `[disabled]` (see
+   §"Enhance snapshot rendering" for the required carveout). The **only
+   remaining enumeration gap is explicit tab index**, closeable with a
+   small snapshot rendering change — cheaper than a new tool.
 
 ### Proposal
 
@@ -82,12 +86,15 @@ tabs are UI structure and are already visible in the snapshot.
   `SnapshotNode.calculateSelfLine()` keyed on `role == PAGE_TAB`, emitting
   `ctx.getAccessibleIndexInParent()` (verified equivalent to tab index by
   UC-014 probe). Mirrors the JTable row rendering pattern (`- row N: ...`).
-- **`[disabled]` state on disabled tabs** is believed to emit already, because
-  `SwingUtils.isEffectivelyEnabled` reads `AccessibleStateSet.ENABLED` (not
-  `Component.isEnabled()`), and `JTabbedPane$Page` correctly reflects
-  `isEnabledAt(titleIndex)` in its state set. **To be confirmed by a dedicated
-  snapshot test in Wave A.1** — if the assumption fails, root-cause before
-  proceeding.
+- **`[disabled]` state on disabled tabs** is already wired up as of commit
+  c5feda3. `AccessiblePage` does **not** omit `ENABLED` from its state set
+  when `JTabbedPane.setEnabledAt(i, false)` is called (a Swing quirk — the
+  opposite of what the first grill pass assumed), so `SwingUtils.isEffectivelyEnabled`
+  carries an explicit `parent instanceof JTabbedPane` carveout that consults
+  `tp.isEnabledAt(idx)`. The contract is locked in by the snapshot tests
+  added in commit 043a71b (`SwingSnapshotToolTest.tabbedPane_tabDisabledViaSetEnabledAt_marksOnlyThatTabDisabled`
+  and `tabbedPane_buttonOnDisabledTab_isStillClickable`). No further work
+  needed in this wave beyond tab-index emission.
 
 Example rendering after the change:
 
@@ -99,20 +106,52 @@ Example rendering after the change:
     - page_tab 2 "Legacy" [disabled]
 ```
 
-#### Semantics note: `[disabled]` on a `page_tab` is narrower than elsewhere
+Weird-but-legal edge case — a tab that is both selected and disabled (if
+`setEnabledAt(idx, false)` is called on the currently-selected tab):
 
-Empirically verified (2026-04-13 probe):
+```
+- page_tab_list "Only" [ref=1] actions: single-selection
+    - page_tab 0 "Only" [disabled, selected]
+      - push_button "OnDisabled" [ref=2] actions: click
+```
 
-- On a button / other interactive component, `[disabled]` means the component
-  is inert — clicks do nothing, actions are blocked.
-- On a `page_tab`, `[disabled]` means **only the tab header is
-  non-navigable.** Programmatic selection via `JTabbedPane.setSelectedIndex`
-  works; the tab's content, when displayed, is fully live (child buttons fire
-  their action listeners normally). UC-015 BR-14 is a **policy** that refuses
-  such programmatic selection from our tool, not a Swing-level barrier.
+The child button has **no** `[disabled]` marker — per issue below, the
+snapshot mirrors Swing's non-propagating `setEnabled` semantics exactly.
+
+#### Semantics note: `[disabled]` never propagates to children, by design
+
+After the `isEffectivelyEnabled` rewrite in commit c02f86b, the snapshot
+mirrors Swing's non-propagating disabled semantics **uniformly across all
+containers**: on a disabled `JPanel`, `JScrollPane`, `JToolBar`, or
+`JTabbedPane` tab, the container is marked `[disabled]` but its children
+are not. This is not a JTabbedPane-specific quirk — it is Swing's
+documented, by-design behavior for `Component.setEnabled(false)`
+(JDK-4177727, closed as won't-fix). A button inside any disabled container
+is still mechanically clickable, and our `swing_click` will accept it. See
+[`feedback_swing_fidelity.md`](../../../.claude/projects/-home-mavi-work-swingai-swing-mcp/memory/feedback_swing_fidelity.md)
+— MCP exposes what Swing allows, not what would be cleaner.
+
+Practical consequences specific to `page_tab`:
+
+- **Tab header non-navigable.** A user cannot click a `[disabled]` tab
+  header to switch to it. This is what the `[disabled]` marker on the
+  `page_tab` line reports.
+- **Programmatic selection still works at the Swing level** —
+  `JTabbedPane.setSelectedIndex(i)` happily switches to a disabled tab.
+  UC-015 BR-14 is a **policy** in our tool that refuses such selection,
+  not a Swing-level barrier.
+- **Children of a disabled tab are fully live when displayed** — if the
+  disabled tab is the selected one (legal but odd), its child buttons fire
+  their action listeners normally. The snapshot reflects this faithfully
+  by not propagating `[disabled]`.
 
 Worth a design note in UC-002 (near SC-2) so future readers don't assume
-"disabled tab" means the subtree is inert.
+"disabled tab" means the subtree is inert. Pre-c5feda3 the snapshot was
+silently *wrong* about disabled tabs (missing the `[disabled]` marker
+entirely); BR-14 was the only honest signal. Post-c5feda3 snapshot and
+BR-14 agree — an AI reading the snapshot can now predict BR-14's refusal
+without out-of-band policy knowledge. This tightening is worth calling out
+in the architecture.md footnote (see Phase A.3).
 
 #### Keep the selection family polymorphic for `JTabbedPane`
 
@@ -136,8 +175,13 @@ enumerate-not-advertised footnote keeps the doc honest in a single edit.
 |---|---|---|---|---|
 | `JList` | `get_items` | `get_item_count` | `get_selection` | `set_selection` |
 | `JComboBox` | `get_items` | `get_item_count` | `get_selection` | `set_selection` |
-| `JTable` | `get_items` | `get_item_count` | `get_selection` (row mode) | `set_selection` (row mode) |
+| `JTable` | `get_items` [^jt] | `get_item_count` [^jt] | `get_selection` (row mode) | `set_selection` (row mode) |
 | `JTabbedPane` | *(inline in snapshot — not advertised)* | *(inline in snapshot)* | `get_selection` | `set_selection` |
+
+[^jt]: `get_items` / `get_item_count` accept **any** `JTable`, regardless of
+    selection mode (row / column / cell / none) — per the
+    `SwingUtils.supportsGetSelectableItems` gate added in commit 5296004.
+    Only the selection read/write columns require row mode.
 
 ### Rejected alternatives
 
@@ -178,17 +222,26 @@ Two independently shippable waves. Wave B does not start until Wave A merges.
 Additive (snapshot rendering) + subtractive (JTabbedPane leaves two tools). No
 renames.
 
-1. **Phase A.1 — verify free behavior.** Add a headless snapshot test
-   asserting `[disabled]` already emits on a disabled `page_tab` line.
-   Confirms the assumption underpinning §"Enhance snapshot rendering" above.
-   If it fails, investigate before proceeding.
-2. **Phase A.2 — snapshot enhancement.** Add the `role == PAGE_TAB` branch to
-   `SnapshotNode.calculateSelfLine()` that emits the tab index. Add tests
-   covering: enabled tab, selected tab, disabled tab, tab with nested
-   content, multi-tab pane.
+1. **Phase A.1 — verify free behavior.** ~~Add a headless snapshot test
+   asserting `[disabled]` already emits on a disabled `page_tab` line.~~
+   **DONE — and the "free behavior" assumption failed.** `AccessiblePage`
+   does not omit `ENABLED`; an explicit `JTabbedPane.isEnabledAt` carveout
+   in `SwingUtils.isEffectivelyEnabled` was required (commit c5feda3). The
+   two snapshot tests in commit 043a71b lock the contract: a disabled tab
+   emits `[disabled]`, and a child button on a disabled-but-selected tab
+   does NOT inherit `[disabled]` (Swing fidelity — see Semantics note).
+2. **Phase A.2 — snapshot enhancement.** **Scope reduced to tab-index
+   emission only** — `[disabled]` emission is done (see A.1). Add the
+   `role == PAGE_TAB` branch to `SnapshotNode.calculateSelfLine()` that
+   emits `ctx.getAccessibleIndexInParent()` as `- page_tab N "title"`
+   (mirrors the JTable `- row N: ...` pattern). Add tests covering:
+   enabled tab, selected tab, tab with nested content, multi-tab pane.
+   Also update the two existing tests from commit 043a71b (which currently
+   assert `- page_tab "Tab1"`) to assert the new `- page_tab 0 "Tab1"`
+   form — verify `[disabled, selected]` ordering stays stable.
 3. **Phase A.3 — spec.**
    - **UC-002**: document the new `- page_tab N "title"` rendering (example
-     + the `[disabled]` narrower-semantics note near SC-2).
+     + the Swing-fidelity-everywhere `[disabled]` semantics note near SC-2).
    - **UC-017**: remove JTabbedPane from the component matrix; remove
      BR-11's JTabbedPane clause; remove BR-12 entirely; remove the
      JTabbedPane algorithm branch and the `JTabbedPane.isEnabledAt` line
@@ -197,7 +250,11 @@ renames.
      description.
    - **architecture.md § Selection Action Groups**: add a JTabbedPane
      footnote covering (a) enumerate-not-advertised — tabs are in the
-     snapshot — and (b) the pre-existing `clear_selection` asymmetry.
+     snapshot — (b) the pre-existing `clear_selection` asymmetry, and
+     (c) the snapshot-now-predicts-BR-14 tightening: post-c5feda3 the
+     `[disabled]` marker on a `page_tab` accurately foreshadows UC-015
+     BR-14's refusal of disabled-tab selection, so an AI reading the
+     snapshot no longer needs out-of-band policy knowledge.
 4. **Phase A.4 — implement.**
    - Update `SwingUtils.supportsGetSelectableItems` and
      `SwingUtils.getSelectableItemsCount` to exclude JTabbedPane.
@@ -245,6 +302,39 @@ proposal.)*
   - Landed on structure-vs-value as the litmus test for enumerate tools.
   - Verified empirically (probe 2026-04-13) that disabled-tab contents are live;
     established that `[disabled]` on `page_tab` has narrower semantics.
-  - Downsized Wave A.2 after realizing `SwingUtils.isEffectivelyEnabled` reads
+  - ~~Downsized Wave A.2 after realizing `SwingUtils.isEffectivelyEnabled` reads
     `AccessibleStateSet.ENABLED` (not `Component.isEnabled()`), meaning
-    `[disabled]` likely already emits on tabs with no new machinery needed.
+    `[disabled]` likely already emits on tabs with no new machinery needed.~~
+    **Struck through in 2026-04-13 re-grill** — assumption was wrong, see below.
+
+- **2026-04-13 (re-grill, post-`isEffectivelyEnabled` rewrite)** — verified the
+  proposal against the now-landed c02f86b / c5feda3 / 043a71b commits.
+  - **First-grill assumption corrected.** `AccessiblePage` does NOT omit
+    `ENABLED` when `setEnabledAt(i, false)` is called; an explicit
+    `JTabbedPane.isEnabledAt` carveout in `SwingUtils.isEffectivelyEnabled`
+    was required (commit c5feda3, merged before this re-grill). Before that
+    fix, the snapshot was silently *wrong* about disabled tabs — not just
+    "missing a nice-to-have marker". The JTabbedPane-drop is downstream of
+    a correctness fix, not just aesthetic cleanup.
+  - **Phase A.1 re-classified as done** (commit 043a71b tests) and A.2
+    narrowed to tab-index emission only.
+  - **Reframed the `[disabled]` semantics note** from "JTabbedPane-specific
+    narrower semantics" to "Swing-fidelity everywhere": after c02f86b,
+    `isEffectivelyEnabled` no longer walks the parent chain for real
+    Components, so disabled containers never mark their children — uniform
+    across `JPanel`, `JScrollPane`, `JToolBar`, `JTabbedPane`. Cites memory
+    entry `feedback_swing_fidelity.md`.
+  - Added `[disabled, selected]` edge-case example (covered by commit
+    043a71b test `tabbedPane_buttonOnDisabledTab_isStillClickable`).
+  - Surfaced the **snapshot-now-predicts-BR-14** tightening — pre-c5feda3
+    the `[disabled]` marker was missing so BR-14's refusal was un-predictable
+    from the snapshot alone; post-c5feda3 snapshot and BR-14 agree. Added
+    as a third bullet in the A.3 architecture.md footnote task.
+  - Sharpened the enumerate-tool principle from "UI structure vs. value" to
+    "bounded by data vs. bounded by UI layout" — the load-bearing property
+    that avoids category arguments.
+  - Added a tool-matrix footnote clarifying JTable's `get_items` enumerate
+    gate is *selection-mode-independent* (per `supportsGetSelectableItems`,
+    commit 5296004), unlike the selection read/write columns.
+  - Flagged tooltip-text-per-tab (`setToolTipTextAt`) as out of scope; a
+    dedicated tool is planned separately.
