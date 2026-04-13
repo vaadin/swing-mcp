@@ -470,6 +470,17 @@ class SnapshotNode {
         AccessibleRole role = ctx != null ? ctx.getAccessibleRole() : null;
         sb.append(role != null ? AccessibleNames.roleName(role) : "unknown");
 
+        // UC-002 SC-2: emit the 0-based tab index inline for JTabbedPane pages,
+        // so an AI client can pass it straight to swing_set_selection as [N]
+        // without a separate enumeration call (UC-015). Mirrors the JTable
+        // row rendering pattern (- row N: …).
+        if (role == AccessibleRole.PAGE_TAB && ctx != null) {
+            int tabIndex = ctx.getAccessibleIndexInParent();
+            if (tabIndex >= 0) {
+                sb.append(' ').append(tabIndex);
+            }
+        }
+
         // Name and description (omit if blank)
         String name = ctx != null ? ctx.getAccessibleName() : null;
         String desc = ctx != null ? ctx.getAccessibleDescription() : null;

@@ -499,9 +499,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         assertEquals(
                 "- panel\n"
                 + "  - page_tab_list \"Tab1\" [ref=1] actions: single-selection\n"
-                + "    - page_tab \"Tab1\" [selected]\n"
+                + "    - page_tab 0 \"Tab1\" [selected]\n"
                 + "      - push_button \"InTab1\" [ref=2] actions: click\n"
-                + "    - page_tab \"Tab2\"",
+                + "    - page_tab 1 \"Tab2\"",
                 output);
     }
 
@@ -523,8 +523,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         assertEquals(
                 "- panel\n"
                 + "  - page_tab_list \"Tab1\" [ref=1] actions: single-selection\n"
-                + "    - page_tab \"Tab1\" [selected]\n"
-                + "    - page_tab \"Tab2\" [disabled]",
+                + "    - page_tab 0 \"Tab1\" [selected]\n"
+                + "    - page_tab 1 \"Tab2\" [disabled]",
                 output);
     }
 
@@ -549,9 +549,36 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         assertEquals(
                 "- panel\n"
                 + "  - page_tab_list \"OnlyTab\" [ref=1] actions: single-selection\n"
-                + "    - page_tab \"OnlyTab\" [disabled, selected]\n"
+                + "    - page_tab 0 \"OnlyTab\" [disabled, selected]\n"
                 + "      - push_button \"OnDisabled\" [ref=2] actions: click",
                 output);
+    }
+
+    @Test
+    void tabbedPane_fourTabs_indicesAscendFromZero() throws Exception {
+        // Regression guard: tab indices are 0-based and strictly ascending
+        // across the page_tab_list, with the selected tab carrying [selected]
+        // and disabled tabs carrying [disabled]. Mixes states so a regression
+        // in ctx.getAccessibleIndexInParent() ordering would surface here.
+        JPanel panel = new JPanel();
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.addTab("Alpha", new JPanel());
+        tabbedPane.addTab("Beta", new JPanel());
+        tabbedPane.addTab("Gamma", new JPanel());
+        tabbedPane.addTab("Delta", new JPanel());
+        tabbedPane.setSelectedIndex(2);
+        tabbedPane.setEnabledAt(1, false);
+        tabbedPane.setEnabledAt(3, false);
+        panel.add(tabbedPane);
+
+        assertEquals(
+                "- panel\n"
+                + "  - page_tab_list \"Gamma\" [ref=1] actions: single-selection\n"
+                + "    - page_tab 0 \"Alpha\"\n"
+                + "    - page_tab 1 \"Beta\" [disabled]\n"
+                + "    - page_tab 2 \"Gamma\" [selected]\n"
+                + "    - page_tab 3 \"Delta\" [disabled]",
+                snapshot(panel));
     }
 
     @Test
@@ -898,8 +925,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         assertEquals(
                 "- panel\n"
                 + "  - page_tab_list \"General\" [ref=1] actions: single-selection\n"
-                + "    - page_tab \"General\" [selected]\n"
-                + "    - page_tab \"Advanced\"",
+                + "    - page_tab 0 \"General\" [selected]\n"
+                + "    - page_tab 1 \"Advanced\"",
                 snapshot(panel));
     }
 
