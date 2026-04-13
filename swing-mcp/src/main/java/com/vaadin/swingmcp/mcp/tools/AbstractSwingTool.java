@@ -108,21 +108,39 @@ public abstract class AbstractSwingTool {
     }
 
     /**
-     * Validates that the accessible is a large data component (JTable, JList,
-     * JTree), throwing an {@link MCPErrorResponseException} if it is not.
+     * Validates that the accessible is a valid target for {@code swing_get_cells}
+     * or {@code swing_get_cell_count} — i.e. its role is LIST or TREE. Throws an
+     * {@link MCPErrorResponseException} otherwise.
      *
-     * @param accessible the component to check
-     * @param toolName   the tool name for the error message
-     *                   (e.g. {@code "get_cells"})
-     * @throws MCPErrorResponseException if the component is not a large data component
+     * <p>JTable targets receive a dedicated error that redirects the AI to
+     * {@code swing_get_selectable_items} (for {@code swing_get_cells}) or
+     * {@code swing_get_selectable_items_count} (for {@code swing_get_cell_count}).
+     * Table cells are stamp-painted plain text labels with no actionable children,
+     * so these tools can never return a useful ref for a JTable.</p>
+     *
+     * @param accessible       the component to check
+     * @param toolName         the tool name for the generic error message
+     *                         (e.g. {@code "get_cells"})
+     * @param jtableRedirectTo the name of the tool the AI should use instead for
+     *                         JTable (e.g. {@code "swing_get_selectable_items"})
+     * @throws MCPErrorResponseException if the component does not support the tool
      */
-    protected static void requireLargeDataComponent(Accessible accessible, String toolName)
+    protected static void requireGetCellsSupported(Accessible accessible,
+                                                   String toolName,
+                                                   String jtableRedirectTo)
             throws MCPErrorResponseException {
-        if (!SwingUtils.isLargeDataComponent(accessible)) {
-            throw new MCPErrorResponseException(
-                    "Component does not support " + toolName
-                            + ". Call swing_snapshot or swing_get_cells to verify the list of actions.");
+        if (SwingUtils.isGetCellsSupported(accessible)) {
+            return;
         }
+        if (accessible instanceof JTable) {
+            throw new MCPErrorResponseException(
+                    "JTable does not support " + toolName
+                            + ". Table cells are plain text labels \u2014 use "
+                            + jtableRedirectTo + " to page through rows.");
+        }
+        throw new MCPErrorResponseException(
+                "Component does not support " + toolName
+                        + ". Call swing_snapshot or swing_get_cells to verify the list of actions.");
     }
 
     /**

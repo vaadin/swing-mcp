@@ -660,8 +660,11 @@ class SnapshotNode {
             actions.add("single-selection");
         }
 
-        // Step 6b: content discovery for truncated large data components
-        if (truncated) {
+        // Step 6b: content discovery for truncated large data components.
+        // JTable is excluded — its cells are stamp-painted plain text labels
+        // with no actionable children; use swing_get_selectable_items instead
+        // (UC-002 step 6b, UC-020 BR-03).
+        if (truncated && SwingUtils.isGetCellsSupported(accessible)) {
             actions.add("get_cell_count");
             actions.add("get_cells");
         }

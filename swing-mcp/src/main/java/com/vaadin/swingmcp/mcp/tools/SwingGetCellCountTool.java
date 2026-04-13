@@ -24,11 +24,13 @@ public class SwingGetCellCountTool extends AbstractSwingTool {
 
     @Override
     public String getDescription() {
-        return "Get the total number of accessible children (cells) of a large data component by ref. "
-                + "Returns the count as a plain integer. For JTable, this is rows \u00d7 columns "
-                + "(individual cells in row-major order \u2014 same index space as swing_get_cells). "
-                + "For JList, this is the item count. For JTree, this is the top-level visible "
-                + "node count. Requires a ref obtained from swing_snapshot or swing_get_cells.";
+        return "Get the total number of accessible children (cells) of a large data component "
+                + "(JList, JTree) by ref. Returns the count as a plain integer in the same "
+                + "index space as swing_get_cells. For JList, this is the item count. For "
+                + "JTree, this is the top-level visible node count. For JTable, use "
+                + "swing_get_selectable_items_count instead \u2014 table cells are plain text "
+                + "labels with no actionable children. Requires a ref obtained from "
+                + "swing_snapshot or swing_get_cells.";
     }
 
     @Override
@@ -46,8 +48,9 @@ public class SwingGetCellCountTool extends AbstractSwingTool {
         // Step 2 (BR-02): ref lookup
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // Step 3 (BR-03): eligibility check
-        requireLargeDataComponent(accessible, "swing_get_cell_count");
+        // Step 3 (BR-03): eligibility check — role must be LIST or TREE. JTable
+        // is rejected with a redirect to swing_get_selectable_items_count.
+        requireGetCellsSupported(accessible, "swing_get_cell_count", "swing_get_selectable_items_count");
 
         // Step 4 (BR-07): compute count
         int totalChildren = accessible.getAccessibleContext().getAccessibleChildrenCount();

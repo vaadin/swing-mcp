@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** get the total count of accessible children (cells) in a large data component by ref **so that** I can decide how to page through `swing_get_cells` without first requesting any cells — saving a round-trip when I only need the count.
 
-**Status:** Approved (amended 2026-04-13 — JTable removed; re-implementation pending)
+**Status:** Implemented (amended 2026-04-13 — JTable removed)
 **Date:** 2026-04-08
 
 ---
@@ -54,7 +54,7 @@ Execution order:
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_get_cell_count` on a `JTable` returns an MCP error whose message redirects the AI to `swing_get_selectable_items_count`.
+- [x] Calling `swing_get_cell_count` on a `JTable` returns an MCP error whose message redirects the AI to `swing_get_selectable_items_count`.
 - [x] Calling `swing_get_cell_count` with a valid ref for a `JList` with 200 items returns `200`.
 - [x] Calling `swing_get_cell_count` with a valid ref for an empty `JList` returns `0`.
 - [x] Calling `swing_get_cell_count` with a valid ref for a `JTree` returns the top-level visible node count.
@@ -71,8 +71,8 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingGetCellCountTest` (headless)
-  - [ ] `JTable` returns an MCP error redirecting to `swing_get_selectable_items_count`.
+- [x] `SwingGetCellCountTest` (headless)
+  - [x] `JTable` returns an MCP error redirecting to `swing_get_selectable_items_count`.
   - [x] `JList` with 200 items returns `200`.
   - [x] Empty `JList` returns `0`.
   - [x] `JTree` returns top-level visible node count.
@@ -85,8 +85,8 @@ Execution order:
   - [x] Returned count matches `total` from `swing_get_cells` header for same component.
   - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [ ] `SwingGetCellCountScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
-  - [ ] `JTable` inside `JFrame` returns an MCP error redirecting to `swing_get_selectable_items_count`.
+- [x] `SwingGetCellCountScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+  - [x] `JTable` inside `JFrame` returns an MCP error redirecting to `swing_get_selectable_items_count`.
   - [x] `JList` inside `JFrame` returns correct count.
   - [x] `JList` inside `JDialog` returns correct count.
 

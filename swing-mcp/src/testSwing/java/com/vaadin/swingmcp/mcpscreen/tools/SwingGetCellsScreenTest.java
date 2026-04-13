@@ -5,6 +5,7 @@ import com.vaadin.swingmcp.mcp.tools.SwingGetCellsTool;
 import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
+import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -58,17 +59,21 @@ class SwingGetCellsScreenTest extends AbstractScreenTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void truncatedJTableInsideJFrame() throws Exception {
+    void jtableInsideJFrame_returnsRedirectError() throws Exception {
         JFrame frame = new JFrame("Test");
         JTable table = createTable(15, 1);
         frame.getContentPane().add(table);
 
         snapshot(frame);
-        String output = getCells(context.getRefOf(table), 0, 5);
-        assertTrue(output.contains("Showing 5 children from offset 0 (total 15) for table [ref=1]"),
-                "Should show header, got: " + output);
-        assertTrue(output.contains("\"r0c0\""), "Should contain first cell, got: " + output);
-        assertTrue(output.contains("\"r4c0\""), "Should contain fifth cell, got: " + output);
+        int ref = context.getRefOf(table);
+        Exception ex = assertThrows(Exception.class, () -> getCells(ref, 0, 5));
+        Throwable cause = ex instanceof MCPErrorResponseException ? ex : ex.getCause();
+        assertTrue(cause instanceof MCPErrorResponseException,
+                "Expected MCPErrorResponseException, got: " + ex);
+        assertEquals(
+                "JTable does not support swing_get_cells. Table cells are plain text labels \u2014 "
+                        + "use swing_get_selectable_items to page through rows.",
+                cause.getMessage());
     }
 
     @Test
@@ -92,16 +97,18 @@ class SwingGetCellsScreenTest extends AbstractScreenTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void truncatedJTableInsideJDialog() throws Exception {
+    void truncatedJListInsideJDialog() throws Exception {
         JDialog dialog = new JDialog((Frame) null, "Test");
-        JTable table = createTable(15, 1);
-        dialog.getContentPane().add(table);
+        String[] items = new String[20];
+        for (int i = 0; i < 20; i++) items[i] = "Item-" + i;
+        JList<String> list = new JList<>(items);
+        dialog.getContentPane().add(list);
 
         snapshot(dialog);
-        String output = getCells(context.getRefOf(table), 5, 5);
-        assertTrue(output.contains("Showing 5 children from offset 5 (total 15) for table [ref=1]"),
+        String output = getCells(context.getRefOf(list), 5, 5);
+        assertTrue(output.contains("Showing 5 children from offset 5 (total 20) for list [ref=1]"),
                 "Should show header, got: " + output);
-        assertTrue(output.contains("\"r5c0\""), "Should contain r5c0, got: " + output);
-        assertTrue(output.contains("\"r9c0\""), "Should contain r9c0, got: " + output);
+        assertTrue(output.contains("\"Item-5\""), "Should contain Item-5, got: " + output);
+        assertTrue(output.contains("\"Item-9\""), "Should contain Item-9, got: " + output);
     }
 }

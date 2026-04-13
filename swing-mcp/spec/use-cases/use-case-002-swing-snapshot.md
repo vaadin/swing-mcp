@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** obtain an accessibility tree snapshot of the Swing application **so that** I can understand the current UI structure and identify components for interaction.
 
-**Status:** Approved (amended 2026-04-13 — `get_cells` advertising narrowed to JList/JTree; re-implementation pending)
+**Status:** Implemented (amended 2026-04-13 — `get_cells` advertising narrowed to JList/JTree)
 **Date:** 2026-03-26
 
 ---
@@ -398,7 +398,7 @@ Tree filtering fixes both problems: ancestors give the AI a path from the root (
 - [x] A JTable NOT inside a JScrollPane (header not visible) does NOT show `columns:` (SC-6).
 - [x] JTable children are rendered as pipe-separated row lines with 0-based index (`- row 0: Val1 | Val2 | Val3`), not individual cell labels (SC-6).
 - [x] JTable truncation summary reads `... and N more rows` (not `... and N more items`) (SC-6).
-- [ ] A truncated JTable node does NOT advertise `get_cell_count` or `get_cells` in its action list (step 6b — JTable excluded).
+- [x] A truncated JTable node does NOT advertise `get_cell_count` or `get_cells` in its action list (step 6b — JTable excluded).
 - [x] A truncated JList/JTree node advertises `get_cell_count` and `get_cells` in its action list (step 6b).
 - [x] The JTableHeader panel (with column name labels) is suppressed from the snapshot tree when SC-6 applies (SC-7).
 

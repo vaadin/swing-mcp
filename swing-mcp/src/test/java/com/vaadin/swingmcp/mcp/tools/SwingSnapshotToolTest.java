@@ -270,9 +270,11 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot(root);
 
+        // UC-002 step 6b / UC-020 BR-03: JTable does NOT advertise
+        // get_cell_count / get_cells — use swing_get_selectable_items instead.
         assertEquals(
                 "- panel\n"
-                + "  - table [ref=1] actions: multi-selection, get_cell_count, get_cells\n"
+                + "  - table [ref=1] actions: multi-selection\n"
                 + "    - row 0: row0\n"
                 + "    - row 1: row1\n"
                 + "    - row 2: row2\n"
@@ -280,6 +282,44 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 + "    - row 4: row4\n"
                 + "    ... and 10 more rows",
                 output);
+    }
+
+    @Test
+    void largeJListAdvertisesGetCellsAndGetCellCount() throws Exception {
+        // UC-002 step 6b: truncated JList advertises get_cell_count + get_cells.
+        String[] items = new String[20];
+        for (int i = 0; i < 20; i++) items[i] = "Item-" + i;
+        JList<String> list = new JList<>(items);
+
+        String output = snapshot(list);
+
+        String firstLine = output.split("\n")[0];
+        assertTrue(firstLine.contains("get_cell_count"),
+                "Truncated JList should advertise get_cell_count, got: " + firstLine);
+        assertTrue(firstLine.contains("get_cells"),
+                "Truncated JList should advertise get_cells, got: " + firstLine);
+    }
+
+    @Test
+    void largeJTreeAdvertisesGetCellsAndGetCellCount() throws Exception {
+        // UC-002 step 6b: truncated JTree advertises get_cell_count + get_cells.
+        javax.swing.tree.DefaultMutableTreeNode root =
+                new javax.swing.tree.DefaultMutableTreeNode("Root");
+        for (int i = 0; i < 20; i++) {
+            root.add(new javax.swing.tree.DefaultMutableTreeNode("Node-" + i));
+        }
+        JTree tree = new JTree(root);
+        tree.setRootVisible(false);
+        tree.setSize(200, 400);
+        tree.expandRow(0);
+
+        String output = snapshot(tree);
+
+        String firstLine = output.split("\n")[0];
+        assertTrue(firstLine.contains("get_cell_count"),
+                "Truncated JTree should advertise get_cell_count, got: " + firstLine);
+        assertTrue(firstLine.contains("get_cells"),
+                "Truncated JTree should advertise get_cells, got: " + firstLine);
     }
 
     @Test

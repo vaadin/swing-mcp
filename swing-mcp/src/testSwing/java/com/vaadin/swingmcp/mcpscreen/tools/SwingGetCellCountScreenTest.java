@@ -5,6 +5,7 @@ import com.vaadin.swingmcp.mcp.tools.SwingGetCellCountTool;
 import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
+import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -47,13 +48,21 @@ class SwingGetCellCountScreenTest extends AbstractScreenTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void jTableInsideJFrame() throws Exception {
+    void jTableInsideJFrame_returnsRedirectError() throws Exception {
         JFrame frame = new JFrame("Test");
         JTable table = new JTable(new DefaultTableModel(10, 3));
         frame.getContentPane().add(table);
 
         snapshot(frame);
-        assertEquals("30", getCount(context.getRefOf(table)));
+        int ref = context.getRefOf(table);
+        Exception ex = assertThrows(Exception.class, () -> getCount(ref));
+        Throwable cause = ex instanceof MCPErrorResponseException ? ex : ex.getCause();
+        assertTrue(cause instanceof MCPErrorResponseException,
+                "Expected MCPErrorResponseException, got: " + ex);
+        assertEquals(
+                "JTable does not support swing_get_cell_count. Table cells are plain text labels \u2014 "
+                        + "use swing_get_selectable_items_count to page through rows.",
+                cause.getMessage());
     }
 
     @Test
@@ -73,12 +82,14 @@ class SwingGetCellCountScreenTest extends AbstractScreenTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void jTableInsideJDialog() throws Exception {
+    void jListInsideJDialog() throws Exception {
         JDialog dialog = new JDialog((Frame) null, "Test");
-        JTable table = new JTable(new DefaultTableModel(5, 4));
-        dialog.getContentPane().add(table);
+        String[] items = new String[15];
+        for (int i = 0; i < 15; i++) items[i] = "Dialog-" + i;
+        JList<String> list = new JList<>(items);
+        dialog.getContentPane().add(list);
 
         snapshot(dialog);
-        assertEquals("20", getCount(context.getRefOf(table)));
+        assertEquals("15", getCount(context.getRefOf(list)));
     }
 }

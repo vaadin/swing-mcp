@@ -520,7 +520,9 @@ public final class SwingUtils {
      * (JTable, JList, or JTree) — i.e. its accessible role is TABLE, LIST,
      * or TREE.
      *
-     * @see <a href="use-case-020-swing-get-cells.md">UC-020 BR-03</a>
+     * <p>Used by the snapshot pipeline for SC-3 row-count truncation. The
+     * {@code swing_get_cells} / {@code swing_get_cell_count} eligibility gate
+     * is narrower — see {@link #isGetCellsSupported(Accessible)}.</p>
      */
     public static boolean isLargeDataComponent(Accessible a) {
         AccessibleContext ac = a.getAccessibleContext();
@@ -528,6 +530,29 @@ public final class SwingUtils {
         AccessibleRole role = ac.getAccessibleRole();
         return role == AccessibleRole.TABLE
                 || role == AccessibleRole.LIST
+                || role == AccessibleRole.TREE;
+    }
+
+    /**
+     * Returns {@code true} if the accessible is a valid target for
+     * {@code swing_get_cells} / {@code swing_get_cell_count} — i.e. its
+     * accessible role is LIST or TREE.
+     *
+     * <p>JTable is deliberately excluded. Table cell renderers are stamp-painted
+     * via {@code CellRendererPane} and surface as plain text {@code LABEL}s
+     * with no {@code AccessibleAction}, so {@code get_cells} can never return
+     * an actionable ref for a JTable. The canonical row-access tools for
+     * JTable are {@code swing_get_selectable_items} /
+     * {@code swing_get_selectable_items_count} (UC-017 BR-09).</p>
+     *
+     * @see <a href="use-case-020-swing-get-cells.md">UC-020 BR-03</a>
+     * @see <a href="use-case-021-swing-get-cell-count.md">UC-021 BR-03</a>
+     */
+    public static boolean isGetCellsSupported(Accessible a) {
+        AccessibleContext ac = a.getAccessibleContext();
+        if (ac == null) return false;
+        AccessibleRole role = ac.getAccessibleRole();
+        return role == AccessibleRole.LIST
                 || role == AccessibleRole.TREE;
     }
 

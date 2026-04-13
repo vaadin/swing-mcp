@@ -45,21 +45,31 @@ class SwingGetCellCountTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JTable
+    // JTable — rejected (UC-021 BR-03): redirected to swing_get_selectable_items_count
     // ══════════════════════════════════════════════════════════════════════════
 
+    private static final String JTABLE_REDIRECT_MESSAGE =
+            "JTable does not support swing_get_cell_count. Table cells are plain text labels \u2014 "
+                    + "use swing_get_selectable_items_count to page through rows.";
+
     @Test
-    void jTable_10rowsX5cols_returns50() throws Exception {
+    void jtable_returnsRedirectError() throws Exception {
         JTable table = new JTable(new DefaultTableModel(10, 5));
         snapshot(table);
-        assertEquals("50", getCount(context.getRefOf(table)));
+        int ref = context.getRefOf(table);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getCount(ref));
+        assertEquals(JTABLE_REDIRECT_MESSAGE, ex.getMessage());
     }
 
     @Test
-    void jTable_3rowsX2cols_returns6() throws Exception {
+    void jtable_refMapPreservedAfterRedirectError() throws Exception {
         JTable table = new JTable(new DefaultTableModel(3, 2));
         snapshot(table);
-        assertEquals("6", getCount(context.getRefOf(table)));
+        int ref = context.getRefOf(table);
+        assertThrows(MCPErrorResponseException.class, () -> getCount(ref));
+        // Read-only: ref still resolves after the rejected call.
+        assertSame(table, context.getAccessibleByRef(ref));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -174,29 +184,19 @@ class SwingGetCellCountTest extends AbstractHeadlessTest {
                 "get_cells header total should match get_cell_count, got: " + cellsOutput);
     }
 
-    @Test
-    void countMatchesGetCellsHeader_JTable() throws Exception {
-        JTable table = new JTable(new DefaultTableModel(10, 3));
-        snapshot(table);
-        int ref = context.getRefOf(table);
-        String count = getCount(ref);
-        assertEquals("30", count);
-
-        String cellsOutput = cellsTool.execute(
-                new Parameters(Map.of("ref", ref, "offset", 0, "length", 0)), context).getText();
-        assertTrue(cellsOutput.contains("(total 30)"),
-                "get_cells header total should match get_cell_count, got: " + cellsOutput);
-    }
-
     // ══════════════════════════════════════════════════════════════════════════
     // Component matrix — supported
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void componentMatrix_JTable() throws Exception {
+        // JTable gets a dedicated redirect error, not the generic one.
         JTable table = new JTable(new DefaultTableModel(5, 2));
         snapshot(table);
-        assertEquals("10", getCount(context.getRefOf(table)));
+        int ref = context.getRefOf(table);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getCount(ref));
+        assertEquals(JTABLE_REDIRECT_MESSAGE, ex.getMessage());
     }
 
     @Test

@@ -29,20 +29,20 @@ public class SwingGetCellsTool extends AbstractSwingTool {
 
     @Override
     public String getDescription() {
-        return "Enumerate accessible children of a large data component by ref. "
-                + "Returns a paged accessibility tree (same format as swing_snapshot) "
-                + "rooted at the requested children. Parameters: ref (integer), "
-                + "offset (0-based integer), length (integer). Indices are in the "
-                + "accessible children index space (not the selection item index "
-                + "space \u2014 use swing_get_selectable_items for selection). For "
-                + "JTable, children are individual cells in row-major order (row 0 "
-                + "col 0, row 0 col 1, ..., row 1 col 0, ...); total children = "
-                + "rows \u00d7 columns. WARNING: this tool replaces the ref map \u2014 "
-                + "refs from prior swing_snapshot or swing_get_cells calls become "
-                + "invalid. The parent component gets ref=1 so you can call "
-                + "get_cells again with a different offset. Call swing_snapshot to "
-                + "restore the full-tree ref map. Requires a ref obtained from "
-                + "swing_snapshot or swing_get_cells.";
+        return "Enumerate accessible children of a large data component (JList, JTree) by ref, "
+                + "returning refs for any actionable children inside. Returns a paged "
+                + "accessibility tree (same format as swing_snapshot) rooted at the requested "
+                + "children. Parameters: ref (integer), offset (0-based integer), "
+                + "length (integer). Indices are in the accessible children index space "
+                + "(not the selection item index space \u2014 use swing_get_selectable_items "
+                + "for selection). Use this when you need to click or otherwise interact with "
+                + "a component nested inside a list item or tree node. For JTable, use "
+                + "swing_get_selectable_items instead \u2014 table cells are plain text labels "
+                + "with no actionable children. WARNING: this tool replaces the ref map \u2014 "
+                + "refs from prior swing_snapshot or swing_get_cells calls become invalid. "
+                + "The parent component gets ref=1 so you can call get_cells again with a "
+                + "different offset. Call swing_snapshot to restore the full-tree ref map. "
+                + "Requires a ref obtained from swing_snapshot or swing_get_cells.";
     }
 
     @Override
@@ -76,8 +76,9 @@ public class SwingGetCellsTool extends AbstractSwingTool {
         // Step 2 (BR-02): ref lookup — uses existing ref map
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // Step 3 (BR-03): eligibility check — role only, no child count threshold
-        requireLargeDataComponent(accessible, "swing_get_cells");
+        // Step 3 (BR-03): eligibility check — role must be LIST or TREE. JTable
+        // is rejected with a redirect to swing_get_selectable_items.
+        requireGetCellsSupported(accessible, "swing_get_cells", "swing_get_selectable_items");
 
         AccessibleContext ac = accessible.getAccessibleContext();
 

@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** enumerate the accessible children of a large data component (JList, JTree) by ref **so that** I can discover content beyond the snapshot's truncation cap — e.g. find and click a specific button rendered inside a list item that was not included in the snapshot.
 
-**Status:** Approved (amended 2026-04-13 — JTable removed; re-implementation pending)
+**Status:** Implemented (amended 2026-04-13 — JTable removed)
 **Date:** 2026-04-08
 
 ---
@@ -77,7 +77,7 @@ Execution order:
 
 ## Acceptance Criteria
 
-- [ ] Calling `swing_get_cells` on a `JTable` returns an MCP error whose message redirects the AI to `swing_get_selectable_items`.
+- [x] Calling `swing_get_cells` on a `JTable` returns an MCP error whose message redirects the AI to `swing_get_selectable_items`.
 - [x] Calling `swing_get_cells` with `offset` beyond the total children count returns an empty result (not an error) with a header showing the total count.
 - [x] Calling `swing_get_cells` on a truncated `JList` returns the expected children with correct roles and names.
 - [x] Calling `swing_get_cells` with `offset: 10, length: 5` on a truncated `JList` returns children 10–14.
@@ -107,8 +107,8 @@ Execution order:
 
 > Write tests that verify the acceptance criteria above. See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingGetCellsTest` (headless)
-  - [ ] Reading a `JTable` returns an MCP error whose message redirects the AI to `swing_get_selectable_items`.
+- [x] `SwingGetCellsTest` (headless)
+  - [x] Reading a `JTable` returns an MCP error whose message redirects the AI to `swing_get_selectable_items`.
   - [x] Reading with `offset` beyond total children count returns empty output with header.
   - [x] Reading a truncated `JList` returns children with correct roles and names.
   - [x] Reading a truncated `JList` (`offset: 10, length: 5`) returns children 10–14.
@@ -134,8 +134,8 @@ Execution order:
   - [x] Ref map is replaced even when output is empty (offset beyond end).
   - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [ ] `SwingGetCellsScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
-  - [ ] Reading a `JTable` inside `JFrame` returns an MCP error redirecting to `swing_get_selectable_items`.
+- [x] `SwingGetCellsScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+  - [x] Reading a `JTable` inside `JFrame` returns an MCP error redirecting to `swing_get_selectable_items`.
   - [x] Reading a truncated `JList` inside `JFrame` returns children.
   - [x] Reading a truncated `JList` inside `JDialog` returns children.
 
