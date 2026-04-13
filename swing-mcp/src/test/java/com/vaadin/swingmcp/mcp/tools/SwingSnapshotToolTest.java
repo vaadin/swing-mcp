@@ -506,6 +506,55 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     @Test
+    void tabbedPane_tabDisabledViaSetEnabledAt_marksOnlyThatTabDisabled() throws Exception {
+        // setEnabledAt(1, false) disables tab 2 (the AccessiblePage). The tab itself
+        // should be marked [disabled] in the snapshot. The other tab and the
+        // page_tab_list itself remain enabled.
+        JPanel panel = new JPanel();
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.addTab("Tab1", new JPanel());
+        tabbedPane.addTab("Tab2", new JPanel());
+        tabbedPane.setSelectedIndex(0);
+        tabbedPane.setEnabledAt(1, false);
+        panel.add(tabbedPane);
+
+        String output = snapshot(panel);
+
+        assertEquals(
+                "- panel\n"
+                + "  - page_tab_list \"Tab1\" [ref=1] actions: single-selection\n"
+                + "    - page_tab \"Tab1\" [selected]\n"
+                + "    - page_tab \"Tab2\" [disabled]",
+                output);
+    }
+
+    @Test
+    void tabbedPane_buttonOnDisabledTab_isStillClickable() throws Exception {
+        // The disabled tab is the selected one. Per Swing semantics, buttons on
+        // it are still mechanically clickable (setEnabled does not propagate),
+        // so the snapshot must report the button as enabled even though the
+        // hosting page_tab is [disabled]. Mirrors Swing exactly.
+        JPanel panel = new JPanel();
+        JPanel tabContent = new JPanel();
+        tabContent.add(new JButton("OnDisabled"));
+
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.addTab("OnlyTab", tabContent);
+        tabbedPane.setSelectedIndex(0);
+        tabbedPane.setEnabledAt(0, false);
+        panel.add(tabbedPane);
+
+        String output = snapshot(panel);
+
+        assertEquals(
+                "- panel\n"
+                + "  - page_tab_list \"OnlyTab\" [ref=1] actions: single-selection\n"
+                + "    - page_tab \"OnlyTab\" [disabled, selected]\n"
+                + "      - push_button \"OnDisabled\" [ref=2] actions: click",
+                output);
+    }
+
+    @Test
     void onlyMeaningfulStatesAreShown() throws Exception {
         JPanel panel = new JPanel();
         JButton button = new JButton("Normal");
