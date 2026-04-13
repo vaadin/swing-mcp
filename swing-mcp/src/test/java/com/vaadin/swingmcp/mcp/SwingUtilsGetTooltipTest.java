@@ -52,13 +52,19 @@ class SwingUtilsGetTooltipTest {
         }
 
         @Test
-        void buttonWithEmptyTooltip_returnsRawEmptyString() {
-            // Per contract: non-HTML text passes through verbatim.
-            // setToolTipText("") sets an empty tooltip, which getToolTipText
-            // returns verbatim.
+        void buttonWithEmptyTooltip_returnsNull() {
+            // Blank tooltips normalize to null so callers need only one
+            // null check.
             JButton button = new JButton("OK");
             button.setToolTipText("");
-            assertEquals("", SwingUtils.getTooltipAsText(button));
+            assertNull(SwingUtils.getTooltipAsText(button));
+        }
+
+        @Test
+        void buttonWithWhitespaceOnlyTooltip_returnsNull() {
+            JButton button = new JButton("OK");
+            button.setToolTipText("   \t  ");
+            assertNull(SwingUtils.getTooltipAsText(button));
         }
 
         @Test
@@ -217,10 +223,18 @@ class SwingUtilsGetTooltipTest {
         }
 
         @Test
-        void htmlTooltip_emptyAfterStrip_returnsEmpty() {
+        void htmlTooltip_emptyAfterStrip_returnsNull() {
+            // HTML that strips down to nothing is also blank → null.
             JButton button = new JButton("OK");
             button.setToolTipText("<html></html>");
-            assertEquals("", SwingUtils.getTooltipAsText(button));
+            assertNull(SwingUtils.getTooltipAsText(button));
+        }
+
+        @Test
+        void htmlTooltip_whitespaceOnlyAfterStrip_returnsNull() {
+            JButton button = new JButton("OK");
+            button.setToolTipText("<html>  <br>  &nbsp;  </html>");
+            assertNull(SwingUtils.getTooltipAsText(button));
         }
 
         @Test

@@ -466,6 +466,10 @@ public final class SwingUtils {
      * renders strings starting with {@code <html>} as HTML, so a literal
      * tooltip such as {@code "List<String>"} must be preserved unchanged.
      * <p>
+     * Blank results (empty or whitespace-only, including HTML that strips
+     * down to nothing) are normalized to {@code null} so callers can use a
+     * single null check.
+     * <p>
      * The result is not truncated — callers that need a length cap apply it
      * themselves.
      * <p>
@@ -500,25 +504,29 @@ public final class SwingUtils {
 
         if (raw == null) return null;
 
+        String text;
         // Swing only treats the string as HTML when it starts with "<html>"
-        // (case-insensitive). For any other string, return it verbatim — a
+        // (case-insensitive). For any other string, keep it verbatim — a
         // literal tooltip like "List<String>" must not have its angle
         // brackets stripped.
-        if (!raw.regionMatches(true, 0, "<html>", 0, 6)) {
-            return raw;
+        if (raw.regionMatches(true, 0, "<html>", 0, 6)) {
+            // Tag → space (so "Save<br>file" becomes "Save file" rather than
+            // "Savefile"). Then decode the four standard entities. &amp; is
+            // decoded last so source text like "&amp;lt;" round-trips to the
+            // literal "&lt;" rather than being double-decoded to "<".
+            text = raw.replaceAll("<[^>]*>", " ");
+            text = text.replace("&nbsp;", " ")
+                       .replace("&lt;", "<")
+                       .replace("&gt;", ">")
+                       .replace("&amp;", "&");
+            text = text.replaceAll("\\s+", " ").trim();
+        } else {
+            text = raw;
         }
 
-        // Tag → space (so "Save<br>file" becomes "Save file" rather than
-        // "Savefile"). Then decode the four standard entities. &amp; is
-        // decoded last so source text like "&amp;lt;" round-trips to the
-        // literal "&lt;" rather than being double-decoded to "<".
-        String text = raw.replaceAll("<[^>]*>", " ");
-        text = text.replace("&nbsp;", " ")
-                   .replace("&lt;", "<")
-                   .replace("&gt;", ">")
-                   .replace("&amp;", "&");
-        text = text.replaceAll("\\s+", " ").trim();
-        return text;
+        // Blank → null, so callers don't need to distinguish "no tooltip"
+        // from "empty/whitespace tooltip".
+        return text.isBlank() ? null : text;
     }
 
     /**
