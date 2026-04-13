@@ -128,11 +128,17 @@ access to JTable is via `swing_get_items` (always implicit from the
 **Why.**
 - JTable cells are stamp-painted via `CellRendererPane` and surface as plain
   text `LABEL`s with no actions — `get_cells` can never return an actionable
-  ref on a JTable.
-- The snapshot speaks in rows (SC-6: `- row N: Val1 | Val2 | Val3`); cell
-  tools speak in flat row-major indices. If both were advertised, the AI
-  would see `... and 45 more rows` in the snapshot and then receive
-  `cell_count = 150` from `get_cell_count` — a confusing mismatch.
+  ref on a JTable. Interactive cell *editors* only appear in the accessibility
+  tree while a cell is being actively edited, so `get_cells` cannot reach them
+  as a supported discovery workflow either.
+- Index-space mismatch. The snapshot speaks in rows (UC-002 SC-6:
+  `- row N: Val1 | Val2 | Val3`) and selection tools (UC-014, UC-017 BR-09)
+  use the same row-based index space. `get_cells` uses a flat row-major
+  cell-index space (`row*cols + col`). If both were advertised, the AI would
+  see `... and 45 more rows` in the snapshot and then receive
+  `cell_count = 150` from `get_cell_count` on the same table — a confusing
+  mismatch, and the two index spaces would not be translatable without the
+  AI tracking column count out-of-band.
 
 **Follow-up.** If JTable needs bulk row access beyond the snapshot cap, add
 row-dumping tools — do not resurrect cell-indexed access.

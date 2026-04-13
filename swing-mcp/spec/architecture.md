@@ -359,14 +359,7 @@ it via `SwingUtilities.invokeLater()`. No branching on which tier was used.
 
 ### Effectively Enabled Check
 
-Swing's `Component.setEnabled(false)` **does not propagate to children** — this is the
-documented, by-design behaviour (see the `Component.setEnabled` javadoc and
-[JDK-4177727](https://bugs.openjdk.org/browse/JDK-4177727), closed as won't-fix). A button
-inside a disabled `JPanel`, `JScrollPane`, or `JToolBar` is still mechanically clickable.
-Our MCP layer must **mirror Swing's semantics exactly**: a tool that refused to click a
-button just because its container was disabled would be lying about what the running app
-allows. `isEffectivelyEnabled()` therefore does **not** walk the parent chain for real
-`Component` instances — it trusts each component's own `ENABLED` state set bit.
+`isEffectivelyEnabled()` does **not** walk the parent chain for real `Component` instances — it trusts each component's own `ENABLED` state-set bit. Rationale (why Swing's non-propagating `setEnabled` must be mirrored rather than "fixed") is **DR-003**.
 
 Two Swing quirks need explicit handling:
 
@@ -657,7 +650,7 @@ This important distinction must be mentioned in tool description, so that the AI
 
 This avoids action list noise for small lists where all children are already visible in the snapshot.
 
-**Why `TABLE` is excluded.** JTable cell renderers are painted via `CellRendererPane` (stamp painting) — renderer `Component`s are never added to the real component hierarchy and never expose actions through the accessibility API. Every JTable cell surfaces as a `LABEL` with no `AccessibleAction`, so `get_cells` on a JTable can only ever return text without refs — a strict subset of what `swing_get_items` already provides, and worse, in a flat cell-index space (`row*cols + col`) that conflicts with the row-based index space of the snapshot (UC-002 SC-6) and selection tools (UC-014, UC-017 BR-09). Interactive cell editors only appear in the accessibility tree while a cell is being actively edited — reaching them through `get_cells` is not a supported workflow. Therefore JTable is unconditionally rejected by `swing_get_cells` / `swing_get_cell_count` with an error that redirects the AI to `swing_get_items` / `swing_get_item_count`.
+**`TABLE` is excluded** — rationale is **DR-004**. At runtime, JTable is unconditionally rejected by `swing_get_cells` / `swing_get_cell_count` with an error that redirects the AI to `swing_get_items` / `swing_get_item_count`.
 
 **`get_items` / `get_item_count`** operate in the **selection item index space** — the same 0-based index that `addAccessibleSelection(i)` expects. They are not listed as snapshot actions; their availability is documented in the tool descriptions and they are callable on `JList`, `JComboBox`, and any `JTable`. For JTable specifically, these are the **canonical row-access tools** (UC-017 BR-09) and replace what `get_cells` would otherwise have offered. Their eligibility gate is `SwingUtils.supportsGetItems`, which accepts `JList` / `JComboBox` / `JTable` only. Two deliberate deviations from `supportsSelection`: (a) **JTable is accepted in any selection mode** (row / column / cell / no-selection) — row enumeration is read-only and does not require a working selection model; the write-path selection tools (`swing_set_selection`, `swing_clear_selection`, `swing_select_all`) keep the strict `supportsSelection` gate. (b) **JTabbedPane is rejected** — see caveat below. Discoverability caveat for JTable: a non-row-selection JTable does not carry the `single-selection` / `multi-selection` group label in the snapshot, so the AI relies on the tool description to learn that these two tools still work on it.
 
