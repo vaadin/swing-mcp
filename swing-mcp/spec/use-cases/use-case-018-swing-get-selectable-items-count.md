@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** get the total count of selectable items in a UI component by ref **so that** I can decide how to page through `swing_get_selectable_items` without first requesting any items — saving a round-trip when I only need the count.
 
-**Status:** Implemented (amended 2026-04-13 — JTable decoupled from selection-mode gate; any JTable is now a valid target)
+**Status:** Implemented (amended 2026-04-13 — JTable decoupled from selection-mode gate; any JTable is now a valid target. Amended 2026-04-13 per P-001 — JTabbedPane dropped as a supported target; the tab count is derivable from the snapshot, which renders every tab inline per UC-002 SC-2.)
 **Date:** 2026-04-08
 
 ---
@@ -17,7 +17,7 @@
 - The tool returns the total count as a plain integer string (e.g. `"200"`).
 - I use the count to decide whether and how to page through `swing_get_selectable_items`.
 
-**Tool description:** "Get the total number of selectable items of a UI component by ref. Returns the count as a plain integer. For JTable, this is the canonical way to get the row count regardless of selection mode (use this instead of swing_get_cell_count, which does not support JTable). Note: swing_set_selection still requires the table to be in row-selection mode. Requires a ref obtained from swing_snapshot or swing_get_cells."
+**Tool description:** "Get the total number of selectable items of a UI component by ref. Supported components: JList, JComboBox, JTable. Returns the count as a plain integer. For JTable, this is the canonical way to get the row count regardless of selection mode (use this instead of swing_get_cell_count, which does not support JTable). Note: swing_set_selection still requires the table to be in row-selection mode. For JTabbedPane, count the tabs directly from the snapshot — each tab renders as `- page_tab N \"title\"` with its 0-based index (UC-002 SC-2). Requires a ref obtained from swing_snapshot or swing_get_cells."
 
 ---
 
@@ -27,11 +27,11 @@
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | If the target does not support `get_selectable_items_count` (i.e. `SwingUtils.supportsGetSelectableItems(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message *"Component does not support get_selectable_items_count. Call swing_snapshot or swing_get_cells to verify the list of actions."* `supportsGetSelectableItems` is equivalent to `supportsSelection` for every component *except* `JTable`: **any JTable passes, regardless of selection mode** (row / column / cell / no-selection). Same decoupling rationale as UC-017 BR-03. |
+| BR-03 | If the target does not support `get_selectable_items_count` (i.e. `SwingUtils.supportsGetSelectableItems(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message *"Component does not support get_selectable_items_count. Call swing_snapshot or swing_get_cells to verify the list of actions."* `supportsGetSelectableItems` accepts `JList`, `JComboBox`, and `JTable` only — **`JTabbedPane` is rejected** (dropped per P-001; tabs are inline in the snapshot per UC-002 SC-2), and JTable is accepted regardless of selection mode. Same gate as UC-017 BR-03. |
 | BR-04 | All Swing component access happens on the EDT via `runInEDT()`. |
 | BR-05 | `swing_get_selectable_items_count` is a read-only tool: `isMutation()` returns `false` and the ref map is **not** cleared after invocation. |
 | BR-06 | No enabled check is performed — counting selectable items is always allowed, even on disabled components. |
-| BR-07 | The count is determined via `SwingUtils.getSelectableItemsCount(accessible)` — the same helper used by UC-017 — and returned as a plain integer string via `Content.text()`. For JTable: row count via `AccessibleTable.getAccessibleRowCount()`. For JComboBox: `JComboBox.getItemCount()`. For JList/JTabbedPane: `AccessibleContext.getAccessibleChildrenCount()`. |
+| BR-07 | The count is determined via `SwingUtils.getSelectableItemsCount(accessible)` — the same helper used by UC-017 — and returned as a plain integer string via `Content.text()`. For JTable: row count via `AccessibleTable.getAccessibleRowCount()`. For JComboBox: `JComboBox.getItemCount()`. For JList: `AccessibleContext.getAccessibleChildrenCount()`. |
 
 ### Algorithm
 
@@ -55,7 +55,7 @@ Execution order:
 - [x] Calling `swing_get_selectable_items_count` with a valid ref for a `JList` with 5 items returns `5`.
 - [x] Calling `swing_get_selectable_items_count` with a valid ref for a `JList` with 200 items returns `200`.
 - [x] Calling `swing_get_selectable_items_count` with a valid ref for an empty `JList` returns `0`.
-- [x] Calling `swing_get_selectable_items_count` with a valid ref for a `JTabbedPane` with 3 tabs returns `3`.
+- [ ] Calling `swing_get_selectable_items_count` on a `JTabbedPane` returns an MCP error ("Component does not support get_selectable_items_count") — regression guard: the tab count is derivable from the snapshot, which renders every tab inline per UC-002 SC-2.
 - [x] Calling `swing_get_selectable_items_count` with a valid ref for a `JComboBox` with 3 items returns `3`.
 - [x] Calling `swing_get_selectable_items_count` with a valid ref for an empty `JComboBox` returns `0`.
 - [x] Calling `swing_get_selectable_items_count` with a valid ref for a `JTable` (row-selection mode) with 10 rows returns `10`.
@@ -79,8 +79,7 @@ Execution order:
   - [x] `JList` with 5 items returns `5`.
   - [x] `JList` with 200 items returns `200`.
   - [x] Empty `JList` returns `0`.
-  - [x] `JTabbedPane` with 3 tabs returns `3`.
-  - [x] Empty `JTabbedPane` returns `0`.
+  - [ ] `JTabbedPane` returns an MCP error (regression guard — dropped per P-001).
   - [x] `JComboBox` with 3 items returns `3`.
   - [x] Empty `JComboBox` returns `0`.
   - [x] `JTable` (row-selection mode) with 10 rows returns `10`.
@@ -97,7 +96,7 @@ Execution order:
 
 - [x] `SwingGetSelectableItemsCountScreenTest` (`testSwing` — requires display)
   - [x] `JList` inside `JFrame` returns correct count.
-  - [x] `JTabbedPane` inside `JFrame` returns correct count.
+  - [ ] `JTabbedPane` inside `JFrame` returns an MCP error (regression guard — dropped per P-001).
   - [x] `JComboBox` inside `JFrame` returns correct count.
   - [x] `JTable` (row-selection mode) inside `JFrame` returns correct count.
   - [x] `JList` inside `JDialog` returns correct count.
@@ -107,7 +106,7 @@ Execution order:
 Each component from the verification matrix gets a dedicated test method.
 
 **Expected to succeed (`get_selectable_items_count` supported):**
-`JList`, `JTabbedPane`, `JComboBox`, `JTable` (any selection mode — row / column / cell / no-selection — since the read path is selection-mode agnostic per BR-03)
+`JList`, `JComboBox`, `JTable` (any selection mode — row / column / cell / no-selection — since the read path is selection-mode agnostic per BR-03)
 
 **Expected to fail with "Component does not support get_selectable_items_count" error:**
-`JTree` (suppressed), `JButton`, `JCheckBox`, `JRadioButton`, `JTextField`, `JTextArea`, `JToggleButton`, `JSlider`, `JPanel`, `JScrollPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JSpinner`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`
+`JTabbedPane` (dropped per P-001 — tabs are inline in the snapshot), `JTree` (suppressed), `JButton`, `JCheckBox`, `JRadioButton`, `JTextField`, `JTextArea`, `JToggleButton`, `JSlider`, `JPanel`, `JScrollPane`, `JSplitPane`, `JLabel`, `JProgressBar`, `JSpinner`, `JMenuBar`, `JMenu`, `JMenuItem`, `JToolBar`

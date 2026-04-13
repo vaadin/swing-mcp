@@ -125,7 +125,7 @@ After Stages 1 and 2, any surviving node is included. The following criteria ser
 | ID | Rule | Rationale |
 |----|------|-----------|
 | SC-1 | **JMenu items: include even when menu is closed.** Walk `AccessibleContext.getAccessibleChild(i)` for menus regardless of popup visibility. | The full menu structure is needed for migration. The accessibility API exposes menu items as accessible children even when the popup is not shown. |
-| SC-2 | **JTabbedPane: include only the selected tab's content.** Walk `getAccessibleChild()` naturally — it exposes the tab items (`PAGE_TAB`) and the selected tab's content panel. Mark the selected tab via `SELECTED` state. | The user can only see and interact with the selected tab's content; non-selected content is not accessible via the standard accessibility API anyway. |
+| SC-2 | **JTabbedPane: include only the selected tab's content; render each tab with its 0-based index.** Walk `getAccessibleChild()` naturally — it exposes the tab items (`PAGE_TAB`) and the selected tab's content panel. Mark the selected tab via `SELECTED` state. Render each tab as `- page_tab N "title"` where `N` is the 0-based tab index, obtained from `AccessibleContext.getAccessibleIndexInParent()` (empirically verified equivalent to the JTabbedPane tab index). Mirrors the JTable row rendering pattern (`- row N: …` — SC-6). Tab-header-disabled state is covered by SC-4 (narrower semantics: `[disabled]` on a `page_tab` means only the header is non-navigable; the tab's children, when displayed, are live — Swing-fidelity, see architecture.md § 4). | The user can only see and interact with the selected tab's content; non-selected content is not accessible via the standard accessibility API anyway. Emitting the tab index inline lets the AI pass it directly to `swing_set_selection` as `[N]` without a separate enumeration call (UC-015). This is the only `PAGE_TAB`-specific rendering rule — disabled-tab semantics live in SC-4 to keep disabled behavior in one place across the spec. |
 | SC-3 | **Large data components (JTable, JList, JTree): truncate to first N accessible children** where N is a static final constant in the tool class (initially **5**). When truncated, Phase 4 emits a render-only `... and X more items` summary line (not a `SnapshotNode`). | A table with thousands of rows would blow up the AI context window. 10 rows gives enough structural overview. |
 | SC-4 | **Disabled components: included with `disabled` state, mirroring Swing's non-propagating semantics.** The `disabled` state is derived from `SwingUtils.isEffectivelyEnabled()` — see **architecture.md § 4 — Effectively Enabled Check** for the full rule. In short: `setEnabled(false)` does not propagate through real-`Component` ancestors in Swing, and neither does `[disabled]` in the snapshot. A button inside a disabled `JPanel` is **not** marked `disabled` (and `swing_click` would accept it). Two carveouts: (a) `JTabbedPane` tabs disabled via `setEnabledAt` carry `[disabled]` on their `page_tab` line (only the header is non-navigable; the tab's children, when displayed, are live); (b) virtual accessible children (e.g. `JTable` cells) do inherit their host component's disabled state. | The AI needs to see disabled components to understand the full UI. `[disabled]` in the snapshot is consistent with what mutation tools will actually refuse — if a tool call would fail with "disabled", the snapshot shows it; if a tool call would succeed, the snapshot does not lie by propagating `[disabled]` to its parents. See `feedback_swing_fidelity.md` — MCP mirrors what Swing allows, not what would be "cleaner". |
 | SC-5 | **JInternalFrame: include all, mark iconified ones** via `ICONIFIED` state. | Iconified internal frames are minimized but not invisible. |
@@ -181,7 +181,7 @@ survives pruning, and what it looks like in the snapshot output.
 | `JScrollPane` | `SCROLL_PANE` | No | `- scroll_pane` |
 | `JSplitPane` | `SPLIT_PANE` | No | `- split_pane` |
 | `JTabbedPane` | `PAGE_TAB_LIST` | No | `- page_tab_list "General" [ref=1] actions: single-selection` |
-| *(tab within JTabbedPane)* | `PAGE_TAB` | No | `- page_tab "General" [selected]` |
+| *(tab within JTabbedPane)* | `PAGE_TAB` | No | `- page_tab 0 "General" [selected]` (index is 0-based, emitted inline — SC-2) |
 | `JToolBar` | `TOOL_BAR` | No | `- tool_bar "Main"` |
 | `JOptionPane` | `OPTION_PANE` | No | `- option_pane` |
 
@@ -381,6 +381,9 @@ Tree filtering fixes both problems: ancestors give the AI a path from the root (
 - [x] `CellRendererPane` instances and their descendants are excluded.
 - [x] Menu items are included even when the menu is closed.
 - [x] JTabbedPane shows tab items with the selected tab marked `SELECTED`; only the selected tab's content is included.
+- [ ] Each JTabbedPane tab renders with its 0-based index: `- page_tab N "title"` (SC-2).
+- [ ] A tab disabled via `JTabbedPane.setEnabledAt(i, false)` shows `[disabled]` on its `page_tab` line (SC-2 + SC-4; architecture.md § 4 Quirk 1).
+- [ ] A child component on a disabled-but-selected tab is NOT marked `disabled` (tab-header-only semantics — SC-4, mirrors Swing).
 - [x] A JTable/JList/JTree with more than `MAX_DATA_ROW_NODES` rows shows only the first `MAX_DATA_ROW_NODES` rows plus a `... and N more items` summary.
 - [x] Only meaningful accessible states are shown (see **Accessible States — Display Rules**).
 - [x] An unnamed JPanel with an application MouseListener receives the `click` action and a ref (not pruned by TP-5 — AI-3 safety net applies).
@@ -426,6 +429,9 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [x] A JTable with more than `MAX_DATA_ROW_NODES` rows is truncated with a summary node.
   - [x] Menu items appear in the tree even when the menu is not open.
   - [x] JTabbedPane shows tab items; selected tab has `SELECTED` state; non-selected tab content is not included.
+  - [ ] JTabbedPane tabs render with 0-based index: `- page_tab N "title"` (SC-2). Locked in by multi-tab, selected-tab, and nested-content tests.
+  - [x] A tab disabled via `setEnabledAt(i, false)` renders as `[disabled]` on the `page_tab` line (`tabbedPane_tabDisabledViaSetEnabledAt_marksOnlyThatTabDisabled` — commit 043a71b).
+  - [x] A child button on a disabled-but-selected tab retains unprefixed `click` and no `[disabled]` state (`tabbedPane_buttonOnDisabledTab_isStillClickable` — commit 043a71b).
   - [x] Only meaningful states are shown (e.g., `disabled` appears, `visible`/`enabled` do not).
   - [x] Disabled components appear in the tree with `disabled` state.
   - [x] Disabled button shows `!click` (mutation action prefixed with `!`).
