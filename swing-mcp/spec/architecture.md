@@ -74,15 +74,7 @@ simultaneously would produce unpredictable, interleaved UI state.
 The wrapper function registered by `MCPServer.registerTool` acquires a `ReentrantLock`
 (`toolLock` field on `MCPServer`) for the entire duration of the tool call —
 from lock acquisition through the `runInEDT()` call and the `invokeLater()` dispatch (for
-mutations). Both run inside `toolLock.lock()` / `toolLock.unlock()`.
-An explicit `Lock` is used rather than `synchronized` to avoid ambiguity about which monitor
-is held inside a lambda closure.
-
-**Why locking `runInEDT` alone is insufficient:** the EDT is inherently serialised already.
-The problem is the *HTTP-thread* gap between the `runInEDT()` return and the `invokeLater()`
-call. If `runInEDT` were the only lock, a second tool call could slip in during that gap,
-replace the ref map, or mutate the UI before the first tool's action has been posted.
-The wrapper-level `toolLock` closes that gap.
+mutations). Both run inside `toolLock.lock()` / `toolLock.unlock()`. Rationale (why the lock spans the whole tool call rather than just the EDT turn, and why `ReentrantLock` rather than `synchronized`) is **DR-007**.
 
 ### Fire-and-Forget Mutation Dispatch
 

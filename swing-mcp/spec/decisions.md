@@ -254,3 +254,37 @@ until paint completes.
 - **Return `doAccessibleAction()`'s boolean via best-effort echo.**
   Rejected — the only mechanism to read it is `invokeAndWait`; with that
   off the table, the boolean is unreachable.
+
+---
+
+## DR-007 — Wrapper-level `toolLock` spans the whole tool call
+
+**Status:** Accepted
+**Applies to:** `MCPServer.registerTool` wrapper, every Swing tool
+
+**Decision.** The wrapper function registered by `MCPServer.registerTool`
+acquires a server-wide `ReentrantLock` (`toolLock`) at entry and holds it for
+the **entire tool call** — through `runInEDT()` and, for mutations, the
+subsequent `invokeLater()` dispatch. Not just around the EDT turn itself. The
+lock is a `ReentrantLock`, not a `synchronized` block.
+
+**Why.** The EDT is already serialised, so a first instinct is "just run on
+the EDT, that's the lock." Under fire-and-forget dispatch (DR-006),
+`runInEDT()` returns as soon as validation completes and `invokeLater(action)`
+has been posted — **before the action has actually run**. Between that
+`runInEDT()` return and the HTTP response being sent, a second HTTP thread
+could enter, acquire its own `runInEDT()`, and replace the ref map or post a
+conflicting mutation before the first tool's action has fired. The
+wrapper-level lock closes that HTTP-thread gap.
+
+**Alternatives considered.**
+- **No extra lock; rely on `runInEDT()` alone.** Rejected — leaks the
+  post-validation / pre-action window described above.
+- **`synchronized` block on a monitor object.** Rejected for readability:
+  inside a Swing lambda closure it becomes non-obvious which monitor is
+  held. An explicit `ReentrantLock` makes the scope visible at the
+  lock/unlock call sites.
+- **Per-tool locks instead of one server-wide lock.** Rejected —
+  concurrent tool calls on *different* tools would still interleave
+  ref-map mutations. Swing-MCP is designed for a single AI controller;
+  there is no value in permitting cross-tool concurrency.
