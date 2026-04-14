@@ -12,12 +12,14 @@ import java.awt.Window;
 import java.awt.event.WindowEvent;
 
 /**
- * MCP tool {@code swing_close}: closes a window or dialog identified by ref.
+ * MCP tool {@code swing_close}: closes a window, dialog, internal frame, or
+ * desktop icon (iconified internal frame) identified by ref.
  *
- * <p>Validates the ref and close support, then posts {@link WindowEvent#WINDOW_CLOSING}
- * via {@code SwingUtilities.invokeLater()} (fire-and-forget). The event respects the
- * application's {@link java.awt.event.WindowListener}s and {@code defaultCloseOperation}.
- * The client observes the result via {@code swing_snapshot}.</p>
+ * <p>Validates the ref and close support, then dispatches the close event
+ * via {@code SwingUtilities.invokeLater()} (fire-and-forget). For windows,
+ * posts {@link WindowEvent#WINDOW_CLOSING}; for internal frames and desktop
+ * icons, calls {@code doDefaultCloseAction()}. The client observes the
+ * result via {@code swing_snapshot}.</p>
  *
  * @see <a href="use-case-011-swing-close.md">UC-011</a>
  */
@@ -30,9 +32,9 @@ public class SwingCloseTool extends AbstractSwingTool {
 
     @Override
     public String getDescription() {
-        return "Close a window or dialog by ref. Requires a ref obtained from swing_snapshot or swing_get_cells. Note: Closing a window may terminate the app; since\n" +
-                "  Swing-MCP runs as a part of that app it will be killed too, and the client will see a dropped HTTP connection. If this\n" +
-                "  happens, the only way to recover is to re-run the Swing app";
+        return "Close a window, dialog, internal frame, or desktop icon (iconified internal frame) by ref. Requires a ref obtained from swing_snapshot or swing_get_cells.\n" +
+                "  Note: Closing a window may terminate the app; since Swing-MCP runs as a part of that app it will be killed too, and\n" +
+                "  the client will see a dropped HTTP connection. If this happens, the only way to recover is to re-run the Swing app";
     }
 
     @Override
@@ -59,7 +61,10 @@ public class SwingCloseTool extends AbstractSwingTool {
             Window window = (Window) accessible;
             SwingUtilities.invokeLater(() -> window.dispatchEvent(new WindowEvent(window, WindowEvent.WINDOW_CLOSING)));
         } else {
-            JInternalFrame iframe = (JInternalFrame) accessible;
+            // JInternalFrame or JDesktopIcon — resolve to frame, call doDefaultCloseAction
+            JInternalFrame iframe = (accessible instanceof JInternalFrame.JDesktopIcon)
+                    ? ((JInternalFrame.JDesktopIcon) accessible).getInternalFrame()
+                    : (JInternalFrame) accessible;
             SwingUtilities.invokeLater(iframe::doDefaultCloseAction);
         }
         return null;

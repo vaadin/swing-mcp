@@ -430,9 +430,11 @@ public final class SwingUtils {
      * Returns {@code true} if the accessible supports the synthetic {@code close} action.
      * <p>
      * Close is available for top-level windows (JFrame, JDialog) that are showing,
-     * have OS decorations, and will not terminate the JVM on close; and for
+     * have OS decorations, and will not terminate the JVM on close; for
      * {@link JInternalFrame}s that are showing, closable, and do not have
-     * {@code EXIT_ON_CLOSE}.
+     * {@code EXIT_ON_CLOSE}; and for {@link JInternalFrame.JDesktopIcon}s
+     * (iconified internal frames) where the icon is showing and the underlying
+     * frame passes the JInternalFrame rules.
      *
      * @see <a href="architecture.md">architecture.md § 4 — Detecting Close Support</a>
      */
@@ -451,6 +453,16 @@ public final class SwingUtils {
             if (!iframe.isShowing()) return false;
             if (!iframe.isClosable()) return false;
             if (iframe.getDefaultCloseOperation() == WindowConstants.EXIT_ON_CLOSE) return false;
+            return true;
+        }
+        // BR-11: JDesktopIcon — isShowing() on the icon, frame rules on the underlying frame
+        if (a instanceof JInternalFrame.JDesktopIcon) {
+            JInternalFrame.JDesktopIcon icon = (JInternalFrame.JDesktopIcon) a;
+            if (!icon.isShowing()) return false;
+            JInternalFrame frame = icon.getInternalFrame();
+            if (frame == null) return false;
+            if (!frame.isClosable()) return false;
+            if (frame.getDefaultCloseOperation() == WindowConstants.EXIT_ON_CLOSE) return false;
             return true;
         }
         return false;
