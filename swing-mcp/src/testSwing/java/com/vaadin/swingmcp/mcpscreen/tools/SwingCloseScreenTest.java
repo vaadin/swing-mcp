@@ -192,9 +192,12 @@ class SwingCloseScreenTest extends AbstractScreenTest {
 
         snapshot(frame);
 
-        // Frame should have no ref (supportsClose returns false for EXIT_ON_CLOSE)
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(frame),
-                "EXIT_ON_CLOSE frame should have no ref");
+        // Frame gets a ref (supportsIconify returns true), but close should still fail
+        int ref = context.getRefOf(frame);
+        assertTrue(ref > 0, "EXIT_ON_CLOSE frame should have a ref (iconify action)");
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", ref)), context)));
+        assertTrue(ex.getMessage().contains("does not support close"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

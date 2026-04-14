@@ -739,6 +739,11 @@ class SnapshotNode {
             actions.add("close");
         }
 
+        // Step 8: iconify (synthetic, for frames only)
+        if (SwingUtils.supportsIconify(accessible)) {
+            actions.add("iconify");
+        }
+
         return actions;
     }
 
@@ -780,7 +785,8 @@ class SnapshotNode {
                 || SwingUtils.supportsGetText(accessible)
                 || SwingUtils.supportsGetValue(accessible)
                 || SwingUtils.supportsSelection(accessible)
-                || SwingUtils.supportsClose(accessible);
+                || SwingUtils.supportsClose(accessible)
+                || SwingUtils.supportsIconify(accessible);
     }
 
     private static boolean hasKnownActionConstant(AccessibleContext ctx) {
