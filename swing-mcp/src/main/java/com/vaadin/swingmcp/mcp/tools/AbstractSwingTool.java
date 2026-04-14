@@ -44,6 +44,7 @@ public abstract class AbstractSwingTool {
     public static final String TOOL_SWING_ICONIFY = "swing_iconify";
     public static final String TOOL_SWING_RESTORE = "swing_restore";
     public static final String TOOL_SWING_GET_DESCRIPTION = "swing_get_description";
+    public static final String TOOL_SWING_DRAG = "swing_drag";
 
     /**
      * @return the MCP tool name (e.g. {@code "swing_snapshot"})
