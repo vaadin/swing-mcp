@@ -306,7 +306,15 @@ wrapper-level lock closes that HTTP-thread gap.
 2. **JDesktopPane children are walked via the standard accessible-children
    API**, not `getAllFrames()`. This preserves non-frame children that
    spaghetti apps add to the desktop pane (toolbars on palette layers,
-   background labels, status bars).
+   background labels, status bars). **Supplemental walk for iconified
+   frames:** after the accessibility walk, `JDesktopPane.getAllFrames()`
+   is checked for any iconified frame (`isIcon() == true`) whose
+   `getDesktopIcon()` was not already discovered. Missing icons are
+   added to the tree. This is necessary because macOS Aqua L&F nests
+   `JDesktopIcon` inside a non-accessible `AquaInternalFramePaneUI$Dock`
+   wrapper — `getAccessibleChildrenCount()` returns 0 for the desktop
+   pane after iconification. The supplement is harmless on other L&Fs
+   (Metal, Windows) where the icon is already an accessible child.
 
 3. **JDesktopIcon is rendered as itself** — not resolved back to its
    JInternalFrame. The node line uses the class name `JDesktopIcon`,
@@ -372,9 +380,10 @@ evolving years ago — no risk of refactoring or removal.
   showing, triggers HE-1 pruning and `supportsClose()` rejection,
   children are non-interactable. Every issue requires a special-case
   bypass.
-- **Use `JDesktopPane.getAllFrames()` instead of accessible children.**
-  Rejected — drops non-frame children that spaghetti apps add to the
-  desktop pane.
+- **Use `JDesktopPane.getAllFrames()` as the primary walk instead of
+  accessible children.** Rejected as the sole strategy — drops non-frame
+  children that spaghetti apps add to the desktop pane. Adopted as a
+  **supplement** for iconified frames only (see item 2 above).
 - **Render JDesktopIcon raw (no title annotation, show L&F children).**
   Rejected — the icon's own accessible name is `null`, so it would
   render as a nameless `JComponent (desktop_icon)` with a button and
