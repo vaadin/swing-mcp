@@ -100,6 +100,7 @@ public class MCPServer {
         registerTool(new com.vaadin.swingmcp.mcp.tools.SwingGetCellsTool());
         registerTool(new com.vaadin.swingmcp.mcp.tools.SwingGetCellCountTool());
         registerTool(new com.vaadin.swingmcp.mcp.tools.SwingIconifyTool());
+        registerTool(new com.vaadin.swingmcp.mcp.tools.SwingRestoreTool());
     }
 
     private final SwingToolContext context = new SwingToolContext();

@@ -744,6 +744,11 @@ class SnapshotNode {
             actions.add("iconify");
         }
 
+        // Step 9: restore (synthetic, for iconified frames and JDesktopIcon)
+        if (SwingUtils.supportsRestore(accessible)) {
+            actions.add("restore");
+        }
+
         return actions;
     }
 
@@ -786,7 +791,8 @@ class SnapshotNode {
                 || SwingUtils.supportsGetValue(accessible)
                 || SwingUtils.supportsSelection(accessible)
                 || SwingUtils.supportsClose(accessible)
-                || SwingUtils.supportsIconify(accessible);
+                || SwingUtils.supportsIconify(accessible)
+                || SwingUtils.supportsRestore(accessible);
     }
 
     private static boolean hasKnownActionConstant(AccessibleContext ctx) {
