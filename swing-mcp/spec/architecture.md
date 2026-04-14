@@ -377,8 +377,9 @@ The `swing_snapshot` tool also uses `isEffectivelyEnabled()` in two ways:
 ### Detecting Close Support
 
 `supportsClose` is a **synthetic** action — it is not derived from `AccessibleAction` or any
-`AccessibleContext` interface. It is exposed for top-level windows (JFrame, JDialog) and
-`JInternalFrame`. The close mechanism differs by type:
+`AccessibleContext` interface. It is exposed for top-level windows (JFrame, JDialog),
+`JInternalFrame`, and `JDesktopIcon` (iconified internal frame). The close mechanism differs
+by type:
 
 - **Window (JFrame, JDialog):** dispatches `WindowEvent.WINDOW_CLOSING`, which mirrors what
   the OS close button does and allows the app's `WindowListener`s and `defaultCloseOperation`
@@ -386,8 +387,10 @@ The `swing_snapshot` tool also uses `isEffectivelyEnabled()` in two ways:
 - **JInternalFrame:** calls `doDefaultCloseAction()`, which fires
   `InternalFrameEvent.INTERNAL_FRAME_CLOSING` and then executes the frame's
   `defaultCloseOperation` — mirroring what the internal frame's close button does.
+- **JDesktopIcon:** resolves to the underlying JInternalFrame via `getInternalFrame()` and
+  then follows the JInternalFrame path.
 
-In both cases the tool does **not** bypass `DO_NOTHING_ON_CLOSE` — if the app ignores the
+In all cases the tool does **not** bypass `DO_NOTHING_ON_CLOSE` — if the app ignores the
 event, the window/frame stays open.
 
 `JOptionPane` is intentionally excluded: it is a `JComponent`, not a window. Its containing
@@ -400,15 +403,20 @@ Implemented in `SwingUtils.supportsClose(Accessible)`:
   terminate the JVM on close.
 - Returns `true` for JInternalFrame when the frame is showing, `isClosable()` is true, and
   `defaultCloseOperation` is not `EXIT_ON_CLOSE`.
+- Returns `true` for JDesktopIcon when the icon is showing and its underlying JInternalFrame
+  (via `getInternalFrame()`) passes the JInternalFrame rules above (`isClosable()`, not
+  `EXIT_ON_CLOSE`).
 - Returns `false` for all other component types, including `JOptionPane`.
 - Undecorated windows (`setUndecorated(true)`) have no visible close button, so the user
   cannot close them through the normal UI — `supportsClose` returns `false` for those.
 - Non-closable JInternalFrames (`isClosable() == false`) have no close button in the title
-  bar — `supportsClose` returns `false` (analogous to undecorated windows).
+  bar — `supportsClose` returns `false` (analogous to undecorated windows). This also
+  applies to JDesktopIcons whose underlying frame is not closable.
 - `JFrame` with `EXIT_ON_CLOSE` is explicitly excluded: dispatching `WINDOW_CLOSING` would
   terminate the JVM, taking the swing-mcp server down with it and dropping the AI client
   connection with no explanation. The `close` action is never advertised for such frames.
-- `JInternalFrame` with `EXIT_ON_CLOSE` is also excluded for consistency.
+- `JInternalFrame` with `EXIT_ON_CLOSE` is also excluded for consistency (and transitively,
+  JDesktopIcons whose underlying frame has `EXIT_ON_CLOSE`).
   `JInternalFrame.setDefaultCloseOperation()` silently accepts the invalid value (JDK does
   not validate), but `doDefaultCloseAction()` falls through with no effect. The refusal is
   defensive — undefined behavior should not be exposed to the AI.
@@ -439,6 +447,7 @@ Implemented in `SwingUtils`: `supportsGetText`, `supportsSetText`, `supportsGetV
 
 - **JSpinner false-positive:** `AccessibleJSpinner` returns `this` from `getAccessibleValue()` for every model type, so `supportsGetValue` also null-checks `getCurrentAccessibleValue()` — this returns `null` for `SpinnerDateModel` / `SpinnerListModel` and correctly suppresses the action.
 - **`READ_ONLY_VALUE_ROLES` — `PROGRESS_BAR` only.** A user can drag a `JScrollBar`, so it stays writable. `JProgressBar.setCurrentAccessibleValue()` actually mutates the bar at the JDK level (verified by test), but we suppress `set_value` at the tool level because progress is application-controlled, not user-controlled.
+- **`SUPPRESSED_VALUE_ROLES` includes `INTERNAL_FRAME` and `DESKTOP_ICON`.** Both expose `AccessibleValue` for the `JLayeredPane` Z-order layer — a programmatic concept, not a user-controlled value. `set_value` would silently re-layer frames. See DR-008.
 - **`supportsSetText` implies `supportsGetText`** since `AccessibleEditableText extends AccessibleText` — check editable first, fall back to read-only.
 
 ### AccessibleValue — Component Behaviour
@@ -560,7 +569,7 @@ Other specs reference this table instead of duplicating detection logic.
 | `multi-selection` | `supportsMultiSelection()` | `supportsSelection()` AND `isMultiSelectable()` | *(group label)* | Snapshot action group label. Signals that all selection tools work on this component, including `swing_select_all`. |
 | `get_cell_count` | `isGetCellsSupported` (role is LIST or TREE) AND `childCount > MAX_DATA_ROW_NODES` | `getAccessibleChildrenCount()` | `swing_get_cell_count` | Returns the total number of accessible children. Only advertised on JList/JTree when the snapshot truncated the component's children. **JTable is excluded** — use `swing_get_item_count` for row counts. |
 | `get_cells` | `isGetCellsSupported` (role is LIST or TREE) AND `childCount > MAX_DATA_ROW_NODES` | `getAccessibleChild(int i)` | `swing_get_cells` | Returns a paged accessibility tree dump of the component's accessible children, with refs for actionable children inside cell renderers. Parameters: `ref` (integer), `offset` (integer, 0-based), `length` (integer, max children to return). The output format mirrors `swing_snapshot` — the same indented text tree — but rooted at the requested children rather than the full UI. Each child receives a ref, and `get_cells` **replaces the MCPServer ref map** with only the refs in its output window. Children outside the `offset`/`length` window are not interactable. The AI must call `swing_snapshot` again to return to the full-tree ref map. Only advertised on JList/JTree when the snapshot truncated the component's children. **JTable is excluded** — table cells are stamp-painted plain text labels with no actionable children; use `swing_get_items` for row access. |
-| `close` | `supportsClose()` | Synthetic — **Window:** dispatches `WindowEvent.WINDOW_CLOSING`; **JInternalFrame:** calls `doDefaultCloseAction()` | `swing_close` | Not from `AccessibleAction`. Exposed for `Window` instances (JFrame, JDialog) and `JInternalFrame` — `JOptionPane` is excluded because its containing JDialog already exposes `close`. Respects the app's close listeners and `defaultCloseOperation`; does **not** bypass `DO_NOTHING_ON_CLOSE`. `isEffectivelyEnabled()` is **not** checked — closing is a window/frame-level action, not a component-level one. |
+| `close` | `supportsClose()` | Synthetic — **Window:** dispatches `WindowEvent.WINDOW_CLOSING`; **JInternalFrame:** calls `doDefaultCloseAction()`; **JDesktopIcon:** resolves to JInternalFrame, then `doDefaultCloseAction()` | `swing_close` | Not from `AccessibleAction`. Exposed for `Window` instances (JFrame, JDialog), `JInternalFrame`, and `JDesktopIcon` (iconified internal frame) — `JOptionPane` is excluded because its containing JDialog already exposes `close`. Respects the app's close listeners and `defaultCloseOperation`; does **not** bypass `DO_NOTHING_ON_CLOSE`. `isEffectivelyEnabled()` is **not** checked — closing is a window/frame-level action, not a component-level one. |
 
 ### Selection Index Spaces
 
