@@ -403,9 +403,10 @@ Implemented in `SwingUtils.supportsClose(Accessible)`:
   terminate the JVM on close.
 - Returns `true` for JInternalFrame when the frame is showing, `isClosable()` is true, and
   `defaultCloseOperation` is not `EXIT_ON_CLOSE`.
-- Returns `true` for JDesktopIcon when the icon is showing and its underlying JInternalFrame
-  (via `getInternalFrame()`) passes the JInternalFrame rules above (`isClosable()`, not
-  `EXIT_ON_CLOSE`).
+- Returns `true` for JDesktopIcon when the **icon itself** is showing (the underlying frame
+  is detached with `isShowing() == false` — checking the frame would always fail) and its
+  underlying JInternalFrame (via `getInternalFrame()`) passes the JInternalFrame rules
+  above (`isClosable()`, not `EXIT_ON_CLOSE`).
 - Returns `false` for all other component types, including `JOptionPane`.
 - Undecorated windows (`setUndecorated(true)`) have no visible close button, so the user
   cannot close them through the normal UI — `supportsClose` returns `false` for those.

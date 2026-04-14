@@ -26,7 +26,7 @@ Closing a window may terminate the application (e.g. `EXIT_ON_CLOSE` on the main
 | BR-08 | `swing_close` is a **mutation tool** — it clears the ref map in a `finally` block after execution, regardless of success or failure (see **architecture.md §3 rule 3**). |
 | BR-09 | `JFrame` with `defaultCloseOperation == EXIT_ON_CLOSE` is refused: `supportsClose()` returns `false` for it, so no `close` action is ever advertised in the snapshot and any attempt to call `swing_close` on such a frame returns the BR-05 error. Rationale: `EXIT_ON_CLOSE` terminates the JVM, which would kill the swing-mcp server in-process and drop the AI client connection with no explanation. `JInternalFrame` with `defaultCloseOperation == EXIT_ON_CLOSE` is also refused, for consistency. Note: `JInternalFrame.setDefaultCloseOperation()` silently accepts `EXIT_ON_CLOSE` without validation (JDK bug — no `IllegalArgumentException`), and `doDefaultCloseAction()` falls through the switch with no effect. The refusal is defensive. |
 | BR-10 | `JInternalFrame` with `isClosable() == false` is refused: `supportsClose()` returns `false`. This is the JInternalFrame analog of the undecorated-window refusal — when `isClosable()` is false, the internal frame has no close button in its title bar, so the user cannot close it through normal UI. |
-| BR-11 | **JDesktopIcon** (iconified JInternalFrame): `supportsClose()` resolves to the underlying JInternalFrame via `getInternalFrame()` and applies the same rules (BR-09, BR-10). The icon must be showing. |
+| BR-11 | **JDesktopIcon** (iconified JInternalFrame): `supportsClose()` checks `isShowing()` on the **icon itself** (the visible component on the desktop — the underlying frame is detached with `isShowing() == false`), then delegates `isClosable()` and `EXIT_ON_CLOSE` checks to the underlying JInternalFrame via `getInternalFrame()` (BR-09, BR-10). |
 | BR-12 | **Tool description** must mention windows, dialogs, internal frames, and desktop icons (iconified internal frames). |
 
 ### Algorithm: detecting and invoking close
@@ -72,5 +72,6 @@ sees it in the snapshot and can decide how to proceed.
   - [x] Calling `swing_close` on a JInternalFrame with `isClosable() == false` returns an MCP error with `isError: true` (BR-10).
   - [x] Calling `swing_close` on a JInternalFrame with `EXIT_ON_CLOSE` via a stale ref returns an MCP error with `isError: true`.
   - [ ] Calling `swing_close` on a JDesktopIcon (iconified closable JInternalFrame with `DISPOSE_ON_CLOSE`) closes the underlying internal frame (BR-11).
+  - [ ] Calling `swing_close` on a JDesktopIcon whose underlying JInternalFrame has `DO_NOTHING_ON_CLOSE` returns `null`; the JDesktopIcon is still showing on the desktop pane.
   - [ ] Calling `swing_close` on a JDesktopIcon whose underlying JInternalFrame has `isClosable() == false` returns an MCP error with `isError: true` (BR-11 → BR-10).
   - [ ] Calling `swing_close` on a JDesktopIcon whose underlying JInternalFrame has `EXIT_ON_CLOSE` returns an MCP error with `isError: true` (BR-11 → BR-09).

@@ -310,14 +310,23 @@ wrapper-level lock closes that HTTP-thread gap.
 
 3. **JDesktopIcon is rendered as itself** — not resolved back to its
    JInternalFrame. The node line uses the class name `JDesktopIcon`,
-   the role `desktop_icon`, and the **internal frame's title** as the
-   accessible name (pulled at render time via
-   `desktopIcon.getInternalFrame().getTitle()`, since `JDesktopIcon`'s
-   own accessible name is `null`). Example:
-   `- JDesktopIcon (desktop_icon) "Doc1" [ref=3] actions: close`
+   the role `desktop_icon`, and the name from
+   `SwingUtils.getEffectiveAccessibleName()` — a three-step fallback:
+   (1) icon's own accessible name, (2) underlying frame's accessible
+   name, (3) frame title. In practice this collapses to the frame's
+   title, but respects explicit overrides. `JInternalFrame` itself
+   also uses `getEffectiveAccessibleName()` (accessible name → title).
+   Example: `- JDesktopIcon (desktop_icon) "Doc1" [ref=3] actions: close`.
+   **ComponentClassResolver carveout:** `JInternalFrame$JDesktopIcon`
+   is a JDK-internal nested class that would normally be stripped to
+   `JComponent` by `isJdkInternalNested()`. A narrow carveout preserves
+   it so the snapshot renders `JDesktopIcon`, not `JComponent`.
 
-4. **JDesktopIcon's children are pruned** (hard-excluded). The button
-   and label inside are L&F rendering artifacts, not semantic content.
+4. **JDesktopIcon's children are hard-excluded.** The button and label
+   inside are L&F rendering artifacts, not semantic content.
+   Implementation: the snapshot tree-builder skips child-walking for
+   JDesktopIcon nodes entirely (children are never constructed as
+   `SnapshotNode`s), rather than constructing then dropping them.
 
 5. **`DESKTOP_ICON` is added to `SEMANTIC_ROLES`** so the node is
    always retained regardless of other pruning heuristics.
