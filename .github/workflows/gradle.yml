@@ -10,8 +10,6 @@ jobs:
         os: [ubuntu-latest]
         java: [17, 21, 25]
         include:
-          - os: macos-latest
-            java: 17
           - os: windows-latest
             java: 17
 
