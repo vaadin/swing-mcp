@@ -73,7 +73,8 @@ class SnapshotNode {
             AccessibleState.COLLAPSED,
             AccessibleState.MODAL,
             AccessibleState.MULTI_LINE,
-            AccessibleState.ICONIFIED,
+            // ICONIFIED is synthetic (DR-009) — derived from Frame.getExtendedState(),
+            // not from AccessibleStateSet (JDK never sets it). See below.
             AccessibleState.HORIZONTAL,
             AccessibleState.VERTICAL,
             AccessibleState.BUSY,
@@ -111,6 +112,8 @@ class SnapshotNode {
         roles.add(AccessibleRole.FRAME);
         roles.add(AccessibleRole.DIALOG);
         roles.add(AccessibleRole.INTERNAL_FRAME);
+        roles.add(AccessibleRole.DESKTOP_PANE);
+        roles.add(AccessibleRole.DESKTOP_ICON);
         roles.add(AccessibleRole.OPTION_PANE);
         roles.add(AccessibleRole.TOOL_BAR);
         roles.add(AccessibleRole.TOOL_TIP);
@@ -190,6 +193,12 @@ class SnapshotNode {
     void buildChildren() {
         AccessibleContext ctx = accessible.getAccessibleContext();
         if (ctx == null) {
+            return;
+        }
+
+        // SC-5(c): JDesktopIcon's children (L&F button + label) are rendering
+        // artifacts, not semantic content. Skip child-walking entirely.
+        if (accessible instanceof JInternalFrame.JDesktopIcon) {
             return;
         }
 
@@ -492,8 +501,10 @@ class SnapshotNode {
             }
         }
 
-        // Name (omit if blank)
-        String name = ctx != null ? ctx.getAccessibleName() : null;
+        // Name (omit if blank) — uses getEffectiveAccessibleName for
+        // JInternalFrame (accessible name → title) and JDesktopIcon
+        // (icon name → frame name → frame title). See UC-002 SC-5.
+        String name = SwingUtils.getEffectiveAccessibleName(accessible);
         if (name != null && !name.isEmpty()) {
             sb.append(" \"").append(name).append('"');
         }
@@ -544,6 +555,12 @@ class SnapshotNode {
                     }
                 }
             }
+        }
+        // Synthetic ICONIFIED (DR-009): JDK never sets it in AccessibleStateSet.
+        // Derived from Frame.getExtendedState() for JFrame.
+        if (accessible instanceof Frame
+                && (((Frame) accessible).getExtendedState() & Frame.ICONIFIED) != 0) {
+            bracketParts.add("iconified");
         }
         if (!bracketParts.isEmpty()) {
             sb.append(" [").append(String.join(", ", bracketParts)).append(']');

@@ -6,6 +6,7 @@ import javax.accessibility.AccessibleRole;
 import java.awt.Component;
 import java.awt.MenuComponent;
 import java.lang.reflect.Modifier;
+import java.util.Set;
 
 /**
  * Resolves the component-identity slot for a snapshot line per
@@ -129,7 +130,19 @@ public final class ComponentClassResolver {
      * are framework-internal components the end user did not write. User
      * nested classes (enclosing class in user packages) are preserved.
      */
+    /**
+     * Classes that are JDK-internal nested classes but should be preserved
+     * as display classes because they are first-class snapshot citizens
+     * (added to {@code SEMANTIC_ROLES}).
+     */
+    private static final Set<Class<?>> JDK_NESTED_CARVEOUTS = Set.of(
+            javax.swing.JInternalFrame.JDesktopIcon.class
+    );
+
     static boolean isJdkInternalNested(Class<?> c) {
+        if (JDK_NESTED_CARVEOUTS.contains(c)) {
+            return false;
+        }
         Class<?> enclosing = c.getEnclosingClass();
         if (enclosing == null) {
             return false;
@@ -193,6 +206,9 @@ public final class ComponentClassResolver {
      * directly instantiable.
      */
     static boolean isQualifying(Class<?> c) {
+        if (JDK_NESTED_CARVEOUTS.contains(c)) {
+            return true;
+        }
         if (!Modifier.isPublic(c.getModifiers())) {
             return false;
         }

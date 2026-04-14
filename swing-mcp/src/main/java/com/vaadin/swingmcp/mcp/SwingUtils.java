@@ -47,7 +47,12 @@ public final class SwingUtils {
             AccessibleRole.RADIO_BUTTON,
             AccessibleRole.MENU,
             AccessibleRole.MENU_ITEM,
-            AccessibleRole.PAGE_TAB
+            AccessibleRole.PAGE_TAB,
+            // JInternalFrame and JDesktopIcon expose AccessibleValue for the
+            // JLayeredPane Z-order layer — a programmatic concept, not a
+            // user-controlled value. See DR-008.
+            AccessibleRole.INTERNAL_FRAME,
+            AccessibleRole.DESKTOP_ICON
     );
 
     // ── Roles whose AccessibleValue is read-only ─────────────────────────────
