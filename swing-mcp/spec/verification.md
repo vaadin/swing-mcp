@@ -55,7 +55,7 @@ outcomes are valuable test data.
 `JSpinner`, `JSlider`
 
 **Containers / structural:**
-`JPanel`, `JScrollPane`, `JTabbedPane`, `JSplitPane`
+`JPanel`, `JScrollPane`, `JTabbedPane`, `JSplitPane`, `JDesktopPane`
 
 **Display:**
 `JLabel`, `JProgressBar`
@@ -66,6 +66,12 @@ outcomes are valuable test data.
 **Other:**
 `JToolBar`, `JList` (simple single-selection), `JTree`
 
+**Internal windows:**
+`JInternalFrame`
+(note: for headless component-matrix tests, create a `JDesktopPane`, add the `JInternalFrame` to it,
+and add the desktop pane to a `JPanel` — no display needed.
+For screen-mode tests, host the `JDesktopPane` inside a visible `JFrame`).
+
 **Top-level windows (screen required — `testSwing` sources):**
 `JFrame`, `JDialog`, `JOptionPane`
 (note: test on the JFrame/JDialog/JOptionPane component itself, not on a component nested in them. For example,
@@ -75,8 +81,9 @@ For JOptionPane, create a JOptionPane instance and add it to a JDialog's content
 
 Each tool test class should include a test method per component from this list,
 verifying the tool's behavior (successful operation or appropriate error).
-Tests for `JFrame` and `JDialog` require a display and must live in the
-`testSwing` source set (run via `./gradlew :swing-mcp:testSwing`).
+Tests for `JFrame`, `JDialog`, and `JInternalFrame` (inside a visible `JDesktopPane`)
+require a display and must live in the `testSwing` source set
+(run via `./gradlew :swing-mcp:testSwing`).
 
 ### Naming Conventions
 

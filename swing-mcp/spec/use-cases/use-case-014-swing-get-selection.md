@@ -141,6 +141,7 @@ Verified empirically on Java 21 OpenJDK in headless mode (`AccessibleSelectionPr
   - [x] Reading a `JComboBox` inside `JFrame` returns the selected item.
   - [x] Reading a `JTable` (row-selection mode) inside `JFrame` returns row-level selection.
   - [x] Reading a `JList` inside `JDialog` returns the selection.
+  - [ ] Reading a `JList` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) returns the selection.
 
 ### Component matrix
 

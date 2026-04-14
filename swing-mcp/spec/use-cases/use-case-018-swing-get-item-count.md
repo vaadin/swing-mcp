@@ -67,6 +67,7 @@ Execution order:
   - [x] `JComboBox` inside `JFrame` returns correct count.
   - [x] `JTable` (row-selection mode) inside `JFrame` returns correct count.
   - [x] `JList` inside `JDialog` returns correct count.
+  - [ ] `JList` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) returns correct count.
 
 ### Component matrix
 

@@ -72,6 +72,8 @@ Execution order:
   - [x] Setting text on a `JTextField` inside `JDialog` replaces its content.
   - [x] Setting text on a `JPasswordField` inside `JDialog` updates the password.
   - [x] Clearing a `JTextField` inside `JDialog` with empty string succeeds.
+  - [ ] Setting text on a `JTextField` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) replaces its content.
+  - [ ] Setting text on a disabled field inside `JInternalFrame` returns an MCP error.
 
 ### Component matrix
 

@@ -78,6 +78,7 @@ Execution order:
   - [x] Reading a `JSpinner(SpinnerNumberModel)` inside `JFrame` returns its value.
   - [x] Reading a `JProgressBar` inside `JFrame` returns its value.
   - [x] Reading a `JSlider` inside `JDialog` returns its value.
+  - [ ] Reading a `JSlider` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) returns its value.
 
 ### Component matrix
 

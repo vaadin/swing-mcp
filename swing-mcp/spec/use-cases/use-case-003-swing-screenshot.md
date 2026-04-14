@@ -56,3 +56,4 @@ Uses real `JFrame`/`JDialog` instances on an actual display.
 #### Component matrix (screen-mode)
 
 - [x] Every top-level window in the matrix (`JFrame`, `JDialog`) is shown on screen at 200×100 and renders to a valid 200×100 PNG.
+- [ ] A `JInternalFrame` inside a `JDesktopPane` (inside a `JFrame`) is shown on screen and renders to a valid PNG.

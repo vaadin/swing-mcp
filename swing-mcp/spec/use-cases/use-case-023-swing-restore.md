@@ -66,3 +66,4 @@ The client calls `swing_snapshot` after to determine whether the window was rest
   - [x] Snapshot of a JDesktopIcon shows `restore` in its actions.
   - [x] Calling `swing_restore` on a JDesktopIcon whose `VetoableChangeListener` rejects the restore returns `null`; the JDesktopIcon is still present in the snapshot — verifies we call `setIcon(false)` which respects vetoes.
   - [x] JInternalFrame (non-iconified) does not show `restore` in its actions.
+  - [ ] `JDesktopPane` component matrix: `swing_restore` returns an MCP error with `isError: true`.

@@ -57,6 +57,7 @@ Execution order:
   - [x] Decrementing a `JSpinner` inside `JFrame` decreases its value (verified after EDT drains).
   - [x] Decrementing a `JSlider` inside `JFrame` decreases its value (verified after EDT drains).
   - [x] Decrementing a `JSpinner` inside `JDialog` decreases its value (verified after EDT drains).
+  - [ ] Decrementing a `JSpinner` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) decreases its value (verified after EDT drains).
 
 ### Component matrix
 

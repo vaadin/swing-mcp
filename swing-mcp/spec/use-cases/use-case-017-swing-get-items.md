@@ -122,6 +122,7 @@ Execution order:
   - [x] Reading a `JComboBox` inside `JFrame` returns items.
   - [x] Reading a `JTable` (row-selection mode) inside `JFrame` returns rows.
   - [x] Reading a `JList` inside `JDialog` returns items.
+  - [ ] Reading a `JList` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) returns items.
 
 ### Component matrix
 

@@ -157,6 +157,7 @@ Execution order:
   - [x] Setting a `JComboBox` selection inside `JFrame` selects the item.
   - [x] Setting a `JTable` (row-selection mode) selection inside `JFrame` selects the row.
   - [x] Setting a `JList` selection inside `JDialog` selects the item.
+  - [ ] Setting a `JList` selection inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) selects the item.
 
 ### Component matrix
 

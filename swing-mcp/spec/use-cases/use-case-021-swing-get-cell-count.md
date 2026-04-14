@@ -62,6 +62,7 @@ Execution order:
   - [x] `JTable` inside `JFrame` returns an MCP error redirecting to `swing_get_item_count`.
   - [x] `JList` inside `JFrame` returns correct count.
   - [x] `JList` inside `JDialog` returns correct count.
+  - [ ] `JList` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) returns correct count.
 
 ### Component matrix
 
