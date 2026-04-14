@@ -241,6 +241,26 @@ class SwingCloseScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    // JDesktopPane component matrix
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void componentMatrix_JDesktopPane() throws Exception {
+        JFrame host = new JFrame("Host");
+        host.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        extraWindows.add(host);
+        executeOnEDT(() -> { host.setSize(400, 300); host.setVisible(true); return null; });
+
+        snapshot(host);
+        context.putRef(99, (Accessible) desktop);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // JInternalFrame helpers
     // ══════════════════════════════════════════════════════════════════════════
 

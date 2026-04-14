@@ -233,6 +233,35 @@ class SwingGetItemsScreenTest extends AbstractScreenTest {
     // JDialog
     // ══════════════════════════════════════════════════════════════════════════
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void readJListItemsInsideJInternalFrame() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma"});
+        iframe.getContentPane().add(list);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+
+        snapshot(host);
+        String json = getItems(context.getRefOf(list), 0, 3);
+        assertEquals("{\"totalCount\":3,\"items\":["
+                + "{\"index\":0,\"name\":\"Alpha\"},"
+                + "{\"index\":1,\"name\":\"Beta\"},"
+                + "{\"index\":2,\"name\":\"Gamma\"}"
+                + "]}", json);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JDialog
+    // ══════════════════════════════════════════════════════════════════════════
+
     @Test
     void readJListItemsInsideJDialog() throws Exception {
         JDialog dialog = new JDialog();

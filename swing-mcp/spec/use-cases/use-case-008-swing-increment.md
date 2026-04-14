@@ -56,7 +56,7 @@ Execution order:
   - [x] Incrementing a `JSpinner` inside `JFrame` increases its value (verified after EDT drains).
   - [x] Incrementing a `JSlider` inside `JFrame` increases its value (verified after EDT drains).
   - [x] Incrementing a `JSpinner` inside `JDialog` increases its value (verified after EDT drains).
-  - [ ] Incrementing a `JSpinner` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) increases its value (verified after EDT drains).
+  - [x] Incrementing a `JSpinner` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) increases its value (verified after EDT drains).
 
 ### Component matrix
 

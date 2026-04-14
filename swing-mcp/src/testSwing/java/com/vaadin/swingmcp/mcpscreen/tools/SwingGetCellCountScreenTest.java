@@ -81,6 +81,32 @@ class SwingGetCellCountScreenTest extends AbstractScreenTest {
     // JDialog
     // ══════════════════════════════════════════════════════════════════════════
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jListInsideJInternalFrame() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        String[] items = new String[20];
+        for (int i = 0; i < 20; i++) items[i] = "Item-" + i;
+        JList<String> list = new JList<>(items);
+        iframe.getContentPane().add(list);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+
+        snapshot(host);
+        assertEquals("20", getCount(context.getRefOf(list)));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JDialog
+    // ══════════════════════════════════════════════════════════════════════════
+
     @Test
     void jListInsideJDialog() throws Exception {
         JDialog dialog = new JDialog((Frame) null, "Test");

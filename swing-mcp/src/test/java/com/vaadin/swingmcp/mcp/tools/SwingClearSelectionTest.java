@@ -55,6 +55,27 @@ class SwingClearSelectionTest extends AbstractHeadlessTest {
     }
 
     @Test
+    void jList_insideJInternalFrame_clearSelection_deselectsItem() throws Exception {
+        JDesktopPane desktop = new JDesktopPane();
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma"});
+        list.setSelectedIndex(1);
+        iframe.getContentPane().add(list);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+        JPanel root = new JPanel();
+        root.add(desktop);
+
+        snapshot(root);
+        int ref = context.getRefOf(list);
+        clearSelection(ref);
+
+        assertEquals(-1, list.getSelectedIndex());
+        assertTrue(list.isSelectionEmpty());
+    }
+
+    @Test
     void clearSelectionViaMcpClient() throws Exception {
         JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma"});
         list.setSelectedIndex(2);

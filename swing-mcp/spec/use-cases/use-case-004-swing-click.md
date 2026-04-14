@@ -64,7 +64,7 @@ correctly. Lives in `src/test` so it is visible to both headless and `testSwing`
   - [x] Clicking a button inside `JDialog` fires its action listener.
   - [x] Clicking a checkbox inside `JDialog` toggles its state.
   - [x] Clicking a disabled button inside `JDialog` returns an MCP error.
-  - [ ] Clicking a button inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) fires its action listener.
-  - [ ] Clicking a checkbox inside `JInternalFrame` toggles its state.
-  - [ ] Clicking a disabled button inside `JInternalFrame` returns an MCP error.
+  - [x] Clicking a button inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) fires its action listener.
+  - [x] Clicking a checkbox inside `JInternalFrame` toggles its state.
+  - [x] Clicking a disabled button inside `JInternalFrame` returns an MCP error.
 

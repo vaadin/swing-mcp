@@ -514,5 +514,5 @@ Uses real `JFrame`/`JDialog` instances on an actual display. The snapshot tool i
 
 - [x] A visible `JFrame` with child components produces a snapshot tree rooted at the frame's content (framework-internal wrappers pruned).
 - [x] A visible `JDialog` with child components produces a snapshot tree rooted at the dialog's content (framework-internal wrappers pruned).
-- [ ] A visible `JInternalFrame` inside a `JDesktopPane` (inside `JFrame`) produces a snapshot subtree for the internal frame with correct roles, names, and refs.
-- [ ] A `JDesktopPane` with multiple `JInternalFrame`s shows all internal frames in the snapshot.
+- [x] A visible `JInternalFrame` inside a `JDesktopPane` (inside `JFrame`) produces a snapshot subtree for the internal frame with correct roles, names, and refs.
+- [x] A `JDesktopPane` with multiple `JInternalFrame`s shows all internal frames in the snapshot.

@@ -160,6 +160,32 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void togglePopupOpensComboInsideJInternalFrame() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        JComboBox<String> combo = new JComboBox<>(new String[]{"A", "B", "C"});
+        iframe.getContentPane().add(combo);
+        iframe.setSize(200, 100);
+        desktop.add(iframe);
+        host.setSize(400, 300);
+        host.setVisible(true);
+        iframe.setVisible(true);
+        try {
+            snapshot(host);
+            togglePopup(context.getRefOf(combo));
+            assertTrue(combo.isPopupVisible(), "Popup should be open inside JInternalFrame");
+        } finally {
+            host.dispose();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // Component matrix — JFrame and JDialog themselves (not their children)
     // ══════════════════════════════════════════════════════════════════════════
 

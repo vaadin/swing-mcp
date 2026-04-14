@@ -70,4 +70,4 @@ The client calls `swing_snapshot` after to determine whether the frame was iconi
   - [x] Snapshot of a JInternalFrame with `isIconifiable() == false` does not show `iconify` in its actions.
   - [x] Calling `swing_iconify` on a JInternalFrame whose `VetoableChangeListener` rejects the iconify returns `null`; the internal frame is still showing (not replaced by JDesktopIcon) — verifies we call `setIcon(true)` which respects vetoes.
   - [x] JDesktopIcon does not show `iconify` in its actions.
-  - [ ] `JDesktopPane` component matrix: `swing_iconify` returns an MCP error with `isError: true`.
+  - [x] `JDesktopPane` component matrix: `swing_iconify` returns an MCP error with `isError: true`.

@@ -490,6 +490,20 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         assertNotSupported(m);
     }
     @Test void componentMatrix_JMenuItem() throws Exception { assertNotSupported(new JMenuItem("Open")); }
+    @Test void componentMatrix_JDesktopPane() throws Exception {
+        JDesktopPane desktop = new JDesktopPane();
+        context.putRef(99, desktop);
+        assertThrows(MCPErrorResponseException.class, () -> getCells(99, 0, 1));
+    }
+    @Test void componentMatrix_JInternalFrame() throws Exception {
+        JDesktopPane desktop = new JDesktopPane();
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+        context.putRef(99, iframe);
+        assertThrows(MCPErrorResponseException.class, () -> getCells(99, 0, 1));
+    }
 
     // ══════════════════════════════════════════════════════════════════════════
     // MCP client smoke test

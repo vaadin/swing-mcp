@@ -164,6 +164,26 @@ class SwingGetItemCountScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jListInsideJInternalFrame() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma"});
+        iframe.getContentPane().add(list);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+
+        snapshot(host);
+        assertEquals("3", getCount(context.getRefOf(list)));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // JDialog
     // ══════════════════════════════════════════════════════════════════════════
 

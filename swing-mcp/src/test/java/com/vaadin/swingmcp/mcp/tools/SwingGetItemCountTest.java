@@ -362,6 +362,24 @@ class SwingGetItemCountTest extends AbstractHeadlessTest {
         assertTrue(ex.getMessage().contains("does not support swing_get_item_count"));
     }
 
+    @Test
+    void componentMatrix_JDesktopPane() throws Exception {
+        JDesktopPane desktop = new JDesktopPane();
+        context.putRef(99, desktop);
+        assertThrows(MCPErrorResponseException.class, () -> getCount(99));
+    }
+
+    @Test
+    void componentMatrix_JInternalFrame() throws Exception {
+        JDesktopPane desktop = new JDesktopPane();
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+        context.putRef(99, iframe);
+        assertThrows(MCPErrorResponseException.class, () -> getCount(99));
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // MCP client smoke test
     // ══════════════════════════════════════════════════════════════════════════

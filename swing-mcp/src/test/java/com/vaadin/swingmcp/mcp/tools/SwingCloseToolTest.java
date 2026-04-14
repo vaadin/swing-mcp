@@ -275,4 +275,22 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
                 () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
         assertTrue(ex.getMessage().contains("does not support close"));
     }
+
+    @Test
+    void componentMatrix_JDesktopPane() throws Exception {
+        JDesktopPane desktop = new JDesktopPane();
+        context.putRef(99, desktop);
+        assertThrows(MCPErrorResponseException.class, () -> close(99));
+    }
+
+    @Test
+    void componentMatrix_JInternalFrame() throws Exception {
+        JDesktopPane desktop = new JDesktopPane();
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+        context.putRef(99, iframe);
+        assertThrows(MCPErrorResponseException.class, () -> close(99));
+    }
 }

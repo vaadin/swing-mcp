@@ -93,7 +93,7 @@ Execution order:
   - [x] Setting a `JSpinner(SpinnerNumberModel)` value inside `JFrame` changes the spinner value.
   - [x] Setting a `JSlider` value inside `JDialog` changes the slider position.
   - [x] Setting on a disabled `JSlider` inside `JFrame` returns an MCP error.
-  - [ ] Setting a `JSlider` value inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) changes the slider position.
+  - [x] Setting a `JSlider` value inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) changes the slider position.
 
 ### Component matrix
 

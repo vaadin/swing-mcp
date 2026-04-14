@@ -22,4 +22,4 @@ This tool is a convenience wrapper around `swing_set_selection` (UC-015) with `i
 - [x] `SwingClearSelectionTest` (headless)
   - [x] Clearing the selection of a `JList` with a selected item deselects the item (happy path).
   - [x] Calling `swing_clear_selection` via the MCP client clears the selection.
-  - [ ] Clearing the selection of a `JList` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) deselects the item.
+  - [x] Clearing the selection of a `JList` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) deselects the item.

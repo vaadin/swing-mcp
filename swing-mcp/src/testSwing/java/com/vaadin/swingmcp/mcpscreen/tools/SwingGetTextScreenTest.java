@@ -120,6 +120,45 @@ class SwingGetTextScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void readTextFieldInsideJInternalFrame() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        JTextField field = new JTextField("iframe content");
+        iframe.getContentPane().add(field);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+
+        snapshot(host);
+        assertEquals("iframe content", getText(context.getRefOf(field)));
+    }
+
+    @Test
+    void readPasswordFieldInsideJInternalFrame() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        JPasswordField password = new JPasswordField("secret");
+        iframe.getContentPane().add(password);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+
+        snapshot(host);
+        String result = getText(context.getRefOf(password));
+        assertNotNull(result);
+        assertNotEquals("secret", result, "Password should be masked");
+        assertEquals(6, result.length());
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // Component matrix — JFrame and JDialog themselves (not their children)
     // ══════════════════════════════════════════════════════════════════════════
 

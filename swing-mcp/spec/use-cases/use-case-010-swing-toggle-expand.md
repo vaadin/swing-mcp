@@ -53,8 +53,8 @@ Execution order:
 - [x] `SwingToggleExpandScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
   - [x] `swing_toggle_expand` fails on `JFrame` itself (not a tree node).
   - [x] `swing_toggle_expand` fails on `JDialog` itself (not a tree node).
-  - [ ] `swing_toggle_expand` fails on `JInternalFrame` itself (not a tree node).
-  - [ ] `swing_toggle_expand` fails on `JDesktopPane` itself (not a tree node).
+  - [x] `swing_toggle_expand` fails on `JInternalFrame` itself (not a tree node).
+  - [x] `swing_toggle_expand` fails on `JDesktopPane` itself (not a tree node).
 
 ### Component matrix
 

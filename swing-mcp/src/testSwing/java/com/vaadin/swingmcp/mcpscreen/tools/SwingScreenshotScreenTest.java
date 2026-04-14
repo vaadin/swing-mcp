@@ -187,6 +187,26 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
     }
 
     @Test
+    void jInternalFrameInsideDesktopPaneRendersSuccessfully() throws Exception {
+        JFrame host = showFrame(400, 300);
+        JDesktopPane desktop = new JDesktopPane();
+        SwingUtilities.invokeAndWait(() -> host.setContentPane(desktop));
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        iframe.setSize(200, 100);
+        SwingUtilities.invokeAndWait(() -> {
+            desktop.add(iframe);
+            iframe.setVisible(true);
+        });
+        mcpServer.setConsideredComponents(List.of(host));
+
+        McpSchema.CallToolResult result = mcpClient.callTool(
+                new McpSchema.CallToolRequest("swing_screenshot", Map.of()));
+        BufferedImage image = decodeResult(result);
+        assertTrue(image.getWidth() > 0 && image.getHeight() > 0,
+                "Screenshot of JFrame with JInternalFrame should produce a valid image");
+    }
+
+    @Test
     void jDialogRendersSuccessfully() throws Exception {
         JFrame owner = showFrame(200, 100);
         JDialog dialog = showDialog(owner, 200, 100);

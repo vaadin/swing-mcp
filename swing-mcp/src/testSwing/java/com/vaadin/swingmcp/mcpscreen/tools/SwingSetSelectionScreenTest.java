@@ -126,6 +126,27 @@ class SwingSetSelectionScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void setJListSelectionInsideJInternalFrame() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma"});
+        iframe.getContentPane().add(list);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+
+        snapshot(host);
+        setSelection(context.getRefOf(list), List.of(1.0));
+        assertEquals(1, list.getSelectedIndex());
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // JTable round-trip (requires screen — addAccessibleSelection is no-op headless)
     // ══════════════════════════════════════════════════════════════════════════
 

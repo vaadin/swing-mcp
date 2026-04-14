@@ -149,6 +149,47 @@ class SwingSetTextScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void setTextOnJTextFieldInsideJInternalFrame() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        JTextField field = new JTextField("old");
+        iframe.getContentPane().add(field);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+
+        snapshot(host);
+        setText(context.getRefOf(field), "new value");
+        assertEquals("new value", field.getText());
+    }
+
+    @Test
+    void setTextOnDisabledFieldInsideJInternalFrameFails() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        JTextField field = new JTextField("text");
+        field.setEnabled(false);
+        iframe.getContentPane().add(field);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+
+        snapshot(host);
+        int ref = context.getRefOf(field);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> setText(ref, "new"));
+        assertTrue(ex.getMessage().contains("disabled"));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // Component matrix — JFrame and JDialog themselves (not their children)
     // ══════════════════════════════════════════════════════════════════════════
 

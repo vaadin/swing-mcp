@@ -109,6 +109,33 @@ class SwingIncrementScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void incrementSpinnerInsideJInternalFrame() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        JSpinner spinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 1));
+        iframe.getContentPane().add(spinner);
+        iframe.setSize(150, 80);
+        desktop.add(iframe);
+        host.pack();
+        host.setVisible(true);
+        iframe.setVisible(true);
+        try {
+            snapshot(host);
+            MCPProtocol.Content result = increment(context.getRefOf(spinner));
+            assertNull(result, "Success should return null");
+            assertEquals(6, spinner.getValue());
+        } finally {
+            host.dispose();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // Component matrix — JFrame and JDialog themselves (not their children)
     // ══════════════════════════════════════════════════════════════════════════
 

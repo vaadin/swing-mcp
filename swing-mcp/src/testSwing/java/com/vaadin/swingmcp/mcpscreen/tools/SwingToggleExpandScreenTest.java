@@ -65,6 +65,53 @@ class SwingToggleExpandScreenTest extends AbstractScreenTest {
     }
 
     @Test
+    void componentMatrix_JInternalFrame() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+        host.setSize(400, 300);
+        host.setVisible(true);
+        try {
+            snapshot(host);
+            // JInternalFrame itself has close/iconify actions but no toggle_expand — verify it doesn't have toggle_expand
+            int ref = context.getRefOf(iframe);
+            var ex = assertThrows(com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException.class,
+                    () -> executeOnEDT(() -> {
+                        toggleExpandTool.execute(new Parameters(Map.of("ref", ref)), context);
+                        return null;
+                    }));
+            assertTrue(ex.getMessage().contains("does not support toggle_expand"));
+        } finally {
+            host.dispose();
+        }
+    }
+
+    @Test
+    void componentMatrix_JDesktopPane() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        host.setSize(400, 300);
+        host.setVisible(true);
+        try {
+            snapshot(host);
+            context.putRef(99, desktop);
+            var ex = assertThrows(com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException.class,
+                    () -> executeOnEDT(() -> {
+                        toggleExpandTool.execute(new Parameters(Map.of("ref", 99)), context);
+                        return null;
+                    }));
+            assertTrue(ex.getMessage().contains("does not support toggle_expand"));
+        } finally {
+            host.dispose();
+        }
+    }
+
+    @Test
     void componentMatrix_JOptionPane() throws Exception {
         JDialog dialog = new JDialog();
         JOptionPane optionPane = new JOptionPane(

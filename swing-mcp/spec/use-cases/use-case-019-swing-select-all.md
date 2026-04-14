@@ -123,7 +123,7 @@ Verified empirically on Java 21 OpenJDK in headless mode (`JTableSelectAllProbeT
   - [x] `JList` (multi-selection) inside `JFrame`: all items selected after `select_all`.
   - [x] `JTable` (row-selection, multi-selection) inside `JFrame`: all rows selected after `select_all`.
   - [x] `JList` (multi-selection) inside `JDialog`: all items selected after `select_all`.
-  - [ ] `JList` (multi-selection) inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`): all items selected after `select_all`.
+  - [x] `JList` (multi-selection) inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`): all items selected after `select_all`.
 
 ### Component matrix
 

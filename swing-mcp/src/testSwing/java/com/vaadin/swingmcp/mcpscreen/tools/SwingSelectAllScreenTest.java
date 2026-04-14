@@ -89,6 +89,32 @@ class SwingSelectAllScreenTest extends AbstractScreenTest {
     // JDialog
     // ══════════════════════════════════════════════════════════════════════════
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void selectAllJListInsideJInternalFrame() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma"});
+        list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        iframe.getContentPane().add(list);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+
+        snapshot(host);
+        selectAll(context.getRefOf(list));
+        assertArrayEquals(new int[]{0, 1, 2}, list.getSelectedIndices());
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JDialog
+    // ══════════════════════════════════════════════════════════════════════════
+
     @Test
     void selectAllJListInsideJDialog() throws Exception {
         JDialog dialog = new JDialog();

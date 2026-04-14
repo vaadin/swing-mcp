@@ -93,6 +93,56 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
     // JDialog tests
     // ══════════════════════════════════════════════════════════════════════════
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame tests
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jInternalFrameInsideDesktopPaneAppearsInSnapshot() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        iframe.getContentPane().add(new JButton("OK"));
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+
+        String text = snapshot(host);
+        assertTrue(text.contains("JInternalFrame"), "snapshot should contain JInternalFrame");
+        assertTrue(text.contains("\"Doc\""), "snapshot should show internal frame title");
+        assertTrue(text.contains("\"OK\""), "snapshot should show button inside internal frame");
+    }
+
+    @Test
+    void desktopPaneWithMultipleInternalFrames() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+
+        JInternalFrame iframe1 = new JInternalFrame("Doc1", true, true);
+        iframe1.getContentPane().add(new JButton("A"));
+        iframe1.setSize(150, 80);
+        iframe1.setVisible(true);
+        desktop.add(iframe1);
+
+        JInternalFrame iframe2 = new JInternalFrame("Doc2", true, true);
+        iframe2.getContentPane().add(new JButton("B"));
+        iframe2.setSize(150, 80);
+        iframe2.setVisible(true);
+        desktop.add(iframe2);
+
+        String text = snapshot(host);
+        assertTrue(text.contains("\"Doc1\""), "snapshot should contain first internal frame");
+        assertTrue(text.contains("\"Doc2\""), "snapshot should contain second internal frame");
+        assertTrue(text.contains("\"A\""), "snapshot should show button in first iframe");
+        assertTrue(text.contains("\"B\""), "snapshot should show button in second iframe");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JDialog tests
+    // ══════════════════════════════════════════════════════════════════════════
+
     @Test
     void jDialogAppearsAsDialog() throws Exception {
         JDialog dialog = new JDialog();

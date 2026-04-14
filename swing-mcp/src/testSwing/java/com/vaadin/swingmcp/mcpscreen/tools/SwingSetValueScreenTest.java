@@ -90,6 +90,31 @@ class SwingSetValueScreenTest extends AbstractScreenTest {
     // Error cases
     // ══════════════════════════════════════════════════════════════════════════
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void setSliderValueInsideJInternalFrame() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        JSlider slider = new JSlider(0, 100, 50);
+        iframe.getContentPane().add(slider);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+
+        snapshot(host);
+        setValue(context.getRefOf(slider), 75.0);
+        assertEquals(75, slider.getValue());
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Error cases
+    // ══════════════════════════════════════════════════════════════════════════
+
     @Test
     void disabledSliderInsideJFrameReturnsMcpError() throws Exception {
         JFrame frame = new JFrame("Test");

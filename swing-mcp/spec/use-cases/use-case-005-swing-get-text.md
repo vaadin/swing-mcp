@@ -73,8 +73,8 @@ Execution order:
   - [x] Reading a `JTextField` inside `JDialog` returns its content.
   - [x] Reading a `JPasswordField` inside `JDialog` returns echo characters.
   - [x] Reading an empty `JTextField` inside `JDialog` returns an empty string.
-  - [ ] Reading a `JTextField` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) returns its content.
-  - [ ] Reading a `JPasswordField` inside `JInternalFrame` returns echo characters.
+  - [x] Reading a `JTextField` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) returns its content.
+  - [x] Reading a `JPasswordField` inside `JInternalFrame` returns echo characters.
 
 ### Component matrix
 

@@ -97,7 +97,7 @@ Execution order:
   - [x] Reading a `JTable` inside `JFrame` returns an MCP error redirecting to `swing_get_items`.
   - [x] Reading a truncated `JList` inside `JFrame` returns children.
   - [x] Reading a truncated `JList` inside `JDialog` returns children.
-  - [ ] Reading a truncated `JList` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) returns children.
+  - [x] Reading a truncated `JList` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) returns children.
 
 ### Component matrix
 

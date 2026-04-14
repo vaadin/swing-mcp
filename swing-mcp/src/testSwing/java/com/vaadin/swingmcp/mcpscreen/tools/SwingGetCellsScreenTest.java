@@ -96,6 +96,36 @@ class SwingGetCellsScreenTest extends AbstractScreenTest {
     // JDialog
     // ══════════════════════════════════════════════════════════════════════════
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void truncatedJListInsideJInternalFrame() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        String[] items = new String[20];
+        for (int i = 0; i < 20; i++) items[i] = "Item-" + i;
+        JList<String> list = new JList<>(items);
+        iframe.getContentPane().add(list);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+
+        snapshot(host);
+        String output = getCells(context.getRefOf(list), 0, 3);
+        assertTrue(output.contains("Showing 3 children from offset 0 (total 20) for list [ref=1]"),
+                "Should show header, got: " + output);
+        assertTrue(output.contains("\"Item-0\""), "Should contain Item-0, got: " + output);
+        assertTrue(output.contains("\"Item-2\""), "Should contain Item-2, got: " + output);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JDialog
+    // ══════════════════════════════════════════════════════════════════════════
+
     @Test
     void truncatedJListInsideJDialog() throws Exception {
         JDialog dialog = new JDialog((Frame) null, "Test");

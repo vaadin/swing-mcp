@@ -132,6 +132,67 @@ class SwingClickScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void clickButtonInsideJInternalFrame() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        JButton button = new JButton("OK");
+        AtomicBoolean clicked = new AtomicBoolean(false);
+        button.addActionListener(e -> clicked.set(true));
+        iframe.getContentPane().add(button);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+
+        snapshot(host);
+        click(context.getRefOf(button));
+        assertTrue(clicked.get(), "Button inside JInternalFrame should be clickable");
+    }
+
+    @Test
+    void clickCheckBoxInsideJInternalFrame() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        JCheckBox checkBox = new JCheckBox("Accept");
+        iframe.getContentPane().add(checkBox);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+        assertFalse(checkBox.isSelected());
+
+        snapshot(host);
+        click(context.getRefOf(checkBox));
+        assertTrue(checkBox.isSelected(), "Checkbox inside JInternalFrame should toggle on click");
+    }
+
+    @Test
+    void clickDisabledButtonInsideJInternalFrameFails() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        JButton button = new JButton("Disabled");
+        button.setEnabled(false);
+        iframe.getContentPane().add(button);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+
+        snapshot(host);
+        int ref = context.getRefOf(button);
+        var ex = assertThrows(com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException.class,
+                () -> click(ref));
+        assertTrue(ex.getMessage().contains("disabled"));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // Component matrix — JFrame and JDialog themselves (not their children)
     // ══════════════════════════════════════════════════════════════════════════
 

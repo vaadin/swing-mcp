@@ -93,4 +93,25 @@ class SwingGetValueScreenTest extends AbstractScreenTest {
         String json = getValue(context.getRefOf(slider));
         assertEquals("{\"current\":25,\"min\":0,\"max\":50}", json);
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void readSliderInsideJInternalFrame() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        JSlider slider = new JSlider(0, 100, 42);
+        iframe.getContentPane().add(slider);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+
+        snapshot(host);
+        String json = getValue(context.getRefOf(slider));
+        assertEquals("{\"current\":42,\"min\":0,\"max\":100}", json);
+    }
 }

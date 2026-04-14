@@ -49,6 +49,12 @@ tools will succeed on a given component (e.g., `swing_click` on a `JButton`),
 while others will correctly fail (e.g., `swing_click` on a `JLabel`). Both
 outcomes are valuable test data.
 
+Note: some components do not receive refs. In order to test those, you
+register them to the context under a testing ID (for example 99),
+then call the tool with the testing ID. If it's supposed to fail,
+check that MCPServerException was thrown. Do **not** simply assert that `context.getRefOf(component)`
+fails with an IllegalStateException - that is not testing the tool error checking itself.
+
 **Interactive / Form inputs:**
 `JButton`, `JTextField`, `JPasswordField`, `JTextArea`, `JCheckBox`,
 `JRadioButton` (with `ButtonGroup`), `JComboBox`, `JToggleButton`,

@@ -125,4 +125,28 @@ class SwingGetSelectionScreenTest extends AbstractScreenTest {
                 "{\"selectedCount\":1,\"selected\":[{\"index\":2,\"name\":\"Z\"}]}",
                 json);
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void readJListSelectionInsideJInternalFrame() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", true, true);
+        JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma"});
+        list.setSelectedIndex(1);
+        iframe.getContentPane().add(list);
+        iframe.setSize(150, 80);
+        iframe.setVisible(true);
+        desktop.add(iframe);
+
+        snapshot(host);
+        String json = getSelection(context.getRefOf(list));
+        assertEquals(
+                "{\"selectedCount\":1,\"selected\":[{\"index\":1,\"name\":\"Beta\"}]}",
+                json);
+    }
 }
