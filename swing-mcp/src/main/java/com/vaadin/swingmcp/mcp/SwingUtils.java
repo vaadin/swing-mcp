@@ -496,6 +496,45 @@ public final class SwingUtils {
     }
 
     /**
+     * Returns {@code true} if the accessible is a window in an iconified (minimized) state
+     * and is currently showing. A hidden window is never considered iconified.
+     * JDesktopIcon is a component, not a window — it is not considered iconified.
+     * <ul>
+     *   <li><b>Frame (including JFrame):</b> {@code isShowing() && (getExtendedState() & Frame.ICONIFIED) != 0}</li>
+     *   <li><b>JInternalFrame:</b> {@code isShowing() && isIcon()}</li>
+     *   <li><b>All other types (including JDesktopIcon):</b> {@code false}</li>
+     * </ul>
+     */
+    public static boolean isIconified(Accessible a) {
+        if (a instanceof Frame) {
+            Frame frame = (Frame) a;
+            return frame.isShowing()
+                    && (frame.getExtendedState() & Frame.ICONIFIED) != 0;
+        }
+        if (a instanceof JInternalFrame) {
+            JInternalFrame iframe = (JInternalFrame) a;
+            return iframe.isShowing() && iframe.isIcon();
+        }
+        return false;
+    }
+
+    /**
+     * Returns {@code true} if the accessible supports the synthetic {@code restore} action.
+     * <p>
+     * Restore (de-iconify) is available for iconified windows ({@link #isIconified(Accessible)})
+     * and for showing {@link JInternalFrame.JDesktopIcon}s (the visible representation of an
+     * iconified JInternalFrame — a component, not a window, so not covered by {@code isIconified}).
+     *
+     * @see <a href="use-case-023-swing-restore.md">UC-023</a>
+     */
+    public static boolean supportsRestore(Accessible a) {
+        if (a instanceof JInternalFrame.JDesktopIcon) {
+            return ((JInternalFrame.JDesktopIcon) a).isShowing();
+        }
+        return isIconified(a);
+    }
+
+    /**
      * Returns the effective accessible name for the given accessible, or
      * {@code null} if none is available.
      * <p>
