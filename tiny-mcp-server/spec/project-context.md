@@ -97,4 +97,5 @@ the intended user.
 # Related Documents
 
 - [Architecture](architecture.md) — technology stack and application structure
+- [Decisions](decisions.md) — cross-cutting design decisions (what/why/alternatives)
 - [Verification](verification.md) — visual verification checklists
