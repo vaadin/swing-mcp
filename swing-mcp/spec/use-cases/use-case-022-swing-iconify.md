@@ -1,9 +1,9 @@
 # UC-022: swing_iconify
 
-**Status:** Draft
+**Status:** Implemented
 **Date:** 2026-04-14
 
-Iconifies (minimizes) a Frame (including JFrame) or JInternalFrame — needed because the snapshot currently exposes no window-management actions beyond `close`, so the AI cannot minimize windows.
+Iconifies (minimizes) a Frame (including JFrame) or JInternalFrame — needed because the snapshot previously exposed no window-management actions beyond `close`, so the AI could not minimize windows.
 
 **Tool description:** "Iconify (minimize) a Frame (including JFrame) or JInternalFrame by ref. Frame is minimized to the OS taskbar; JInternalFrame is replaced by a JDesktopIcon on its JDesktopPane. Requires a ref obtained from swing_snapshot or swing_get_cells."
 
@@ -54,19 +54,19 @@ The client calls `swing_snapshot` after to determine whether the frame was iconi
 
 > See `architecture.md` § Testing for conventions.
 
-- [ ] `SwingIconifyTest` (headless)
-  - [ ] Each non-Frame/JInternalFrame component from the component matrix returns an MCP error (`isError: true`) when `swing_iconify` is called on it.
-  - [ ] Calling `swing_iconify` with an invalid ref returns an MCP error with `isError: true` and a recovery message.
+- [x] `SwingIconifyToolTest` (headless)
+  - [x] Each non-Frame/JInternalFrame component from the component matrix returns an MCP error (`isError: true`) when `swing_iconify` is called on it.
+  - [x] Calling `swing_iconify` with an invalid ref returns an MCP error with `isError: true` and a recovery message.
 
-- [ ] `SwingIconifyScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
-  - [ ] Calling `swing_iconify` on a decorated JFrame iconifies the frame; snapshot shows `[iconified]` and no longer lists the `iconify` action (verified after EDT drains).
-  - [ ] Calling `swing_iconify` on an undecorated JFrame returns an MCP error with `isError: true` and message "Frame is undecorated and cannot be iconified".
-  - [ ] An already-iconified JFrame does not show `iconify` in the snapshot actions.
-  - [ ] Calling `swing_iconify` on an already-iconified JFrame via a stale ref returns an MCP error with `isError: true` and message "Frame is already iconified".
-  - [ ] Snapshot of a visible decorated JFrame shows `iconify` in its actions.
-  - [ ] Calling `swing_iconify` on an iconifiable JInternalFrame iconifies it; the snapshot shows a JDesktopIcon in its place (verified after EDT drains).
-  - [ ] Calling `swing_iconify` on a JInternalFrame with `isIconifiable() == false` returns an MCP error with `isError: true` and message "JInternalFrame is not iconifiable".
-  - [ ] Snapshot of a visible iconifiable JInternalFrame shows `iconify` in its actions.
-  - [ ] Snapshot of a JInternalFrame with `isIconifiable() == false` does not show `iconify` in its actions.
-  - [ ] Calling `swing_iconify` on a JInternalFrame whose `VetoableChangeListener` rejects the iconify returns `null`; the internal frame is still showing (not replaced by JDesktopIcon) — verifies we call `setIcon(true)` which respects vetoes.
-  - [ ] JDesktopIcon does not show `iconify` in its actions.
+- [x] `SwingIconifyScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+  - [x] Calling `swing_iconify` on a decorated JFrame iconifies the frame; snapshot shows `[iconified]` and no longer lists the `iconify` action (verified after EDT drains).
+  - [x] Calling `swing_iconify` on an undecorated JFrame returns an MCP error with `isError: true` and message "Frame is undecorated and cannot be iconified".
+  - [x] An already-iconified JFrame does not show `iconify` in the snapshot actions.
+  - [x] Calling `swing_iconify` on an already-iconified JFrame via a stale ref returns an MCP error with `isError: true` and message "Frame is already iconified".
+  - [x] Snapshot of a visible decorated JFrame shows `iconify` in its actions.
+  - [x] Calling `swing_iconify` on an iconifiable JInternalFrame iconifies it; the snapshot shows a JDesktopIcon in its place (verified after EDT drains).
+  - [x] Calling `swing_iconify` on a JInternalFrame with `isIconifiable() == false` returns an MCP error with `isError: true` and message "JInternalFrame is not iconifiable".
+  - [x] Snapshot of a visible iconifiable JInternalFrame shows `iconify` in its actions.
+  - [x] Snapshot of a JInternalFrame with `isIconifiable() == false` does not show `iconify` in its actions.
+  - [x] Calling `swing_iconify` on a JInternalFrame whose `VetoableChangeListener` rejects the iconify returns `null`; the internal frame is still showing (not replaced by JDesktopIcon) — verifies we call `setIcon(true)` which respects vetoes.
+  - [x] JDesktopIcon does not show `iconify` in its actions.
