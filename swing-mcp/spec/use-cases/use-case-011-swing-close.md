@@ -71,7 +71,7 @@ sees it in the snapshot and can decide how to proceed.
   - [x] Calling `swing_close` on a closable JInternalFrame with `DO_NOTHING_ON_CLOSE` returns `null`; internal frame is still showing (verified via `isShowing()` after EDT drains).
   - [x] Calling `swing_close` on a JInternalFrame with `isClosable() == false` returns an MCP error with `isError: true` (BR-10).
   - [x] Calling `swing_close` on a JInternalFrame with `EXIT_ON_CLOSE` via a stale ref returns an MCP error with `isError: true`.
-  - [ ] Calling `swing_close` on a JDesktopIcon (iconified closable JInternalFrame with `DISPOSE_ON_CLOSE`) closes the underlying internal frame (BR-11).
-  - [ ] Calling `swing_close` on a JDesktopIcon whose underlying JInternalFrame has `DO_NOTHING_ON_CLOSE` returns `null`; the JDesktopIcon is still showing on the desktop pane.
-  - [ ] Calling `swing_close` on a JDesktopIcon whose underlying JInternalFrame has `isClosable() == false` returns an MCP error with `isError: true` (BR-11 → BR-10).
-  - [ ] Calling `swing_close` on a JDesktopIcon whose underlying JInternalFrame has `EXIT_ON_CLOSE` returns an MCP error with `isError: true` (BR-11 → BR-09).
+  - [x] Calling `swing_close` on a JDesktopIcon (iconified closable JInternalFrame with `DISPOSE_ON_CLOSE`) closes the underlying internal frame (BR-11).
+  - [x] Calling `swing_close` on a JDesktopIcon whose underlying JInternalFrame has `DO_NOTHING_ON_CLOSE` returns `null`; the JDesktopIcon is still showing on the desktop pane.
+  - [x] Calling `swing_close` on a JDesktopIcon whose underlying JInternalFrame has `isClosable() == false` returns an MCP error with `isError: true` (BR-11 → BR-10).
+  - [x] Calling `swing_close` on a JDesktopIcon whose underlying JInternalFrame has `EXIT_ON_CLOSE` returns an MCP error with `isError: true` (BR-11 → BR-09).

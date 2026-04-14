@@ -320,4 +320,93 @@ class SwingCloseScreenTest extends AbstractScreenTest {
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
         assertTrue(ex.getMessage().contains("does not support close"));
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JDesktopIcon helpers
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Creates a JInternalFrame inside a JDesktopPane, iconifies it, and returns
+     * the JDesktopIcon. The frame must be iconifiable (4th constructor arg).
+     */
+    private JInternalFrame.JDesktopIcon showIconifiedFrame(boolean closable, int defaultCloseOp) throws Exception {
+        // iconifiable=true is the 4th JInternalFrame constructor arg
+        JFrame host = new JFrame("Host");
+        host.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", false, closable, false, true);
+        iframe.setDefaultCloseOperation(defaultCloseOp);
+        iframe.setSize(150, 80);
+        desktop.add(iframe);
+        extraWindows.add(host);
+        executeOnEDT(() -> {
+            host.setSize(400, 300);
+            host.setVisible(true);
+            iframe.setVisible(true);
+            return null;
+        });
+        // Iconify
+        executeOnEDT(() -> { iframe.setIcon(true); return null; });
+        return iframe.getDesktopIcon();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JDesktopIcon with DISPOSE_ON_CLOSE (BR-11)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void desktopIconWithDisposeOnCloseClosesUnderlyingFrame() throws Exception {
+        JInternalFrame.JDesktopIcon icon = showIconifiedFrame(true, WindowConstants.DISPOSE_ON_CLOSE);
+        JInternalFrame iframe = icon.getInternalFrame();
+
+        snapshot(SwingUtilities.getWindowAncestor(icon));
+        close(context.getRefOf(icon));
+
+        assertTrue(iframe.isClosed(), "underlying internal frame should be closed (disposed)");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JDesktopIcon with DO_NOTHING_ON_CLOSE
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void desktopIconDoNothingOnCloseIconStaysShowing() throws Exception {
+        JInternalFrame.JDesktopIcon icon = showIconifiedFrame(true, WindowConstants.DO_NOTHING_ON_CLOSE);
+
+        snapshot(SwingUtilities.getWindowAncestor(icon));
+        close(context.getRefOf(icon));
+
+        assertTrue(icon.isShowing(), "desktop icon should still be showing — DO_NOTHING_ON_CLOSE");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JDesktopIcon not closable (BR-11 → BR-10)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void desktopIconNotClosableReturnsMcpError() throws Exception {
+        JInternalFrame.JDesktopIcon icon = showIconifiedFrame(false, WindowConstants.DISPOSE_ON_CLOSE);
+
+        // Non-closable → no close action → no ref in snapshot; force a ref
+        context.putRef(99, (Accessible) icon);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JDesktopIcon EXIT_ON_CLOSE (BR-11 → BR-09)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void desktopIconExitOnCloseReturnsMcpError() throws Exception {
+        JInternalFrame.JDesktopIcon icon = showIconifiedFrame(true, WindowConstants.EXIT_ON_CLOSE);
+
+        // EXIT_ON_CLOSE → no close action → no ref; force a ref
+        context.putRef(99, (Accessible) icon);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
 }
