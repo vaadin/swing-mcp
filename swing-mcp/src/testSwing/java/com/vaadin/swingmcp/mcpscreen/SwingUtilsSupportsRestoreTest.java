@@ -2,6 +2,7 @@ package com.vaadin.swingmcp.mcpscreen;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.JButton;
@@ -85,6 +86,11 @@ class SwingUtilsSupportsRestoreTest extends AbstractScreenTest {
         show(frame);
         SwingUtilities.invokeAndWait(() ->
                 frame.setExtendedState(Frame.MAXIMIZED_BOTH | Frame.ICONIFIED));
+
+        // Some WMs (e.g. Xvfb) don't support MAXIMIZED_BOTH | ICONIFIED combined state
+        int state = frame.getExtendedState();
+        Assumptions.assumeTrue((state & Frame.ICONIFIED) != 0 && (state & Frame.MAXIMIZED_BOTH) != 0,
+                "WM does not support MAXIMIZED_BOTH | ICONIFIED (state=" + state + "), skipping");
 
         assertTrue(SwingUtils.supportsRestore(frame));
     }
