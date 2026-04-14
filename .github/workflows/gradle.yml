@@ -36,9 +36,9 @@ jobs:
       run: sudo apt-get install -y xvfb
     - name: Build with Gradle (Linux)
       if: runner.os == 'Linux'
-      run: xvfb-run --auto-servernum ./gradlew clean build '-Pvaadin.productionMode' --stacktrace --info --no-daemon
+      run: xvfb-run --auto-servernum ./gradlew clean build --stacktrace --info --no-daemon
     - name: Build with Gradle (macOS / Windows)
       if: runner.os != 'Linux'
       shell: bash
-      run: ./gradlew clean build '-Pvaadin.productionMode' --stacktrace --info --no-daemon
+      run: ./gradlew clean build --stacktrace --info --no-daemon
 
