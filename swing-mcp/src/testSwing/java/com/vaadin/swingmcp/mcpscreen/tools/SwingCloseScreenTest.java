@@ -10,7 +10,9 @@ import org.junit.jupiter.api.Test;
 import javax.accessibility.Accessible;
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -21,6 +23,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
     private SwingCloseTool closeTool;
     private SwingToolContext context;
     private Window currentWindow;
+    private final List<Window> extraWindows = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
@@ -36,6 +39,10 @@ class SwingCloseScreenTest extends AbstractScreenTest {
             currentWindow = null;
             executeOnEDT(() -> { w.dispose(); return null; });
         }
+        for (Window w : extraWindows) {
+            executeOnEDT(() -> { w.dispose(); return null; });
+        }
+        extraWindows.clear();
     }
 
     private void snapshot(Component... roots) throws Exception {
@@ -225,6 +232,90 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         snapshot(dialog);
         // JOptionPane has no close action and no ref — force a ref to test error path
         context.putRef(99, (Accessible) optionPane);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame helpers
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private JInternalFrame showInternalFrame(boolean closable, int defaultCloseOp) throws Exception {
+        JFrame host = new JFrame("Host");
+        host.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", false, closable);
+        iframe.setDefaultCloseOperation(defaultCloseOp);
+        iframe.setSize(150, 80);
+        desktop.add(iframe);
+        extraWindows.add(host);
+        executeOnEDT(() -> {
+            host.setSize(400, 300);
+            host.setVisible(true);
+            iframe.setVisible(true);
+            return null;
+        });
+        return iframe;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame with DISPOSE_ON_CLOSE
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jinternalFrameWithDisposeOnCloseIsDismissed() throws Exception {
+        JInternalFrame iframe = showInternalFrame(true, WindowConstants.DISPOSE_ON_CLOSE);
+
+        snapshot(SwingUtilities.getWindowAncestor(iframe));
+        close(context.getRefOf(iframe));
+
+        assertTrue(iframe.isClosed(), "internal frame should be closed (disposed)");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame with DO_NOTHING_ON_CLOSE
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jinternalFrameDoNothingOnCloseStaysShowing() throws Exception {
+        JInternalFrame iframe = showInternalFrame(true, WindowConstants.DO_NOTHING_ON_CLOSE);
+
+        snapshot(SwingUtilities.getWindowAncestor(iframe));
+        close(context.getRefOf(iframe));
+
+        assertTrue(iframe.isShowing(), "internal frame should still be showing — DO_NOTHING_ON_CLOSE");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame not closable (BR-10)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void nonClosableJInternalFrameReturnsMcpError() throws Exception {
+        JInternalFrame iframe = showInternalFrame(false, WindowConstants.DISPOSE_ON_CLOSE);
+
+        // Non-closable internal frame has no close action → no ref in snapshot
+        snapshot(SwingUtilities.getWindowAncestor(iframe));
+
+        // Force a ref to test the error path directly
+        context.putRef(99, (Accessible) iframe);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
+        assertTrue(ex.getMessage().contains("does not support close"));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame EXIT_ON_CLOSE — stale ref returns MCP error
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jinternalFrameWithExitOnCloseViaStaleRefReturnsMcpError() throws Exception {
+        JInternalFrame iframe = showInternalFrame(true, WindowConstants.EXIT_ON_CLOSE);
+
+        // Manually force a ref to simulate a stale ref
+        context.putRef(99, (Accessible) iframe);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
         assertTrue(ex.getMessage().contains("does not support close"));

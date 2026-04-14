@@ -4,6 +4,7 @@ import javax.accessibility.*;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
+import javax.swing.JInternalFrame;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTabbedPane;
@@ -424,19 +425,30 @@ public final class SwingUtils {
      * Returns {@code true} if the accessible supports the synthetic {@code close} action.
      * <p>
      * Close is available for top-level windows (JFrame, JDialog) that are showing,
-     * have OS decorations, and will not terminate the JVM on close.
+     * have OS decorations, and will not terminate the JVM on close; and for
+     * {@link JInternalFrame}s that are showing, closable, and do not have
+     * {@code EXIT_ON_CLOSE}.
      *
      * @see <a href="architecture.md">architecture.md § 4 — Detecting Close Support</a>
      */
     public static boolean supportsClose(Accessible a) {
-        if (!(a instanceof Window)) return false;
-        Window window = (Window) a;
-        if (!window.isShowing()) return false;
-        if (window instanceof Frame && ((Frame) window).isUndecorated()) return false;
-        if (window instanceof Dialog && ((Dialog) window).isUndecorated()) return false;
-        if (window instanceof JFrame &&
-                ((JFrame) window).getDefaultCloseOperation() == WindowConstants.EXIT_ON_CLOSE) return false;
-        return true;
+        if (a instanceof Window) {
+            Window window = (Window) a;
+            if (!window.isShowing()) return false;
+            if (window instanceof Frame && ((Frame) window).isUndecorated()) return false;
+            if (window instanceof Dialog && ((Dialog) window).isUndecorated()) return false;
+            if (window instanceof JFrame &&
+                    ((JFrame) window).getDefaultCloseOperation() == WindowConstants.EXIT_ON_CLOSE) return false;
+            return true;
+        }
+        if (a instanceof JInternalFrame) {
+            JInternalFrame iframe = (JInternalFrame) a;
+            if (!iframe.isShowing()) return false;
+            if (!iframe.isClosable()) return false;
+            if (iframe.getDefaultCloseOperation() == WindowConstants.EXIT_ON_CLOSE) return false;
+            return true;
+        }
+        return false;
     }
 
     /**

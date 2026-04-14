@@ -5,8 +5,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.JButton;
+import javax.swing.JDesktopPane;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
+import javax.swing.JInternalFrame;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import java.awt.Window;
@@ -148,5 +150,68 @@ class SwingUtilsSupportsCloseTest extends AbstractScreenTest {
 
         assertFalse(SwingUtils.supportsClose(frame),
                 "EXIT_ON_CLOSE would terminate the JVM and kill the MCP server");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame — positive cases
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private JInternalFrame showInternalFrame(boolean closable, int defaultCloseOp) throws Exception {
+        JFrame host = new JFrame("Host");
+        host.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", false, closable);
+        iframe.setDefaultCloseOperation(defaultCloseOp);
+        iframe.setSize(150, 80);
+        desktop.add(iframe);
+        createdWindows.add(host);
+        SwingUtilities.invokeAndWait(() -> {
+            host.setSize(400, 300);
+            host.setVisible(true);
+            iframe.setVisible(true);
+        });
+        return iframe;
+    }
+
+    @Test
+    void showingClosableJInternalFrame_supportsClose() throws Exception {
+        JInternalFrame iframe = showInternalFrame(true, WindowConstants.DISPOSE_ON_CLOSE);
+        assertTrue(SwingUtils.supportsClose(iframe));
+    }
+
+    @Test
+    void disabledClosableJInternalFrame_stillSupportsClose() throws Exception {
+        JInternalFrame iframe = showInternalFrame(true, WindowConstants.DISPOSE_ON_CLOSE);
+        SwingUtilities.invokeAndWait(() -> iframe.setEnabled(false));
+
+        assertFalse(iframe.isEnabled(), "precondition: iframe is disabled");
+        assertTrue(SwingUtils.supportsClose(iframe),
+                "disabled JInternalFrame should still support close");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame — negative cases
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void nonClosableJInternalFrame_doesNotSupportClose() throws Exception {
+        JInternalFrame iframe = showInternalFrame(false, WindowConstants.DISPOSE_ON_CLOSE);
+        assertFalse(SwingUtils.supportsClose(iframe),
+                "non-closable JInternalFrame has no close button (BR-10)");
+    }
+
+    @Test
+    void hiddenJInternalFrame_doesNotSupportClose() {
+        JInternalFrame iframe = new JInternalFrame("Hidden", false, true);
+        assertFalse(SwingUtils.supportsClose(iframe),
+                "not-showing JInternalFrame should not support close");
+    }
+
+    @Test
+    void exitOnCloseJInternalFrame_doesNotSupportClose() throws Exception {
+        JInternalFrame iframe = showInternalFrame(true, WindowConstants.EXIT_ON_CLOSE);
+        assertFalse(SwingUtils.supportsClose(iframe),
+                "EXIT_ON_CLOSE JInternalFrame is refused defensively (BR-09)");
     }
 }

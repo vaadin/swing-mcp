@@ -64,7 +64,7 @@ sees it in the snapshot and can decide how to proceed.
   - [x] `JOptionPane` component matrix: `swing_close` returns an MCP error with `isError: true`.
   - [x] Snapshot of a JFrame with `DISPOSE_ON_CLOSE` shows `close` in its actions and assigns it a ref.
   - [x] Snapshot of a visible JDialog shows `close` in its actions and assigns it a ref.
-  - [ ] Calling `swing_close` on a closable JInternalFrame (with `DISPOSE_ON_CLOSE`) fires the close event; internal frame is disposed (verified after EDT drains).
-  - [ ] Calling `swing_close` on a closable JInternalFrame with `DO_NOTHING_ON_CLOSE` returns `null`; internal frame is still showing (verified via `isShowing()` after EDT drains).
-  - [ ] Calling `swing_close` on a JInternalFrame with `isClosable() == false` returns an MCP error with `isError: true` (BR-10).
-  - [ ] Calling `swing_close` on a JInternalFrame with `EXIT_ON_CLOSE` via a stale ref returns an MCP error with `isError: true`.
+  - [x] Calling `swing_close` on a closable JInternalFrame (with `DISPOSE_ON_CLOSE`) fires the close event; internal frame is disposed (verified after EDT drains).
+  - [x] Calling `swing_close` on a closable JInternalFrame with `DO_NOTHING_ON_CLOSE` returns `null`; internal frame is still showing (verified via `isShowing()` after EDT drains).
+  - [x] Calling `swing_close` on a JInternalFrame with `isClosable() == false` returns an MCP error with `isError: true` (BR-10).
+  - [x] Calling `swing_close` on a JInternalFrame with `EXIT_ON_CLOSE` via a stale ref returns an MCP error with `isError: true`.

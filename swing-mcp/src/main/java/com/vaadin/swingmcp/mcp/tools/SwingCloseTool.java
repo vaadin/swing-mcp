@@ -6,6 +6,7 @@ import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import javax.accessibility.Accessible;
+import javax.swing.JInternalFrame;
 import javax.swing.SwingUtilities;
 import java.awt.Window;
 import java.awt.event.WindowEvent;
@@ -54,8 +55,13 @@ public class SwingCloseTool extends AbstractSwingTool {
         }
 
         // BR-03: fire the close event asynchronously (fire-and-forget)
-        Window window = (Window) accessible;
-        SwingUtilities.invokeLater(() -> window.dispatchEvent(new WindowEvent(window, WindowEvent.WINDOW_CLOSING)));
+        if (accessible instanceof Window) {
+            Window window = (Window) accessible;
+            SwingUtilities.invokeLater(() -> window.dispatchEvent(new WindowEvent(window, WindowEvent.WINDOW_CLOSING)));
+        } else {
+            JInternalFrame iframe = (JInternalFrame) accessible;
+            SwingUtilities.invokeLater(iframe::doDefaultCloseAction);
+        }
         return null;
     }
 
