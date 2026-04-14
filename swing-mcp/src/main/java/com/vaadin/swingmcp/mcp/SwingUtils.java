@@ -452,6 +452,56 @@ public final class SwingUtils {
     }
 
     /**
+     * Returns the effective accessible name for the given accessible, or
+     * {@code null} if none is available.
+     * <p>
+     * For most components this delegates to
+     * {@code getAccessibleContext().getAccessibleName()}. For
+     * {@link JInternalFrame.JDesktopIcon}, a three-step fallback is used
+     * (matching the BR-10 "respect explicit, fall back to derived" pattern):
+     * <ol>
+     *   <li>The icon's own {@code getAccessibleName()} (if someone set it
+     *       explicitly — in practice always {@code null}).</li>
+     *   <li>The underlying frame's {@code getAccessibleName()} (may differ
+     *       from the title if explicitly overridden).</li>
+     *   <li>The underlying frame's {@code getTitle()} (last resort, always
+     *       available).</li>
+     * </ol>
+     *
+     * @see <a href="use-case-002-swing-snapshot.md">UC-002 SC-5</a>
+     */
+    public static String getEffectiveAccessibleName(Accessible a) {
+        if (a instanceof JInternalFrame.JDesktopIcon) {
+            JInternalFrame.JDesktopIcon icon = (JInternalFrame.JDesktopIcon) a;
+
+            // Step 1: icon's own accessible name
+            AccessibleContext iconCtx = icon.getAccessibleContext();
+            if (iconCtx != null) {
+                String name = iconCtx.getAccessibleName();
+                if (name != null && !name.isEmpty()) return name;
+            }
+
+            // Steps 2–3: recurse into the underlying frame
+            JInternalFrame frame = icon.getInternalFrame();
+            return frame != null ? getEffectiveAccessibleName(frame) : null;
+        }
+
+        if (a instanceof JInternalFrame) {
+            JInternalFrame frame = (JInternalFrame) a;
+            AccessibleContext ctx = frame.getAccessibleContext();
+            if (ctx != null) {
+                String name = ctx.getAccessibleName();
+                if (name != null && !name.isEmpty()) return name;
+            }
+            return frame.getTitle();
+        }
+
+        // Default path: standard accessible name
+        AccessibleContext ctx = a.getAccessibleContext();
+        return ctx != null ? ctx.getAccessibleName() : null;
+    }
+
+    /**
      * Returns the tooltip text associated with the given accessible as plain
      * text, or {@code null} if none is available.
      * <p>
