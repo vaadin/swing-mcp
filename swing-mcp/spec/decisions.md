@@ -288,3 +288,67 @@ wrapper-level lock closes that HTTP-thread gap.
   concurrent tool calls on *different* tools would still interleave
   ref-map mutations. Swing-MCP is designed for a single AI controller;
   there is no value in permitting cross-tool concurrency.
+
+---
+
+## DR-008 — JDesktopPane: walk accessible children, resolve JDesktopIcon to JInternalFrame
+
+**Status:** Accepted
+**Applies to:** UC-002 (snapshot), UC-011 (close), future minimize/restore UCs
+**Decided:** 2026-04-14
+
+**Decision.** The snapshot walks `JDesktopPane`'s accessible children
+normally. When a child is `instanceof JInternalFrame.JDesktopIcon`, the
+snapshot resolves it back to its `JInternalFrame` via
+`desktopIcon.getInternalFrame()` and renders the frame node instead,
+with a synthetic `ICONIFIED` state (the accessibility API does not
+provide it — see "Why" below). All other children (toolbars, labels,
+or anything else spaghetti apps add to the desktop pane) pass through
+the normal snapshot pipeline untouched.
+
+`JDesktopPane` itself is always retained in the snapshot (added to
+`SEMANTIC_ROLES` as `DESKTOP_PANE`) because it signals MDI semantics
+to the AI client, even when empty. It receives no ref (no actions).
+
+`JInternalFrame`'s `AccessibleValue` (the `JLayeredPane` Z-order layer)
+is suppressed — added to `SUPPRESSED_VALUE_ROLES`. The layer is a
+programmatic concept, not a user-controlled value; exposing `set_value`
+risks silently re-layering frames.
+
+**Why.**
+
+- **Accessible children, not `getAllFrames()`.** Real-world Swing apps
+  add non-frame components to `JDesktopPane` (toolbars on a palette
+  layer, background labels, status bars). `getAllFrames()` silently
+  drops them. Walking accessible children preserves everything.
+
+- **JDesktopIcon → JInternalFrame resolution.** When a JInternalFrame
+  is iconified, Swing removes it from the component/accessibility tree
+  entirely (parent becomes `null`, `isShowing()` returns `false`) and
+  replaces it with a `JDesktopIcon` child on the JDesktopPane. The
+  accessibility API does **not** set `ICONIFIED` in the frame's
+  `AccessibleStateSet` (empirically verified, Java 21 OpenJDK,
+  2026-04-14). By resolving the icon back to its frame, the AI always
+  sees JInternalFrames in the tree — normal and iconified — with
+  consistent identity and actions. The AI can then close or (when
+  implemented) restore the iconified frame by ref.
+
+- **`JInternalFrame.JDesktopIcon` is safe to depend on.**
+  The class is public. Swing stopped evolving years ago — no risk of
+  refactoring or removal. The `getInternalFrame()` method is the
+  documented way to navigate back.
+
+**Alternatives considered.**
+
+- **Use `JDesktopPane.getAllFrames()` instead of accessible children.**
+  Rejected — drops non-frame children that spaghetti apps add to the
+  desktop pane.
+- **Render JDesktopIcon as-is (role `desktop_icon`) without resolving
+  to JInternalFrame.** Rejected — the AI would see an opaque
+  `JComponent (desktop_icon)` with a button and label inside, losing
+  the identity link to the original frame and breaking action
+  consistency (e.g. `close` would not be advertised on the icon).
+- **Synthesize `ICONIFIED` from `JInternalFrame.isIcon()` on all
+  frames regardless of tree position.** Rejected — over-complicated;
+  the JDesktopIcon resolution already handles the tree-position problem,
+  and `isIcon()` is only meaningful in the JDesktopPane context.
