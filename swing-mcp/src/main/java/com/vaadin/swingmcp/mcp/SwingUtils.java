@@ -469,6 +469,33 @@ public final class SwingUtils {
     }
 
     /**
+     * Returns {@code true} if the accessible supports the synthetic {@code iconify} action.
+     * <p>
+     * Iconify is available for {@link Frame}s (including {@link JFrame}) that are showing,
+     * decorated, and not already iconified; and for {@link JInternalFrame}s that are showing,
+     * iconifiable, and not already iconified.
+     *
+     * @see <a href="use-case-022-swing-iconify.md">UC-022</a>
+     */
+    public static boolean supportsIconify(Accessible a) {
+        if (a instanceof Frame) {
+            Frame frame = (Frame) a;
+            if (!frame.isShowing()) return false;
+            if (frame.isUndecorated()) return false;
+            if ((frame.getExtendedState() & Frame.ICONIFIED) != 0) return false;
+            return true;
+        }
+        if (a instanceof JInternalFrame) {
+            JInternalFrame iframe = (JInternalFrame) a;
+            if (!iframe.isShowing()) return false;
+            if (!iframe.isIconifiable()) return false;
+            if (iframe.isIcon()) return false;
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Returns the effective accessible name for the given accessible, or
      * {@code null} if none is available.
      * <p>
