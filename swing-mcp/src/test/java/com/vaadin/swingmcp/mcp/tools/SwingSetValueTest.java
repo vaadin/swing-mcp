@@ -470,7 +470,7 @@ class SwingSetValueTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void swingSetValueViaMcpClient() {
+    void swingSetValueViaMcpClient() throws Exception {
         JSlider slider = new JSlider(0, 100, 50);
         mcpServer.setConsideredComponents(List.of(slider));
 
@@ -478,6 +478,7 @@ class SwingSetValueTest extends AbstractHeadlessTest {
 
         McpSchema.CallToolResult result = mcpClient.callTool(
                 new McpSchema.CallToolRequest("swing_set_value", Map.of("ref", 1, "value", 75)));
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
 
         assertNotEquals(Boolean.TRUE, result.isError(), "set_value should succeed");
         assertEquals(75, slider.getValue());
