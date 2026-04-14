@@ -371,3 +371,51 @@ evolving years ago — no risk of refactoring or removal.
   render as a nameless `JComponent (desktop_icon)` with a button and
   label inside. The AI would have to inspect button text to identify
   the frame. The title annotation is a minimal, honest assist.
+
+---
+
+## DR-009 — Synthetic `ICONIFIED` state for JFrame
+
+**Status:** Accepted
+**Applies to:** UC-002 (snapshot states), future restore UC
+**Decided:** 2026-04-14
+
+**Decision.** `ICONIFIED` becomes a **synthetic state** in the snapshot,
+derived from `frame.getExtendedState() & Frame.ICONIFIED` for JFrame.
+It is emitted alongside the existing synthetic states (`DISABLED`,
+`READ_ONLY`). The JDK's `AccessibleStateSet` is not used as the source
+— it never contains `ICONIFIED` (see "Why" below).
+
+This does **not** apply to JInternalFrame — iconified internal frames
+are replaced by `JDesktopIcon` in the accessibility tree (DR-008), so
+the AI sees them as a different component type. There is no frame node
+to annotate.
+
+A minimized JFrame remains `isShowing() == true` and its children
+stay accessible, so the frame and its content still appear in the
+snapshot. The `[iconified]` annotation tells the AI the window is
+minimized to the OS taskbar.
+
+`frame.setState(Frame.NORMAL)` restores a minimized JFrame
+programmatically — a future `swing_restore` tool can use this.
+
+**Why.** `AccessibleJFrame` does not override `getAccessibleStateSet()`
+to include `ICONIFIED` based on `getExtendedState()`. Empirically
+verified (Java 21 OpenJDK, 2026-04-14): after `setState(Frame.ICONIFIED)`,
+`getState()` returns 1, `WindowStateEvent` fires, but
+`getAccessibleStateSet().contains(AccessibleState.ICONIFIED)` returns
+`false`. This is a JDK bug/omission. Since Swing is frozen, it will
+never be fixed. Synthesizing the state follows the same pattern as
+`DISABLED` (derived from `isEffectivelyEnabled()` instead of trusting
+`AccessibleState.ENABLED`).
+
+**Alternatives considered.**
+- **Trust the JDK `AccessibleStateSet`.** Rejected — `ICONIFIED` is
+  never present; the AI would never see it.
+- **Remove `ICONIFIED` from the displayed states list entirely.**
+  Rejected — `ICONIFIED` is valuable for the AI to know when a window
+  is minimized, especially for a future `swing_restore` tool.
+- **Synthesize `ICONIFIED` for JInternalFrame too (via `isIcon()`).**
+  Not needed — iconified internal frames are represented as
+  `JDesktopIcon` nodes in the tree (DR-008). No JInternalFrame node
+  exists to annotate.

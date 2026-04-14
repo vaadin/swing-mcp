@@ -137,12 +137,14 @@ After Stages 1 and 2, any surviving node is included. The following criteria ser
 Which states from `AccessibleStateSet` appear in the snapshot output:
 
 **Included (meaningful for AI understanding):**
-`FOCUSED`, `SELECTED`, `CHECKED`, `EXPANDED`, `COLLAPSED`, `MODAL`, `MULTI_LINE`, `ICONIFIED`, `HORIZONTAL`, `VERTICAL`, `BUSY`, `INDETERMINATE`
+`FOCUSED`, `SELECTED`, `CHECKED`, `EXPANDED`, `COLLAPSED`, `MODAL`, `MULTI_LINE`, `HORIZONTAL`, `VERTICAL`, `BUSY`, `INDETERMINATE`
 
 **Synthetic states (derived, not from `AccessibleStateSet` directly):**
 `DISABLED` — emitted when `SwingUtils.isEffectivelyEnabled()` returns `false`. Per **architecture.md § 4**, Swing's `setEnabled(false)` does not propagate to children, so the snapshot mirrors that: a locally-enabled component inside a disabled `JPanel`/`JScrollPane`/`JToolBar`/`JTabbedPane` tab is **not** marked `disabled`. Carveouts: `JTabbedPane` tabs disabled via `setEnabledAt` carry `[disabled]` on the `page_tab` line (header-only semantics), and virtual children (e.g. `JTable` cells) do inherit their host's disabled state. This is consistent with the check mutation tools perform at execution time — if the snapshot shows `[disabled]`, the mutation tool will refuse; if it does not, the tool will accept.
 
 `READ_ONLY` — emitted for text components that expose `AccessibleEditableText` but lack the `EDITABLE` state in their `AccessibleStateSet` (e.g. `JTextField` with `setEditable(false)`). Most text fields are editable by default, so the absence of `read_only` means editable — no `editable` flag is shown. This keeps the snapshot concise: only the exceptional read-only case is annotated.
+
+`ICONIFIED` — emitted for JFrame when `frame.getExtendedState() & Frame.ICONIFIED != 0`. The JDK's `AccessibleStateSet` never contains `ICONIFIED` (verified Java 21 OpenJDK, 2026-04-14 — JDK bug, will never be fixed). Does not apply to JInternalFrame — iconified internal frames are replaced by `JDesktopIcon` in the tree (DR-008). See DR-009.
 
 **Omitted (noise or always-true for included nodes):**
 `VISIBLE`, `SHOWING`, `ENABLED` (superseded by synthetic `DISABLED` derived from `isEffectivelyEnabled()`), `EDITABLE` (default for text fields — only show its absence as `READ_ONLY`), `OPAQUE`, `RESIZABLE`, `ARMED`, `TRANSIENT`, `MANAGES_DESCENDANTS`
