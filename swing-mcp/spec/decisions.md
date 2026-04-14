@@ -386,7 +386,7 @@ evolving years ago — no risk of refactoring or removal.
 ## DR-009 — Synthetic `ICONIFIED` state for JFrame
 
 **Status:** Accepted
-**Applies to:** UC-002 (snapshot states), future restore UC
+**Applies to:** UC-002 (snapshot states), UC-023 (swing_restore)
 **Decided:** 2026-04-14
 
 **Decision.** `ICONIFIED` becomes a **synthetic state** in the snapshot,
@@ -405,8 +405,12 @@ stay accessible, so the frame and its content still appear in the
 snapshot. The `[iconified]` annotation tells the AI the window is
 minimized to the OS taskbar.
 
-`frame.setState(Frame.NORMAL)` restores a minimized JFrame
-programmatically — a future `swing_restore` tool can use this.
+`frame.setExtendedState(frame.getExtendedState() & ~Frame.ICONIFIED)`
+restores a minimized JFrame programmatically (UC-023). This clears only
+the `ICONIFIED` bit and preserves other extended-state bits (e.g.
+`MAXIMIZED_BOTH`), so an iconified-maximized frame is restored to
+maximized rather than normal. `setState(Frame.NORMAL)` is not used
+because it clears all extended-state bits.
 
 **Why.** `AccessibleJFrame` does not override `getAccessibleStateSet()`
 to include `ICONIFIED` based on `getExtendedState()`. Empirically

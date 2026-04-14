@@ -1,5 +1,6 @@
 package com.vaadin.swingmcp.mcp.tools;
 
+import com.vaadin.swingmcp.mcp.SwingUtils;
 import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
@@ -49,37 +50,17 @@ public class SwingIconifyTool extends AbstractSwingTool {
         int ref = params.getInt("ref");
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // BR-05: specific error messages per refusal reason
-        if (accessible instanceof Frame) {
-            Frame frame = (Frame) accessible;
-            if (!frame.isShowing()) {
-                throw new MCPErrorResponseException(
-                        "Component does not support iconify. Call swing_snapshot or swing_get_cells to verify the list of actions");
-            }
-            if (frame.isUndecorated()) {
-                throw new MCPErrorResponseException("Frame is undecorated and cannot be iconified");
-            }
-            if ((frame.getExtendedState() & Frame.ICONIFIED) != 0) {
-                throw new MCPErrorResponseException("Frame is already iconified");
-            }
-            // BR-03: fire-and-forget iconify dispatch
-            SwingUtilities.invokeLater(() -> frame.setExtendedState(frame.getExtendedState() | Frame.ICONIFIED));
-            return null;
+        // BR-05: gate on supportsIconify, then derive specific error message
+        if (!SwingUtils.supportsIconify(accessible)) {
+            throw new MCPErrorResponseException(iconifyErrorMessage(accessible));
         }
 
-        if (accessible instanceof JInternalFrame) {
+        // BR-03: fire-and-forget iconify dispatch
+        if (accessible instanceof Frame) {
+            Frame frame = (Frame) accessible;
+            SwingUtilities.invokeLater(() -> frame.setExtendedState(frame.getExtendedState() | Frame.ICONIFIED));
+        } else {
             JInternalFrame iframe = (JInternalFrame) accessible;
-            if (!iframe.isShowing()) {
-                throw new MCPErrorResponseException(
-                        "Component does not support iconify. Call swing_snapshot or swing_get_cells to verify the list of actions");
-            }
-            if (!iframe.isIconifiable()) {
-                throw new MCPErrorResponseException("JInternalFrame is not iconifiable");
-            }
-            if (iframe.isIcon()) {
-                throw new MCPErrorResponseException("JInternalFrame is already iconified");
-            }
-            // BR-03: fire-and-forget iconify dispatch
             SwingUtilities.invokeLater(() -> {
                 try {
                     iframe.setIcon(true);
@@ -88,12 +69,21 @@ public class SwingIconifyTool extends AbstractSwingTool {
                     // The client calls swing_snapshot to check the outcome.
                 }
             });
-            return null;
         }
+        return null;
+    }
 
-        // Not a Frame or JInternalFrame
-        throw new MCPErrorResponseException(
-                "Component does not support iconify. Call swing_snapshot or swing_get_cells to verify the list of actions");
+    private static String iconifyErrorMessage(Accessible accessible) {
+        if (accessible instanceof Frame) {
+            Frame frame = (Frame) accessible;
+            if (frame.isUndecorated()) return "Frame is undecorated and cannot be iconified";
+            if ((frame.getExtendedState() & Frame.ICONIFIED) != 0) return "Frame is already iconified";
+        } else if (accessible instanceof JInternalFrame) {
+            JInternalFrame iframe = (JInternalFrame) accessible;
+            if (!iframe.isIconifiable()) return "JInternalFrame is not iconifiable";
+            if (iframe.isIcon()) return "JInternalFrame is already iconified";
+        }
+        return "Component does not support iconify. Call swing_snapshot or swing_get_cells to verify the list of actions";
     }
 
     @Override
