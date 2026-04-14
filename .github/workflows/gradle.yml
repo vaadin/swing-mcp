@@ -6,7 +6,6 @@ jobs:
   build:
 
     strategy:
-      fail-fast: false
       matrix:
         os: [ubuntu-latest]
         java: [17, 21, 25]
