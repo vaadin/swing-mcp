@@ -11,6 +11,7 @@ import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.util.*;
 import java.util.List;
+import java.util.function.Predicate;
 
 /**
  * Internal tree node used during the four-phase snapshot pipeline.
@@ -52,11 +53,21 @@ class SnapshotNode {
             AccessibleAction.TOGGLE_EXPAND, "toggle_expand"
     );
 
-    // ── Mutation actions that get "!" prefix when unavailable (BR-08) ────────
+    // ── Mutation availability gates (BR-08) ─────────────────────────────────
+    // Maps mutation action names to predicates that check whether the action
+    // can succeed right now.  Actions absent from this map are never "!"-prefixed.
+    // Window-level actions (close, iconify) are intentionally absent — they work
+    // regardless of the component's enabled state.
 
-    private static final Set<String> MUTATION_ACTIONS = Set.of(
-            "click", "toggle_popup", "increment", "decrement",
-            "toggle_expand", "set_text", "set_value", "close"
+    private static final Map<String, Predicate<Accessible>> MUTATION_AVAILABILITY = Map.of(
+            "click",          SwingUtils::isEffectivelyEnabled,
+            "toggle_popup",   SwingUtils::isEffectivelyEnabled,
+            "increment",      SwingUtils::isEffectivelyEnabled,
+            "decrement",      SwingUtils::isEffectivelyEnabled,
+            "toggle_expand",  SwingUtils::isEffectivelyEnabled,
+            "set_value",      SwingUtils::isEffectivelyEnabled,
+            "set_text",       a -> SwingUtils.isEffectivelyEnabled(a)
+                                   && SwingUtils.supportsSetText(a)
     );
 
     // ── States shown in the snapshot ──────────────────────────────────────────
@@ -575,7 +586,7 @@ class SnapshotNode {
         // Actions (BR-06) with "!" prefix for unavailable mutations (BR-08)
         List<String> actions = resolveActions();
         if (!actions.isEmpty()) {
-            List<String> prefixed = prefixUnavailable(actions, effectivelyEnabled, readOnly);
+            List<String> prefixed = prefixUnavailable(actions, accessible);
             sb.append(" actions: ").append(String.join(", ", prefixed));
         }
 
@@ -733,30 +744,27 @@ class SnapshotNode {
 
     /**
      * Prefixes mutation actions with "!" when they would fail validation (BR-08).
-     * A mutation action is unavailable when:
-     * (a) the component is not effectively enabled, or
-     * (b) the action is "set_text" and the component is read-only.
+     * Each action in {@link #MUTATION_AVAILABILITY} has its own predicate that
+     * determines availability.  Actions absent from the map (read-only tools,
+     * window-level actions like close/iconify) are never prefixed.
      */
     private static List<String> prefixUnavailable(List<String> actions,
-                                                   boolean effectivelyEnabled,
-                                                   boolean readOnly) {
-        if (effectivelyEnabled && !readOnly) {
-            return actions; // fast path: nothing to prefix
-        }
-        List<String> result = new ArrayList<>(actions.size());
-        for (String action : actions) {
-            if (MUTATION_ACTIONS.contains(action)) {
-                // All mutations blocked when disabled; only set_text blocked when read-only
-                if (!effectivelyEnabled || (readOnly && "set_text".equals(action))) {
-                    result.add("!" + action);
-                } else {
-                    result.add(action);
+                                                   Accessible accessible) {
+        List<String> result = null; // lazy — most nodes have no unavailable actions
+        for (int i = 0; i < actions.size(); i++) {
+            String action = actions.get(i);
+            Predicate<Accessible> gate = MUTATION_AVAILABILITY.get(action);
+            if (gate != null && !gate.test(accessible)) {
+                if (result == null) {
+                    result = new ArrayList<>(actions.size());
+                    result.addAll(actions.subList(0, i));
                 }
-            } else {
+                result.add("!" + action);
+            } else if (result != null) {
                 result.add(action);
             }
         }
-        return result;
+        return result != null ? result : actions;
     }
 
     /**
