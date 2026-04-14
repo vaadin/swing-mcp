@@ -232,6 +232,24 @@ class SnapshotNode {
             truncated = true;
             truncatedCount = totalChildren - MAX_DATA_ROW_NODES;
         }
+
+        // Some L&Fs (macOS Aqua) nest JDesktopIcon inside a non-accessible
+        // wrapper (Dock), so iconified internal frames don't appear in the
+        // accessibility tree.  Supplement with JDesktopPane's own API.
+        if (accessible instanceof JDesktopPane) {
+            Set<Accessible> alreadyFound = new HashSet<>(children.size());
+            for (SnapshotNode child : children) {
+                alreadyFound.add(child.accessible);
+            }
+            for (JInternalFrame f : ((JDesktopPane) accessible).getAllFrames()) {
+                if (f.isIcon()) {
+                    JInternalFrame.JDesktopIcon icon = f.getDesktopIcon();
+                    if (icon != null && !alreadyFound.contains(icon)) {
+                        children.add(build(icon));
+                    }
+                }
+            }
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════════
