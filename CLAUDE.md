@@ -2,10 +2,12 @@
 
 This is a pure Java/Gradle project implementing an in-process
 Model Context Protocol (MCP)
-server for a Java Swing app. There are two subprojects:
+server for a Java Swing app. There are four subprojects:
 
 - `tiny-mcp-server`
 - `swing-mcp`
+- `swing-mcp-agent`
+- `test-apps`
 
 Since this project is intended to be added as a jar file
 to an existing Swing app, it must have as few runtime dependencies
