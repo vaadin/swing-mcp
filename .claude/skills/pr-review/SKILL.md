@@ -5,6 +5,7 @@ description: Instructions used when reviewing a PR
 
 When reviewing a PR, follow these rules: check that:
 
+- The PR contents was grilled using Claude grill-me skill
 - the file placement and naming follows the current project structure
 - tests are created for the PR
 - Java code quality is good
@@ -16,6 +17,6 @@ Also check all PR reviews, there might be some already in the "request changes" 
 
 When this project is a GitHub project:
 
-- You can use `gh pr diff PR_ID` to get the PR's diff
-- Use `gh pr checks PR_ID` to check that all builds pass
+- You can use `gh pr diff PR_ID` to get the PR diff
+- Use `gh pr checks PR_ID` to check that there is no failed precondition
 
