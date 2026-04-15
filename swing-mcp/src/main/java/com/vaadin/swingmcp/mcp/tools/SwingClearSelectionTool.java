@@ -41,7 +41,12 @@ public class SwingClearSelectionTool extends AbstractSwingTool {
         int ref = params.getInt("ref");
         Parameters delegateParams = new Parameters(
                 Map.of("ref", ref, "indices", Collections.emptyList()));
-        return delegate.execute(delegateParams, context);
+        // Delegate performs validation + fire-and-forget dispatch (or throws on error).
+        // Discard the delegate's echo — it says "Posted set-selection ..." with the wrong
+        // action name. Per DR-010 the echo reflects the MCP-exposed tool name, which here
+        // is swing_clear_selection.
+        delegate.execute(delegateParams, context);
+        return echo(ref);
     }
 
     @Override

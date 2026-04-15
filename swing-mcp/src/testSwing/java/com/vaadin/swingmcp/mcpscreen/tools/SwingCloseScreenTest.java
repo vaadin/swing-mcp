@@ -3,6 +3,7 @@ package com.vaadin.swingmcp.mcpscreen.tools;
 import com.vaadin.swingmcp.mcp.tools.*;
 import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
+import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,12 +53,15 @@ class SwingCloseScreenTest extends AbstractScreenTest {
 
     /**
      * Calls swing_close and drains the EDT so the fire-and-forget invokeLater has run.
+     * Returns the tool's success Content (DR-010 echo) so callers can assert on it.
      */
-    private void close(int ref) throws Exception {
+    private MCPProtocol.Content close(int ref) throws Exception {
         try {
-            executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", ref)), context));
+            MCPProtocol.Content result = executeOnEDT(
+                    () -> closeTool.execute(new Parameters(Map.of("ref", ref)), context));
             // Drain the EDT: this no-op is queued after the fire-and-forget invokeLater
             executeOnEDT(() -> null);
+            return result;
         } finally {
             context.clearRefMap();
         }
@@ -136,8 +140,11 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         executeOnEDT(() -> { frame.setSize(200, 100); frame.setVisible(true); return null; });
 
         snapshot(frame);
-        close(context.getRefOf(frame));
+        int ref = context.getRefOf(frame);
+        MCPProtocol.Content result = close(ref);
 
+        assertEquals("Posted close on ref=" + ref, result.getText(),
+                "DR-010: tool returns echo on dispatch even when listener vetoes");
         assertTrue(frame.isShowing(), "frame should still be showing — DO_NOTHING_ON_CLOSE");
     }
 
@@ -150,8 +157,11 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         executeOnEDT(() -> { dialog.setSize(200, 100); dialog.setVisible(true); return null; });
 
         snapshot(dialog);
-        close(context.getRefOf(dialog));
+        int ref = context.getRefOf(dialog);
+        MCPProtocol.Content result = close(ref);
 
+        assertEquals("Posted close on ref=" + ref, result.getText(),
+                "DR-010: tool returns echo on dispatch even when listener vetoes");
         assertTrue(dialog.isShowing(), "dialog should still be showing — DO_NOTHING_ON_CLOSE");
     }
 
@@ -306,8 +316,11 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         JInternalFrame iframe = showInternalFrame(true, WindowConstants.DO_NOTHING_ON_CLOSE);
 
         snapshot(SwingUtilities.getWindowAncestor(iframe));
-        close(context.getRefOf(iframe));
+        int ref = context.getRefOf(iframe);
+        MCPProtocol.Content result = close(ref);
 
+        assertEquals("Posted close on ref=" + ref, result.getText(),
+                "DR-010: tool returns echo on dispatch even when listener vetoes");
         assertTrue(iframe.isShowing(), "internal frame should still be showing — DO_NOTHING_ON_CLOSE");
     }
 
@@ -398,8 +411,11 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         JInternalFrame.JDesktopIcon icon = showIconifiedFrame(true, WindowConstants.DO_NOTHING_ON_CLOSE);
 
         snapshot(SwingUtilities.getWindowAncestor(icon));
-        close(context.getRefOf(icon));
+        int ref = context.getRefOf(icon);
+        MCPProtocol.Content result = close(ref);
 
+        assertEquals("Posted close on ref=" + ref, result.getText(),
+                "DR-010: tool returns echo on dispatch even when listener vetoes");
         assertTrue(icon.isShowing(), "desktop icon should still be showing — DO_NOTHING_ON_CLOSE");
     }
 

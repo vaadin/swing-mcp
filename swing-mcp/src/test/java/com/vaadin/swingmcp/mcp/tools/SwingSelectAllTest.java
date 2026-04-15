@@ -90,7 +90,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         context.putRef(99, list);
         MCPProtocol.Content result = selectAll(99);
 
-        assertNull(result, "Mutation tool should return null on success");
+        assertEquals("Posted select-all on ref=99", result.getText());
         assertEquals(0, list.getSelectedIndices().length);
     }
 
@@ -112,7 +112,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(table);
         MCPProtocol.Content result = selectAllTool.execute(
                 new Parameters(Map.of("ref", ref)), context);
-        assertNull(result, "Mutation tool should return null on success");
+        assertEquals("Posted select-all on ref=" + ref, result.getText());
     }
 
     @Test
@@ -124,7 +124,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         // Empty table may not get a ref; force one
         context.putRef(99, table);
         MCPProtocol.Content result = selectAll(99);
-        assertNull(result, "Mutation tool should return null on success");
+        assertEquals("Posted select-all on ref=99", result.getText());
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -352,7 +352,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(list);
         MCPProtocol.Content result = selectAllTool.execute(
                 new Parameters(Map.of("ref", ref)), context);
-        assertNull(result);
+        assertEquals("Posted select-all on ref=" + ref, result.getText());
     }
 
     @Test
@@ -365,7 +365,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(table);
         MCPProtocol.Content result = selectAllTool.execute(
                 new Parameters(Map.of("ref", ref)), context);
-        assertNull(result);
+        assertEquals("Posted select-all on ref=" + ref, result.getText());
     }
 
     // ══════════════════════════════════════════════════════════════════════════

@@ -79,7 +79,8 @@ public class SwingSetSelectionTool extends AbstractSwingTool {
                         "This component does not allow the selection to be empty.");
             }
             SwingUtilities.invokeLater(as::clearAccessibleSelection);
-            return null;
+            // BR-09: DR-010 success echo
+            return echo(ref, renderEchoIntArray(deduplicated));
         }
 
         // Step 8 (BR-08): single-selection enforcement
@@ -133,8 +134,8 @@ public class SwingSetSelectionTool extends AbstractSwingTool {
             });
         }
 
-        // Step 13
-        return null;
+        // Step 13 (BR-09): DR-010 success echo
+        return echo(ref, renderEchoIntArray(deduplicated));
     }
 
     @Override

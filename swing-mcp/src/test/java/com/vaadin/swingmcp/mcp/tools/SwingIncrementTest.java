@@ -60,8 +60,9 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     void incrementSpinnerNumberModel() throws Exception {
         JSpinner spinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 1));
         snapshot(spinner);
-        MCPProtocol.Content result = increment(context.getRefOf(spinner));
-        assertNull(result, "Success should return null");
+        int ref = context.getRefOf(spinner);
+        MCPProtocol.Content result = increment(ref);
+        assertEquals("Posted increment on ref=" + ref, result.getText());
         assertEquals(6, spinner.getValue());
     }
 
@@ -89,9 +90,28 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     void incrementSlider() throws Exception {
         JSlider slider = new JSlider(0, 100, 50);
         snapshot(slider);
-        MCPProtocol.Content result = increment(context.getRefOf(slider));
-        assertNull(result, "Success should return null");
+        int ref = context.getRefOf(slider);
+        MCPProtocol.Content result = increment(ref);
+        assertEquals("Posted increment on ref=" + ref, result.getText());
         assertEquals(51, slider.getValue());
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Boundary — value stays at maximum (UC-008 BR-09 — fire-and-forget no-op)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void incrementSpinnerAtMaximumIsNoOp() throws Exception {
+        // Spinner already at max: the EDT action is a silent no-op
+        // (SpinnerNumberModel.getNextValue() returns null at max).
+        // The tool still returns the DR-010 echo because it only confirms dispatch.
+        JSpinner spinner = new JSpinner(new SpinnerNumberModel(10, 0, 10, 1));
+        snapshot(spinner);
+        int ref = context.getRefOf(spinner);
+        MCPProtocol.Content result = increment(ref);
+        assertEquals("Posted increment on ref=" + ref, result.getText(),
+                "Tool returns DR-010 echo on dispatch; the EDT action's no-op outcome is not reflected");
+        assertEquals(10, spinner.getValue(), "Value should stay at max");
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -134,10 +154,12 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void successReturnsNull() throws Exception {
+    void successReturnsEcho() throws Exception {
         JSpinner spinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 1));
         snapshot(spinner);
-        assertNull(increment(context.getRefOf(spinner)));
+        int ref = context.getRefOf(spinner);
+        MCPProtocol.Content result = increment(ref);
+        assertEquals("Posted increment on ref=" + ref, result.getText());
     }
 
     @Test
@@ -177,8 +199,9 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     void componentMatrix_JSpinner() throws Exception {
         JSpinner spinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 1));
         snapshot(spinner);
-        MCPProtocol.Content result = increment(context.getRefOf(spinner));
-        assertNull(result);
+        int ref = context.getRefOf(spinner);
+        MCPProtocol.Content result = increment(ref);
+        assertEquals("Posted increment on ref=" + ref, result.getText());
         assertEquals(6, spinner.getValue());
     }
 
@@ -186,8 +209,9 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     void componentMatrix_JSlider() throws Exception {
         JSlider slider = new JSlider(0, 100, 50);
         snapshot(slider);
-        MCPProtocol.Content result = increment(context.getRefOf(slider));
-        assertNull(result);
+        int ref = context.getRefOf(slider);
+        MCPProtocol.Content result = increment(ref);
+        assertEquals("Posted increment on ref=" + ref, result.getText());
         assertEquals(51, slider.getValue());
     }
 
