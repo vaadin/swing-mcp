@@ -542,31 +542,45 @@ class SnapshotNode {
     private String computeInlinePreview() {
         StringBuilder preview = new StringBuilder();
 
-        // text="..." — gated by supportsGetText (DR-011 password exclusion is
-        // already baked into supportsGetText, so password fields produce no
-        // annotation for free).
+        // text="..." — gated by supportsGetText (DR-011 password exclusion
+        // and DR-015 label exclusion are already baked into supportsGetText,
+        // so password fields and JLabels produce no annotation for free).
         if (SwingUtils.supportsGetText(accessible)) {
             try {
                 String raw = SwingUtils.readText(accessible, PREVIEW_RAW_READ);
-                // Collapse whitespace runs (including newlines) to single
-                // spaces and strip leading/trailing whitespace — consistent
-                // with BR-10's HTML-text cleanup.
-                String collapsed = raw.replaceAll("\\s+", " ").strip();
+                // Sanitise per BR-13 / DR-014: collapse whitespace runs to
+                // single spaces, strip leading/trailing whitespace, escape
+                // embedded quotes. Null-or-blank result → no preview.
+                String sanitized = SwingUtils.sanitizeForQuotedSlot(raw);
+                // Cap to PREVIEW_MAX_LENGTH chars (DR-013 convention). The
+                // cap counts rendered chars including the backslash in an
+                // escaped quote — a field containing a single '"' produces
+                // the two-char sequence `\"` in the preview; we cap on the
+                // rendered length, not the pre-escape length, so the 15-char
+                // budget is an upper bound on on-screen characters.
                 String truncated;
-                if (collapsed.length() <= PREVIEW_MAX_LENGTH) {
+                if (sanitized == null) {
+                    truncated = "";
+                } else if (sanitized.length() <= PREVIEW_MAX_LENGTH) {
                     // Did we read everything? If raw hit the raw-read budget
                     // there may be more content that collapsed away; mark
                     // truncation so the AI knows to call swing_get_text.
                     if (raw.length() < PREVIEW_RAW_READ) {
-                        truncated = collapsed;
+                        truncated = sanitized;
                     } else {
-                        truncated = collapsed + "…";
+                        truncated = sanitized + "…";
                     }
                 } else {
                     // Strip trailing whitespace inside the cap window so the
                     // preview does not render " …" (space + ellipsis) when the
-                    // 14-char prefix happens to end in whitespace.
-                    String prefix = collapsed.substring(0, PREVIEW_MAX_LENGTH - 1).stripTrailing();
+                    // 14-char prefix happens to end in whitespace. Also avoid
+                    // splitting an escape sequence: if the cap would land
+                    // between `\` and `"`, drop the dangling backslash so the
+                    // preview never ends in a half-finished escape.
+                    String prefix = sanitized.substring(0, PREVIEW_MAX_LENGTH - 1).stripTrailing();
+                    if (prefix.endsWith("\\")) {
+                        prefix = prefix.substring(0, prefix.length() - 1).stripTrailing();
+                    }
                     truncated = prefix + "…";
                 }
                 preview.append("text=\"").append(truncated).append('"');
@@ -666,8 +680,11 @@ class SnapshotNode {
         // Name (omit if blank) — uses getEffectiveAccessibleName for
         // JInternalFrame (accessible name → title) and JDesktopIcon
         // (icon name → frame name → frame title). See UC-002 SC-5.
-        String name = SwingUtils.getEffectiveAccessibleName(accessible);
-        if (name != null && !name.isEmpty()) {
+        // Sanitised per BR-13 / DR-014: whitespace collapsed, embedded
+        // quotes escaped. Uncapped — name is identity (DR-014 §2).
+        String name = SwingUtils.sanitizeForQuotedSlot(
+                SwingUtils.getEffectiveAccessibleName(accessible));
+        if (name != null) {
             sb.append(" \"").append(name).append('"');
         }
 
@@ -678,14 +695,17 @@ class SnapshotNode {
         // JComponent.AccessibleJComponent.getAccessibleDescription() already
         // auto-falls-back to getToolTipText() inside the JDK — so an
         // "explicit-looking" description may actually be a (potentially HTML)
-        // tooltip. Result is capped at MAX_DESCRIPTION_LENGTH chars
-        // symmetrically across all sources.
+        // tooltip. Sanitised per BR-13 / DR-014 (covers non-HTML descriptions
+        // with embedded newlines/quotes that htmlToPlainText passes through).
+        // Result is capped at MAX_DESCRIPTION_LENGTH chars symmetrically
+        // across all sources (DR-014 §3 — description stays capped).
         String desc = ctx != null
                 ? SwingUtils.htmlToPlainText(ctx.getAccessibleDescription())
                 : null;
         if (desc == null) {
             desc = SwingUtils.getTooltipAsText(accessible);
         }
+        desc = SwingUtils.sanitizeForQuotedSlot(desc);
         if (desc != null) {
             sb.append(" \"").append(capDescription(desc)).append('"');
         }
