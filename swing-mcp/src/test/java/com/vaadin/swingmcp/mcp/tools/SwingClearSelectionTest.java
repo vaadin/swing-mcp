@@ -1,6 +1,7 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
+import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -73,6 +74,19 @@ class SwingClearSelectionTest extends AbstractHeadlessTest {
 
         assertEquals(-1, list.getSelectedIndex());
         assertTrue(list.isSelectionEmpty());
+    }
+
+    @Test
+    void successEchoUsesClearSelectionActionName() throws Exception {
+        // UC-016: the wrapper composes the echo from this tool's MCP-exposed name
+        // (clear-selection), not from the delegated SwingSetSelectionTool (set-selection).
+        JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma"});
+        list.setSelectedIndex(1);
+        snapshot(list);
+        int ref = context.getRefOf(list);
+        MCPProtocol.Content result = clearSelectionTool.execute(
+                new Parameters(Map.of("ref", ref)), context);
+        assertEquals("Posted clear-selection on ref=" + ref, result.getText());
     }
 
     @Test

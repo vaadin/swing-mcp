@@ -60,8 +60,9 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     void incrementSpinnerNumberModel() throws Exception {
         JSpinner spinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 1));
         snapshot(spinner);
-        MCPProtocol.Content result = increment(context.getRefOf(spinner));
-        assertNull(result, "Success should return null");
+        int ref = context.getRefOf(spinner);
+        MCPProtocol.Content result = increment(ref);
+        assertEquals("Posted increment on ref=" + ref, result.getText());
         assertEquals(6, spinner.getValue());
     }
 
@@ -89,8 +90,9 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     void incrementSlider() throws Exception {
         JSlider slider = new JSlider(0, 100, 50);
         snapshot(slider);
-        MCPProtocol.Content result = increment(context.getRefOf(slider));
-        assertNull(result, "Success should return null");
+        int ref = context.getRefOf(slider);
+        MCPProtocol.Content result = increment(ref);
+        assertEquals("Posted increment on ref=" + ref, result.getText());
         assertEquals(51, slider.getValue());
     }
 
@@ -134,10 +136,12 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void successReturnsNull() throws Exception {
+    void successReturnsEcho() throws Exception {
         JSpinner spinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 1));
         snapshot(spinner);
-        assertNull(increment(context.getRefOf(spinner)));
+        int ref = context.getRefOf(spinner);
+        MCPProtocol.Content result = increment(ref);
+        assertEquals("Posted increment on ref=" + ref, result.getText());
     }
 
     @Test
@@ -177,8 +181,9 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     void componentMatrix_JSpinner() throws Exception {
         JSpinner spinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 1));
         snapshot(spinner);
-        MCPProtocol.Content result = increment(context.getRefOf(spinner));
-        assertNull(result);
+        int ref = context.getRefOf(spinner);
+        MCPProtocol.Content result = increment(ref);
+        assertEquals("Posted increment on ref=" + ref, result.getText());
         assertEquals(6, spinner.getValue());
     }
 
@@ -186,8 +191,9 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     void componentMatrix_JSlider() throws Exception {
         JSlider slider = new JSlider(0, 100, 50);
         snapshot(slider);
-        MCPProtocol.Content result = increment(context.getRefOf(slider));
-        assertNull(result);
+        int ref = context.getRefOf(slider);
+        MCPProtocol.Content result = increment(ref);
+        assertEquals("Posted increment on ref=" + ref, result.getText());
         assertEquals(51, slider.getValue());
     }
 

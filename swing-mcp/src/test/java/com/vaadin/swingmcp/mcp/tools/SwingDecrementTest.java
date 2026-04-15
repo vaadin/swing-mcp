@@ -61,8 +61,9 @@ class SwingDecrementTest extends AbstractHeadlessTest {
     void decrementSpinnerNumberModel() throws Exception {
         JSpinner spinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 1));
         snapshot(spinner);
-        MCPProtocol.Content result = decrement(context.getRefOf(spinner));
-        assertNull(result, "Success should return null");
+        int ref = context.getRefOf(spinner);
+        MCPProtocol.Content result = decrement(ref);
+        assertEquals("Posted decrement on ref=" + ref, result.getText());
         assertEquals(4, spinner.getValue());
     }
 
@@ -91,8 +92,9 @@ class SwingDecrementTest extends AbstractHeadlessTest {
     void decrementSlider() throws Exception {
         JSlider slider = new JSlider(0, 100, 50);
         snapshot(slider);
-        MCPProtocol.Content result = decrement(context.getRefOf(slider));
-        assertNull(result, "Success should return null");
+        int ref = context.getRefOf(slider);
+        MCPProtocol.Content result = decrement(ref);
+        assertEquals("Posted decrement on ref=" + ref, result.getText());
         assertEquals(49, slider.getValue());
     }
 
@@ -136,10 +138,12 @@ class SwingDecrementTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void successReturnsNull() throws Exception {
+    void successReturnsEcho() throws Exception {
         JSpinner spinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 1));
         snapshot(spinner);
-        assertNull(decrement(context.getRefOf(spinner)));
+        int ref = context.getRefOf(spinner);
+        MCPProtocol.Content result = decrement(ref);
+        assertEquals("Posted decrement on ref=" + ref, result.getText());
     }
 
     @Test
@@ -179,8 +183,9 @@ class SwingDecrementTest extends AbstractHeadlessTest {
     void componentMatrix_JSpinner() throws Exception {
         JSpinner spinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 1));
         snapshot(spinner);
-        MCPProtocol.Content result = decrement(context.getRefOf(spinner));
-        assertNull(result);
+        int ref = context.getRefOf(spinner);
+        MCPProtocol.Content result = decrement(ref);
+        assertEquals("Posted decrement on ref=" + ref, result.getText());
         assertEquals(4, spinner.getValue());
     }
 
@@ -188,8 +193,9 @@ class SwingDecrementTest extends AbstractHeadlessTest {
     void componentMatrix_JSlider() throws Exception {
         JSlider slider = new JSlider(0, 100, 50);
         snapshot(slider);
-        MCPProtocol.Content result = decrement(context.getRefOf(slider));
-        assertNull(result);
+        int ref = context.getRefOf(slider);
+        MCPProtocol.Content result = decrement(ref);
+        assertEquals("Posted decrement on ref=" + ref, result.getText());
         assertEquals(49, slider.getValue());
     }
 

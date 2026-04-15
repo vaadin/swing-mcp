@@ -115,13 +115,14 @@ class SwingClickToolTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void successReturnsNull() throws Exception {
+    void successReturnsEcho() throws Exception {
         JButton button = new JButton("OK");
         snapshot(button);
+        int ref = context.getRefOf(button);
 
         MCPProtocol.Content result = clickTool.execute(
-                new Parameters(Map.of("ref", context.getRefOf(button))), context);
-        assertNull(result, "Successful click should return null (empty string)");
+                new Parameters(Map.of("ref", ref)), context);
+        assertEquals("Posted click on ref=" + ref, result.getText());
     }
 
     @Test
