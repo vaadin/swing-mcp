@@ -173,6 +173,14 @@ class SnapshotNode {
      */
     int truncatedCount = 0;
 
+    /**
+     * Lazily-computed cached action list for this node (BR-06 Action Label
+     * Algorithm output, without the BR-08 {@code "!"} prefix). {@code null}
+     * until {@link #actions()} is first called. Cached so {@link #hasAnyAction()}
+     * and {@link #render} share a single walk of the BR-06 pipeline per node.
+     */
+    private List<String> actions;
+
     SnapshotNode(Accessible accessible) {
         this.accessible = accessible;
     }
@@ -312,7 +320,7 @@ class SnapshotNode {
         }
 
         // ── Stage 3 safety net: always-included nodes override Stage 2 ────────
-        if (mustKeep(accessible, ctx)) {
+        if (mustKeep(node, ctx)) {
             return PruneResult.KEEP;
         }
 
@@ -341,10 +349,11 @@ class SnapshotNode {
     /**
      * Stage 3 safety net: returns true if this node must always be kept.
      */
-    private static boolean mustKeep(Accessible accessible, AccessibleContext ctx) {
+    private static boolean mustKeep(SnapshotNode node, AccessibleContext ctx) {
         if (ctx == null) {
             return false;
         }
+        Accessible accessible = node.accessible;
         AccessibleRole role = ctx.getAccessibleRole();
 
         // AI-1: semantic (non-structural) role
@@ -364,7 +373,7 @@ class SnapshotNode {
         }
 
         // AI-3: has at least one action (BR-06 algorithm)
-        if (hasAnyAction(accessible)) {
+        if (node.hasAnyAction()) {
             return true;
         }
 
@@ -440,7 +449,11 @@ class SnapshotNode {
      * @return the next free ref value after processing this subtree
      */
     int assignRefs(int nextRef, SwingToolContext context) {
-        if (hasAnyAction(accessible) || truncated) {
+        // Dropped the historical `|| truncated` tail: every truncated container
+        // now has at least one action via the action list (LIST/TREE emit
+        // get_cell_count/get_cells in step 6b; TABLE always has a selection
+        // group label), so truncation is already covered by hasAnyAction().
+        if (hasAnyAction()) {
             ref = nextRef;
             context.putRef(nextRef, accessible);
             nextRef++;
@@ -602,9 +615,9 @@ class SnapshotNode {
         }
 
         // Actions (BR-06) with "!" prefix for unavailable mutations (BR-08)
-        List<String> actions = resolveActions();
-        if (!actions.isEmpty()) {
-            List<String> prefixed = prefixUnavailable(actions, accessible);
+        List<String> acts = actions();
+        if (!acts.isEmpty()) {
+            List<String> prefixed = prefixUnavailable(acts, accessible);
             sb.append(" actions: ").append(String.join(", ", prefixed));
         }
 
@@ -680,10 +693,28 @@ class SnapshotNode {
     // ══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Resolves the action labels to show for this node, using the six-step
-     * Action Label Algorithm from BR-06.
+     * Returns this node's action labels (BR-06 Action Label Algorithm output,
+     * without the BR-08 {@code "!"} prefix). Lazily computed on first call and
+     * cached for reuse — see {@link #actions}.
+     *
+     * <p>Serves as the single source of truth for {@link #hasAnyAction()}
+     * (ref-assignment gate) and {@link #render} (snapshot output). Previously
+     * the two were kept in sync by hand — an OR chain of {@code SwingUtils.supportsX}
+     * predicates mirroring the BR-06 steps — which drifted under DR-011 and had
+     * to be patched. Caching the list collapses both into one walk.
      */
-    private List<String> resolveActions() {
+    List<String> actions() {
+        if (actions == null) {
+            actions = computeActions();
+        }
+        return actions;
+    }
+
+    /**
+     * Computes the action labels for this node using the six-step Action Label
+     * Algorithm from BR-06. Called exactly once per node via {@link #actions()}.
+     */
+    private List<String> computeActions() {
         Accessible accessible = this.accessible;
         AccessibleContext ctx = accessible.getAccessibleContext();
         if (ctx == null) {
@@ -800,38 +831,11 @@ class SnapshotNode {
     }
 
     /**
-     * Returns true if the accessible has at least one action under the BR-06 algorithm
-     * (BR-07 ref-assignment gate).
+     * Returns {@code true} if this node has at least one action under the BR-06
+     * algorithm (BR-07 ref-assignment gate). Derived from {@link #actions()}.
      */
-    static boolean hasAnyAction(Accessible accessible) {
-        AccessibleContext ctx = accessible.getAccessibleContext();
-        if (ctx == null) return false;
-        return SwingUtils.supportsClick(accessible) != null
-                || SwingUtils.supportsTogglePopup(accessible) >= 0
-                || hasKnownActionConstant(ctx)
-                || SwingUtils.supportsGetText(accessible)
-                // hasEditableText covers write-only text components: a password
-                // field (supportsGetText=false via DR-011, but set_text is
-                // still advertised) must still get a ref. More generally: any
-                // component where reading yields garbage but writing is valid
-                // (e.g. filter combo boxes that clear themselves on apply).
-                || SwingUtils.hasEditableText(accessible)
-                || SwingUtils.supportsGetValue(accessible)
-                || SwingUtils.supportsSelection(accessible)
-                || SwingUtils.supportsClose(accessible)
-                || SwingUtils.supportsIconify(accessible)
-                || SwingUtils.supportsRestore(accessible);
-    }
-
-    private static boolean hasKnownActionConstant(AccessibleContext ctx) {
-        AccessibleAction aa = ctx.getAccessibleAction();
-        if (aa == null) return false;
-        for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
-            if (STEP3_CONSTANTS.containsKey(aa.getAccessibleActionDescription(i))) {
-                return true;
-            }
-        }
-        return false;
+    boolean hasAnyAction() {
+        return !actions().isEmpty();
     }
 
     /**
