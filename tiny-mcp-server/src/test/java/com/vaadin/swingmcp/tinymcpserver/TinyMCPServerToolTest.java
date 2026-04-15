@@ -18,11 +18,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Integration tests for tool registration and invocation via the MCP client.
- * Uses a dedicated server on port 18090 with tools pre-registered.
+ * Uses a dedicated server on an OS-assigned ephemeral port with tools pre-registered.
  */
 class TinyMCPServerToolTest {
 
-    private static final int TEST_PORT = 18090;
     private static TinyMCPServer server;
     private static McpSyncClient client;
 
@@ -31,7 +30,8 @@ class TinyMCPServerToolTest {
 
     @BeforeAll
     static void startServer() throws Exception {
-        server = new TinyMCPServer(TEST_PORT, "/mcp");
+        // Port 0 → OS-assigned ephemeral port, so parallel test runs don't collide.
+        server = new TinyMCPServer(0, "/mcp");
 
         // Tool: echo_text — returns the "message" string as text content
         server.addTool("echo_text", "Echo a text message",
@@ -183,7 +183,7 @@ class TinyMCPServerToolTest {
         server.start();
 
         HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport
-                .builder("http://127.0.0.1:" + TEST_PORT + "/mcp")
+                .builder(server.getUrl())
                 .openConnectionOnStartup(false)
                 .build();
 

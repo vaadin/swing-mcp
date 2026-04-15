@@ -21,18 +21,18 @@ public abstract class AbstractScreenTest {
         new JFrame(); // this fails on headless
     }
 
-    private static final int MCP_PORT = 18090;
     protected static FakeMCPServer mcpServer;
     protected static McpSyncClient mcpClient;
 
     @BeforeAll
     static void startMcpServer() throws Exception {
-        mcpServer = new FakeMCPServer(MCP_PORT, "/mcp", true);
+        // Port 0 → OS-assigned ephemeral port, so parallel test runs don't collide.
+        mcpServer = new FakeMCPServer(0, "/mcp", true);
         mcpServer.start();
 
         Duration timeout = Duration.ofSeconds(5);
         HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport
-                .builder("http://127.0.0.1:" + MCP_PORT + "/mcp")
+                .builder(mcpServer.getUrl())
                 .openConnectionOnStartup(false)
                 .build();
         mcpClient = McpClient.sync(transport)

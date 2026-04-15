@@ -83,6 +83,11 @@ public class TinyMCPServer {
         }
     }
 
+    /**
+     * The port requested in the constructor. May be {@code 0}, meaning
+     * "let the OS pick an ephemeral port at bind time". After {@link #start()},
+     * the actual bound port is available via {@link #getPort()}.
+     */
     private final int port;
     private final String contextPath;
     private final MCPProtocol.Implementation serverInfo;
@@ -90,6 +95,8 @@ public class TinyMCPServer {
     private final Map<String, RegisteredTool> tools = new LinkedHashMap<>();
     private volatile boolean started = false;
     private HttpServer httpServer;
+    /** Populated by {@link #start()} once the OS has assigned a port. */
+    private volatile int boundPort = -1;
     private String activeSessionId;
 
     public TinyMCPServer() {
@@ -104,7 +111,15 @@ public class TinyMCPServer {
         this(port, contextPath, serverInfo, null);
     }
 
+    /**
+     * @param port the TCP port to bind to, or {@code 0} to let the OS pick a free
+     *             ephemeral port. After {@link #start()}, {@link #getPort()} returns
+     *             the actual bound port.
+     */
     public TinyMCPServer(int port, String contextPath, MCPProtocol.Implementation serverInfo, String instructions) {
+        if (port < 0 || port > 65535) {
+            throw new IllegalArgumentException("Parameter port: invalid value " + port + ": must be in [0, 65535]");
+        }
         this.port = port;
         if (!contextPath.startsWith("/")) {
             throw new IllegalArgumentException("Parameter contextPath: invalid value " + contextPath + ": must start with a slash");
@@ -115,7 +130,7 @@ public class TinyMCPServer {
     }
 
     public String getUrl() {
-        return "http://127.0.0.1:" + port + contextPath;
+        return "http://127.0.0.1:" + getPort() + contextPath;
     }
 
     /**
@@ -158,6 +173,8 @@ public class TinyMCPServer {
         started = true;
         httpServer = HttpServer.create(
                 new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port), 0);
+        // If port was 0, the OS assigned an ephemeral port; capture the actual port.
+        boundPort = httpServer.getAddress().getPort();
         httpServer.setExecutor(Executors.newCachedThreadPool(r -> {
             Thread t = new Thread(r);
             t.setDaemon(true);
@@ -181,12 +198,19 @@ public class TinyMCPServer {
         if (httpServer != null) {
             httpServer.stop(0);
             httpServer = null;
+            boundPort = -1;
             LOG.info("TinyMCPServer stopped");
         }
     }
 
+    /**
+     * Returns the port this server is bound to. Before {@link #start()} (or after
+     * {@link #stop()}), returns the port requested in the constructor — which may be
+     * {@code 0}, meaning the OS will pick an ephemeral port at bind time. After
+     * {@code start()}, returns the actual bound port.
+     */
     public int getPort() {
-        return port;
+        return boundPort > 0 ? boundPort : port;
     }
 
     public String getContextPath() {
