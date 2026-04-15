@@ -114,8 +114,8 @@ them to the expected type. This is necessary because LLM clients frequently send
 tool arguments as strings, ignoring the `"type": "integer"` declared in the JSON schema.
 Non-parseable strings still produce `INVALID_PARAMS` errors.
 
-See `Parameters.java` for the full API. Error messages must name the parameter and the expected type, e.g.:
-`"Required parameter 'ref' is missing"`, `"Parameter 'ref' must be an integer"`.
+See `Parameters.java` for the full API. Error messages must name the parameter and the expected type, and — for wrong-type cases — include the observed value or its class to aid debugging, e.g.:
+`"Required parameter 'ref' is missing"`, `"Parameter 'ref' must be an integer, got 3.7"`, `"Parameter 'value' must be a number, got ListN"`.
 
 `AbstractSwingTool.execute` receives `Parameters` (constructed by `MCPServer.registerTool`
 from the raw map) instead of `Map<String, Object>`.

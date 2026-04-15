@@ -98,7 +98,7 @@ class ParametersTest {
         var params = new Parameters(Map.of("ref", List.of()));
         var ex = assertThrows(MCPServerException.class, () -> params.getInt("ref"));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
-        assertEquals("Parameter 'ref' must be an integer", ex.getMessage());
+        assertEquals("Parameter 'ref' must be an integer, got ListN", ex.getMessage());
     }
 
     @Test
@@ -147,7 +147,7 @@ class ParametersTest {
         var params = new Parameters(Map.of("value", List.of()));
         var ex = assertThrows(MCPServerException.class, () -> params.getNumber("value"));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
-        assertEquals("Parameter 'value' must be a number", ex.getMessage());
+        assertEquals("Parameter 'value' must be a number, got ListN", ex.getMessage());
     }
 
     // ── getIntOrNull ─────────────────────────────────────────────────────────
@@ -189,7 +189,7 @@ class ParametersTest {
         var params = new Parameters(Map.of("offset", List.of()));
         var ex = assertThrows(MCPServerException.class, () -> params.getIntOrNull("offset"));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
-        assertEquals("Parameter 'offset' must be an integer", ex.getMessage());
+        assertEquals("Parameter 'offset' must be an integer, got ListN", ex.getMessage());
     }
 
     @Test
@@ -234,7 +234,7 @@ class ParametersTest {
         var params = new Parameters(Map.of("indices", "notalist"));
         var ex = assertThrows(MCPServerException.class, () -> params.getIntArray("indices"));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
-        assertEquals("Parameter 'indices' must be an array of integers", ex.getMessage());
+        assertEquals("Parameter 'indices' must be an array of integers, got String", ex.getMessage());
     }
 
     @Test
@@ -272,7 +272,7 @@ class ParametersTest {
         var params = new Parameters(Map.of("indices", 42));
         var ex = assertThrows(MCPServerException.class, () -> params.getIntArray("indices"));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
-        assertEquals("Parameter 'indices' must be an array of integers", ex.getMessage());
+        assertEquals("Parameter 'indices' must be an array of integers, got Integer", ex.getMessage());
     }
 
     // ── null map ─────────────────────────────────────────────────────────────

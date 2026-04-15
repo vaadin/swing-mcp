@@ -78,7 +78,7 @@ public class Parameters {
         }
         if (!(value instanceof Number)) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
-                    "Parameter '" + key + "' must be an integer");
+                    "Parameter '" + key + "' must be an integer, got " + value.getClass().getSimpleName());
         }
         Number num = (Number) value;
         if (num.doubleValue() % 1 != 0) {
@@ -111,7 +111,7 @@ public class Parameters {
         }
         if (!(value instanceof Number)) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
-                    "Parameter '" + key + "' must be a number");
+                    "Parameter '" + key + "' must be a number, got " + value.getClass().getSimpleName());
         }
         return (Number) value;
     }
@@ -134,7 +134,7 @@ public class Parameters {
         }
         if (!(value instanceof List)) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
-                    "Parameter '" + key + "' must be an array of integers");
+                    "Parameter '" + key + "' must be an array of integers, got " + value.getClass().getSimpleName());
         }
         List<?> list = (List<?>) value;
         List<Integer> result = new ArrayList<>(list.size());
@@ -183,7 +183,7 @@ public class Parameters {
         }
         if (!(value instanceof Number)) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
-                    "Parameter '" + key + "' must be an integer");
+                    "Parameter '" + key + "' must be an integer, got " + value.getClass().getSimpleName());
         }
         Number num = (Number) value;
         if (num.doubleValue() % 1 != 0) {
