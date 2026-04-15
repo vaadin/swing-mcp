@@ -39,6 +39,28 @@ public final class ComponentClassResolver {
     }
 
     /**
+     * Returns the <b>display class</b> for the given accessible per
+     * BR-11 Step 2: the first class up the superclass chain of
+     * {@code accessible.getClass()} that is not anonymous, synthetic, local,
+     * a runtime proxy ({@code $$}-containing runtime classes with no
+     * enclosing class), a {@code javax.swing.plaf.*} L&amp;F internal, or a
+     * JDK-internal nested class.
+     *
+     * <p>This is the concrete-side identity used by BR-14's modal-stack header
+     * (UC-002 BR-14 / DR-016), where only the concrete simple class name is
+     * shown (without the {@code -> JClass (role)} qualifying-ancestor
+     * decoration). For the full identity slot including the qualifying
+     * ancestor, see {@link #resolveIdentitySlot}.</p>
+     *
+     * @param accessible the accessible to resolve the display class for
+     * @return the display class — never {@code null}; for any pathological
+     *         chain the concrete class itself is returned as a fallback
+     */
+    public static Class<?> resolveDisplayClass(Accessible accessible) {
+        return findDisplayClass(accessible.getClass());
+    }
+
+    /**
      * Returns just the class-name portion of the identity slot, for use in
      * error messages per the "class names everywhere else" convention
      * (snapshot keeps the role parenthetical; tool descriptions and errors

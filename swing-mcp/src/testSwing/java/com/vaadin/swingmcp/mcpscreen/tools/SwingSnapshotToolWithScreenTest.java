@@ -310,4 +310,233 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
                 + "  - JButton (push_button) \"MCP\" [ref=1] actions: click",
                 textContent.text());
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // BR-14 / DR-016 — modal-stack header
+    //
+    // Modal dialogs that would normally block setVisible() are never actually
+    // shown in these tests — the header logic reads Dialog.isModal() and walks
+    // Dialog.getOwner(), neither of which requires the root dialog to be mapped.
+    // Only ancestors in the owner chain need isVisible() == true to be included,
+    // so the test frame (and any visible middle dialog) is shown for real.
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /** Shows the given frame via the EDT; caller must dispose in a {@code finally}. */
+    private JFrame showFrame(String title, int w, int h) throws Exception {
+        JFrame frame = new JFrame(title);
+        frame.setSize(w, h);
+        executeOnEDT(() -> { frame.setVisible(true); return null; });
+        return frame;
+    }
+
+    @Test
+    void dr016_singleModalOverFrame_emitsTwoEntryHeader() throws Exception {
+        JFrame frame = showFrame("Y", 300, 200);
+        try {
+            JDialog dialog = new JDialog(frame, "X", true);
+            String output = snapshot(dialog);
+            assertTrue(output.startsWith(
+                    "[modal stack (2, topmost first): JDialog \"X\" / JFrame \"Y\"]\n"),
+                    "Expected modal-stack header on first line. Got:\n" + output);
+        } finally {
+            executeOnEDT(() -> { frame.dispose(); return null; });
+        }
+    }
+
+    @Test
+    void dr016_nestedModalsOverFrame_emitsThreeEntryHeader() throws Exception {
+        // Three-level owner chain: inner modal (not shown, just the rendered
+        // root) → middle dialog (shown so the chain-walk includes it) → frame
+        // (shown). The middle is non-modal purely because setVisible(true) on
+        // a modal blocks the calling thread. Per BR-14 the chain walk does not
+        // check ancestor modality, only visibility, so this exercises the same
+        // rendering path as a true "modal-over-modal-over-frame" scenario.
+        JFrame frame = showFrame("Z", 300, 200);
+        JDialog[] middleHolder = new JDialog[1];
+        try {
+            executeOnEDT(() -> {
+                JDialog middle = new JDialog(frame, "Y", false);
+                middle.setSize(200, 150);
+                middle.setVisible(true);
+                middleHolder[0] = middle;
+                return null;
+            });
+            JDialog inner = new JDialog(middleHolder[0], "X", true);
+            String output = snapshot(inner);
+            assertTrue(output.startsWith(
+                    "[modal stack (3, topmost first): JDialog \"X\" / JDialog \"Y\" / JFrame \"Z\"]\n"),
+                    "Expected three-entry header. Got:\n" + output);
+        } finally {
+            executeOnEDT(() -> {
+                if (middleHolder[0] != null) middleHolder[0].dispose();
+                frame.dispose();
+                return null;
+            });
+        }
+    }
+
+    @Test
+    void dr016_modalWithHiddenSharedFrameOwner_emitsNoHeader() throws Exception {
+        // JOptionPane.showMessageDialog(null, ...) shape: a modal dialog
+        // owned by Swing's shared hidden frame. SwingUtils.isVisible filters
+        // it out, leaving the chain at length 1 → no header.
+        JDialog dialog = new JDialog((Frame) null, "Alert", true);
+        String output = snapshot(dialog);
+        assertFalse(output.startsWith("[modal stack"),
+                "No header expected for modal with invisible owner chain. Got:\n" + output);
+    }
+
+    @Test
+    void dr016_jFrameRoot_emitsNoHeader() throws Exception {
+        // Frames have no Dialog.getOwner() semantics for this feature;
+        // buildModalStackHeader short-circuits on the !(root instanceof Dialog) check.
+        JFrame frame = showFrame("Root", 200, 150);
+        try {
+            String output = snapshot(frame);
+            assertFalse(output.startsWith("[modal stack"),
+                    "No header expected for JFrame root. Got:\n" + output);
+        } finally {
+            executeOnEDT(() -> { frame.dispose(); return null; });
+        }
+    }
+
+    @Test
+    void dr016_nonModalDialog_emitsNoHeader() throws Exception {
+        // Non-modal dialogs fail the isModal() check even with a visible owner —
+        // DR-016 is modal-scope by design.
+        JFrame frame = showFrame("Y", 300, 200);
+        try {
+            JDialog dialog = new JDialog(frame, "X", false);
+            String output = snapshot(dialog);
+            assertFalse(output.startsWith("[modal stack"),
+                    "No header expected for non-modal dialog. Got:\n" + output);
+        } finally {
+            executeOnEDT(() -> { frame.dispose(); return null; });
+        }
+    }
+
+    /** Local subclass for BR-14 Case-B / BR-11 strip-rule verification. */
+    private static class LoginDialog extends JDialog {
+        LoginDialog(Window owner, String title) {
+            super(owner, title, ModalityType.APPLICATION_MODAL);
+        }
+    }
+
+    @Test
+    void dr016_customSubclassModal_usesConcreteSimpleName() throws Exception {
+        // Concrete class is preferred — the entry reads "LoginDialog", not
+        // "JDialog". BR-11 strip rules are shared via resolveDisplayClass.
+        JFrame frame = showFrame("Y", 300, 200);
+        try {
+            LoginDialog dialog = new LoginDialog(frame, "Sign In");
+            String output = snapshot(dialog);
+            assertTrue(output.startsWith(
+                    "[modal stack (2, topmost first): LoginDialog \"Sign In\" / JFrame \"Y\"]\n"),
+                    "Expected concrete class name in chain entry. Got:\n" + output);
+        } finally {
+            executeOnEDT(() -> { frame.dispose(); return null; });
+        }
+    }
+
+    @Test
+    void dr016_titleWithNewline_collapsedInHeader() throws Exception {
+        // BR-13 shared sanitiser collapses \n to a single space so the
+        // header stays on one line.
+        JFrame frame = showFrame("Y", 300, 200);
+        try {
+            JDialog dialog = new JDialog(frame, "Line1\nLine2", true);
+            String output = snapshot(dialog);
+            assertTrue(output.startsWith(
+                    "[modal stack (2, topmost first): JDialog \"Line1 Line2\" / JFrame \"Y\"]\n"),
+                    "Expected newline collapsed to space. Got:\n" + output);
+        } finally {
+            executeOnEDT(() -> { frame.dispose(); return null; });
+        }
+    }
+
+    @Test
+    void dr016_titleWithEmbeddedQuote_escaped() throws Exception {
+        // BR-13 escapes embedded " as \" so the quoted slot stays parseable.
+        JFrame frame = showFrame("Y", 300, 200);
+        try {
+            JDialog dialog = new JDialog(frame, "say \"hi\"", true);
+            String output = snapshot(dialog);
+            assertTrue(output.startsWith(
+                    "[modal stack (2, topmost first): JDialog \"say \\\"hi\\\"\" / JFrame \"Y\"]\n"),
+                    "Expected embedded quotes escaped as \\\". Got:\n" + output);
+        } finally {
+            executeOnEDT(() -> { frame.dispose(); return null; });
+        }
+    }
+
+    @Test
+    void dr016_modalWithBlankTitle_omitsQuotedSlot() throws Exception {
+        // Blank / null accessible name → chain entry renders as bare class
+        // name with no empty "" slot.
+        JFrame frame = showFrame("Y", 300, 200);
+        try {
+            JDialog dialog = new JDialog(frame, "", true);
+            String output = snapshot(dialog);
+            assertTrue(output.startsWith(
+                    "[modal stack (2, topmost first): JDialog / JFrame \"Y\"]\n"),
+                    "Expected bare class name when title blank. Got:\n" + output);
+        } finally {
+            executeOnEDT(() -> { frame.dispose(); return null; });
+        }
+    }
+
+    @Test
+    void dr016_headerDroppedFromFilteredOutput() throws Exception {
+        // Under filter_substring the modal-stack header is dropped — the
+        // filter produces its own [filter active: ...] notice at line 1.
+        JFrame frame = showFrame("Y", 300, 200);
+        try {
+            JDialog dialog = new JDialog(frame, "X", true);
+            dialog.getContentPane().add(new JButton("Save"));
+
+            context.setConsideredComponents(List.of(dialog));
+            MCPProtocol.Content result = executeOnEDT(() -> tool.execute(
+                    new Parameters(Map.of("filter_substring", "Save")), context));
+            String output = result.getText();
+
+            assertTrue(output.startsWith("[filter active:"),
+                    "Filtered output should start with filter notice. Got:\n" + output);
+            assertFalse(output.contains("[modal stack"),
+                    "Filtered output should not contain modal-stack header. Got:\n" + output);
+            assertTrue(output.contains("\"Save\""),
+                    "Filter should match the button. Got:\n" + output);
+        } finally {
+            executeOnEDT(() -> { frame.dispose(); return null; });
+        }
+    }
+
+    @Test
+    void dr016_mixedRoots_headerOnlyOnModalRoot() throws Exception {
+        // Two independent roots — a modal over a frame, and an unrelated
+        // JFrame. Only the modal root gets a header; the frame doesn't; the
+        // existing --- separator stays intact; refs remain globally sequenced.
+        JFrame ownerFrame = showFrame("Y", 300, 200);
+        JFrame unrelatedFrame = new JFrame("Unrelated");
+        try {
+            JDialog dialog = new JDialog(ownerFrame, "X", true);
+            dialog.getContentPane().add(new JButton("A"));
+            unrelatedFrame.getContentPane().add(new JButton("B"));
+
+            String output = snapshot(dialog, unrelatedFrame);
+            assertEquals(
+                    "[modal stack (2, topmost first): JDialog \"X\" / JFrame \"Y\"]\n"
+                    + "- JDialog (dialog) \"X\" [modal]\n"
+                    + "  - JButton (push_button) \"A\" [ref=1] actions: click\n"
+                    + "---\n"
+                    + "- JFrame (frame) \"Unrelated\"\n"
+                    + "  - JButton (push_button) \"B\" [ref=2] actions: click",
+                    output);
+        } finally {
+            executeOnEDT(() -> {
+                ownerFrame.dispose();
+                unrelatedFrame.dispose();
+                return null;
+            });
+        }
+    }
 }
