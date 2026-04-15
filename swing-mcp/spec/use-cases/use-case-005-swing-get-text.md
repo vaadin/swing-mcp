@@ -1,9 +1,9 @@
 # UC-005: swing_get_text
 
-**Status:** Implemented (amended 2026-04-15 — `JPasswordField` / `PASSWORD_TEXT` role now returns a dedicated error per DR-011)
+**Status:** Implemented (amended 2026-04-15 — `JPasswordField` / `PASSWORD_TEXT` role now returns a dedicated error per DR-011; amended 2026-04-15 — motivation updated for DR-013 inline preview)
 **Date:** 2026-03-31
 
-Reads text content via the accessibility API. Needed because the snapshot deliberately omits field values (UC-002 BR-03) to keep context-window usage predictable.
+Reads the full text content via the accessibility API. The snapshot carries a 15-character inline preview (`text="..."`) per BR-12 / DR-013, sufficient for form-level orientation; `swing_get_text` returns the untruncated value when the AI needs to read the whole field. Both paths share `SwingUtils.readText()`, so the preview and the full value can never disagree.
 
 ---
 

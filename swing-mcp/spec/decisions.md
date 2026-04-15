@@ -640,3 +640,174 @@ class-name lookup needed.
   that the call was refused, and `""` is indistinguishable from an
   empty field. An explicit error teaches the rule and is audit-friendly
   in logs.
+
+---
+
+## DR-013 — Snapshot includes inline text/value previews
+
+**Status:** Accepted
+**Applies to:** UC-002 (BR-03 line format), UC-005 (`swing_get_text`),
+UC-012 (`swing_get_value`)
+**Decided:** 2026-04-15
+**Supersedes:** the "field values are not shown" clause of UC-002 BR-03
+as originally written (pre-amendment). BR-03's own "Revisit if the AI
+needs field values in future" was the designed escalation point; this
+DR takes it.
+
+**Decision.** The snapshot line format gains an inline value annotation
+for components that carry user-facing content via `AccessibleText` or
+`AccessibleValue`. Exactly one of two labels may appear on a line,
+never both, selected by the same capability gate that drives the
+action list (BR-06 steps 4 and 5):
+
+- **`text="..."`** — emitted when `SwingUtils.supportsGetText(accessible)`
+  returns `true` (i.e. the node would advertise `get_text` or
+  `set_text`). Content source: `SwingUtils.readText(accessible)` — the
+  same helper `swing_get_text` calls, so the two can never disagree.
+  Null content is normalised to `""` (matches what the user sees for a
+  JTextField whose document is empty). Newlines and runs of whitespace
+  are **collapsed to a single space** before truncation (consistent with
+  BR-10's HTML cleanup). The result is then capped per the DR-010
+  string-truncation convention: `≤15 chars → full; else first 14 + …`.
+  Wrapped in double quotes.
+- **`value=<number>`** — emitted when
+  `SwingUtils.supportsGetValue(accessible)` returns `true`. Content
+  source: `SwingUtils.readValue(accessible)` (i.e. `current` from
+  `AccessibleValue.getCurrentAccessibleValue()`). Serialised bare per
+  DR-010's number convention (whole numbers as integers, fractional as
+  floats). Not truncated.
+  - **Progress bar exception:** when the role is `PROGRESS_BAR` **and**
+    `getMaximumAccessibleValue()` is non-null, render as
+    `value=<current>/<max>` instead — the denominator is the whole
+    point of looking at a progress bar.
+
+**Placement on the line.** Between the states bracket and the `actions:`
+section, in the "additional component-specific info" slot (same slot
+used for `columns: […]` on JTable). Order when both JTable `columns:`
+and a value annotation are present: `columns:` first, then the value —
+though in practice no component triggers both (JTable itself has
+neither text nor value). Examples:
+
+```
+- JTextField (text) "Name" [ref=3, editable] text="admin" actions: get_text, set_text
+- JTextField (text) "Notes" [ref=4, editable] text="Lorem ipsum d…" actions: get_text, set_text
+- JSlider (slider) "Volume" [ref=5, horizontal] value=42 actions: increment, decrement, get_value, set_value
+- JSpinner (spin_box) "Quantity" [ref=6] value=10 actions: increment, decrement, get_value, set_value
+- JProgressBar (progress_bar) "Loading" [horizontal] value=37/100 actions: get_value
+- JTextField (text) "Empty" [ref=7, editable] text="" actions: get_text, set_text
+```
+
+**Password carveout is free.** `SwingUtils.supportsGetText()` already
+returns `false` for `AccessibleRole.PASSWORD_TEXT` (DR-011). Keying
+inline `text="..."` off the same gate means password fields never emit
+an inline preview — no new code, no new spec carveout. A password
+field retains its `set_text` action (or `!set_text` when non-editable)
+and simply has no value annotation.
+
+**Shared read helpers.** Implementation factors the read into
+`SwingUtils.readText(Accessible) → String` (null → `""`) and
+`SwingUtils.readValue(Accessible) → Number` (pre-gated by
+`supportsGetValue()`). Both `SwingSnapshotTool` (for the inline
+preview) and `SwingGetTextTool` / `SwingGetValueTool` (for the full
+response) call these helpers. The snapshot truncates; the tools
+return whole. This structurally guarantees that a `text="abc"` preview
+implies `swing_get_text` on the same ref will begin with `abc…` — they
+are literally the same read.
+
+**Defensive read.** The inline preview is wrapped in try/catch. If a
+custom widget's `AccessibleText`/`AccessibleValue` throws (document
+lock contention, misbehaving custom impl, etc.), the single
+annotation is **omitted** — the rest of the snapshot still renders.
+A JUL `FINE` log line records the failure for later diagnosis. The
+snapshot must always produce output; one bad widget cannot take down
+the whole tree.
+
+**Multi-capability components.** In standard Swing, no component
+exposes both `AccessibleText` with content and `AccessibleValue` — the
+families are disjoint (text vs. slider/spinner/progress/scroll/split).
+A hypothetical custom widget that gates true on both is permitted to
+emit both annotations (`text="..." value=42`); no engineered tie-break
+is needed. DR-003 ("mirror Swing semantics exactly") covers this — if
+the framework reports both, we report both.
+
+**Why.**
+
+- **Chatter reduction.** Observed in the field: AI clients currently
+  round-trip `swing_get_text` / `swing_get_value` for every text
+  field, slider, and spinner on a form to learn current contents.
+  For a 10-field form that is 10 extra MCP calls per verification
+  cycle. The inline preview collapses that into one snapshot call.
+- **Auto-discovery.** An optional flag (considered, rejected — see
+  alternatives) requires the AI to *choose* verbose mode; inline
+  preview means the AI *sees* the current value the moment it reads
+  the snapshot, without deciding anything.
+- **Bounded cost.** A 15-char string cap matches DR-010's existing
+  truncation convention. Worst-case overhead for a 50-field form is
+  ~750 chars (\~200 tokens) — well within the noise floor of a
+  normal snapshot.
+- **Playwright alignment.** The original BR-03 rationale cited
+  "consistency with Playwright MCP's approach." In fact Playwright's
+  accessibility snapshot does surface `value` for textboxes, sliders,
+  and progressbars. This DR moves *closer* to Playwright, not away.
+- **Matches the round-trip tool.** `text="..."` → `swing_get_text`
+  returns the full untruncated string. `value=42` → `swing_get_value`
+  returns `{current, min, max}`. The label is its own documentation.
+
+**Trade-offs accepted.**
+
+- Snapshot size now correlates loosely with form content, not just
+  form structure. Bounded by the 15-char cap; empirically negligible
+  for realistic UIs.
+- Multi-line JTextArea / JEditorPane previews lose line structure via
+  whitespace collapsing. Acceptable — at 15 chars the structure is
+  rarely meaningful, and the `multi_line` state + `get_text` action
+  both signal to the AI that the full content is available via
+  round-trip.
+- For any component (text *or* value) that holds sensitive-but-
+  non-password content (draft email, API-key field, partially-typed
+  credential, etc.), the snapshot now surfaces up to 14 chars of it.
+  Accepted: (a) the AI could already call `swing_get_text` and obtain
+  the full value; the inline preview does not widen the exfiltration
+  surface, only reduces its cost; (b) the role-based password gate
+  (DR-011) covers the one case Swing itself marks as secret; custom
+  secret fields that fail to adopt `PASSWORD_TEXT` were already
+  leaking via `swing_get_text` and are out of scope here.
+
+**Alternatives considered.**
+
+- **Status quo — no inline value.** Rejected — see "chatter
+  reduction" above. BR-03 itself had "Revisit if the AI needs field
+  values in future" as a deliberate escalation clause; this DR is
+  the escalation.
+- **Boolean flag on `swing_snapshot` (e.g. `include_values=true`).**
+  Rejected — the flag's hidden cost is per-call decision overhead.
+  Either the AI always sets it (equivalent to default-on with no
+  flag) or never sets it (equivalent to status quo). Flags earn
+  their keep when both modes have real users — here the "user" is
+  one AI controller with one preference per session. Bureaucratic
+  without benefit.
+- **Bulk `get_text` / `get_value` accepting an array of refs.**
+  Rejected **as a substitute**, kept open as a future follow-up.
+  Fixes chattiness (1 batched call vs N) but not *discovery*: the
+  AI still has to decide "should I batch-fetch?" and heuristics
+  leak. Inline preview is auto-discovery. A bulk getter may still
+  be worth adding later for slider-heavy control panels where the
+  full numeric value (not truncated preview) is worth the extra
+  round-trip.
+- **`value=<current> [<min>..<max>]` everywhere.** Rejected — range
+  is rarely actionable-at-a-glance for sliders/spinners (a reasonable
+  range is usually implied by the widget's purpose) and the AI can
+  always call `swing_get_value` when bounds matter. Kept the
+  denominator only for `JProgressBar`, where progress toward a
+  maximum *is* the meaning of the widget.
+- **Inline preview for `JCheckBox` / `JRadioButton` / `JComboBox`
+  selection.** Rejected — `[checked]`/`[selected]` state already
+  carries the boolean signal for checkboxes/radios; combo-box
+  selected-item exposure is a separate design question (the
+  selection-display story across JList/JTable/JComboBox is better
+  addressed as a coordinated follow-up than as part of this DR).
+- **Show raw newlines / JSON-escape `\n`, `\t`.** Rejected —
+  collapsing to a single space matches BR-10's established text-
+  cleanup convention and keeps the snapshot line-oriented. At
+  15 chars the fidelity cost is negligible; the full content is
+  always reachable via `swing_get_text`.

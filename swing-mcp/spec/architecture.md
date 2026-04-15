@@ -433,8 +433,9 @@ Implemented in `SwingUtils.supportsClose(Accessible)`:
 
 Beyond `AccessibleAction`, the accessibility API exposes further interaction capabilities via
 dedicated interfaces on `AccessibleContext`. Each interface returning non-null signals that the
-corresponding actions are available. Since the snapshot deliberately omits field values (UC-002
-BR-03), both read and write actions are needed so the AI can retrieve data it cannot see.
+corresponding actions are available. The snapshot surfaces a capped inline preview (`text="..."` /
+`value=N`) per UC-002 BR-12 (DR-013); the `swing_get_text` / `swing_get_value` tools return the
+full untruncated value when the AI needs content beyond the preview window.
 
 ### Capability → Action Mapping
 

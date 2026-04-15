@@ -1,9 +1,9 @@
 # UC-012: swing_get_value
 
-**Status:** Implemented
+**Status:** Implemented (amended 2026-04-15 — motivation updated for DR-013 inline preview)
 **Date:** 2026-04-02
 
-Reads the numeric value of sliders, spinners, progress bars, and split-pane dividers. Needed because the snapshot omits field values (UC-002 BR-03).
+Reads the numeric value of sliders, spinners, progress bars, and split-pane dividers, together with its min/max bounds. The snapshot carries an inline `value=N` preview per BR-12 / DR-013 (or `value=N/M` for progress bars); `swing_get_value` returns the full `{current, min, max}` shape when the AI needs bounds information. Both paths share `SwingUtils.readValue()` so the preview and the JSON result can never disagree on the current value.
 
 **Tool description:** "Read the numeric value of a UI component by ref. Returns JSON with current, min, max. Missing min/max means unbounded. Requires a ref obtained from swing_snapshot or swing_get_cells."
 

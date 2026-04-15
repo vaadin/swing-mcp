@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** obtain an accessibility tree snapshot of the Swing application **so that** I can understand the current UI structure and identify components for interaction.
 
-**Status:** Implemented (amended 2026-04-13 — `get_cells` advertising narrowed to JList/JTree; component class identity prefix added — see BR-11; amended 2026-04-15 — `get_text` suppressed for `AccessibleRole.PASSWORD_TEXT` per DR-011)
+**Status:** Implemented (amended 2026-04-13 — `get_cells` advertising narrowed to JList/JTree; component class identity prefix added — see BR-11; amended 2026-04-15 — `get_text` suppressed for `AccessibleRole.PASSWORD_TEXT` per DR-011; amended 2026-04-15 — inline `text="..."`/`value=N` previews added per DR-013)
 **Date:** 2026-03-26
 
 ---
@@ -98,7 +98,7 @@ After pruning (component identity format per BR-11):
     - JScrollPane (scroll_pane)
       - JList (list) [ref=2] actions: multi-selection, get_cell_count, get_cells
     - JPanel (panel) "Details"
-      - JTextField (text) "Name" [ref=3] actions: get_text, set_text
+      - JTextField (text) "Name" [ref=3] text="" actions: get_text, set_text
     - JButton (push_button) "Add" [ref=4] actions: click
 ```
 
@@ -202,10 +202,10 @@ survives pruning, and what it looks like in the snapshot output.
 
 | Swing Component | `AccessibleRole` | Pruned? | Snapshot Example |
 |---|---|---|---|
-| `JTextField` | `TEXT` | No | `- JTextField (text) "Name" [ref=1, editable] actions: get_text, set_text` |
-| `JPasswordField` | `PASSWORD_TEXT` | No | `- JPasswordField (password_text) "Password" [ref=1, editable] actions: set_text` — `get_text` is suppressed (DR-011). A non-editable password field (`setEditable(false)`) shows `actions: !set_text` only. |
-| `JTextArea` | `TEXT` | No | `- JTextArea (text) "Notes" [ref=1, editable, multi_line] actions: get_text, set_text` |
-| `JEditorPane` | `TEXT` | No | `- JEditorPane (text) "Content" [ref=1, editable, multi_line] actions: get_text, set_text` |
+| `JTextField` | `TEXT` | No | `- JTextField (text) "Name" [ref=1, editable] text="admin" actions: get_text, set_text` — inline `text="..."` preview per BR-12 (DR-013), 15-char cap with `…` suffix (`text="Lorem ipsum d…"`); empty/null document renders as `text=""`. |
+| `JPasswordField` | `PASSWORD_TEXT` | No | `- JPasswordField (password_text) "Password" [ref=1, editable] actions: set_text` — `get_text` is suppressed (DR-011); no inline `text="..."` preview either, since BR-12 keys off `supportsGetText()` which already excludes `PASSWORD_TEXT`. A non-editable password field (`setEditable(false)`) shows `actions: !set_text` only. |
+| `JTextArea` | `TEXT` | No | `- JTextArea (text) "Notes" [ref=1, editable, multi_line] text="line one line…" actions: get_text, set_text` — newlines collapsed to spaces in the preview (BR-12); call `swing_get_text` for full multi-line content. |
+| `JEditorPane` | `TEXT` | No | `- JEditorPane (text) "Content" [ref=1, editable, multi_line] text="Rendered body…" actions: get_text, set_text` — HTML-stripped rendered text in the preview (BR-12 + UC-005 BR-11). |
 
 ### Selection & Data Components
 
@@ -222,9 +222,9 @@ survives pruning, and what it looks like in the snapshot output.
 
 | Swing Component | `AccessibleRole` | Pruned? | Snapshot Example |
 |---|---|---|---|
-| `JSlider` | `SLIDER` | No | `- JSlider (slider) "Volume" [ref=1, horizontal] actions: increment, decrement, get_value, set_value` |
-| `JSpinner` | `SPIN_BOX` | No | `- JSpinner (spin_box) "Quantity" [ref=1] actions: increment, decrement, get_value, set_value` |
-| `JProgressBar` | `PROGRESS_BAR` | No | `- JProgressBar (progress_bar) "Loading" [horizontal] actions: get_value` |
+| `JSlider` | `SLIDER` | No | `- JSlider (slider) "Volume" [ref=1, horizontal] value=42 actions: increment, decrement, get_value, set_value` — inline `value=N` preview per BR-12 (DR-013). |
+| `JSpinner` | `SPIN_BOX` | No | `- JSpinner (spin_box) "Quantity" [ref=1] value=10 actions: increment, decrement, get_value, set_value` — inline `value=N` per BR-12. Fractional spinner values render with a decimal point (e.g. `value=3.5`). |
+| `JProgressBar` | `PROGRESS_BAR` | No | `- JProgressBar (progress_bar) "Loading" [horizontal] value=37/100 actions: get_value` — `PROGRESS_BAR` renders as `value=current/max` per BR-12 when the maximum is non-null; bare `value=N` otherwise. |
 
 ### Display Components
 
@@ -233,7 +233,7 @@ survives pruning, and what it looks like in the snapshot output.
 | `JLabel` | `LABEL` | No | `- JLabel (label) "Status: OK"` |
 | `JToolTip` | `TOOL_TIP` | No | `- JToolTip (tool_tip) "Click to save"` |
 | `JSeparator` | `SEPARATOR` | No | `- JSeparator (separator)` |
-| `JScrollBar` | `SCROLL_BAR` | No | `- JScrollBar (scroll_bar) [ref=1, vertical] actions: increment, decrement, get_value, set_value` |
+| `JScrollBar` | `SCROLL_BAR` | No | `- JScrollBar (scroll_bar) [ref=1, vertical] value=0 actions: increment, decrement, get_value, set_value` — inline `value=N` per BR-12. |
 
 ### Menu Components
 
@@ -252,10 +252,10 @@ Beyond the standard Swing components above, two additional identity-slot forms a
 
 | Scenario | Accessible | Snapshot Example |
 |---|---|---|
-| User subclass of a standard Swing component (e.g. a company component library's `SearchField extends JTextField`) | concrete subclass, `Component` | `- SearchField -> JTextField (text) "search the catalog" [ref=1] actions: get_text, set_text` (BR-11 Case B) |
+| User subclass of a standard Swing component (e.g. a company component library's `SearchField extends JTextField`) | concrete subclass, `Component` | `- SearchField -> JTextField (text) "search the catalog" [ref=1] text="widgets" actions: get_text, set_text` (BR-11 Case B; inline `text="..."` per BR-12) |
 | Third-party subclass (e.g. SwingX `JXTable extends JTable`) | concrete subclass, `Component` | `- JXTable -> JTable (table) [ref=1] columns: [Name, Email] actions: multi-selection` (BR-11 Case B) |
 | Anonymous subclass (`new JButton() { ... }`) | anonymous, `Component` | `- JButton (push_button) "OK" [ref=1] actions: click` — anonymous class name stripped (BR-11) |
-| CGLIB / ByteBuddy / Hibernate runtime proxy wrapping a user subclass | proxy, `Component` | `- SearchField -> JTextField (text) [ref=1] actions: get_text, set_text` — proxy name stripped (BR-11) |
+| CGLIB / ByteBuddy / Hibernate runtime proxy wrapping a user subclass | proxy, `Component` | `- SearchField -> JTextField (text) [ref=1] text="" actions: get_text, set_text` — proxy name stripped (BR-11) |
 | `JTabbedPane` tab | `JTabbedPane.Page`, **not** a `Component` | `- (page_tab) 0 "General" [selected]` (BR-11 Case C; SC-2) |
 | `JList` item | `JList.AccessibleJListChild`, **not** a `Component` | `- (label) "Item 1" [ref=2] actions: click` (BR-11 Case C) |
 | `JTree` node | `JTree.AccessibleJTreeNode`, **not** a `Component` | `- (label) "Folder" [ref=2] actions: toggle_expand, click` (BR-11 Case C) |
@@ -267,6 +267,7 @@ Beyond the standard Swing components above, two additional identity-slot forms a
 - `JTextArea` and `JEditorPane` share the `TEXT` role with `JTextField` but include the `multi_line` state.
 - Snapshot examples show typical states; actual output depends on the component's runtime configuration.
 - Mutation actions prefixed with `!` are unavailable because the component is disabled or read-only. For example, a disabled button shows `actions: !click`; a read-only text field shows `actions: get_text, !set_text`.
+- Inline `text="..."` / `value=N` previews (BR-12 / DR-013) appear between the states bracket and `actions:`. The two labels are mutually exclusive across every standard Swing component: text components emit `text`, value components emit `value`. `JPasswordField` never emits `text="..."` (DR-011 gate). `JCheckBox` / `JRadioButton` do not emit a value preview — their state is already carried by `[checked]`/`[selected]`.
 
 ---
 
@@ -382,7 +383,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 |----|------|
 | BR-01 | Refs are short integers starting from 1, assigned fresh with each snapshot call, globally across all roots. Only nodes that expose at least one action under the BR-06/BR-07 algorithm receive a ref. |
 | BR-02 | The entire four-phase pipeline runs on the EDT via `runInEDT()` (which uses `SwingUtilities.invokeLater()` + a `CountDownLatch`). All phases — including prune, assignRefs, and render — execute inside that single call. Off-EDT optimisation is deferred until a performance problem is demonstrated. Tool calls always arrive from an HTTP thread (via `TinyMCPServer`) — never from the EDT — so `runInEDT()` will never deadlock. Do **not** add EDT detection (`SwingUtilities.isEventDispatchThread()`) as a "helpful" fallback; it would mask bugs and is not needed. |
-| BR-03 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. Line format: `- <component-identity> "name" "description" [ref=N, state1, state2] additional-info actions: action1, !action2`. The `<component-identity>` slot is defined in BR-11 and renders as `JClass (role)`, `ConcreteClass -> JClass (role)`, or `(role)` depending on the case. Role is the `AccessibleRole` field name lowercased with underscores (e.g. `push_button`, `text`, `scroll_pane`) — never `toDisplayString()`, which is locale-sensitive. Omit `"name"` if blank; omit `"description"` if blank — see BR-10 for the description's source resolution (tooltip fallback) and 120-character cap. Ref and states share one bracket, comma-separated, lowercase. Omit the bracket entirely if there is no ref and no states. Additional component-specific info (e.g. `columns: [ID, Name, City]` for JTable) appears after the bracket and before `actions:`; omitted when empty. Omit `actions:` if none. Mutation actions that would fail validation are prefixed with `!` (see BR-08). Field values (`AccessibleText` content, `AccessibleValue`) are **not** shown in the output — only name and description are shown, consistent with Playwright MCP's approach. Revisit if the AI needs field values in future. |
+| BR-03 | The output format is a compact indented text tree (not YAML), mimicking Playwright MCP. Line format: `- <component-identity> "name" "description" [ref=N, state1, state2] additional-info actions: action1, !action2`. The `<component-identity>` slot is defined in BR-11 and renders as `JClass (role)`, `ConcreteClass -> JClass (role)`, or `(role)` depending on the case. Role is the `AccessibleRole` field name lowercased with underscores (e.g. `push_button`, `text`, `scroll_pane`) — never `toDisplayString()`, which is locale-sensitive. Omit `"name"` if blank; omit `"description"` if blank — see BR-10 for the description's source resolution (tooltip fallback) and 120-character cap. Ref and states share one bracket, comma-separated, lowercase. Omit the bracket entirely if there is no ref and no states. Additional component-specific info appears after the bracket and before `actions:`; omitted when empty. This slot carries `columns: [ID, Name, City]` for JTable (SC-6) and the **inline value preview** for components whose content is exposed via `AccessibleText` or `AccessibleValue` (BR-12, DR-013): `text="..."` when `SwingUtils.supportsGetText()` is true (string capped at 15 chars per the DR-010 convention: `≤15 → full; else first 14 + …`; newlines/whitespace runs collapsed to a single space; null content rendered as `""`); `value=N` when `SwingUtils.supportsGetValue()` is true (bare number; `PROGRESS_BAR` renders as `value=N/M` when the maximum is non-null). The two labels are mutually exclusive in practice — standard Swing never gates both true — but a custom widget exposing both is permitted to emit both. When `columns:` and a value preview co-occur (no standard component triggers this), `columns:` is emitted first. Omit `actions:` if none. Mutation actions that would fail validation are prefixed with `!` (see BR-08). |
 | BR-04 | The tree walker walks the `javax.accessibility` tree via `AccessibleContext.getAccessibleChild(i)`, **not** the `Component.getComponents()` component tree. The accessibility tree provides virtual children for complex components (table cells, list items, tree nodes). |
 | BR-05 | Large data components (JTable, JList, JTree) are truncated to `MAX_DATA_ROW_NODES` accessible children (static final constant, initially 5). When truncated, a synthetic `... and N more items` node is appended. For JTable, truncation is by **rows** and the summary reads `... and N more rows` (SC-6). |
 | BR-06 | Action labels displayed in the snapshot are determined by the **Action Label Algorithm** below. Detection methods, Java mechanisms, and MCP tool names are defined in **architecture.md §6**. All action names use lower-case underscore-separated format. |
@@ -391,6 +392,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 | BR-09 | **Snapshot filtering (`filter_substring`).** When the optional `filter_substring` parameter is provided, the tool applies **tree filtering** after Phase 4 (render). The algorithm walks the rendered tree (split into lines, using indentation depth to reconstruct parent/child relationships) and marks every node whose rendered line contains the substring (case-insensitive `String.toLowerCase().contains()`) as a **match**. The output includes: (a) every matched node, (b) every **ancestor** of a matched node (to preserve structural context / path from root), and (c) every **descendant** of a matched node (so children like table rows, list items, combo-box entries are always shown with their parent). Non-matching sibling branches are dropped entirely. The first line of filtered output is a notice: `[filter active: only nodes matching "<filter>" and their ancestors/descendants are shown]`. Root separators (`---`) are excluded from filtered output. The ref map is unaffected — filtering does not change ref assignment. If no nodes match, the tool returns the message `No lines matched filter_substring 'X'` (where X is the provided value). |
 | BR-10 | **Description source resolution, HTML cleanup, and 120-character cap.** The `"description"` slot in the BR-03 line format is filled from the following sources, in order: (a) `AccessibleContext.getAccessibleDescription()` if non-blank after HTML cleanup, else (b) the tooltip via `SwingUtils.getTooltipAsText()` if non-blank — which resolves the tooltip from the JComponent or, for `PAGE_TAB` nodes, from `JTabbedPane.getToolTipTextAt(index)`. **HTML cleanup applies to both sources** via `SwingUtils.htmlToPlainText()`: any value starting with `<html>` (case-insensitive) has each tag replaced by a single space, the four standard entities (`&amp;`, `&lt;`, `&gt;`, `&nbsp;`) decoded, runs of whitespace collapsed, and the result trimmed; non-HTML strings pass through verbatim so a literal value like `"List<String>"` is preserved. **Why cleanup applies to (a):** `JComponent.AccessibleJComponent.getAccessibleDescription()` already auto-falls-back to `getToolTipText()` inside the JDK when no explicit description is set — so an "explicit-looking" value returned from (a) may in fact be a (potentially HTML) tooltip. The resolved description is then capped at **120 characters**, with truncation indicated by a trailing `…` (U+2026). The cap applies symmetrically to all sources so the AI cannot distinguish a real description from a tooltip-fallback. Per-cell, per-row, per-node and per-item tooltips on `JTable`, `JList`, `JTree` and `JTableHeader` are **not** exposed — those are computed on the fly by the cell renderer in response to a `MouseEvent`, which is not available during snapshot building. **Rationale:** older Swing apps frequently never set `accessibleDescription`; the tooltip is often the only descriptive signal available. Symmetric capping prevents long tooltips/descriptions from bloating the snapshot while preserving the most useful prefix. |
 | BR-11 | **Component identity slot (class prefix + role).** Every node's rendered line begins with a component-identity slot computed by the algorithm in **Implementation Notes — Component Identity Resolution**. Three cases, exhaustive: **Case A** — standard Swing component, slot is `JClass (role)` (e.g. `JButton (push_button)`). **Case B** — meaningful custom subclass, slot is `ConcreteSimpleName -> JClass (role)` (e.g. `SearchField -> JTextField (text)`); the concrete class is stripped of anonymous, synthetic, local, proxy artefacts (`$$`-containing runtime classes with no enclosing class), `javax.swing.plaf.*` L&F internals, and JDK-internal nested classes (enclosing class in `javax.swing.*`/`java.awt.*`) before display. **Case C** — non-Component accessible (e.g. `JTabbedPane.Page`, `JList.AccessibleJListChild`, `JTree.AccessibleJTreeNode`), slot is `(role)` alone — class name omitted, parentheses retained so the role still reads as "type info in parens." The parenthesised role is unconditional across all three cases, including when the role is a tautological lowercasing of the class (`JButton (push_button)`), so that a non-standard role override (`JButton (button_with_dropdown)`) becomes a clean attention signal. Qualifying-ancestor criteria (public, non-nested, in `javax.swing` or its subpackages except `javax.swing.plaf.*`, or in `java.awt`; assignable to `Component` or `MenuComponent`; abstract classes qualify) and the full walk-up/strip algorithm are specified in the Component Identity Resolution section. |
+| BR-12 | **Inline value preview — full specification (DR-013).** The `text="..."` / `value=N` annotations introduced in BR-03 are produced by shared read helpers `SwingUtils.readText(Accessible) → String` and `SwingUtils.readValue(Accessible) → Number`, which are also called by `swing_get_text` (UC-005) and `swing_get_value` (UC-012) — so snapshot preview and round-trip tool can never disagree. Snapshot truncates; the tools return whole. **Gate parity with actions:** `text="..."` is emitted iff the BR-06 algorithm would advertise `get_text` or `set_text` (including `!set_text`); `value=N` is emitted iff it would advertise `get_value`. **Password fields:** `SwingUtils.supportsGetText()` already excludes `AccessibleRole.PASSWORD_TEXT` (DR-011), so password fields emit no `text="..."` — the gate parity handles this without a new carveout. **Defensive read:** the inline preview is wrapped in try/catch; if `readText`/`readValue` throws (document lock contention, misbehaving custom impl), the single annotation is omitted and a `FINE` JUL log line records the failure — the rest of the snapshot still renders. **Rationale, alternatives (including the rejected `include_values` flag and bulk-getter), and trade-offs** live in DR-013. |
 
 ### Action Label Algorithm (BR-06)
 
@@ -466,6 +468,20 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [x] An editable `JPasswordField` shows `actions: set_text` — `get_text` is suppressed per DR-011.
   - [x] A non-editable `JPasswordField` (`setEditable(false)`) shows `actions: !set_text` only and retains its ref (DR-011 pathological case).
   - [x] A custom component whose `AccessibleContext` returns role `PASSWORD_TEXT` (without extending `JPasswordField`) also has `get_text` suppressed (role-based gate, DR-011).
+  - [ ] A `JTextField` containing `"admin"` renders with `text="admin"` between the states bracket and `actions:` (BR-12 / DR-013).
+  - [ ] A `JTextField` with a 30-character value renders with `text="<first 14 chars>…"` — 15-char cap, DR-010 truncation convention (BR-12).
+  - [ ] A `JTextField` with a 15-character value renders the full value (no `…`) — boundary case (BR-12).
+  - [ ] An empty `JTextField` renders with `text=""` — null/empty content normalised (BR-12).
+  - [ ] A `JTextArea` containing `"line one\nline two"` renders with `text="line one line …"` — newlines and whitespace runs collapsed to single spaces before truncation (BR-12).
+  - [ ] A `JPasswordField` does **not** emit `text="..."` — BR-12 gate-parity with `supportsGetText()` excludes `PASSWORD_TEXT` for free (DR-011 alignment).
+  - [ ] A `JSlider` at value 42 renders with `value=42` between the states bracket and `actions:` (BR-12 / DR-013).
+  - [ ] A `JSpinner` holding `Double(3.5)` renders with `value=3.5` (fractional numbers keep the decimal point per DR-010's number convention).
+  - [ ] A `JProgressBar` at 37/100 renders with `value=37/100` — `PROGRESS_BAR` renders `current/max` when `getMaximumAccessibleValue()` is non-null (BR-12 progress-bar exception).
+  - [ ] A `JProgressBar` whose `getMaximumAccessibleValue()` returns `null` renders bare `value=N` (BR-12 progress-bar fallback).
+  - [ ] A `JCheckBox` does **not** emit `value=N` or `text="..."` — neither gate fires; `[checked]` carries the signal (BR-12).
+  - [ ] A `JButton` does **not** emit `value=` or `text=` — neither gate fires (BR-12).
+  - [ ] A component whose `AccessibleText.getCharCount()` / `getAtIndex` throws at snapshot time still produces a rendered line for the component — the `text="..."` annotation is omitted and the rest of the tree still renders (BR-12 defensive read). Verified by a test fixture that installs a throwing `AccessibleText` on a custom `JTextComponent` subclass.
+  - [ ] `SwingUtils.readText(Accessible)` returns `""` for null content (regression guard against a nullable return drifting back in — BR-12 relies on null-normalisation).
   - [x] Enabled button inside a disabled `JPanel` is NOT marked `disabled` and shows unprefixed `click` — Swing's `setEnabled(false)` does not propagate to children.
   - [x] Disabled component with only `!`-prefixed actions still receives a ref.
   - [x] When two roots are provided, their trees are separated by a `---` line and refs are numbered globally (not reset between roots).
