@@ -454,7 +454,9 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [x] A truncated `JList` advertises `get_cell_count` and `get_cells` (BR-06 step 6b) — `largeJListAdvertisesGetCellsAndGetCellCount`.
   - [x] A truncated `JTree` advertises `get_cell_count` and `get_cells` (BR-06 step 6b) — `largeJTreeAdvertisesGetCellsAndGetCellCount`.
   - [x] Menu items appear in the tree even when the menu is not open.
-  - [ ] A `JMenu` renders without a `click` action and without a ref (DR-012). Its `JMenuItem` children still receive refs with `click`.
+  - [x] A `JMenu` renders without a `click` action and without a ref (DR-012). Its `JMenuItem` children still receive refs with `click`. Locked in by `jMenuAppearsAsMenu` / `jMenuBarAppearsAsMenuBar` / `jMenuItemAppearsAsMenuItem` / `menuItemsAppearEvenWhenMenuIsClosed`.
+  - [x] HE-5 prune (positive case, headless): a `JPopupMenu` whose `getInvoker()` is a `JMenu` is dropped from the snapshot — `jPopupMenuWithJMenuInvokerIsPruned`.
+  - [x] HE-5 prune (negative case / regression guard, headless): a `JPopupMenu` whose `getInvoker()` is a `JButton` is NOT dropped — `contextJPopupMenuWithNonJMenuInvokerIsNotPruned`.
   - [x] JTabbedPane shows tab items; selected tab has `SELECTED` state; non-selected tab content is not included.
   - [x] JTabbedPane tabs render with 0-based index: `- (page_tab) N "title"` (SC-2; BR-11 Case C). Locked in by `tabbedPane_fourTabs_indicesAscendFromZero` plus the multi-tab / selected-tab / nested-content tests.
   - [x] A tab disabled via `setEnabledAt(i, false)` renders as `[disabled]` on the `page_tab` line (`tabbedPane_tabDisabledViaSetEnabledAt_marksOnlyThatTabDisabled` — commit 043a71b).
@@ -521,5 +523,4 @@ Uses real `JFrame`/`JDialog` instances on an actual display. The snapshot tool i
 - [x] A visible `JDialog` with child components produces a snapshot tree rooted at the dialog's content (framework-internal wrappers pruned).
 - [x] A visible `JInternalFrame` inside a `JDesktopPane` (inside `JFrame`) produces a snapshot subtree for the internal frame with correct roles, names, and refs.
 - [x] A `JDesktopPane` with multiple `JInternalFrame`s shows all internal frames in the snapshot.
-- [ ] When a `JMenu`'s popup is open (opened directly via `JMenu.doClick()` on the EDT, not via MCP), the resulting `JPopupMenu` node is pruned (HE-5) and the menu's `JMenuItem` children appear only once — under the `JMenu`, not duplicated under a sibling `JPopupMenu`. The `JMenu` carries `[selected, checked]` state to signal the popup is open.
-- [ ] A right-click-style `JPopupMenu` whose `getInvoker()` is a `JButton` (not a `JMenu`) is NOT pruned — it renders with its items. Regression guard for HE-5.
+- [x] HE-5 end-to-end (screen): when a `JMenu`'s popup is opened via real Swing mechanics (`JMenu.doClick()` on a visible `JFrame`), the resulting `JPopupMenu` node is pruned and the menu's `JMenuItem` children appear only once — under the `JMenu`, not duplicated under a sibling `JPopupMenu`. The `JMenu` carries `[selected, checked]` state to signal the popup is open. `openJMenuPopup_doesNotDuplicateItems_HE5`.

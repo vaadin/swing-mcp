@@ -50,7 +50,7 @@ Execution order:
   - [x] Clicking a disabled `ClickRecordingPanel` returns an MCP error with `isError: true`.
   - [x] Clicking a component with no AccessibleAction click and no application MouseListener returns an MCP error with `isError: true`.
   - [x] A component with an interactive role (e.g. `JSlider`) and an application MouseListener but no AccessibleAction click is not clickable (Tier 2 skipped for interactive roles).
-  - [ ] `JMenu` is **not** clickable (DR-012). `componentMatrix_JMenu` registers a `JMenu` under a testing ref and asserts `swing_click` returns the generic "does not support click" error. `componentMatrix_JMenuBar` verifies the `JMenu` on a menubar also has no click ref. `JMenuItem` continues to be clickable and fires its `ActionListener`.
+  - [x] `JMenu` is **not** clickable (DR-012). `componentMatrix_JMenu` registers a `JMenu` under a testing ref and asserts `swing_click` returns the generic "does not support click" error. `componentMatrix_JMenuBar` verifies the `JMenu` on a menubar does not receive a snapshot ref. `JMenuItem` continues to be clickable and fires its `ActionListener`.
 
 ### `ClickRecordingPanel` — Reusable Test Component
 
