@@ -152,13 +152,40 @@ class SwingSetTextTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void successReturnsNull() throws Exception {
+    void successReturnsDR010Echo() throws Exception {
         JTextField field = new JTextField("text");
         snapshot(field);
+        int ref = context.getRefOf(field);
 
         MCPProtocol.Content result = setTextTool.execute(
-                new Parameters(Map.of("ref", context.getRefOf(field), "text", "new")), context);
-        assertNull(result, "Successful set_text should return null");
+                new Parameters(Map.of("ref", ref, "text", "new")), context);
+        assertEquals("Posted set-text on ref=" + ref + " to \"new\"", result.getText());
+    }
+
+    @Test
+    void successWithLongTextTruncatesValueInEcho() throws Exception {
+        // DR-010: string values are truncated at 15 chars — first 14 + U+2026.
+        JTextField field = new JTextField("old");
+        snapshot(field);
+        int ref = context.getRefOf(field);
+
+        MCPProtocol.Content result = setTextTool.execute(
+                new Parameters(Map.of("ref", ref, "text", "this is a pretty long message")), context);
+        assertEquals("Posted set-text on ref=" + ref + " to \"this is a pret\u2026\"",
+                result.getText());
+    }
+
+    @Test
+    void successOnJPasswordFieldReturnsBareEcho() throws Exception {
+        // BR-13 / DR-011: the password value must NOT appear in the success echo,
+        // even though the LLM supplied it as input.
+        JPasswordField field = new JPasswordField();
+        snapshot(field);
+        int ref = context.getRefOf(field);
+
+        MCPProtocol.Content result = setTextTool.execute(
+                new Parameters(Map.of("ref", ref, "text", "hunter2")), context);
+        assertEquals("Posted set-text on ref=" + ref, result.getText());
     }
 
     @Test
