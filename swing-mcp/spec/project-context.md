@@ -109,9 +109,19 @@ Consider only visible windows:
 - If there is a modal visible window, only consider that window
   (use `KeyboardFocusManager` to determine the current modal window).
 - If there is no modal window, consider all visible windows.
-- For snapshots: all considered windows appear in the tree.
+- For snapshots: all considered windows appear in the tree. When a considered
+  window is a modal dialog with a visible owner chain, the snapshot emits a
+  `[modal stack ...]` header above it so the AI can reason about what state
+  will be returned to when the modal is dismissed — see UC-002 BR-14 / DR-016.
 - For screenshots: all considered windows are arranged vertically in a single
   PNG with no overlapping.
+
+> **This rule is load-bearing — see DR-017.** The owner chain of a modal and
+> any windows blocked by a modal are **not** surfaced as interactable roots;
+> they are exposed only as metadata (per DR-016 above). Do not "extend"
+> window selection to return blocked windows or owner chains as refs — DR-017
+> captures the rejected alternatives and the reasons they will not be
+> revisited without explicit supersession.
 
 ## 6. Testing
 
