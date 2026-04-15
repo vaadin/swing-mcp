@@ -468,20 +468,20 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [x] An editable `JPasswordField` shows `actions: set_text` — `get_text` is suppressed per DR-011.
   - [x] A non-editable `JPasswordField` (`setEditable(false)`) shows `actions: !set_text` only and retains its ref (DR-011 pathological case).
   - [x] A custom component whose `AccessibleContext` returns role `PASSWORD_TEXT` (without extending `JPasswordField`) also has `get_text` suppressed (role-based gate, DR-011).
-  - [ ] A `JTextField` containing `"admin"` renders with `text="admin"` between the states bracket and `actions:` (BR-12 / DR-013).
-  - [ ] A `JTextField` with a 30-character value renders with `text="<first 14 chars>…"` — 15-char cap, DR-010 truncation convention (BR-12).
-  - [ ] A `JTextField` with a 15-character value renders the full value (no `…`) — boundary case (BR-12).
-  - [ ] An empty `JTextField` renders with `text=""` — null/empty content normalised (BR-12).
-  - [ ] A `JTextArea` containing `"line one\nline two"` renders with `text="line one line …"` — newlines and whitespace runs collapsed to single spaces before truncation (BR-12).
-  - [ ] A `JPasswordField` does **not** emit `text="..."` — BR-12 gate-parity with `supportsGetText()` excludes `PASSWORD_TEXT` for free (DR-011 alignment).
-  - [ ] A `JSlider` at value 42 renders with `value=42` between the states bracket and `actions:` (BR-12 / DR-013).
-  - [ ] A `JSpinner` holding `Double(3.5)` renders with `value=3.5` (fractional numbers keep the decimal point per DR-010's number convention).
-  - [ ] A `JProgressBar` at 37/100 renders with `value=37/100` — `PROGRESS_BAR` renders `current/max` when `getMaximumAccessibleValue()` is non-null (BR-12 progress-bar exception).
-  - [ ] A `JProgressBar` whose `getMaximumAccessibleValue()` returns `null` renders bare `value=N` (BR-12 progress-bar fallback).
-  - [ ] A `JCheckBox` does **not** emit `value=N` or `text="..."` — neither gate fires; `[checked]` carries the signal (BR-12).
-  - [ ] A `JButton` does **not** emit `value=` or `text=` — neither gate fires (BR-12).
-  - [ ] A component whose `AccessibleText.getCharCount()` / `getAtIndex` throws at snapshot time still produces a rendered line for the component — the `text="..."` annotation is omitted and the rest of the tree still renders (BR-12 defensive read). Verified by a test fixture that installs a throwing `AccessibleText` on a custom `JTextComponent` subclass.
-  - [ ] `SwingUtils.readText(Accessible)` returns `""` for null content (regression guard against a nullable return drifting back in — BR-12 relies on null-normalisation).
+  - [x] A `JTextField` containing `"admin"` renders with `text="admin"` between the states bracket and `actions:` (BR-12 / DR-013) — `br12_jTextFieldWithContent_rendersInlineTextPreview`.
+  - [x] A `JTextField` with a 30-character value renders with `text="<first 14 chars>…"` — 15-char cap, DR-010 truncation convention (BR-12) — `br12_jTextFieldLongerThanCap_truncatesTo14CharsPlusEllipsis`.
+  - [x] A `JTextField` with a 15-character value renders the full value (no `…`) — boundary case (BR-12) — `br12_jTextFieldAt15Chars_rendersFullValue`.
+  - [x] An empty `JTextField` renders with `text=""` — null/empty content normalised (BR-12) — `br12_emptyJTextField_rendersEmptyStringPreview`.
+  - [x] A `JTextArea` containing `"line one\nline two"` renders with `text="line one line…"` — newlines and whitespace runs collapsed to single spaces before truncation; trailing whitespace inside the cap window is stripped before the ellipsis (BR-12) — `br12_jTextAreaWithNewlines_collapsesWhitespaceBeforeTruncation`.
+  - [x] A `JPasswordField` does **not** emit `text="..."` — BR-12 gate-parity with `supportsGetText()` excludes `PASSWORD_TEXT` for free (DR-011 alignment) — `br12_editableJPasswordField_doesNotEmitTextPreview`.
+  - [x] A `JSlider` at value 42 renders with `value=42` between the states bracket and `actions:` (BR-12 / DR-013) — `br12_jSliderWithValue_rendersInlineValuePreview`.
+  - [x] A `JSpinner` holding `Double(3.5)` renders with `value=3.5` (fractional numbers keep the decimal point per DR-010's number convention) — `br12_jSpinnerWithFractionalValue_rendersDecimalValue`.
+  - [x] A `JProgressBar` at 37/100 renders with `value=37/100` — `PROGRESS_BAR` renders `current/max` when `getMaximumAccessibleValue()` is non-null (BR-12 progress-bar exception) — `br12_jProgressBarWithMax_rendersCurrentOverMax`.
+  - [x] A `JProgressBar` whose `getMaximumAccessibleValue()` returns `null` renders bare `value=N` (BR-12 progress-bar fallback) — `br12_jProgressBarWithNullMax_rendersBareValue`.
+  - [x] A `JCheckBox` does **not** emit `value=N` or `text="..."` — neither gate fires; `[checked]` carries the signal (BR-12) — `br12_jCheckBox_emitsNoInlinePreview`.
+  - [x] A `JButton` does **not** emit `value=` or `text=` — neither gate fires (BR-12) — `br12_jButton_emitsNoInlinePreview`.
+  - [x] A component whose `AccessibleText.getCharCount()` / `getAtIndex` throws at snapshot time still produces a rendered line for the component — the `text="..."` annotation is omitted and the rest of the tree still renders (BR-12 defensive read) — `br12_defensiveRead_throwingAccessibleText_omitsAnnotationKeepsNode`.
+  - [x] `SwingUtils.readText(Accessible, int)` returns `""` for null content and for components without `AccessibleText` (regression guard — BR-12 relies on null-normalisation) — `SwingUtilsSupportsTextTest.readText_*`.
   - [x] Enabled button inside a disabled `JPanel` is NOT marked `disabled` and shows unprefixed `click` — Swing's `setEnabled(false)` does not propagate to children.
   - [x] Disabled component with only `!`-prefixed actions still receives a ref.
   - [x] When two roots are provided, their trees are separated by a `---` line and refs are numbered globally (not reset between roots).

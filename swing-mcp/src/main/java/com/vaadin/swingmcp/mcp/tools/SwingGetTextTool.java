@@ -7,7 +7,6 @@ import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
-import javax.accessibility.AccessibleText;
 
 /**
  * MCP tool {@code swing_get_text}: reads the text content of a UI component by ref.
@@ -62,37 +61,21 @@ public class SwingGetTextTool extends AbstractSwingTool {
         }
 
         // BR-05: all access happens on EDT (guaranteed by MCPServer.registerTool)
+        // Step 4: get total character count — needed independently of the
+        // read itself to compose BR-09's truncation notice with the real total.
         AccessibleContext ac = accessible.getAccessibleContext();
-        AccessibleText at = ac.getAccessibleText();
-
-        // Step 4: get total character count
-        int len = at.getCharCount();
+        int len = ac.getAccessibleText().getCharCount();
 
         // BR-08: empty text returns explicit empty string
         if (len == 0) {
             return MCPProtocol.Content.text("");
         }
 
-        // BR-09: cap at MAX_TEXT_LENGTH
-        int readLen = Math.min(len, MAX_TEXT_LENGTH);
-
-        String text;
-
-        // Step 7: primary path via AccessibleEditableText
-        var editableText = ac.getAccessibleEditableText();
-        if (editableText != null) {
-            text = editableText.getTextRange(0, readLen);
-        } else {
-            // Step 8: fallback — character by character
-            StringBuilder sb = new StringBuilder(readLen);
-            for (int i = 0; i < readLen; i++) {
-                String ch = at.getAtIndex(AccessibleText.CHARACTER, i);
-                if (ch != null) {
-                    sb.append(ch);
-                }
-            }
-            text = sb.toString();
-        }
+        // Shared read path with snapshot inline preview (BR-12 / DR-013):
+        // SwingUtils.readText caps at MAX_TEXT_LENGTH and handles both the
+        // primary AccessibleEditableText.getTextRange path and the
+        // AccessibleText.getAtIndex fallback.
+        String text = SwingUtils.readText(accessible, MAX_TEXT_LENGTH);
 
         // BR-09: append truncation notice if needed
         if (len > MAX_TEXT_LENGTH) {

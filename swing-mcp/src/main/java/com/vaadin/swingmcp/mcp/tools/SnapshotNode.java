@@ -12,6 +12,8 @@ import java.awt.*;
 import java.util.*;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Internal tree node used during the four-phase snapshot pipeline.
@@ -29,6 +31,8 @@ import java.util.function.Predicate;
  */
 class SnapshotNode {
 
+    private static final Logger LOG = Logger.getLogger(SnapshotNode.class.getName());
+
     /** Maximum child SnapshotNodes for large data components (JTable rows, JList items, JTree nodes). */
     static final int MAX_DATA_ROW_NODES = 5;
 
@@ -40,6 +44,24 @@ class SnapshotNode {
      * two sources from the rendered output.
      */
     static final int MAX_DESCRIPTION_LENGTH = 120;
+
+    /**
+     * Maximum length of an inline {@code text="..."} preview (BR-12 / DR-013).
+     * Strings of this length or less are emitted in full; longer strings are
+     * truncated to the first {@code PREVIEW_MAX_LENGTH - 1} characters plus a
+     * trailing U+2026. Matches DR-010's value-render convention for
+     * consistency across mutation echoes and snapshot previews.
+     */
+    static final int PREVIEW_MAX_LENGTH = 15;
+
+    /**
+     * Raw read budget for the preview read (BR-12). Wider than
+     * {@link #PREVIEW_MAX_LENGTH} so that whitespace-heavy content still
+     * produces a meaningful preview after collapsing. A pathological case
+     * where all {@value #PREVIEW_RAW_READ} raw chars collapse to ≤
+     * {@link #PREVIEW_MAX_LENGTH} is signalled by an appended ellipsis.
+     */
+    private static final int PREVIEW_RAW_READ = 64;
 
     // ── Roles that are always included (AI-1) ──────────────────────────────────
 
@@ -488,6 +510,94 @@ class SnapshotNode {
     }
 
     /**
+     * Computes the inline {@code text="..."} / {@code value=N} preview for
+     * this node's rendered line, per BR-12 / DR-013.
+     *
+     * <p>Gate parity with BR-06: emits {@code text="..."} iff
+     * {@link SwingUtils#supportsGetText} returns {@code true}, and
+     * {@code value=N} iff {@link SwingUtils#supportsGetValue} returns
+     * {@code true}. In standard Swing these are disjoint, so at most one of
+     * the two labels appears; a custom widget exposing both is permitted to
+     * emit both (text first, then value).
+     *
+     * <p>Defensive read: every accessibility-API call is wrapped in try/catch.
+     * If a custom widget's {@code AccessibleText}/{@code AccessibleValue}
+     * throws (document lock contention, misbehaving custom impl, etc.), the
+     * affected annotation is omitted and a {@code FINE} log line records the
+     * failure — the rest of the snapshot still renders.
+     *
+     * @return the preview string (without leading/trailing spaces) or
+     *         {@code ""} if neither gate fires
+     */
+    private String computeInlinePreview() {
+        StringBuilder preview = new StringBuilder();
+
+        // text="..." — gated by supportsGetText (DR-011 password exclusion is
+        // already baked into supportsGetText, so password fields produce no
+        // annotation for free).
+        if (SwingUtils.supportsGetText(accessible)) {
+            try {
+                String raw = SwingUtils.readText(accessible, PREVIEW_RAW_READ);
+                // Collapse whitespace runs (including newlines) to single
+                // spaces and strip leading/trailing whitespace — consistent
+                // with BR-10's HTML-text cleanup.
+                String collapsed = raw.replaceAll("\\s+", " ").strip();
+                String truncated;
+                if (collapsed.length() <= PREVIEW_MAX_LENGTH) {
+                    // Did we read everything? If raw hit the raw-read budget
+                    // there may be more content that collapsed away; mark
+                    // truncation so the AI knows to call swing_get_text.
+                    if (raw.length() < PREVIEW_RAW_READ) {
+                        truncated = collapsed;
+                    } else {
+                        truncated = collapsed + "…";
+                    }
+                } else {
+                    // Strip trailing whitespace inside the cap window so the
+                    // preview does not render " …" (space + ellipsis) when the
+                    // 14-char prefix happens to end in whitespace.
+                    String prefix = collapsed.substring(0, PREVIEW_MAX_LENGTH - 1).stripTrailing();
+                    truncated = prefix + "…";
+                }
+                preview.append("text=\"").append(truncated).append('"');
+            } catch (Exception e) {
+                LOG.log(Level.FINE,
+                        "Snapshot inline text preview failed for " + accessible.getClass(), e);
+            }
+        }
+
+        // value=N — gated by supportsGetValue. Progress bars with a non-null
+        // maximum render as value=current/max (BR-12 progress-bar exception).
+        if (SwingUtils.supportsGetValue(accessible)) {
+            try {
+                Number current = SwingUtils.readValue(accessible);
+                Number serializedCurrent = SwingUtils.serializeNumber(current);
+                AccessibleContext ac = accessible.getAccessibleContext();
+                AccessibleRole role = ac != null ? ac.getAccessibleRole() : null;
+                Number max = null;
+                if (AccessibleRole.PROGRESS_BAR.equals(role) && ac != null) {
+                    AccessibleValue av = ac.getAccessibleValue();
+                    if (av != null) {
+                        max = av.getMaximumAccessibleValue();
+                    }
+                }
+                if (preview.length() > 0) {
+                    preview.append(' ');
+                }
+                preview.append("value=").append(serializedCurrent);
+                if (max != null) {
+                    preview.append('/').append(SwingUtils.serializeNumber(max));
+                }
+            } catch (Exception e) {
+                LOG.log(Level.FINE,
+                        "Snapshot inline value preview failed for " + accessible.getClass(), e);
+            }
+        }
+
+        return preview.toString();
+    }
+
+    /**
      * Renders this node and its children as indented text lines.
      *
      * @param depth current indentation depth
@@ -612,6 +722,14 @@ class SnapshotNode {
         String additionalInfo = getAdditionalInfo();
         if (!additionalInfo.isEmpty()) {
             sb.append(' ').append(additionalInfo);
+        }
+
+        // Inline value preview (BR-12 / DR-013). Emitted after additionalInfo
+        // so that on the (spec-permitted but never-actually-seen) co-occurrence
+        // case `columns:` appears first, then `text=`/`value=`.
+        String preview = computeInlinePreview();
+        if (!preview.isEmpty()) {
+            sb.append(' ').append(preview);
         }
 
         // Actions (BR-06) with "!" prefix for unavailable mutations (BR-08)

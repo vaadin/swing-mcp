@@ -6,7 +6,6 @@ import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import javax.accessibility.Accessible;
-import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleValue;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -54,19 +53,15 @@ public class SwingGetValueTool extends AbstractSwingTool {
         }
 
         // BR-04: all access happens on EDT (guaranteed by MCPServer.registerTool)
-        AccessibleContext ac = accessible.getAccessibleContext();
-        AccessibleValue av = ac.getAccessibleValue();
-
-        // Step 4: read current value
-        Number current = av.getCurrentAccessibleValue();
-
-        // BR-09: defensive fallback — should not happen if supportsGetValue() is correct
-        if (current == null) {
-            throw new MCPErrorResponseException(
-                    "Component does not support get_value. Call swing_snapshot or swing_get_cells to verify the list of actions");
-        }
+        // Step 4: read current value via the shared helper (BR-12 / DR-013
+        // shared-read with snapshot inline preview). supportsGetValue already
+        // verified getCurrentAccessibleValue() is non-null so readValue
+        // succeeds here; the IllegalStateException branch is a gate-violation
+        // safety net.
+        Number current = SwingUtils.readValue(accessible);
 
         // Steps 5-6: read optional min/max
+        AccessibleValue av = accessible.getAccessibleContext().getAccessibleValue();
         Number min = av.getMinimumAccessibleValue();
         Number max = av.getMaximumAccessibleValue();
 
