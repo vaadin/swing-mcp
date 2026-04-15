@@ -5,6 +5,7 @@ import com.vaadin.swingmcp.mcp.tools.SwingGetTextTool;
 import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
+import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -55,16 +56,19 @@ class SwingGetTextScreenTest extends AbstractScreenTest {
     }
 
     @Test
-    void readPasswordFieldInsideJFrame() throws Exception {
+    void readPasswordFieldInsideJFrameReturnsDr011Error() throws Exception {
         JFrame frame = new JFrame("Login");
         JPasswordField password = new JPasswordField("secret");
         frame.getContentPane().add(password);
 
         snapshot(frame);
-        String result = getText(context.getRefOf(password));
-        assertNotNull(result);
-        assertNotEquals("secret", result, "Password should be masked");
-        assertEquals(6, result.length());
+        int ref = context.getRefOf(password);
+
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getText(ref));
+        assertEquals(
+                "JPasswordField content is not readable. Use swing_set_text if you need to write a known value.",
+                ex.getMessage());
     }
 
     @Test
@@ -93,17 +97,20 @@ class SwingGetTextScreenTest extends AbstractScreenTest {
     }
 
     @Test
-    void readPasswordFieldInsideJDialog() throws Exception {
+    void readPasswordFieldInsideJDialogReturnsDr011Error() throws Exception {
         JDialog dialog = new JDialog();
         dialog.setTitle("Login");
         JPasswordField password = new JPasswordField("pass");
         dialog.getContentPane().add(password);
 
         snapshot(dialog);
-        String result = getText(context.getRefOf(password));
-        assertNotNull(result);
-        assertNotEquals("pass", result, "Password should be masked");
-        assertEquals(4, result.length());
+        int ref = context.getRefOf(password);
+
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getText(ref));
+        assertEquals(
+                "JPasswordField content is not readable. Use swing_set_text if you need to write a known value.",
+                ex.getMessage());
     }
 
     @Test
@@ -140,7 +147,7 @@ class SwingGetTextScreenTest extends AbstractScreenTest {
     }
 
     @Test
-    void readPasswordFieldInsideJInternalFrame() throws Exception {
+    void readPasswordFieldInsideJInternalFrameReturnsDr011Error() throws Exception {
         JFrame host = new JFrame("Host");
         JDesktopPane desktop = new JDesktopPane();
         host.setContentPane(desktop);
@@ -152,10 +159,13 @@ class SwingGetTextScreenTest extends AbstractScreenTest {
         desktop.add(iframe);
 
         snapshot(host);
-        String result = getText(context.getRefOf(password));
-        assertNotNull(result);
-        assertNotEquals("secret", result, "Password should be masked");
-        assertEquals(6, result.length());
+        int ref = context.getRefOf(password);
+
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getText(ref));
+        assertEquals(
+                "JPasswordField content is not readable. Use swing_set_text if you need to write a known value.",
+                ex.getMessage());
     }
 
     // ══════════════════════════════════════════════════════════════════════════

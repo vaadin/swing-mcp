@@ -1,6 +1,6 @@
 # UC-005: swing_get_text
 
-**Status:** Implemented
+**Status:** Implemented (amended 2026-04-15 — `JPasswordField` / `PASSWORD_TEXT` role now returns a dedicated error per DR-011)
 **Date:** 2026-03-31
 
 Reads text content via the accessibility API. Needed because the snapshot deliberately omits field values (UC-002 BR-03) to keep context-window usage predictable.
@@ -16,7 +16,7 @@ Reads text content via the accessibility API. Needed because the snapshot delibe
 | BR-03 | The text is read via the accessibility API. Primary path: `AccessibleEditableText.getTextRange(0, charCount)` for efficient bulk retrieval. Fallback (when only `AccessibleText` is available): character-by-character via `AccessibleText.getAtIndex(CHARACTER, i)`. See **Algorithm** section below. |
 | BR-04 | If the target does not support `get_text` (i.e. `SwingUtils.supportsGetText(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support get_text. Call swing_snapshot or swing_get_cells to verify the list of actions". |
 | BR-05 | All Swing component access happens on the EDT via `runInEDT()`. |
-| BR-06 | On `JPasswordField`, the tool returns the echo characters (the masked representation), **not** the actual password. This is the default behavior of `AccessibleText` on `JPasswordField` — `AccessibleJPasswordField` overrides `getTextRange()`, `getAtIndex()`, and all related methods to replace every character with the echo char. No special handling is needed. |
+| BR-06 | **Password fields are not readable (DR-011).** If the target's `AccessibleRole` is `AccessibleRole.PASSWORD_TEXT` (canonically `JPasswordField` and its subclasses; any third-party component that adopts the role is also covered), the tool returns an MCP-level error (`isError: true`) with the dedicated message: `"JPasswordField content is not readable. Use swing_set_text if you need to write a known value."`. The check runs **before** the generic `supportsGetText` gate in BR-04 so the AI receives the specific rule rather than a generic "does not support get_text". Rationale: the default `AccessibleJPasswordField` returns echo characters (`••••••`), which (a) misleads the AI into reading it as literal bullet content and (b) leaks the real password length — both contradict the asymmetric security posture declared in UC-006 BR-12. See DR-011 for the full decision. |
 | BR-07 | `swing_get_text` is a read-only tool: `isMutation()` returns `false` and the ref map is **not** cleared after invocation. |
 | BR-08 | If the text content is empty (zero characters), the tool returns `MCPProtocol.Content.text("")` — an explicit empty-string text result, not `null`. A `null` return would produce an empty content array (`"content": []`), which signals "no result"; an empty string signals "the field exists and is empty". |
 | BR-09 | The returned text is capped at `MAX_TEXT_LENGTH` characters (static final constant, initially **1000**). If the text is longer, only the first `MAX_TEXT_LENGTH` characters are returned, followed by `"\n... (truncated, N total characters)"`. |
@@ -28,16 +28,17 @@ Reads text content via the accessibility API. Needed because the snapshot delibe
 
 Execution order:
 1. **BR-02** — ref lookup (fail fast if ref is invalid).
-2. **BR-04** — `SwingUtils.supportsGetText(accessible)` — if `false`, fail with error.
-3. Obtain `AccessibleText at = ac.getAccessibleText()`.
-4. Get the total character count: `int len = at.getCharCount()`.
-5. If `len == 0`, return empty string (BR-08).
-6. Compute the read length: `int readLen = Math.min(len, MAX_TEXT_LENGTH)`.
-7. **Primary path:** try `ac.getAccessibleEditableText()` — if non-null, call `getTextRange(0, readLen)` which returns the text as a single `String`. Available on all `JTextComponent` subclasses (since `AccessibleJTextComponent` implements `AccessibleEditableText`).
-8. **Fallback path:** if `getAccessibleEditableText()` returns `null` (read-only `AccessibleText` without editable support), iterate `at.getAtIndex(AccessibleText.CHARACTER, i)` for `i` in `[0, readLen)` and concatenate. This fallback is expected to be rare — kept as defensive code.
+2. **BR-06** — password-role check (DR-011). If `accessible.getAccessibleContext().getAccessibleRole() == AccessibleRole.PASSWORD_TEXT`, fail with the dedicated error: `"JPasswordField content is not readable. Use swing_set_text if you need to write a known value."`. This runs before BR-04 so the AI gets the specific rule instead of the generic "does not support get_text".
+3. **BR-04** — `SwingUtils.supportsGetText(accessible)` — if `false`, fail with the generic error.
+4. Obtain `AccessibleText at = ac.getAccessibleText()`.
+5. Get the total character count: `int len = at.getCharCount()`.
+6. If `len == 0`, return empty string (BR-08).
+7. Compute the read length: `int readLen = Math.min(len, MAX_TEXT_LENGTH)`.
+8. **Primary path:** try `ac.getAccessibleEditableText()` — if non-null, call `getTextRange(0, readLen)` which returns the text as a single `String`. Available on all `JTextComponent` subclasses (since `AccessibleJTextComponent` implements `AccessibleEditableText`).
+9. **Fallback path:** if `getAccessibleEditableText()` returns `null` (read-only `AccessibleText` without editable support), iterate `at.getAtIndex(AccessibleText.CHARACTER, i)` for `i` in `[0, readLen)` and concatenate. This fallback is expected to be rare — kept as defensive code.
 
-**Design note:** The two-step detection (gate on `getAccessibleText()` in step 2, then try `getAccessibleEditableText()` in step 7) is intentionally kept for spec clarity, even though in practice `getAccessibleEditableText()` alone could serve both detection and retrieval. The implementation may optimize this internally.
-9. **BR-09** — If `len > MAX_TEXT_LENGTH`, append `"\n... (truncated, N total characters)"` to the result.
+**Design note:** The two-step detection (gate on `getAccessibleText()` in step 3, then try `getAccessibleEditableText()` in step 8) is intentionally kept for spec clarity, even though in practice `getAccessibleEditableText()` alone could serve both detection and retrieval. The implementation may optimize this internally.
+10. **BR-09** — If `len > MAX_TEXT_LENGTH`, append `"\n... (truncated, N total characters)"` to the result.
 
 **Accessibility API methods used:**
 - `AccessibleContext.getAccessibleText()` — detection (returns `AccessibleText` or `null`)
@@ -55,7 +56,8 @@ Execution order:
 - [x] `SwingGetTextTest`
   - [x] Reading a `JTextField` with content returns the expected text.
   - [x] Reading a `JTextArea` with multi-line content returns the full text including newlines.
-  - [x] Reading a `JPasswordField` returns echo characters, not the actual password.
+  - [x] Reading a `JPasswordField` returns an MCP error with `isError: true` and the dedicated message `"JPasswordField content is not readable. Use swing_set_text if you need to write a known value."` (DR-011). The real password is never emitted, not even masked.
+  - [x] Reading a custom component whose `AccessibleContext` reports `AccessibleRole.PASSWORD_TEXT` (without extending `JPasswordField`) returns the same error — the gate is role-based (DR-011).
   - [x] Reading an empty `JTextField` returns an empty string.
   - [x] Reading with an invalid ref returns an MCP error with `isError: true`.
   - [x] The error message suggests calling `swing_snapshot` to refresh refs.
@@ -68,18 +70,20 @@ Execution order:
 
 - [x] `SwingGetTextScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
   - [x] Reading a `JTextField` inside `JFrame` returns its content.
-  - [x] Reading a `JPasswordField` inside `JFrame` returns echo characters.
+  - [x] Reading a `JPasswordField` inside `JFrame` returns the DR-011 MCP error.
   - [x] Reading a `JTextArea` inside `JFrame` returns multi-line content.
   - [x] Reading a `JTextField` inside `JDialog` returns its content.
-  - [x] Reading a `JPasswordField` inside `JDialog` returns echo characters.
+  - [x] Reading a `JPasswordField` inside `JDialog` returns the DR-011 MCP error.
   - [x] Reading an empty `JTextField` inside `JDialog` returns an empty string.
   - [x] Reading a `JTextField` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) returns its content.
-  - [x] Reading a `JPasswordField` inside `JInternalFrame` returns echo characters.
+  - [x] Reading a `JPasswordField` inside `JInternalFrame` returns the DR-011 MCP error.
 
 ### Component matrix
 
 Each matrix component from `verification.md` gets a dedicated test method.
 
-**Succeed (`get_text` supported):** `JTextField`, `JPasswordField`, `JTextArea`, `JSpinner` (delegates to its inner `JFormattedTextField` editor via `AccessibleJSpinner`).
+**Succeed (`get_text` supported):** `JTextField`, `JTextArea`, `JSpinner` (delegates to its inner `JFormattedTextField` editor via `AccessibleJSpinner`).
 
-All other matrix components return `Component does not support get_text`.
+**Fail with the dedicated DR-011 error:** `JPasswordField` (and any custom component with `AccessibleRole.PASSWORD_TEXT`).
+
+All other matrix components return the generic `Component does not support get_text`.

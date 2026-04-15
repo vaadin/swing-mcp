@@ -708,12 +708,57 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void jPasswordFieldAppearsAsPasswordText() throws Exception {
+        // DR-011: password fields advertise set_text but never get_text.
         JPanel panel = new JPanel();
         panel.add(new JPasswordField());
 
         assertEquals(
                 "- JPanel (panel)\n"
-                + "  - JPasswordField (password_text) [ref=1] actions: get_text, set_text",
+                + "  - JPasswordField (password_text) [ref=1] actions: set_text",
+                snapshot(panel));
+    }
+
+    @Test
+    void nonEditableJPasswordFieldShowsOnlyPrefixedSetText() throws Exception {
+        // DR-011 pathological case: a non-editable JPasswordField keeps its ref
+        // and shows only "!set_text" — get_text is suppressed, set_text is prefixed
+        // with "!" per BR-08 because the EDITABLE state is absent.
+        JPanel panel = new JPanel();
+        JPasswordField pw = new JPasswordField();
+        pw.setEditable(false);
+        panel.add(pw);
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JPasswordField (password_text) [ref=1, read_only] actions: !set_text",
+                snapshot(panel));
+    }
+
+    @Test
+    void customComponentWithPasswordRoleSuppressesGetText() throws Exception {
+        // DR-011 role-based gate: a custom JTextField subclass that claims
+        // AccessibleRole.PASSWORD_TEXT (without extending JPasswordField) also
+        // has get_text suppressed.
+        JPanel panel = new JPanel();
+        JTextField pw = new JTextField() {
+            @Override
+            public javax.accessibility.AccessibleContext getAccessibleContext() {
+                if (accessibleContext == null) {
+                    accessibleContext = new AccessibleJTextField() {
+                        @Override
+                        public javax.accessibility.AccessibleRole getAccessibleRole() {
+                            return javax.accessibility.AccessibleRole.PASSWORD_TEXT;
+                        }
+                    };
+                }
+                return accessibleContext;
+            }
+        };
+        panel.add(pw);
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JTextField (password_text) [ref=1] actions: set_text",
                 snapshot(panel));
     }
 
@@ -1059,7 +1104,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 + "    - JLabel (label) \"Username\"\n"
                 + "    - JTextField (text) \"Username\" [ref=1] actions: get_text, set_text\n"
                 + "    - JLabel (label) \"Password\"\n"
-                + "    - JPasswordField (password_text) \"Password\" [ref=2] actions: get_text, set_text\n"
+                + "    - JPasswordField (password_text) \"Password\" [ref=2] actions: set_text\n"
                 + "    - JCheckBox (check_box) \"Remember me\" [ref=3] actions: click\n"
                 + "    - JButton (push_button) \"Sign In\" [ref=4] actions: click\n"
                 + "    - JButton (push_button) \"Cancel\" [ref=5] actions: click",

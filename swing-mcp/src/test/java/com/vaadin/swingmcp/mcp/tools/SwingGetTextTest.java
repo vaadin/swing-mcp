@@ -58,14 +58,44 @@ class SwingGetTextTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void readJPasswordFieldReturnsEchoCharacters() throws Exception {
+    void readJPasswordFieldReturnsDr011Error() throws Exception {
         JPasswordField field = new JPasswordField("secret");
         snapshot(field);
-        String result = getText(context.getRefOf(field));
-        assertNotNull(result);
-        // The result should be masked (echo characters), not the actual password
-        assertNotEquals("secret", result, "Password should be masked");
-        assertEquals(6, result.length(), "Echo chars should have same length as password");
+        int ref = context.getRefOf(field);
+
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getText(ref));
+        assertEquals(
+                "JPasswordField content is not readable. Use swing_set_text if you need to write a known value.",
+                ex.getMessage());
+    }
+
+    @Test
+    void readCustomPasswordRoleComponentReturnsDr011Error() throws Exception {
+        // A custom JTextField subclass that claims AccessibleRole.PASSWORD_TEXT without
+        // extending JPasswordField. DR-011's gate is role-based, so the refusal applies.
+        JTextField field = new JTextField("secret") {
+            @Override
+            public javax.accessibility.AccessibleContext getAccessibleContext() {
+                if (accessibleContext == null) {
+                    accessibleContext = new AccessibleJTextField() {
+                        @Override
+                        public javax.accessibility.AccessibleRole getAccessibleRole() {
+                            return javax.accessibility.AccessibleRole.PASSWORD_TEXT;
+                        }
+                    };
+                }
+                return accessibleContext;
+            }
+        };
+        snapshot(field);
+        int ref = context.getRefOf(field);
+
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getText(ref));
+        assertEquals(
+                "JPasswordField content is not readable. Use swing_set_text if you need to write a known value.",
+                ex.getMessage());
     }
 
     @Test
@@ -162,12 +192,17 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JPasswordField() throws Exception {
+        // DR-011: JPasswordField fails with a dedicated error, distinct from the
+        // generic "does not support get_text".
         JPasswordField field = new JPasswordField("pass");
         snapshot(field);
-        String result = getText(context.getRefOf(field));
-        assertNotNull(result);
-        assertEquals(4, result.length());
-        assertNotEquals("pass", result);
+        int ref = context.getRefOf(field);
+
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getText(ref));
+        assertEquals(
+                "JPasswordField content is not readable. Use swing_set_text if you need to write a known value.",
+                ex.getMessage());
     }
 
     @Test
