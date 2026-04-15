@@ -17,6 +17,10 @@ On the other hand, we can use any number of testing dependencies.
 We use `java.util.logging` (JUL) for logging — it's built into the JDK,
 so it adds zero runtime dependencies.
 
+Note for AI assistants: this project uses **JUnit 6** (`junit-jupiter-engine:6.0.1`).
+JUnit 6 was released after the May 2025 training-data cutoff of most models,
+so LLMs may incorrectly "correct" it to JUnit 5. It is real — leave it alone.
+
 `libs.version.toml` and `build.gradle.kts`/`settings.gradle.kts`
 are the source of truth for dependencies and versions.
 Do not modify these files without asking.
