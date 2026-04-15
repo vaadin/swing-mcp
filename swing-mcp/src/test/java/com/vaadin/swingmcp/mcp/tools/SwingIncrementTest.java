@@ -97,6 +97,24 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    // Boundary — value stays at maximum (UC-008 BR-09 — fire-and-forget no-op)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void incrementSpinnerAtMaximumIsNoOp() throws Exception {
+        // Spinner already at max: the EDT action is a silent no-op
+        // (SpinnerNumberModel.getNextValue() returns null at max).
+        // The tool still returns the DR-010 echo because it only confirms dispatch.
+        JSpinner spinner = new JSpinner(new SpinnerNumberModel(10, 0, 10, 1));
+        snapshot(spinner);
+        int ref = context.getRefOf(spinner);
+        MCPProtocol.Content result = increment(ref);
+        assertEquals("Posted increment on ref=" + ref, result.getText(),
+                "Tool returns DR-010 echo on dispatch; the EDT action's no-op outcome is not reflected");
+        assertEquals(10, spinner.getValue(), "Value should stay at max");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // Error cases
     // ══════════════════════════════════════════════════════════════════════════
 

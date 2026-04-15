@@ -52,7 +52,7 @@ Execution order:
   - [x] Toggling popup on an editable `JComboBox` inside `JFrame` opens it (BR-11).
   - [x] Toggling popup on a `JComboBox` inside `JDialog` opens it.
   - [x] Toggling popup on a `JComboBox` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) opens it.
-  - [x] Success returns `null`.
+  - [x] Success returns the DR-010 echo `Posted toggle-popup on ref=N`.
   - [x] Ref map is cleared after a successful call.
   - [x] MCP client smoke test.
 

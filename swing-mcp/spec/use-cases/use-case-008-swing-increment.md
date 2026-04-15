@@ -43,12 +43,12 @@ Execution order:
   - [x] Incrementing a `JSpinner` (`SpinnerListModel`) fires the action; advances to next item (verified after EDT drains).
   - [x] Incrementing a `JSpinner` (`SpinnerDateModel`) fires the action; advances by one date unit (verified after EDT drains).
   - [x] Incrementing a `JSlider` fires the action; value increases (verified after EDT drains).
-  - [x] Incrementing a `JSpinner` at its maximum returns `null` (fire-and-forget — no MCP error; value stays at max).
+  - [x] Incrementing a `JSpinner` at its maximum returns the DR-010 echo (fire-and-forget — no MCP error; value stays at max).
   - [x] Invalid ref returns an MCP error with `isError: true`.
   - [x] The error message suggests calling `swing_snapshot` to refresh refs.
   - [x] Component without increment support (e.g. `JButton`) returns an MCP error with `isError: true`.
   - [x] Disabled component returns an MCP error with `isError: true` explaining the component is disabled.
-  - [x] Success returns `null`.
+  - [x] Success returns the DR-010 echo `Posted increment on ref=N`.
   - [x] Ref map is cleared after a successful call.
   - [x] MCP client smoke test.
   - [x] Each component from the component matrix is tested (dedicated test method per component).

@@ -99,6 +99,37 @@ class SwingDecrementTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    // Boundary — value stays at minimum (UC-009 BR-09 — fire-and-forget no-op)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void decrementSpinnerNumberModelAtMinimumIsNoOp() throws Exception {
+        // Spinner already at min: the EDT action is a silent no-op
+        // (SpinnerNumberModel.getPreviousValue() returns null at min).
+        // The tool still returns the DR-010 echo because it only confirms dispatch.
+        JSpinner spinner = new JSpinner(new SpinnerNumberModel(0, 0, 10, 1));
+        snapshot(spinner);
+        int ref = context.getRefOf(spinner);
+        MCPProtocol.Content result = decrement(ref);
+        assertEquals("Posted decrement on ref=" + ref, result.getText());
+        assertEquals(0, spinner.getValue(), "Value should stay at min");
+    }
+
+    @Test
+    void decrementSpinnerDateModelAtMinimumIsNoOp() throws Exception {
+        // SpinnerDateModel with start == value: getPreviousValue() returns null,
+        // EDT action is a no-op. Tool still returns DR-010 echo on dispatch.
+        Date min = new Date(1_000_000L);
+        SpinnerDateModel model = new SpinnerDateModel(min, min, null, Calendar.DAY_OF_MONTH);
+        JSpinner spinner = new JSpinner(model);
+        snapshot(spinner);
+        int ref = context.getRefOf(spinner);
+        MCPProtocol.Content result = decrement(ref);
+        assertEquals("Posted decrement on ref=" + ref, result.getText());
+        assertEquals(min, spinner.getValue(), "Date should stay at min");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // Error cases
     // ══════════════════════════════════════════════════════════════════════════
 

@@ -65,6 +65,6 @@ The client calls `swing_snapshot` after to determine whether the window was rest
   - [x] Restoring an iconified-maximized JFrame clears the ICONIFIED bit; snapshot shows the frame without `[iconified]` (verified after EDT drains). Note: MAXIMIZED_BOTH preservation is platform/WM-dependent — the tool passes `getExtendedState() & ~ICONIFIED` but the WM may drop MAXIMIZED bits (observed on Xvfb).
   - [x] Calling `swing_restore` on a JDesktopIcon restores the underlying JInternalFrame; the snapshot shows the JInternalFrame in place of the JDesktopIcon (verified after EDT drains).
   - [x] Snapshot of a JDesktopIcon shows `restore` in its actions.
-  - [x] Calling `swing_restore` on a JDesktopIcon whose `VetoableChangeListener` rejects the restore returns `null`; the JDesktopIcon is still present in the snapshot — verifies we call `setIcon(false)` which respects vetoes.
+  - [x] Calling `swing_restore` on a JDesktopIcon whose `VetoableChangeListener` rejects the restore returns the DR-010 echo `Posted restore on ref=N`; the JDesktopIcon is still present in the snapshot — verifies we call `setIcon(false)` which respects vetoes.
   - [x] JInternalFrame (non-iconified) does not show `restore` in its actions.
   - [x] `JDesktopPane` component matrix: `swing_restore` returns an MCP error with `isError: true`.

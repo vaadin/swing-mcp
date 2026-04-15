@@ -60,8 +60,8 @@ sees it in the snapshot and can decide how to proceed.
 - [x] `SwingCloseScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
   - [x] Calling `swing_close` on a JFrame ref (with `DISPOSE_ON_CLOSE`) fires the close event; frame is dismissed (verified after EDT drains).
   - [x] Calling `swing_close` on a JDialog ref fires the close event; dialog is dismissed (verified after EDT drains).
-  - [x] Calling `swing_close` on a JFrame with `DO_NOTHING_ON_CLOSE` returns `null`; window is still showing (verified via `isShowing()` after EDT drains).
-  - [x] Calling `swing_close` on a JDialog with `DO_NOTHING_ON_CLOSE` returns `null`; dialog is still showing (verified via `isShowing()` after EDT drains).
+  - [x] Calling `swing_close` on a JFrame with `DO_NOTHING_ON_CLOSE` returns the DR-010 echo `Posted close on ref=N`; window is still showing (verified via `isShowing()` after EDT drains).
+  - [x] Calling `swing_close` on a JDialog with `DO_NOTHING_ON_CLOSE` returns the DR-010 echo; dialog is still showing (verified via `isShowing()` after EDT drains).
   - [x] Calling `swing_close` on an undecorated JFrame returns an MCP error with `isError: true`.
   - [x] A JFrame with `EXIT_ON_CLOSE` does not appear with a `close` action in the snapshot.
   - [x] Calling `swing_close` on a JFrame with `EXIT_ON_CLOSE` via a stale ref returns an MCP error with `isError: true`.
@@ -70,10 +70,10 @@ sees it in the snapshot and can decide how to proceed.
   - [x] Snapshot of a JFrame with `DISPOSE_ON_CLOSE` shows `close` in its actions and assigns it a ref.
   - [x] Snapshot of a visible JDialog shows `close` in its actions and assigns it a ref.
   - [x] Calling `swing_close` on a closable JInternalFrame (with `DISPOSE_ON_CLOSE`) fires the close event; internal frame is disposed (verified after EDT drains).
-  - [x] Calling `swing_close` on a closable JInternalFrame with `DO_NOTHING_ON_CLOSE` returns `null`; internal frame is still showing (verified via `isShowing()` after EDT drains).
+  - [x] Calling `swing_close` on a closable JInternalFrame with `DO_NOTHING_ON_CLOSE` returns the DR-010 echo; internal frame is still showing (verified via `isShowing()` after EDT drains).
   - [x] Calling `swing_close` on a JInternalFrame with `isClosable() == false` returns an MCP error with `isError: true` (BR-10).
   - [x] Calling `swing_close` on a JInternalFrame with `EXIT_ON_CLOSE` via a stale ref returns an MCP error with `isError: true`.
   - [x] Calling `swing_close` on a JDesktopIcon (iconified closable JInternalFrame with `DISPOSE_ON_CLOSE`) closes the underlying internal frame (BR-11).
-  - [x] Calling `swing_close` on a JDesktopIcon whose underlying JInternalFrame has `DO_NOTHING_ON_CLOSE` returns `null`; the JDesktopIcon is still showing on the desktop pane.
+  - [x] Calling `swing_close` on a JDesktopIcon whose underlying JInternalFrame has `DO_NOTHING_ON_CLOSE` returns the DR-010 echo; the JDesktopIcon is still showing on the desktop pane.
   - [x] Calling `swing_close` on a JDesktopIcon whose underlying JInternalFrame has `isClosable() == false` returns an MCP error with `isError: true` (BR-11 → BR-10).
   - [x] Calling `swing_close` on a JDesktopIcon whose underlying JInternalFrame has `EXIT_ON_CLOSE` returns an MCP error with `isError: true` (BR-11 → BR-09).

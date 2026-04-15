@@ -46,7 +46,7 @@ Execution order:
   - [x] Leaf node returns an MCP error with `isError: true`.
   - [x] Component without toggle-expand support (e.g. `JButton`) returns an MCP error with `isError: true`.
   - [x] Disabled `JTree` node returns an MCP error with `isError: true` explaining the component is disabled.
-  - [x] Success returns `null`.
+  - [x] Success returns the DR-010 echo `Posted toggle-expand on ref=N`.
   - [x] Ref map is cleared after a successful call.
   - [x] MCP client smoke test.
   - [x] Each component from the component matrix is tested (dedicated test method per component).

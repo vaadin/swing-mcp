@@ -43,13 +43,13 @@ Execution order:
   - [x] Decrementing a `JSpinner` (`SpinnerListModel`) fires the action; moves to previous item (verified after EDT drains).
   - [x] Decrementing a `JSpinner` (`SpinnerDateModel`) fires the action; moves back by one date unit (verified after EDT drains).
   - [x] Decrementing a `JSlider` fires the action; value decreases (verified after EDT drains).
-  - [x] Decrementing a `JSpinner` (`SpinnerNumberModel`) at its minimum returns `null` (fire-and-forget — no MCP error; value stays at min).
-  - [x] Decrementing a `JSpinner` (`SpinnerDateModel`) at its minimum returns `null` (fire-and-forget — no MCP error).
+  - [x] Decrementing a `JSpinner` (`SpinnerNumberModel`) at its minimum returns the DR-010 echo (fire-and-forget — no MCP error; value stays at min).
+  - [x] Decrementing a `JSpinner` (`SpinnerDateModel`) at its minimum returns the DR-010 echo (fire-and-forget — no MCP error).
   - [x] Invalid ref returns an MCP error with `isError: true`.
   - [x] The error message suggests calling `swing_snapshot` to refresh refs.
   - [x] Component without decrement support (e.g. `JButton`) returns an MCP error with `isError: true`.
   - [x] Disabled component returns an MCP error with `isError: true` explaining the component is disabled.
-  - [x] Success returns `null`.
+  - [x] Success returns the DR-010 echo `Posted decrement on ref=N`.
   - [x] Ref map is cleared after a successful call.
   - [x] MCP client smoke test.
   - [x] Each component from the component matrix is tested (dedicated test method per component).
