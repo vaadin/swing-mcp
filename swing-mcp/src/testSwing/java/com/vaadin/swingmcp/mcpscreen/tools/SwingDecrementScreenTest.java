@@ -61,8 +61,9 @@ class SwingDecrementScreenTest extends AbstractScreenTest {
         frame.setVisible(true);
         try {
             snapshot(frame);
-            MCPProtocol.Content result = decrement(context.getRefOf(spinner));
-            assertNull(result, "Success should return null");
+            int ref = context.getRefOf(spinner);
+            MCPProtocol.Content result = decrement(ref);
+            assertEquals("Posted decrement on ref=" + ref, result.getText());
             assertEquals(4, spinner.getValue());
         } finally {
             frame.dispose();
@@ -78,8 +79,9 @@ class SwingDecrementScreenTest extends AbstractScreenTest {
         frame.setVisible(true);
         try {
             snapshot(frame);
-            MCPProtocol.Content result = decrement(context.getRefOf(slider));
-            assertNull(result, "Success should return null");
+            int ref = context.getRefOf(slider);
+            MCPProtocol.Content result = decrement(ref);
+            assertEquals("Posted decrement on ref=" + ref, result.getText());
             assertEquals(49, slider.getValue());
         } finally {
             frame.dispose();
@@ -100,8 +102,9 @@ class SwingDecrementScreenTest extends AbstractScreenTest {
         dialog.setVisible(true);
         try {
             snapshot(dialog);
-            MCPProtocol.Content result = decrement(context.getRefOf(spinner));
-            assertNull(result, "Success should return null");
+            int ref = context.getRefOf(spinner);
+            MCPProtocol.Content result = decrement(ref);
+            assertEquals("Posted decrement on ref=" + ref, result.getText());
             assertEquals(2, spinner.getValue());
         } finally {
             dialog.dispose();
@@ -127,8 +130,9 @@ class SwingDecrementScreenTest extends AbstractScreenTest {
         iframe.setVisible(true);
         try {
             snapshot(host);
-            MCPProtocol.Content result = decrement(context.getRefOf(spinner));
-            assertNull(result, "Success should return null");
+            int ref = context.getRefOf(spinner);
+            MCPProtocol.Content result = decrement(ref);
+            assertEquals("Posted decrement on ref=" + ref, result.getText());
             assertEquals(4, spinner.getValue());
         } finally {
             host.dispose();

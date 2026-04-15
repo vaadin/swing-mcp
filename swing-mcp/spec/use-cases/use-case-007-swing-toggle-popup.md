@@ -21,6 +21,7 @@ Opens or closes a combo-box popup so the AI can reveal its items before making a
 | BR-09 | The tool toggles the popup regardless of its current open/closed state. If the popup is already open, calling this tool closes it; if closed, it opens it. The AI can infer the current state from the snapshot. |
 | BR-10 | `doAccessibleAction` on `JComboBox` throws `java.awt.HeadlessException` in headless mode (popup display requires `getScreenSize()`). This is not a concern in production — the MCP server only runs inside a real Swing app with a display. As a consequence, the happy-path test (successful toggle) cannot run headless and must live in `SwingTogglePopupScreenTest`. |
 | BR-11 | Both editable (`setEditable(true)`) and non-editable `JComboBox` support `toggle_popup` via the same accessibility action. Both are tested in `SwingTogglePopupScreenTest`. |
+| BR-12 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Posted toggle-popup on ref=<N>` (see **DR-010**). |
 
 ### Algorithm: detecting and invoking the toggle-popup action
 
@@ -51,7 +52,7 @@ Execution order:
   - [x] Toggling popup on an editable `JComboBox` inside `JFrame` opens it (BR-11).
   - [x] Toggling popup on a `JComboBox` inside `JDialog` opens it.
   - [x] Toggling popup on a `JComboBox` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) opens it.
-  - [x] Success returns `null`.
+  - [x] Success returns the DR-010 echo `Posted toggle-popup on ref=N`.
   - [x] Ref map is cleared after a successful call.
   - [x] MCP client smoke test.
 

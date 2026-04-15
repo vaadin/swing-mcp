@@ -200,12 +200,14 @@ class SwingSetValueTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void returnsNullOnSuccess() throws Exception {
+    void returnsEchoOnSuccess() throws Exception {
         JSlider slider = new JSlider(0, 100, 50);
         snapshot(slider);
+        int ref = context.getRefOf(slider);
         var result = setValueTool.execute(
-                new Parameters(Map.of("ref", context.getRefOf(slider), "value", 75.0)), context);
-        assertNull(result, "Mutation tool should return null on success");
+                new Parameters(Map.of("ref", ref, "value", 75.0)), context);
+        // JSlider uses Integer model → 75.0 is converted to Integer 75 → echoed as "75"
+        assertEquals("Posted set-value on ref=" + ref + " to 75", result.getText());
     }
 
     // ══════════════════════════════════════════════════════════════════════════

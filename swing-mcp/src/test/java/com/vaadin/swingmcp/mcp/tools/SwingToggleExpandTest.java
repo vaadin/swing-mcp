@@ -68,7 +68,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
         context.putRef(1, rootNodeAcc);
 
         MCPProtocol.Content result = toggleExpand(1);
-        assertNull(result, "Success should return null");
+        assertEquals("Posted toggle-expand on ref=1", result.getText());
         assertTrue(tree.isExpanded(new TreePath(root)), "Root should be expanded after toggle");
     }
 
@@ -83,7 +83,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
         context.putRef(1, rootNodeAcc);
 
         MCPProtocol.Content result = toggleExpand(1);
-        assertNull(result, "Success should return null");
+        assertEquals("Posted toggle-expand on ref=1", result.getText());
         assertFalse(tree.isExpanded(new TreePath(root)), "Root should be collapsed after toggle");
     }
 
@@ -146,7 +146,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void successReturnsNull() throws Exception {
+    void successReturnsEcho() throws Exception {
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("root");
         root.add(new DefaultMutableTreeNode("child"));
         JTree tree = new JTree(root);
@@ -155,7 +155,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
         Accessible rootNodeAcc = tree.getAccessibleContext().getAccessibleChild(0);
         context.putRef(1, rootNodeAcc);
 
-        assertNull(toggleExpand(1));
+        assertEquals("Posted toggle-expand on ref=1", toggleExpand(1).getText());
     }
 
     @Test

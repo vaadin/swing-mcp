@@ -501,11 +501,19 @@ not by each tool's `execute()`. The wrapper has access to the tool name
 echo cross-cuttingly. Individual UCs do not need to specify their echo
 string; they inherit it from this DR.
 
-**Tool description follow-up.** Each mutation tool's MCP description
-should explicitly direct the client to `swing_snapshot` for outcome
-verification (e.g. "…call `swing_snapshot` to verify the outcome").
-The dispatch-only contract should be visible in the tool's own
-documentation, not just in this DR.
+**Dispatch-only contract surfacing.** The dispatch-only contract is
+communicated to clients via the server-level `INSTRUCTIONS` blurb in
+`MCPServer` (sent at MCP `initialize` time), not via per-tool
+descriptions. The blurb explicitly names the echo format and the
+dispatch-vs-outcome distinction (listeners can veto, revert, or open a
+dialog), then directs clients to `swing_snapshot` for outcome
+verification. **Per-tool descriptions intentionally do not repeat this**
+— `INSTRUCTIONS` already covers cross-cutting contracts (it also hosts
+the parallel-call rule and the ref-staleness rule), and duplicating the
+verify-via-snapshot line across 13 mutation tools would be straight
+duplication, not defense in depth. If a future MCP client is observed
+to drop or de-emphasize `INSTRUCTIONS`, revisit this and consider a
+short per-tool suffix as a backstop.
 
 **Trade-offs accepted.**
 

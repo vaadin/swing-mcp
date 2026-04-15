@@ -67,7 +67,8 @@ public class SwingCloseTool extends AbstractSwingTool {
                     : (JInternalFrame) accessible;
             SwingUtilities.invokeLater(iframe::doDefaultCloseAction);
         }
-        return null;
+        // BR-13: DR-010 success echo
+        return echo(ref);
     }
 
     @Override

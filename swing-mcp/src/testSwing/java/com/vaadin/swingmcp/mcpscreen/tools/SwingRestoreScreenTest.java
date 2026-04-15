@@ -51,12 +51,15 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
 
     /**
      * Calls swing_restore and drains the EDT so the fire-and-forget invokeLater has run.
+     * Returns the tool's success Content (DR-010 echo) so callers can assert on it.
      */
-    private void restore(int ref) throws Exception {
+    private MCPProtocol.Content restore(int ref) throws Exception {
         try {
-            executeOnEDT(() -> restoreTool.execute(new Parameters(Map.of("ref", ref)), context));
+            MCPProtocol.Content result = executeOnEDT(
+                    () -> restoreTool.execute(new Parameters(Map.of("ref", ref)), context));
             // Drain the EDT: this no-op is queued after the fire-and-forget invokeLater
             executeOnEDT(() -> null);
+            return result;
         } finally {
             context.clearRefMap();
         }
@@ -297,8 +300,11 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
 
         snapshot(host);
         JInternalFrame.JDesktopIcon icon = iframe.getDesktopIcon();
-        restore(context.getRefOf(icon));
+        int ref = context.getRefOf(icon);
+        MCPProtocol.Content result = restore(ref);
 
+        assertEquals("Posted restore on ref=" + ref, result.getText(),
+                "DR-010: tool returns echo on dispatch even when listener vetoes");
         // Frame should still be iconified
         assertTrue(iframe.isIcon(), "vetoed restore should leave frame iconified");
 

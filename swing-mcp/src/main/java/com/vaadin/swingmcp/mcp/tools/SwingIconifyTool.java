@@ -70,7 +70,8 @@ public class SwingIconifyTool extends AbstractSwingTool {
                 }
             });
         }
-        return null;
+        // BR-09: DR-010 success echo
+        return echo(ref);
     }
 
     private static String iconifyErrorMessage(Accessible accessible) {

@@ -17,6 +17,7 @@ A click primitive for buttons, checkboxes, menu items, and any other clickable e
 | BR-04 | All validation runs on the EDT inside `runInEDT()`. The action itself is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
 | BR-05 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled and cannot be clicked. See also **architecture.md § 6** — Tool execution level. |
 | BR-06 | If the target does not support clicking (i.e. `supportsClick()` returns `null`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support click. Call swing_snapshot or swing_get_cells to verify the list of actions". |
+| BR-07 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Posted click on ref=<N>` (see **DR-010**). |
 
 ### Algorithm: detecting and invoking the click action
 

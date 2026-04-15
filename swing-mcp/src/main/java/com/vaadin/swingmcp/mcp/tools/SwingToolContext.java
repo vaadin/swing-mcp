@@ -50,7 +50,7 @@ public class SwingToolContext {
     public Accessible getAccessibleByRef(int ref) {
         var result = componentRefs.get(ref);
         if (result == null) {
-            throw new MCPServerException(MCPServerException.INVALID_PARAMS, "No component with ref " + ref + ". Maybe the Swing component tree has changed? Call swing_snapshot to obtain the newest component tree snapshot");
+            throw new MCPServerException(MCPServerException.INVALID_PARAMS, "No component with ref " + ref + ". The ref map is empty or stale — it is cleared after every mutation. Call swing_snapshot to rebuild it.");
         }
         return result;
     }
