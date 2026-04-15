@@ -4,7 +4,7 @@
 
 **As an** AI agent, **I want to** obtain an accessibility tree snapshot of the Swing application **so that** I can understand the current UI structure and identify components for interaction.
 
-**Status:** Implemented (amended 2026-04-13 — `get_cells` advertising narrowed to JList/JTree; component class identity prefix added — see BR-11)
+**Status:** Implemented (amended 2026-04-13 — `get_cells` advertising narrowed to JList/JTree; component class identity prefix added — see BR-11; amended 2026-04-15 — `get_text` suppressed for `AccessibleRole.PASSWORD_TEXT` per DR-011)
 **Date:** 2026-03-26
 
 ---
@@ -203,7 +203,7 @@ survives pruning, and what it looks like in the snapshot output.
 | Swing Component | `AccessibleRole` | Pruned? | Snapshot Example |
 |---|---|---|---|
 | `JTextField` | `TEXT` | No | `- JTextField (text) "Name" [ref=1, editable] actions: get_text, set_text` |
-| `JPasswordField` | `PASSWORD_TEXT` | No | `- JPasswordField (password_text) "Password" [ref=1, editable] actions: get_text, set_text` |
+| `JPasswordField` | `PASSWORD_TEXT` | No | `- JPasswordField (password_text) "Password" [ref=1, editable] actions: set_text` — `get_text` is suppressed (DR-011). A non-editable password field (`setEditable(false)`) shows `actions: !set_text` only. |
 | `JTextArea` | `TEXT` | No | `- JTextArea (text) "Notes" [ref=1, editable, multi_line] actions: get_text, set_text` |
 | `JEditorPane` | `TEXT` | No | `- JEditorPane (text) "Content" [ref=1, editable, multi_line] actions: get_text, set_text` |
 
@@ -399,7 +399,7 @@ For each node, collect actions by running the following checks in order. All det
 1. `supportsClick()` returns non-null → add `click` (covers both AccessibleAction and MouseListener fallback — see **architecture.md § 4 "Detecting Click Support"**)
 2. `supportsTogglePopup()` → add `toggle_popup`
 3. Iterate `AccessibleAction` descriptions; for each that equals a known constant (`AccessibleAction.INCREMENT`, `DECREMENT`, `TOGGLE_EXPAND`), normalize to lower-case underscore format and add it (`increment`, `decrement`, `toggle_expand`)
-4. `supportsSetText()` **and** `AccessibleStateSet` contains `EDITABLE` → add `get_text`, `set_text`; else if `supportsSetText()` without `EDITABLE` (read-only text field) → add `get_text`, `set_text` (the `set_text` will be prefixed with `!` by BR-08 since the component is read-only); else `supportsGetText()` → add `get_text`
+4. `supportsSetText()` **and** `AccessibleStateSet` contains `EDITABLE` → add `get_text`, `set_text`; else if `supportsSetText()` without `EDITABLE` (read-only text field) → add `get_text`, `set_text` (the `set_text` will be prefixed with `!` by BR-08 since the component is read-only); else `supportsGetText()` → add `get_text`. **Exception — password fields (DR-011):** if the accessible's role is `AccessibleRole.PASSWORD_TEXT`, `get_text` is suppressed in every branch. Password fields thus advertise `set_text` alone when editable and `!set_text` alone when non-editable — never `get_text`. Non-editable password fields retain their ref (see DR-011 "pathological case") so the AI can see the component exists.
 5. `supportsGetValue()` → add `get_value`; additionally `supportsSetValue()` → add `set_value`
 6. **Selection group labels:**
    - `supportsMultiSelection()` → add `multi-selection`
@@ -463,6 +463,9 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [x] Disabled button shows `!click` (mutation action prefixed with `!`). Read-only actions and selection group labels are never prefixed.
   - [x] Disabled slider shows `!increment`, `!decrement`, `get_value`, `!set_value` (read-only actions unprefixed).
   - [x] Read-only text field shows `get_text, !set_text`.
+  - [ ] An editable `JPasswordField` shows `actions: set_text` — `get_text` is suppressed per DR-011.
+  - [ ] A non-editable `JPasswordField` (`setEditable(false)`) shows `actions: !set_text` only and retains its ref (DR-011 pathological case).
+  - [ ] A custom component whose `AccessibleContext` returns role `PASSWORD_TEXT` (without extending `JPasswordField`) also has `get_text` suppressed (role-based gate, DR-011).
   - [x] Enabled button inside a disabled `JPanel` is NOT marked `disabled` and shows unprefixed `click` — Swing's `setEnabled(false)` does not propagate to children.
   - [x] Disabled component with only `!`-prefixed actions still receives a ref.
   - [x] When two roots are provided, their trees are separated by a `---` line and refs are numbered globally (not reset between roots).

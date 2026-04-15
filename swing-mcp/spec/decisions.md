@@ -544,3 +544,91 @@ documentation, not just in this DR.
   with a specific message (per existing tool behavior, e.g.
   `swing_iconify` on an already-iconified frame). The success path is
   reserved for "we dispatched the action".
+
+---
+
+## DR-011 — Password fields are not readable
+
+**Status:** Accepted
+**Applies to:** UC-002 (snapshot action list), UC-005 (`swing_get_text`),
+UC-006 (`swing_set_text` BR-12)
+**Decided:** 2026-04-15
+
+**Decision.** Any accessible whose role is `AccessibleRole.PASSWORD_TEXT`
+(canonically `JPasswordField` and its subclasses, plus any third-party
+component that adopts the same role) is treated as non-readable by the
+MCP layer:
+
+1. The snapshot's action-list builder (UC-002 BR-06 step 4) **never emits
+   `get_text`** for a password-role accessible. The `set_text` branch is
+   unaffected — password fields still advertise `set_text` (editable) or
+   `!set_text` (non-editable, per BR-08).
+2. `swing_get_text` called on a password-role accessible returns an
+   MCP-level error (`isError: true`) with the dedicated message:
+   `"JPasswordField content is not readable. Use swing_set_text if you
+   need to write a known value."`. This error is distinct from the
+   generic "Component does not support get_text" so the AI can learn the
+   rule rather than assume the capability is simply absent.
+
+**Why.** UC-006 BR-12 already declares the asymmetric posture: the AI may
+*write* a known credential into a password field (necessary for
+AI-driven login-form filling) but may not *read back* the real value
+(would turn the MCP into a credential exfiltration channel). The default
+`AccessibleJPasswordField` behavior — returning echo characters
+(`••••••`) — undermines that posture on two fronts:
+
+- The AI receives a literal string of echo chars and can reasonably read
+  it as "the field contains six bullet characters", giving misleading
+  signal about field contents.
+- The length of the echo string equals the length of the real password,
+  leaking a non-trivial piece of information about the credential.
+
+Aligning the snapshot (no `get_text` advertised) with the tool
+(dedicated error) closes the loophole. The AI learns the rule from the
+snapshot directly: `set_text` present, `get_text` absent.
+
+**Role-based gate, not class-based.** The rule is keyed on
+`AccessibleRole.PASSWORD_TEXT`, not on `instanceof JPasswordField`. This
+is free coverage for third-party or custom subclasses that adopt the
+password role (e.g. a company-internal `SecretField` whose
+`AccessibleContext` returns `PASSWORD_TEXT`). Consistent with DR-003's
+"mirror Swing semantics exactly" principle — the role is Swing's own
+marker for "this content is secret", and we honor it.
+
+**Pathological case — non-editable password field.** A `JPasswordField`
+with `setEditable(false)` gets `actions: !set_text` — a ref that
+advertises only a currently-unavailable mutation. This is spaghetti-app
+territory (who ships a read-only password field?), but we support it:
+the node retains its ref and remains visible in the snapshot so the AI
+can see that a password field exists and is currently not writable. No
+special-casing in the ref-assignment gate.
+
+**Error message uses class name, gate uses role.** Per DR-001,
+user-facing strings (tool descriptions, error messages) name components
+by Swing class. The error says `JPasswordField` because that's the
+canonical case; for a rare third-party password-role component the
+message is slightly inaccurate but still conveys the rule. No dynamic
+class-name lookup needed.
+
+**Alternatives considered.**
+
+- **Document-only — update `swing_get_text`'s tool description to
+  mention echo-char behavior, leave snapshot and return value
+  unchanged.** Rejected — the snapshot would still advertise `get_text`
+  for a password field, luring the AI into a call that returns
+  `••••••`, which it then has to interpret. Cheaper short-term but
+  leaves two active footguns (misleading value, leaked length).
+- **Drop `set_text` on password fields as well.** Rejected — UC-006
+  BR-12 explicitly protects the write path for login-form filling.
+  Dropping it would kill a primary use case in exchange for symmetry
+  that provides no security benefit (writing a known value is not
+  exfiltration).
+- **Class-based gate (`instanceof JPasswordField`) instead of
+  role-based.** Rejected — misses custom subclasses that adopt
+  `PASSWORD_TEXT` without extending `JPasswordField`. The role is
+  the semantic marker; class is an implementation detail.
+- **Return an empty string or `null` on `swing_get_text` instead of
+  an error.** Rejected — silent degradation gives the AI no signal
+  that the call was refused, and `""` is indistinguishable from an
+  empty field. An explicit error teaches the rule and is audit-friendly
+  in logs.
