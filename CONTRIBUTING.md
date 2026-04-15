@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for taking your time to contribute! Here are some basic rules:
+Thank you for taking your time to contribute! Here are some basic rules for a good PR:
 
 1. Please draft a spec first; see "spec" folder for appropriate subproject for more information. You can use Claude to help create the draft.
 2. The spec must be grilled by Claude: see the grill-me skill.
