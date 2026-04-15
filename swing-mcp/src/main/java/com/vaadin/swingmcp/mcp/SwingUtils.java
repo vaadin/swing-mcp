@@ -206,10 +206,21 @@ public final class SwingUtils {
      * Returns {@code true} iff reading the accessible's text content via
      * {@code swing_get_text} yields <em>meaningful</em> content.
      *
-     * <p>This is not merely a structural "exposes {@link AccessibleText}" check:
-     * {@link AccessibleRole#PASSWORD_TEXT} accessibles are excluded because the
-     * JDK returns echo characters (garbage) rather than the real password
-     * (DR-011). Other components whose accessibility-API read yields garbage
+     * <p>This is not merely a structural "exposes {@link AccessibleText}" check.
+     * Two role-based exclusions apply:
+     * <ul>
+     *   <li>{@link AccessibleRole#PASSWORD_TEXT} (DR-011) — the JDK returns
+     *       echo characters rather than the real password. Returning echo
+     *       chars to the AI is misleading and leaks password length.</li>
+     *   <li>{@link AccessibleRole#LABEL} (DR-015) — HTML-backed {@code JLabel}s
+     *       accidentally expose {@link AccessibleText} via the JDK's HTML
+     *       rendering plumbing, while plain JLabels do not. Excluding the
+     *       role uniformly gives every LABEL-role accessible (JLabel, JList
+     *       cell, JTree node, and custom LABEL-role components) the same
+     *       surface: no {@code get_text}, read the content from the snapshot
+     *       name slot. See DR-015 for the full rationale.</li>
+     * </ul>
+     * Other components whose accessibility-API read yields garbage
      * (e.g. filter combo boxes that clear themselves on apply) may be added
      * here in the future.
      *
@@ -223,8 +234,12 @@ public final class SwingUtils {
     public static boolean supportsGetText(Accessible a) {
         AccessibleContext ac = a.getAccessibleContext();
         if (ac == null) return false;
+        AccessibleRole role = ac.getAccessibleRole();
         // DR-011: password-role accessibles return echo chars, not real content.
-        if (AccessibleRole.PASSWORD_TEXT.equals(ac.getAccessibleRole())) return false;
+        if (AccessibleRole.PASSWORD_TEXT.equals(role)) return false;
+        // DR-015: LABEL-role content is redundant with the snapshot name slot;
+        // excluding here uniformises JLabel behaviour across plain and HTML forms.
+        if (AccessibleRole.LABEL.equals(role)) return false;
         return ac.getAccessibleText() != null;
     }
 
@@ -732,6 +747,53 @@ public final class SwingUtils {
         }
 
         return text.isBlank() ? null : text;
+    }
+
+    /**
+     * Sanitises a string for emission inside a double-quoted snapshot slot —
+     * the {@code "name"} slot, the {@code "description"} slot, and the
+     * {@code text="..."} inline preview (BR-13 / DR-014).
+     *
+     * <p>The helper:
+     * <ol>
+     *   <li>Replaces any run of whitespace characters with a single ASCII
+     *       space. Covers Java's {@code \s} (ASCII: {@code \n}, {@code \r},
+     *       {@code \t}, vertical tab, form feed) plus the Unicode line
+     *       separators U+0085 (NEL), U+2028 (LINE SEPARATOR), and U+2029
+     *       (PARAGRAPH SEPARATOR). The Unicode separators are included
+     *       explicitly because Java's {@code \s} is ASCII-only by default —
+     *       and the snapshot's one-line-per-node invariant must not
+     *       survive <em>any</em> line-break character.</li>
+     *   <li>Escapes embedded {@code "} as {@code \"}.</li>
+     *   <li>Strips leading/trailing whitespace.</li>
+     *   <li>Returns {@code null} if the result is empty or blank, so callers
+     *       need only their existing null-check.</li>
+     * </ol>
+     *
+     * <p>Backslashes are <strong>not</strong> escaped — a literal {@code \}
+     * passes through unchanged. See DR-014 "Alternatives considered" for
+     * why full JSON-style escaping was rejected. Consequence: running the
+     * sanitiser twice is <em>not</em> a no-op — the second pass would
+     * double-escape quotes (so {@code say "hi"} → {@code say \"hi\"} →
+     * {@code say \\"hi\\"}). The snapshot render path calls the sanitiser
+     * exactly once per slot, so double-escape is avoided by call-site
+     * discipline rather than by the helper.
+     *
+     * <p>{@code null} input returns {@code null}.
+     *
+     * <p><strong>Why sanitise.</strong> The snapshot's one-line-per-node
+     * invariant depends on quoted slots not containing raw newlines; a
+     * {@code JLabel("Line 1\nLine 2")} would otherwise render as two lines
+     * and corrupt the indent-based tree structure. Embedded {@code "} would
+     * similarly terminate a quoted slot visually.
+     */
+    public static String sanitizeForQuotedSlot(String raw) {
+        if (raw == null) return null;
+        // Collapse ASCII whitespace + explicit Unicode line separators that
+        // Java's default \s does not match (U+0085 / U+2028 / U+2029).
+        String collapsed = raw.replaceAll("[\\s\\u0085\\u2028\\u2029]+", " ").strip();
+        if (collapsed.isEmpty()) return null;
+        return collapsed.replace("\"", "\\\"");
     }
 
     /**

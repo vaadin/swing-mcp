@@ -118,6 +118,61 @@ class SwingUtilsSupportsTextTest {
     }
 
     @Test
+    void htmlJLabel_doesNotSupportGetText_dr015() {
+        // DR-015: LABEL-role accessibles are excluded from get_text
+        // regardless of whether AccessibleText is exposed. An HTML-wrapped
+        // JLabel exposes AccessibleText via the JDK's HTML rendering
+        // plumbing (AccessibleHTMLTextSupport) — before DR-015 this
+        // accidentally flipped the gate to true. The role-based exclusion
+        // makes plain and HTML JLabels behave identically.
+        JLabel html = new JLabel("<html>Hello <b>world</b></html>");
+        assertFalse(SwingUtils.supportsGetText(html),
+                "HTML JLabel must not support get_text (DR-015)");
+    }
+
+    @Test
+    void customLabelRoleComponent_doesNotSupportGetText_dr015() {
+        // DR-015: role-based gate covers any component whose role is LABEL,
+        // not just javax.swing.JLabel.
+        JLabel custom = new JLabel("x") {
+            @Override
+            public javax.accessibility.AccessibleContext getAccessibleContext() {
+                if (accessibleContext == null) {
+                    accessibleContext = new AccessibleJLabel() {
+                        @Override
+                        public javax.accessibility.AccessibleRole getAccessibleRole() {
+                            return javax.accessibility.AccessibleRole.LABEL;
+                        }
+
+                        @Override
+                        public javax.accessibility.AccessibleText getAccessibleText() {
+                            // Pretend we surface AccessibleText even though
+                            // we're plain text — simulates a custom LABEL-role
+                            // widget that exposes it.
+                            return new javax.accessibility.AccessibleText() {
+                                @Override public int getIndexAtPoint(java.awt.Point p) { return -1; }
+                                @Override public java.awt.Rectangle getCharacterBounds(int i) { return null; }
+                                @Override public int getCharCount() { return 1; }
+                                @Override public int getCaretPosition() { return 0; }
+                                @Override public String getAtIndex(int part, int index) { return "x"; }
+                                @Override public String getAfterIndex(int part, int index) { return ""; }
+                                @Override public String getBeforeIndex(int part, int index) { return ""; }
+                                @Override public javax.swing.text.AttributeSet getCharacterAttribute(int i) { return null; }
+                                @Override public int getSelectionStart() { return 0; }
+                                @Override public int getSelectionEnd() { return 0; }
+                                @Override public String getSelectedText() { return null; }
+                            };
+                        }
+                    };
+                }
+                return accessibleContext;
+            }
+        };
+        assertFalse(SwingUtils.supportsGetText(custom),
+                "Custom LABEL-role component must not support get_text (DR-015)");
+    }
+
+    @Test
     void jProgressBar_doesNotSupportGetText() {
         assertFalse(SwingUtils.supportsGetText(new JProgressBar(0, 100)));
     }
