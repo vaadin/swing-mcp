@@ -29,7 +29,7 @@ import java.util.logging.Logger;
  *       {@link java.awt.Robot} (requires a graphical display).</li>
  * </ul>
  *
- * @see <a href="use-case-022-swing-drag.md">UC-022</a>
+ * @see <a href="use-case-024-swing-drag.md">UC-024</a>
  */
 public class SwingDragTool extends AbstractSwingTool {
 

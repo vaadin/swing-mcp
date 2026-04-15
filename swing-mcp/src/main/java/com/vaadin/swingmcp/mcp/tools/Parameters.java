@@ -192,5 +192,4 @@ public class Parameters {
         }
         return num.intValue();
     }
-
 }
