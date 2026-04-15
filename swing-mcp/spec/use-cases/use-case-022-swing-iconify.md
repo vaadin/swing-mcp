@@ -21,6 +21,7 @@ Iconifies (minimizes) a Frame (including JFrame) or JInternalFrame — needed be
 | BR-06 | `isEffectivelyEnabled()` is **not** checked. Iconifying is a window-level action; it does not depend on the component's enabled state. |
 | BR-07 | `swing_iconify` is a **mutation tool** — it clears the ref map in a `finally` block after execution, regardless of success or failure (see **architecture.md §3 rule 3**). |
 | BR-08 | **Snapshot action:** `iconify` is listed in the actions of a Frame or JInternalFrame when `supportsIconify()` returns true. |
+| BR-09 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Posted iconify on ref=<N>` (see **DR-010**). |
 
 ### Algorithm: detecting iconify support
 

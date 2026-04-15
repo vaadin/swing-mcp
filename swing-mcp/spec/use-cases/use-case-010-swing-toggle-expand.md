@@ -20,6 +20,7 @@ Expands or collapses a `JTree` node so the AI can navigate a hierarchy to find n
 | BR-08 | `swing_toggle_expand` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after invocation (even on failure, via `finally`). |
 | BR-09 | The tool toggles the node regardless of its current expanded/collapsed state. If the node is already expanded, calling this tool collapses it; if collapsed, it expands it. The AI can infer the current state from the `EXPANDED` or `COLLAPSED` state in the snapshot. |
 | BR-10 | **Verified:** Metal, GTK (SynthTreeUI), and Nimbus all return the static `AccessibleAction.TOGGLE_EXPAND` constant directly from `JTree.AccessibleJTreeNode.getAccessibleActionDescription()`. No JDK L&F overrides `AccessibleJTreeNode`. A third-party L&F could theoretically subclass it, but this is an accepted risk. See **architecture.md § 4 — Action Types Summary**. |
+| BR-11 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Posted toggle-expand on ref=<N>` (see **DR-010**). |
 
 ### Algorithm: detecting and invoking the toggle-expand action
 

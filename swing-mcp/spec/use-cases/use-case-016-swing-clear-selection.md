@@ -11,7 +11,9 @@ Convenience wrapper: `swing_set_selection` with an empty indices array.
 
 ## Rules
 
-This tool is a convenience wrapper around `swing_set_selection` (UC-015) with `indices=[]`. All business rules from UC-015 apply — in particular BR-06 (mutation tool), BR-07 (empty indices behavior including JTabbedPane refusal), and BR-09 (returns `null` on success). See UC-015 for the full specification.
+This tool is a convenience wrapper around `swing_set_selection` (UC-015) with `indices=[]`. All business rules from UC-015 apply — in particular BR-06 (mutation tool) and BR-07 (empty indices behavior including JTabbedPane refusal). See UC-015 for the full specification.
+
+**Return message.** On success, the dispatch wrapper returns a single text-content item: `Posted clear-selection on ref=<N>` (see **DR-010**). The echo uses this tool's MCP-exposed name (`clear-selection`), not the underlying `set-selection` it delegates to — DR-010's action name is derived from the public tool name, not from the implementation. UC-015 BR-09's echo (`Posted set-selection on ref=<N> to []`) does not apply here.
 
 ---
 

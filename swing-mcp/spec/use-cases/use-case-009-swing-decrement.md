@@ -20,6 +20,7 @@ Steps a spinner or slider down by one unit — mirror of `swing_increment`.
 | BR-08 | `swing_decrement` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after invocation (even on failure, via `finally`). |
 | BR-09 | The step size and boundary behaviour are determined entirely by the component and the accessibility API. The tool invokes the action once per call and accepts whatever the API does. The AI must call `swing_decrement` multiple times to decrement by more than one step. |
 | BR-10 | `doAccessibleAction` for decrement works correctly in headless mode for both `JSpinner` and `JSlider`. All happy-path tests can therefore run headless; `SwingDecrementScreenTest` exists solely for `JFrame`/`JDialog` coverage required by the component matrix. |
+| BR-11 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Posted decrement on ref=<N>` (see **DR-010**). |
 
 ### Algorithm: detecting and invoking the decrement action
 

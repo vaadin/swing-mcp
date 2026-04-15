@@ -28,6 +28,7 @@ Closing a window may terminate the application (e.g. `EXIT_ON_CLOSE` on the main
 | BR-10 | `JInternalFrame` with `isClosable() == false` is refused: `supportsClose()` returns `false`. This is the JInternalFrame analog of the undecorated-window refusal — when `isClosable()` is false, the internal frame has no close button in its title bar, so the user cannot close it through normal UI. |
 | BR-11 | **JDesktopIcon** (iconified JInternalFrame): `supportsClose()` checks `isShowing()` on the **icon itself** (the visible component on the desktop — the underlying frame is detached with `isShowing() == false`), then delegates `isClosable()` and `EXIT_ON_CLOSE` checks to the underlying JInternalFrame via `getInternalFrame()` (BR-09, BR-10). |
 | BR-12 | **Tool description** must mention windows, dialogs, internal frames, and desktop icons (iconified internal frames). |
+| BR-13 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Posted close on ref=<N>` (see **DR-010**). The echo confirms only that `WINDOW_CLOSING` (or `doDefaultCloseAction()`) was dispatched on the EDT — not that the window actually closed. The client calls `swing_snapshot` to verify outcome. |
 
 ### Algorithm: detecting and invoking close
 

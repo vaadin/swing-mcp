@@ -21,6 +21,7 @@ Restores (de-iconifies) an iconified Frame (including JFrame) or JDesktopIcon (i
 | BR-06 | `isEffectivelyEnabled()` is **not** checked. Restoring is a window-level action; it does not depend on the component's enabled state. |
 | BR-07 | `swing_restore` is a **mutation tool** — it clears the ref map in a `finally` block after execution, regardless of success or failure (see **architecture.md §3 rule 3**). |
 | BR-08 | **Snapshot action:** `restore` is listed in the actions of a Frame or JDesktopIcon when `supportsRestore()` returns true. |
+| BR-09 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Posted restore on ref=<N>` (see **DR-010**). |
 
 ### Algorithm: detecting restore support
 
