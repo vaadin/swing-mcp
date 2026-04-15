@@ -640,3 +640,84 @@ class-name lookup needed.
   that the call was refused, and `""` is indistinguishable from an
   empty field. An explicit error teaches the rule and is audit-friendly
   in logs.
+
+---
+
+## DR-012 — `JMenu` does not expose `click`
+
+**Status:** Accepted
+**Applies to:** UC-002 (snapshot action list), UC-004 (`swing_click`),
+`SwingUtils.supportsClick`
+**Decided:** 2026-04-15
+
+**Decision.** `JMenu` is treated as a **structural container**, not an
+interactive target:
+
+1. `SwingUtils.supportsClick(JMenu)` returns `null`. The snapshot
+   therefore never emits `click` on a `JMenu`, and the node receives no
+   ref (unless some other action applies, which at time of writing never
+   does).
+2. `swing_click` invoked on a `JMenu` ref (possible only from a stale
+   ref obtained before this change, or from a race) returns the generic
+   `"Component does not support click"` error — no dedicated message,
+   since a well-behaved client never sees this.
+3. When the menu's popup is open (any origin — the user tabbed in, a
+   keyboard accelerator fired, the app opened it programmatically), the
+   resulting `JPopupMenu` node is pruned from the snapshot whenever its
+   `getInvoker()` is a `JMenu`. See UC-002 BR-06 prune rule HE-5.
+   Context popups (right-click menus whose invoker is a `JButton`,
+   `JTable`, etc.) are unaffected and render normally.
+
+**Why.** A human clicking a `JMenu` title opens its popup so the items
+become visible. The LLM already has those items in the snapshot —
+`JMenu`'s accessible children are the `JMenuItem` instances that would
+appear in the popup, rendered under the `JMenu` whether the popup is
+open or not. So for the LLM, clicking the menu is a no-op that costs:
+
+- **Context.** An open popup duplicates every item in the snapshot
+  (once under the `JMenu`, once under the `JPopupMenu` — same
+  `JMenuItem` instances reachable via two paths). Menus with many items
+  blow up the snapshot and force the LLM to pick between identical refs.
+- **Round-trips.** `click menu → snapshot → click item` is strictly
+  worse than `click item`. The mutation clears the ref map, so the
+  client also has to re-snapshot just to get the item's ref back.
+- **Semantic clarity.** `doClick()` (what `AccessibleAction.CLICK`
+  invokes) has asymmetric toggle behaviour on a `JMenu`: it opens the
+  popup on the first call but does not close it on subsequent calls.
+  Exposing `click` and having it stop working mid-sequence is a worse
+  API than not exposing it at all.
+
+The items themselves (`JMenuItem`, `JCheckBoxMenuItem`,
+`JRadioButtonMenuItem`) retain `click` as usual — they are the real
+interactive targets.
+
+**Tension with DR-003 ("mirror Swing semantics exactly").** DR-003 says
+we must expose what Swing allows. Humans can click `JMenu` titles, so
+technically this is a carveout. Justification: the user-visible *effect*
+of clicking a menu title (revealing its items) is already delivered by
+the snapshot. Mirroring the human click path would give the LLM strictly
+less capable behaviour than it already has. DR-003's intent is to keep
+the LLM at least as capable as a human; this carveout preserves that
+intent. `JMenu` is closer to an HTML `<details>` element (UI plumbing
+for progressive disclosure) than to a button.
+
+**Dynamically populated menus — deferred.** Some apps add items only in
+a `PopupMenuListener.popupMenuWillBecomeVisible` handler; with `click`
+banned, those items are invisible to the LLM until something else opens
+the popup. This is rare enough to defer. The right future answer is
+`toggle_popup` on `JMenu` (explicit open/close intent) as a separate
+UC — not `click` (toggle with asymmetric semantics). Revisit if the
+pattern shows up in real apps.
+
+**Alternatives considered.**
+
+- **Keep `click`, make it toggle via `MenuSelectionManager`.** Rejected
+  — fixes the asymmetric-close bug but leaves the duplication,
+  context-cost, and round-trip issues in place. The better question is
+  whether the action should exist at all.
+- **Keep `click` for open, ban for close.** Rejected — one-shot
+  "click opens, can't close" is a worse API than no click at all, and
+  the MenuSelectionManager close path is trivial to include anyway.
+- **Expose `toggle_popup` on `JMenu` instead.** Rejected for the
+  common case (items are already visible), deferred for the dynamic-
+  menu corner case.
