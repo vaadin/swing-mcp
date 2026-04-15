@@ -320,6 +320,73 @@ class SwingGetTextTest extends AbstractHeadlessTest {
     }
 
     @Test
+    void dr015_plainJLabel_returnsGenericGetTextError() throws Exception {
+        // DR-015: a plain JLabel has no ref in normal snapshots (no actions),
+        // but if a caller holds a stale ref or injects one, swing_get_text
+        // must refuse with the generic error — not succeed by reading the
+        // underlying AccessibleText (which plain JLabels don't expose anyway).
+        JLabel label = new JLabel("Hello");
+        context.putRef(99, (javax.accessibility.Accessible) label);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getText(99));
+        assertTrue(ex.getMessage().contains("does not support get_text"),
+                "DR-015: plain JLabel must fail with generic error, got: " + ex.getMessage());
+    }
+
+    @Test
+    void dr015_htmlJLabel_returnsGenericGetTextError() throws Exception {
+        // DR-015 behaviour change: before this DR, an HTML JLabel exposed
+        // AccessibleText via the JDK's HTML view, so swing_get_text
+        // succeeded and returned the rendered text. After DR-015, the
+        // LABEL-role exclusion fires first and the tool refuses.
+        JLabel html = new JLabel("<html>Hello <b>world</b></html>");
+        context.putRef(99, (javax.accessibility.Accessible) html);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getText(99));
+        assertTrue(ex.getMessage().contains("does not support get_text"),
+                "DR-015: HTML JLabel must fail with generic error, got: " + ex.getMessage());
+    }
+
+    @Test
+    void dr015_jListCell_returnsGenericGetTextError() throws Exception {
+        // DR-015 role-based gate covers JList.AccessibleJListChild (role LABEL).
+        // Cell ref is legitimately assigned via `click`, but swing_get_text
+        // must refuse — the cell's content is read from the snapshot name slot.
+        //
+        // Lookup by LABEL role rather than by identity: AccessibleJListChild
+        // is virtual and JList.AccessibleJList.getAccessibleChild(i) may return
+        // a fresh instance on each call — the ref map stores the instance
+        // captured during the snapshot walk.
+        DefaultListModel<String> model = new DefaultListModel<>();
+        model.addElement("alpha");
+        JList<String> list = new JList<>(model);
+        snapshot(list);
+
+        int cellRef = -1;
+        for (int candidate = 1; candidate <= 10; candidate++) {
+            try {
+                javax.accessibility.Accessible a = context.getAccessibleByRef(candidate);
+                javax.accessibility.AccessibleContext ctx = a.getAccessibleContext();
+                if (ctx != null && javax.accessibility.AccessibleRole.LABEL
+                        .equals(ctx.getAccessibleRole())) {
+                    cellRef = candidate;
+                    break;
+                }
+            } catch (Exception ignored) {
+                // ref not present — keep looking
+            }
+        }
+        assertTrue(cellRef > 0,
+                "JList cell with LABEL role should have a ref from its click action");
+
+        final int ref = cellRef;
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getText(ref));
+        assertTrue(ex.getMessage().contains("does not support get_text"),
+                "DR-015: JList cell must fail with generic error, got: " + ex.getMessage());
+    }
+
+    @Test
     void componentMatrix_JProgressBar() throws Exception {
         JProgressBar pb = new JProgressBar(0, 100);
         pb.setValue(50);

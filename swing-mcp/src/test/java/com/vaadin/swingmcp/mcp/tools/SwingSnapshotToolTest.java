@@ -1021,6 +1021,207 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     // End of BR-12 / DR-013 tests
     // ══════════════════════════════════════════════════════════════════════════
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // BR-13 / DR-014 — quoted-slot sanitization
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void br13_buttonNameWithNewline_collapsesToSingleSpace() throws Exception {
+        // Without sanitization, JButton("Save\nChanges") rendered as three
+        // visible lines — the label bleeded into the snapshot tree structure.
+        // BR-13 collapses any whitespace run (including \n) to a single space
+        // so the one-line-per-node invariant is preserved.
+        JPanel panel = new JPanel();
+        panel.add(new JButton("Save\nChanges"));
+
+        String out = snapshot(panel);
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"Save Changes\" [ref=1] actions: click",
+                out);
+    }
+
+    @Test
+    void br13_buttonNameWithEmbeddedQuote_escapesAsBackslashQuote() throws Exception {
+        // Embedded " was previously emitted verbatim, producing
+        // `"Click "here""` which terminates the quoted slot visually. BR-13
+        // escapes as \" so the slot remains unambiguous.
+        JPanel panel = new JPanel();
+        panel.add(new JButton("Click \"here\""));
+
+        String out = snapshot(panel);
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"Click \\\"here\\\"\" [ref=1] actions: click",
+                out);
+    }
+
+    @Test
+    void br13_buttonNameWithTab_collapsesToSingleSpace() throws Exception {
+        // Tabs and other Java \s-matching whitespace collapse alongside \n.
+        JPanel panel = new JPanel();
+        panel.add(new JButton("Col1\tCol2\tCol3"));
+
+        String out = snapshot(panel);
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"Col1 Col2 Col3\" [ref=1] actions: click",
+                out);
+    }
+
+    @Test
+    void br13_descriptionWithNewline_collapsesToSingleSpace() throws Exception {
+        // Non-HTML accessibleDescription bypasses htmlToPlainText's whitespace
+        // collapse. BR-13 ensures the description slot is still sanitized.
+        JPanel panel = new JPanel();
+        JButton button = new JButton("OK");
+        button.getAccessibleContext().setAccessibleDescription("line1\nline2\nline3");
+        panel.add(button);
+
+        String out = snapshot(panel);
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"OK\" \"line1 line2 line3\" [ref=1] actions: click",
+                out);
+    }
+
+    @Test
+    void br13_descriptionWithEmbeddedQuote_escapesAsBackslashQuote() throws Exception {
+        JPanel panel = new JPanel();
+        JButton button = new JButton("OK");
+        button.getAccessibleContext().setAccessibleDescription("say \"hi\" loudly");
+        panel.add(button);
+
+        String out = snapshot(panel);
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JButton (push_button) \"OK\" \"say \\\"hi\\\" loudly\" [ref=1] actions: click",
+                out);
+    }
+
+    @Test
+    void br13_textPreviewWithEmbeddedQuote_escapesAsBackslashQuote() throws Exception {
+        // The BR-12 text="..." preview also passes through the sanitizer,
+        // closing the quote-escape gap that was absent before DR-014.
+        JPanel panel = new JPanel();
+        JTextField field = new JTextField();
+        field.setText("say \"hi\"");
+        panel.add(field);
+
+        String out = snapshot(panel);
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JTextField (text) [ref=1] text=\"say \\\"hi\\\"\" actions: get_text, set_text",
+                out);
+    }
+
+    @Test
+    void br13_textPreviewWithNewline_collapsesToSingleSpace() throws Exception {
+        // Newlines in JTextField content were already collapsed in BR-12's
+        // preview whitespace handling. Regression guard that DR-014's
+        // sanitizer keeps the same behaviour while adding quote escaping.
+        JPanel panel = new JPanel();
+        JTextField field = new JTextField();
+        field.setText("line1\nline2");
+        panel.add(field);
+
+        String out = snapshot(panel);
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JTextField (text) [ref=1] text=\"line1 line2\" actions: get_text, set_text",
+                out);
+    }
+
+    @Test
+    void br13_longLabelName_rendersFullNameUncapped() throws Exception {
+        // DR-014 §2: name is identity, rendered in full regardless of length.
+        // Concrete check: a 300-character JLabel name appears verbatim (minus
+        // sanitization) in the name slot — no truncation, no … suffix.
+        StringBuilder longName = new StringBuilder(300);
+        for (int i = 0; i < 300; i++) {
+            longName.append('x');
+        }
+
+        JPanel panel = new JPanel();
+        panel.add(new JLabel(longName.toString()));
+
+        String out = snapshot(panel);
+
+        assertTrue(out.contains("\"" + longName + "\""),
+                "300-char name must render uncapped. Got:\n" + out);
+        assertFalse(out.contains("…"),
+                "Name slot must not emit ellipsis truncation. Got:\n" + out);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // DR-015 — LABEL role excluded from get_text
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void dr015_plainJLabel_hasNoRefNoGetTextNoPreview() throws Exception {
+        // Plain JLabel: no AccessibleText exposed, so behaviour pre-DR-015
+        // was already "no ref, no get_text". Regression guard.
+        JPanel panel = new JPanel();
+        panel.add(new JLabel("Status: OK"));
+
+        String out = snapshot(panel);
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JLabel (label) \"Status: OK\"",
+                out);
+    }
+
+    @Test
+    void dr015_htmlJLabel_hasNoRefNoGetTextNoPreview() throws Exception {
+        // DR-015 behaviour change: a JLabel("<html>...</html>") previously
+        // received ref=1, "actions: get_text", and a text="..." preview
+        // because AccessibleHTMLTextSupport exposed AccessibleText. After
+        // DR-015 the LABEL-role exclusion suppresses all three.
+        JPanel panel = new JPanel();
+        panel.add(new JLabel("<html>Hello <b>world</b></html>"));
+
+        String out = snapshot(panel);
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JLabel (label) \"Hello world\"",
+                out);
+    }
+
+    @Test
+    void dr015_jListCell_retainsClickRef() throws Exception {
+        // Regression guard for DR-015's role-based gate: JList cells have
+        // role LABEL, so the LABEL exclusion applies to them too — but
+        // their ref comes from the `click` action (not get_text), so they
+        // still receive a ref. Loss of this ref would break every JList
+        // interaction.
+        DefaultListModel<String> model = new DefaultListModel<>();
+        model.addElement("alpha");
+        model.addElement("beta");
+        JList<String> list = new JList<>(model);
+        JPanel panel = new JPanel();
+        panel.add(list);
+
+        String out = snapshot(panel);
+
+        assertTrue(out.contains("- (label) \"alpha\" [ref=2] actions: click"),
+                "JList cell must retain click ref despite LABEL-role get_text exclusion. Got:\n" + out);
+        assertFalse(out.contains("get_text"),
+                "JList cell must not advertise get_text after DR-015. Got:\n" + out);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // End of BR-13 / DR-014 / DR-015 tests
+    // ══════════════════════════════════════════════════════════════════════════
+
     @Test
     void jTextAreaAppearsAsMultiLineText() throws Exception {
         JPanel panel = new JPanel();

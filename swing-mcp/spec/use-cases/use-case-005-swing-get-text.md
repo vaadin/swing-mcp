@@ -1,6 +1,6 @@
 # UC-005: swing_get_text
 
-**Status:** Implemented (amended 2026-04-15 — `JPasswordField` / `PASSWORD_TEXT` role now returns a dedicated error per DR-011; amended 2026-04-15 — motivation updated for DR-013 inline preview)
+**Status:** Implemented (amended 2026-04-15 — `JPasswordField` / `PASSWORD_TEXT` role now returns a dedicated error per DR-011; amended 2026-04-15 — motivation updated for DR-013 inline preview; amended 2026-04-15 — LABEL-role accessibles excluded from `get_text` per DR-015)
 **Date:** 2026-03-31
 
 Reads the full text content via the accessibility API. The snapshot carries a 15-character inline preview (`text="..."`) per BR-12 / DR-013, sufficient for form-level orientation; `swing_get_text` returns the untruncated value when the AI needs to read the whole field. Both paths share `SwingUtils.readText()`, so the preview and the full value can never disagree.
@@ -14,7 +14,7 @@ Reads the full text content via the accessibility API. The snapshot carries a 15
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
 | BR-03 | The text is read via the accessibility API. Primary path: `AccessibleEditableText.getTextRange(0, charCount)` for efficient bulk retrieval. Fallback (when only `AccessibleText` is available): character-by-character via `AccessibleText.getAtIndex(CHARACTER, i)`. See **Algorithm** section below. |
-| BR-04 | If the target does not support `get_text` (i.e. `SwingUtils.supportsGetText(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support get_text. Call swing_snapshot or swing_get_cells to verify the list of actions". |
+| BR-04 | If the target does not support `get_text` (i.e. `SwingUtils.supportsGetText(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support get_text. Call swing_snapshot or swing_get_cells to verify the list of actions". **LABEL-role accessibles (DR-015)** — JLabel (plain or HTML), `JList.AccessibleJListChild`, `JTree.AccessibleJTreeNode`, and any custom LABEL-role component — fall into this branch because `supportsGetText` returns `false` for them. They return the same generic error (no dedicated message per DR-015's rationale: the rule "read labels from the snapshot name slot" is obvious from the absent action, so a well-behaved client never hits this path). |
 | BR-05 | All Swing component access happens on the EDT via `runInEDT()`. |
 | BR-06 | **Password fields are not readable (DR-011).** If the target's `AccessibleRole` is `AccessibleRole.PASSWORD_TEXT` (canonically `JPasswordField` and its subclasses; any third-party component that adopts the role is also covered), the tool returns an MCP-level error (`isError: true`) with the dedicated message: `"JPasswordField content is not readable. Use swing_set_text if you need to write a known value."`. The check runs **before** the generic `supportsGetText` gate in BR-04 so the AI receives the specific rule rather than a generic "does not support get_text". Rationale: the default `AccessibleJPasswordField` returns echo characters (`••••••`), which (a) misleads the AI into reading it as literal bullet content and (b) leaks the real password length — both contradict the asymmetric security posture declared in UC-006 BR-12. See DR-011 for the full decision. |
 | BR-07 | `swing_get_text` is a read-only tool: `isMutation()` returns `false` and the ref map is **not** cleared after invocation. |
@@ -62,6 +62,9 @@ Execution order:
   - [x] Reading with an invalid ref returns an MCP error with `isError: true`.
   - [x] The error message suggests calling `swing_snapshot` to refresh refs.
   - [x] Reading a component without text support (e.g. `JSlider`) returns an MCP error with `isError: true`.
+  - [x] **DR-015 LABEL exclusion** — reading a plain `JLabel` by ref returns the generic "Component does not support get_text" error. (A ref for a plain `JLabel` is only obtainable in unusual cases — e.g. the node acquired a ref via another action in a custom component. Test by injecting the accessible directly into the ref map.)
+  - [x] **DR-015 LABEL exclusion — HTML JLabel** — reading a `JLabel("<html>...</html>")` by ref returns the same generic error, even though the label exposes `AccessibleText` via the HTML view. This is the behaviour change from DR-015: previously the call would have returned the rendered text.
+  - [x] **DR-015 LABEL exclusion — JList cell** — reading a `JList.AccessibleJListChild` by ref (ref obtained via its `click` action) returns the generic error; the cell's content is available via the snapshot name slot only.
   - [x] The ref map is preserved after a successful `swing_get_text` call (verified by calling `swing_get_text` twice with the same ref).
   - [x] Reading a disabled `JTextField` succeeds and returns the text content.
   - [x] Text exceeding `MAX_TEXT_LENGTH` is truncated with a `... (truncated, N total characters)` suffix.
@@ -85,5 +88,7 @@ Each matrix component from `verification.md` gets a dedicated test method.
 **Succeed (`get_text` supported):** `JTextField`, `JTextArea`, `JSpinner` (delegates to its inner `JFormattedTextField` editor via `AccessibleJSpinner`).
 
 **Fail with the dedicated DR-011 error:** `JPasswordField` (and any custom component with `AccessibleRole.PASSWORD_TEXT`).
+
+**Fail with the generic error due to LABEL-role exclusion (DR-015):** `JLabel` (plain or HTML), `JList.AccessibleJListChild`, `JTree.AccessibleJTreeNode`, and any custom component with `AccessibleRole.LABEL`. The label's content is available from the snapshot name slot (uncapped per DR-014); no tool is needed.
 
 All other matrix components return the generic `Component does not support get_text`.

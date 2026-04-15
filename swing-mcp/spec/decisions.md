@@ -892,3 +892,279 @@ the framework reports both, we report both.
   cleanup convention and keeps the snapshot line-oriented. At
   15 chars the fidelity cost is negligible; the full content is
   always reachable via `swing_get_text`.
+
+---
+
+## DR-014 — Quoted-slot rendering: name uncapped, description capped, always sanitized
+
+**Status:** Accepted
+**Applies to:** UC-002 (BR-03 line format, BR-10 description, BR-12 inline
+preview), `SnapshotNode.calculateSelfLine`, `SnapshotNode.computeInlinePreview`,
+`SwingUtils.sanitizeForQuotedSlot`
+**Decided:** 2026-04-15
+
+**Decision.** Every quoted slot in a snapshot line — `"name"`,
+`"description"`, and the BR-12 `text="..."` preview — passes through a
+shared sanitizer before emission, and each slot's length policy is
+locked in independently:
+
+1. **Sanitization (applied unconditionally to every quoted slot).**
+   The shared helper `SwingUtils.sanitizeForQuotedSlot(String)`:
+   (a) replaces any run of whitespace characters with a single ASCII
+   space — covers Java's ASCII `\s` (`\n`, `\r`, `\t`, vertical tab,
+   form feed) plus the Unicode line separators U+0085, U+2028, U+2029
+   (added explicitly because Java's default `\s` is ASCII-only);
+   (b) escapes any embedded `"` as `\"`; (c) strips leading/trailing
+   whitespace; (d) returns `null` if the result is empty or blank, so
+   callers need only the existing null-check. Input `null` → output
+   `null`. Backslashes are **not** escaped — a literal `\` passes
+   through. **The sanitizer is not idempotent** — because `\` is not
+   escaped, re-running the sanitizer on already-sanitized output would
+   double-escape embedded quotes (`say "hi"` → `say \"hi\"` → `say
+   \\"hi\\"`). The snapshot render path calls the sanitizer exactly
+   once per slot, so double-escape is prevented by call-site
+   discipline, not by the helper.
+
+2. **Name slot — uncapped.** The accessible name is the component's
+   identity. It answers "which button is this?" — truncating it
+   destroys the AI's primary disambiguator. Empirically, names are
+   short in realistic apps (`"Save"`, `"Cancel"`, `"Invoice #4532"`);
+   when they are long (a multi-sentence `JLabel` used as a warning in
+   a dialog), the length itself carries the signal and must be read
+   in full. Sanitize and emit verbatim.
+
+3. **Description slot — capped at 120 characters per BR-10.** No
+   change from the existing BR-10 behaviour; DR-014 formalises it as a
+   deliberate asymmetry rather than an incidental implementation
+   choice. Descriptions are supplementary context (tooltips,
+   `accessibleDescription`); bounding them keeps a
+   pathological-tooltip component from bloating the snapshot. Cap
+   order: sanitize first, then apply `capDescription` (truncate + `…`).
+
+4. **Inline `text="..."` preview — capped at 15 chars per DR-013.**
+   No change to the existing BR-12 cap. DR-014 adds the missing
+   quote-escape step: previously the preview collapsed whitespace but
+   did not escape `"`, so a `JTextField` whose document contained
+   `say "hi"` rendered as `text="say "hi""` — unparseable. The
+   sanitizer closes that gap.
+
+**Why the asymmetry between name (uncapped) and description (capped).**
+Different roles, different policies:
+
+- **Name is identity** — a first-class part of "what component is
+  this?", equivalent to the class-prefix (BR-11). Identity must be
+  readable in full for the AI to take action against it. Truncating
+  a 500-char warning `JLabel` just to fit a bound defeats the whole
+  purpose of surfacing the label.
+- **Description is advice** — auxiliary context the AI *may* read to
+  learn what the component does, but never needs to act on. Bounded
+  size is cheap insurance against pathological tooltips, and the AI
+  loses nothing load-bearing if the last N chars of a multi-paragraph
+  tooltip get replaced with `…`.
+
+Spec readers may be tempted to unify the two under one policy; this
+DR exists so that choice is documented rather than inferred.
+
+**Why sanitize rather than fail-on-bad-input.** The snapshot's tree
+structure is carried by indentation and line breaks. A single
+`JLabel("Line 1\nLine 2")` or a list item populated from a backend
+string containing `\n` would produce a multi-line snapshot-node
+line, silently corrupting the hierarchy downstream readers
+(including LLMs) rely on. Since every text slot reads from
+user-controlled data (`setAccessibleName`, `setTitle`, cell
+renderers, custom `AccessibleContext` implementations), defensive
+sanitization is the only way to preserve the one-line-per-node
+invariant. The escape for `"` follows the same logic — the slot is
+quoted in the line format, so embedded quotes must not terminate the
+string visually.
+
+**Long-description retrieval — deferred.** For the rare case where a
+description is longer than 120 chars and the AI needs the full value,
+a future `swing_get_description` tool is a clean escape valve:
+nodes whose description was truncated would receive a ref and a
+`get_description` action, and the tool would return the sanitized
+but uncapped string. Out of scope here — not implemented until a
+real case demands it. Referencing this option in DR-014 ensures the
+120-char cap doesn't get re-litigated when someone hits a truncated
+tooltip.
+
+**Interaction with other rules.** The sanitizer runs *before* the
+DR-010 15-char truncation convention and *before* the 120-char
+description cap. Truncation is always applied to sanitized content,
+so the `…` suffix always follows a printable prefix (never a
+trailing escaped quote, never a trailing collapsed-whitespace
+artefact). `htmlToPlainText` remains responsible for HTML-specific
+cleanup (tag stripping, entity decoding); its output is sanitized
+once for the description slot. Because `htmlToPlainText` preserves
+plain text verbatim, sanitization is still needed on top of it — a
+non-HTML description containing `\n` or `"` passes through
+`htmlToPlainText` unchanged and needs the sanitizer to normalise it.
+
+**Alternatives considered.**
+
+- **Uncap both name and description.** Rejected — pathological
+  tooltips (accidental 10k-char strings, localisation bugs,
+  HTML-heavy help text from older Swing apps) can bloat the
+  snapshot without carrying load-bearing signal. Name gets the
+  full-render pass because it's identity; description does not.
+- **Cap both at the same length.** Rejected — truncating a long
+  warning `JLabel` hides the warning the developer wrote. Name-as-ID
+  argument above.
+- **Escape `\` to `\\` alongside `"` to `\"` (full JSON escaping).**
+  Rejected — the snapshot is a text format consumed primarily by
+  LLMs, not a JSON-parser-driven contract. `\\` escaping makes
+  paths-as-names ugly (`C:\Users\foo` → `C:\\Users\\foo`) for no
+  practical gain. LLMs parse `\"` correctly regardless of
+  neighbouring backslashes. The rare component name containing both
+  `\` and `"` tolerates the ambiguity.
+- **Replace embedded `"` with `'` (human-friendly lossy).**
+  Rejected — silent content mutation. A cell label literally
+  containing `'` becomes indistinguishable from a modified `"`, and
+  the AI can no longer reliably pass the value back to a tool
+  (e.g. `swing_set_selection` by item name).
+- **Emit `…` for quotes (replace `"` with typographic double
+  quotes).** Rejected — same lossy-mutation objection, plus adds
+  Unicode characters the AI may not round-trip reliably in tool
+  arguments.
+- **Sanitize only when an unsafe character is present (fast path for
+  the common case).** Rejected — cheap micro-optimisation that
+  doubles the policy surface (when is it applied, when is it not?).
+  Java's regex engine is fast enough that the common case already
+  costs nothing worth measuring; uniform application is easier to
+  reason about.
+- **Sanitize at the input boundary (`setAccessibleName`, title
+  setters) instead of the render site.** Not an option — the input
+  boundary is `javax.accessibility`, owned by the JDK. Swing-MCP
+  cannot enforce sanitization there.
+
+---
+
+## DR-015 — `AccessibleRole.LABEL` never advertises `get_text`
+
+**Status:** Accepted
+**Applies to:** UC-002 (BR-06 action-list algorithm, BR-12 inline
+preview gate), UC-005 (`swing_get_text`), `SwingUtils.supportsGetText`
+**Decided:** 2026-04-15
+
+**Decision.** Any accessible whose role is `AccessibleRole.LABEL` is
+excluded from `get_text` unconditionally. `SwingUtils.supportsGetText`
+returns `false` for LABEL-role accessibles regardless of whether
+`AccessibleText` is exposed. Consequences, all automatic from the
+single gate:
+
+1. The snapshot never emits `get_text` on a LABEL node (BR-06 step 4).
+2. The node receives no ref *on account of `get_text` alone* — refs
+   still arrive via other actions (BR-06: a `JList` cell has `click`,
+   a `JTree` node has `toggle_expand` and `click`).
+3. No inline `text="..."` preview is emitted (BR-12 keys off
+   `supportsGetText`; the gate change propagates for free).
+4. `swing_get_text` called on a LABEL-role accessible returns the
+   generic "Component does not support get_text" error. A dedicated
+   error (parallel to DR-011's password message) would reveal more
+   than it teaches — the rule is "labels are read from the snapshot
+   name slot, not via a tool", which the AI already learns by
+   observing absence of the action.
+
+**Why.** A `JLabel` with plain text exposes no `AccessibleText`, so
+`supportsGetText` returned `false` for it naturally. A `JLabel`
+wrapped in `<html>…</html>`, however, gains an
+`AccessibleHTMLTextSupport`-backed `AccessibleText` surface — a JDK
+implementation detail of how HTML rendering is plumbed into
+accessibility. The side-effect: HTML-backed labels were getting
+`get_text`, a ref, and a `text="..."` preview, while plain labels
+were getting none of those. Same role, same user-facing component,
+different tool capabilities based on whether the developer typed
+`<html>` at the start of the string. That's the wart this DR
+workarounds.
+
+After DR-015:
+
+- Every `JLabel` behaves identically regardless of HTML-ness.
+- The label's content remains fully readable from the snapshot name
+  slot (uncapped per DR-014), so no information is lost.
+- The AI's rule is simple: "LABEL-role nodes have no `get_text`;
+  read them from the name slot."
+
+**Role-based gate, not class-based.** The check is
+`AccessibleRole.LABEL`, not `instanceof JLabel`. This matches
+DR-011's pattern and gives free coverage to other LABEL-role
+accessibles:
+
+- **`JList.AccessibleJListChild`** — role `LABEL`, content in name
+  slot, ref already assigned via `click`. No behavioural change:
+  before DR-015, list cells only got `get_text` in the rare case
+  where the renderer component exposed `AccessibleText`; after
+  DR-015, they never do. The cell label is in the name slot.
+- **`JTree.AccessibleJTreeNode`** — role varies but `LABEL` is
+  common. Same analysis: ref from `click`/`toggle_expand`, content
+  in name slot.
+- **Custom components adopting `AccessibleRole.LABEL`** — follow the
+  same rule for free.
+
+**Relationship to DR-011.** Both DRs add role-based exclusions to
+`SwingUtils.supportsGetText`. DR-011 (PASSWORD_TEXT) excludes because
+the surfaced content is **misleading garbage** (echo chars); DR-015
+(LABEL) excludes because the surfaced content is **redundant** with
+the name slot. Same mechanism, different motivation. Implementation
+is a two-line addition to the existing method:
+
+```java
+public static boolean supportsGetText(Accessible a) {
+    AccessibleContext ac = a.getAccessibleContext();
+    if (ac == null) return false;
+    AccessibleRole role = ac.getAccessibleRole();
+    if (AccessibleRole.PASSWORD_TEXT.equals(role)) return false;  // DR-011
+    if (AccessibleRole.LABEL.equals(role)) return false;          // DR-015
+    return ac.getAccessibleText() != null;
+}
+```
+
+**Tension with DR-003 ("mirror Swing semantics exactly").** DR-003
+says expose what Swing allows. Swing (via the HTML accessibility
+plumbing) does allow reading `AccessibleText` on an HTML `JLabel`.
+Justification for the carveout: the label's *content* is already
+exposed via the name slot, so DR-015 is not withdrawing a
+capability — it is eliminating a duplicate channel that exists only
+because of a JDK implementation detail. The AI's effective
+capability is unchanged: it can read every `JLabel`'s text, just
+via one channel instead of two-for-some-and-one-for-others. The
+underlying Swing semantics we're mirroring is "labels identify
+other components" (LABEL role), not "labels are editable text"
+(TEXT role).
+
+**Alternatives considered.**
+
+- **Status quo — keep the accidental `get_text` on HTML labels.**
+  Rejected. The inconsistency is observable by the AI: identical
+  user-visible components with different tool surfaces based on
+  invisible implementation choices. The AI has no way to predict
+  which `JLabel` accepts `swing_get_text` without trying it,
+  inviting wasted tool calls and confusion.
+- **Make plain `JLabel` *also* expose `AccessibleText` (enable
+  `get_text` everywhere for consistency in the other direction).**
+  Rejected. Every `JLabel` in every dialog (including one-word
+  decorative labels like `"Name:"`, `"Password:"`) would receive a
+  ref, inflating the ref sequence for interactive components
+  elsewhere. The name slot already carries the content in full
+  (DR-014); a tool is redundant. Changes a lot of code to produce
+  worse snapshots.
+- **Class-based gate (`instanceof JLabel`) instead of role-based.**
+  Rejected — misses custom LABEL-role components, splits the rule
+  inconsistently with DR-011's role-based pattern, adds a Swing-
+  class-name coupling that role-based gating avoids.
+- **Expose a dedicated `swing_get_description`-style tool for labels
+  when the name would otherwise need to be long.** Deferred. The
+  name slot is uncapped per DR-014, so a tool is not needed today.
+  If profiling ever surfaces real cases where a label's content
+  itself (not description) bloats snapshots and a truncation-plus-
+  tool escape-valve becomes attractive, revisit under its own DR.
+  Keyed off the same truncation trigger the deferred
+  `swing_get_description` uses.
+- **Dedicated error message on `swing_get_text` for LABEL role
+  (parallel to DR-011's `"JPasswordField content is not readable"`).**
+  Rejected. DR-011's dedicated message exists because the rule is
+  non-obvious (why would reading a password field fail?). DR-015's
+  rule — "read labels from the snapshot" — is obvious from the
+  snapshot itself: the action isn't advertised, so the AI never
+  calls the tool in well-behaved sequences. A generic error is
+  sufficient for stale-ref recovery cases.
