@@ -714,19 +714,21 @@ class SnapshotNode {
             }
         }
 
-        // Step 4: text
-        // Read-only text fields (hasEditableText but not EDITABLE) now emit set_text too;
-        // BR-08 will prefix it with "!" since the component is read-only.
-        // DR-011: password-role accessibles never advertise get_text.
-        boolean isPasswordRole = SwingUtils.hasPasswordRole(accessible);
+        // Step 4: text.
+        // get_text and set_text are independent capabilities: each branch
+        // gates its action on the matching support predicate. SwingUtils.supportsGetText
+        // returns false for components where reading yields garbage (DR-011
+        // password fields), so step 4 does not need an explicit password check.
+        // Read-only text fields (hasEditableText but not EDITABLE) emit set_text
+        // too; BR-08 prefixes with "!" since the component is read-only.
         if (SwingUtils.supportsSetText(accessible)) {
-            if (!isPasswordRole) actions.add("get_text");
+            if (SwingUtils.supportsGetText(accessible)) actions.add("get_text");
             actions.add("set_text");
         } else if (SwingUtils.hasEditableText(accessible)) {
             // Read-only text field: has AccessibleEditableText but lacks EDITABLE state
-            if (!isPasswordRole) actions.add("get_text");
+            if (SwingUtils.supportsGetText(accessible)) actions.add("get_text");
             actions.add("set_text");
-        } else if (SwingUtils.supportsGetText(accessible) && !isPasswordRole) {
+        } else if (SwingUtils.supportsGetText(accessible)) {
             actions.add("get_text");
         }
 
@@ -808,6 +810,12 @@ class SnapshotNode {
                 || SwingUtils.supportsTogglePopup(accessible) >= 0
                 || hasKnownActionConstant(ctx)
                 || SwingUtils.supportsGetText(accessible)
+                // hasEditableText covers write-only text components: a password
+                // field (supportsGetText=false via DR-011, but set_text is
+                // still advertised) must still get a ref. More generally: any
+                // component where reading yields garbage but writing is valid
+                // (e.g. filter combo boxes that clear themselves on apply).
+                || SwingUtils.hasEditableText(accessible)
                 || SwingUtils.supportsGetValue(accessible)
                 || SwingUtils.supportsSelection(accessible)
                 || SwingUtils.supportsClose(accessible)

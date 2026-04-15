@@ -192,12 +192,28 @@ public final class SwingUtils {
     }
 
     /**
-     * Returns {@code true} if the accessible exposes {@link AccessibleText}
-     * (i.e. its text content can be read).
+     * Returns {@code true} iff reading the accessible's text content via
+     * {@code swing_get_text} yields <em>meaningful</em> content.
+     *
+     * <p>This is not merely a structural "exposes {@link AccessibleText}" check:
+     * {@link AccessibleRole#PASSWORD_TEXT} accessibles are excluded because the
+     * JDK returns echo characters (garbage) rather than the real password
+     * (DR-011). Other components whose accessibility-API read yields garbage
+     * (e.g. filter combo boxes that clear themselves on apply) may be added
+     * here in the future.
+     *
+     * <p>Decoupled from {@link #supportsSetText}: a component may support
+     * {@code set_text} without {@code supportsGetText} returning {@code true}
+     * (JPasswordField is the canonical example). Callers that need the raw
+     * structural fact (exposes {@code AccessibleText}) should inspect
+     * {@code AccessibleContext.getAccessibleText()} directly; this helper
+     * answers the domain question "can I show the AI real content?".
      */
     public static boolean supportsGetText(Accessible a) {
         AccessibleContext ac = a.getAccessibleContext();
         if (ac == null) return false;
+        // DR-011: password-role accessibles return echo chars, not real content.
+        if (AccessibleRole.PASSWORD_TEXT.equals(ac.getAccessibleRole())) return false;
         return ac.getAccessibleText() != null;
     }
 
@@ -206,7 +222,9 @@ public final class SwingUtils {
      * {@link AccessibleRole#PASSWORD_TEXT} — i.e. {@link javax.swing.JPasswordField}
      * or any component that adopts the password role. Per DR-011, password-role
      * accessibles must not advertise {@code get_text} and {@code swing_get_text}
-     * must refuse to read them.
+     * must refuse to read them. Used directly by {@code SwingGetTextTool} to
+     * emit the dedicated error message distinct from the generic "does not
+     * support get_text".
      */
     public static boolean hasPasswordRole(Accessible a) {
         AccessibleContext ac = a.getAccessibleContext();

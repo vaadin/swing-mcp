@@ -36,8 +36,11 @@ class SwingUtilsSupportsTextTest {
     }
 
     @Test
-    void jPasswordField_supportsGetText() {
-        assertTrue(SwingUtils.supportsGetText(new JPasswordField("secret")));
+    void jPasswordField_doesNotSupportGetText() {
+        // DR-011: password-role accessibles return echo chars (garbage), not real
+        // content. supportsGetText reflects the domain answer "can I surface real
+        // content?" — for passwords, no.
+        assertFalse(SwingUtils.supportsGetText(new JPasswordField("secret")));
     }
 
     @Test
@@ -295,25 +298,39 @@ class SwingUtilsSupportsTextTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Relationship: setText implies getText
+    // get_text and set_text are decoupled capabilities
     // ══════════════════════════════════════════════════════════════════════════
+    //
+    // Historically AccessibleEditableText extends AccessibleText would make
+    // "supportsSetText implies supportsGetText" look like an invariant, but
+    // DR-011 formally decouples them: JPasswordField supports set_text without
+    // supportsGetText returning true. The per-component checks below are
+    // descriptive observations about specific components, not a universal rule.
 
     @Test
-    void setTextImpliesGetText_JTextField() {
+    void jTextField_supportsBothGetAndSetText() {
         JTextField field = new JTextField("text");
-        if (SwingUtils.supportsSetText(field)) {
-            assertTrue(SwingUtils.supportsGetText(field),
-                    "If setText is supported, getText must also be supported");
-        }
+        assertTrue(SwingUtils.supportsSetText(field));
+        assertTrue(SwingUtils.supportsGetText(field));
     }
 
     @Test
-    void setTextImpliesGetText_JTextArea() {
+    void jTextArea_supportsBothGetAndSetText() {
         JTextArea area = new JTextArea("text");
-        if (SwingUtils.supportsSetText(area)) {
-            assertTrue(SwingUtils.supportsGetText(area),
-                    "If setText is supported, getText must also be supported");
-        }
+        assertTrue(SwingUtils.supportsSetText(area));
+        assertTrue(SwingUtils.supportsGetText(area));
+    }
+
+    @Test
+    void jPasswordField_supportsSetTextWithoutSupportsGetText() {
+        // DR-011: the canonical write-only-from-the-AI's-perspective case.
+        // A password field accepts set_text (needed for login-form filling)
+        // but supportsGetText returns false (reading yields echo chars).
+        JPasswordField field = new JPasswordField("secret");
+        assertTrue(SwingUtils.supportsSetText(field),
+                "Password field must remain writable for login-form filling");
+        assertFalse(SwingUtils.supportsGetText(field),
+                "Password field must not be readable (DR-011)");
     }
 
     // ══════════════════════════════════════════════════════════════════════════
