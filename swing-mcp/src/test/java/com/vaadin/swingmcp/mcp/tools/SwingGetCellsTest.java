@@ -485,9 +485,14 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         assertFalse(com.vaadin.swingmcp.mcp.SwingUtils.isGetCellsSupported(mb));
     }
     @Test void componentMatrix_JMenu() throws Exception {
+        // DR-012: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenu m = new JMenu("File");
         m.add(new JMenuItem("Open"));
-        assertNotSupported(m);
+        context.putRef(99, (javax.accessibility.Accessible) m);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getCells(99, 0, 5));
+        assertEquals("Component does not support swing_get_cells. Call swing_snapshot or swing_get_cells to verify the list of actions.",
+                ex.getMessage());
     }
     @Test void componentMatrix_JMenuItem() throws Exception { assertNotSupported(new JMenuItem("Open")); }
     @Test void componentMatrix_JDesktopPane() throws Exception {

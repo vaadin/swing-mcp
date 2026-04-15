@@ -80,13 +80,55 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
         menuBar.add(menu);
         frame.setJMenuBar(menuBar);
 
+        // DR-012: JMenu has no click action and no ref; only items are clickable.
         assertEquals(
                 "- JFrame (frame)\n"
                 + "  - JMenuBar (menu_bar)\n"
-                + "    - JMenu (menu) \"File\" [ref=1] actions: click\n"
-                + "      - JMenuItem (menu_item) \"Open\" [ref=2] actions: click\n"
-                + "      - JMenuItem (menu_item) \"Save\" [ref=3] actions: click",
+                + "    - JMenu (menu) \"File\"\n"
+                + "      - JMenuItem (menu_item) \"Open\" [ref=1] actions: click\n"
+                + "      - JMenuItem (menu_item) \"Save\" [ref=2] actions: click",
                 snapshot(frame));
+    }
+
+    @Test
+    void openJMenuPopup_doesNotDuplicateItems_HE5() throws Exception {
+        // DR-012 / HE-5 end-to-end: open a JMenu's popup via the real Swing
+        // mechanics (doClick on a visible frame) and verify the snapshot
+        // contains each JMenuItem exactly once — no duplicate sibling
+        // JPopupMenu node. Reproduces the original feedback report verbatim:
+        // before HE-5, "Quit" appeared twice (under JMenu and under a sibling
+        // JPopupMenu added to the layered pane).
+        JFrame frame = new JFrame("Login App");
+        try {
+            frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            frame.add(new JLabel("The app contents", SwingConstants.CENTER), BorderLayout.CENTER);
+            JMenuBar mb = new JMenuBar();
+            JMenu file = new JMenu("File");
+            JMenuItem quit = new JMenuItem("Quit");
+            file.add(quit);
+            mb.add(file);
+            frame.setJMenuBar(mb);
+            frame.setSize(400, 300);
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
+
+            // Open the popup the way a real user would.
+            executeOnEDT(() -> { file.doClick(); return null; });
+            executeOnEDT(() -> null); // drain EDT
+            assertTrue(file.isPopupMenuVisible(), "Popup should be open for the test");
+
+            String output = snapshot(frame);
+            int quitCount = output.split("\"Quit\"", -1).length - 1;
+            assertEquals(1, quitCount,
+                    "Quit must appear exactly once after HE-5 prune. Snapshot:\n" + output);
+            assertFalse(output.contains("JPopupMenu (popup_menu)"),
+                    "JMenu's own JPopupMenu must be pruned. Snapshot:\n" + output);
+            // JMenu still carries [selected, checked] state — signals the popup is open.
+            assertTrue(output.contains("[selected, checked]"),
+                    "JMenu must retain [selected, checked] state when popup is open. Snapshot:\n" + output);
+        } finally {
+            executeOnEDT(() -> { frame.dispose(); return null; });
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════════

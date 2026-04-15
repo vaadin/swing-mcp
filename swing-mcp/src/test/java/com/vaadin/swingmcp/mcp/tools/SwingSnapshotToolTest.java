@@ -471,12 +471,13 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot(root);
 
+        // DR-012: JMenu has no click action and no ref; items are directly reachable.
         assertEquals(
                 "- JPanel (panel)\n"
                 + "  - JMenuBar (menu_bar)\n"
-                + "    - JMenu (menu) \"File\" [ref=1] actions: click\n"
-                + "      - JMenuItem (menu_item) \"Open\" [ref=2] actions: click\n"
-                + "      - JMenuItem (menu_item) \"Save\" [ref=3] actions: click",
+                + "    - JMenu (menu) \"File\"\n"
+                + "      - JMenuItem (menu_item) \"Open\" [ref=1] actions: click\n"
+                + "      - JMenuItem (menu_item) \"Save\" [ref=2] actions: click",
                 output);
     }
 
@@ -1241,6 +1242,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void jMenuBarAppearsAsMenuBar() throws Exception {
+        // DR-012: JMenu has no click action, no ref.
         JPanel panel = new JPanel();
         JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
@@ -1250,12 +1252,13 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         assertEquals(
                 "- JPanel (panel)\n"
                 + "  - JMenuBar (menu_bar)\n"
-                + "    - JMenu (menu) \"File\" [ref=1] actions: click",
+                + "    - JMenu (menu) \"File\"",
                 snapshot(panel));
     }
 
     @Test
     void jMenuAppearsAsMenu() throws Exception {
+        // DR-012: JMenu has no click action, no ref; only the menu item is clickable.
         JPanel panel = new JPanel();
         JMenuBar menuBar = new JMenuBar();
         JMenu editMenu = new JMenu("Edit");
@@ -1266,13 +1269,14 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         assertEquals(
                 "- JPanel (panel)\n"
                 + "  - JMenuBar (menu_bar)\n"
-                + "    - JMenu (menu) \"Edit\" [ref=1] actions: click\n"
-                + "      - JMenuItem (menu_item) \"Cut\" [ref=2] actions: click",
+                + "    - JMenu (menu) \"Edit\"\n"
+                + "      - JMenuItem (menu_item) \"Cut\" [ref=1] actions: click",
                 snapshot(panel));
     }
 
     @Test
     void jMenuItemAppearsAsMenuItem() throws Exception {
+        // DR-012: JMenu has no click action, no ref; only the menu item is clickable.
         JPanel panel = new JPanel();
         JMenuBar menuBar = new JMenuBar();
         JMenu menu = new JMenu("Actions");
@@ -1284,9 +1288,61 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         assertEquals(
                 "- JPanel (panel)\n"
                 + "  - JMenuBar (menu_bar)\n"
-                + "    - JMenu (menu) \"Actions\" [ref=1] actions: click\n"
-                + "      - JMenuItem (menu_item) \"Delete\" [ref=2] actions: click",
+                + "    - JMenu (menu) \"Actions\"\n"
+                + "      - JMenuItem (menu_item) \"Delete\" [ref=1] actions: click",
                 snapshot(panel));
+    }
+
+    @Test
+    void contextJPopupMenuWithNonJMenuInvokerIsNotPruned() throws Exception {
+        // Regression guard for DR-012 / HE-5: the JPopupMenu prune is keyed on
+        // getInvoker() instanceof JMenu. Right-click context menus invoked
+        // from a JButton/JTable/etc. must continue to render normally.
+        // Headless caveat: we override isVisible() and getInvoker() directly
+        // because PopupFactory.getPopup() (the native path) cannot run here.
+        JPanel panel = new JPanel();
+        JButton button = new JButton("Right-click me");
+        panel.add(button);
+
+        @SuppressWarnings("serial")
+        JPopupMenu popup = new JPopupMenu() {
+            @Override public boolean isVisible() { return true; }
+            @Override public Component getInvoker() { return button; }
+        };
+        popup.add(new JMenuItem("Cut"));
+        panel.add(popup);
+
+        String output = snapshot(panel);
+        assertTrue(output.contains("JPopupMenu (popup_menu)"),
+                "JPopupMenu with JButton invoker must NOT be pruned (HE-5 negative case): " + output);
+        assertTrue(output.contains("\"Cut\""),
+                "JPopupMenu's items must render when not pruned: " + output);
+    }
+
+    @Test
+    void jPopupMenuWithJMenuInvokerIsPruned() throws Exception {
+        // DR-012 / HE-5 positive case (headless). The prune rule is keyed on
+        // getInvoker() instanceof JMenu. We test the rule in isolation rather
+        // than reproduce the full "JMenu's internal popup is showing" scenario,
+        // which requires PopupFactory and a real display (covered in the
+        // screen test). A standalone JMenu serves as the invoker; the popup
+        // contains a plain JMenuItem to confirm its contents are dropped too.
+        JPanel panel = new JPanel();
+        JMenu invokerMenu = new JMenu("File");
+
+        @SuppressWarnings("serial")
+        JPopupMenu popup = new JPopupMenu() {
+            @Override public boolean isVisible() { return true; }
+            @Override public Component getInvoker() { return invokerMenu; }
+        };
+        popup.add(new JMenuItem("Quit"));
+        panel.add(popup);
+
+        String output = snapshot(panel);
+        assertFalse(output.contains("JPopupMenu (popup_menu)"),
+                "JPopupMenu with JMenu invoker must be pruned (HE-5): " + output);
+        assertFalse(output.contains("\"Quit\""),
+                "Pruned popup's items must not appear: " + output);
     }
 
     @Test

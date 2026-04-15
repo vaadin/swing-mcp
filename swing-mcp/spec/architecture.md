@@ -232,7 +232,7 @@ Action display names use lower-case underscore-separated format regardless of th
 | Display name | Components | Source type |
 |---|---|---|
 | `click` | AWT: `Button`, `MenuItem`, `Menu`, `PopupMenu` | Literal |
-| `click` | Swing: all `AbstractButton` subclasses (`JButton`, `JCheckBox`, `JRadioButton`, `JToggleButton`, `JMenuItem`, `JCheckBoxMenuItem`, `JRadioButtonMenuItem`, `JMenu`), `JListChild` | UIManager |
+| `click` | Swing: all `AbstractButton` subclasses (`JButton`, `JCheckBox`, `JRadioButton`, `JToggleButton`, `JMenuItem`, `JCheckBoxMenuItem`, `JRadioButtonMenuItem`), `JListChild`. **`JMenu` excluded** by `supportsClick` per DR-012. | UIManager |
 | `toggle_popup` | `JComboBox` | UIManager |
 | `increment`, `decrement` | `JSlider`, `JSpinner` | Static field |
 | `toggle_expand` | `JTree` non-leaf nodes | Static field |
@@ -264,6 +264,13 @@ so callers never need to know which tier was used. The snapshot checks `!= null`
 whether to add the `click` action; `swing_click` calls `run()` inside `invokeLater()`.
 
 Implemented in `SwingUtils.supportsClick(Accessible)`. `INTERACTIVE_ROLES` (referenced by Tier 2 below) is a constant in the same class.
+
+**Special case — `JMenu` (DR-012).** Before Tier 1 runs, `supportsClick()`
+returns `null` if the accessible is a `JMenu`. This removes `click` from
+the snapshot for menu titles (the menu's items are already directly
+clickable via their own refs, so the title click is pure duplication).
+Menu items (`JMenuItem`, `JCheckBoxMenuItem`, `JRadioButtonMenuItem`)
+retain Tier 1 click as usual.
 
 #### Tier 1 — AccessibleAction
 
@@ -563,7 +570,7 @@ Other specs reference this table instead of duplicating detection logic.
 
 | Spec Action Name | Detection Method | Java Mechanism | MCP Tool | Notes |
 |---|---|---|---|---|
-| `click` | `supportsClick()` returns non-null `Runnable` | **Tier 1:** `AccessibleAction.CLICK` (AWT literal) OR `UIManager.getString("AbstractButton.clickText")` (Swing UIManager). **Tier 2 (fallback):** application-installed `MouseListener` on the underlying `Component` (framework listeners filtered by package prefix). See § 4 "Detecting Click Support" for full algorithm. | `swing_click` | `supportsClick()` returns a `Runnable` encapsulating the click action (Tier 1: `doAccessibleAction(i)`, Tier 2: synthetic MouseEvent sequence). Callers just check `!= null` and call `run()`. |
+| `click` | `supportsClick()` returns non-null `Runnable` | **Tier 1:** `AccessibleAction.CLICK` (AWT literal) OR `UIManager.getString("AbstractButton.clickText")` (Swing UIManager). **Tier 2 (fallback):** application-installed `MouseListener` on the underlying `Component` (framework listeners filtered by package prefix). See § 4 "Detecting Click Support" for full algorithm. **`JMenu` is excluded** — `supportsClick()` returns `null` for it per DR-012. | `swing_click` | `supportsClick()` returns a `Runnable` encapsulating the click action (Tier 1: `doAccessibleAction(i)`, Tier 2: synthetic MouseEvent sequence). Callers just check `!= null` and call `run()`. |
 | `toggle_popup` | `supportsTogglePopup()` | `AccessibleAction.TOGGLE_POPUP` OR `UIManager.getString("ComboBox.togglePopupText")` | `swing_toggle_popup` | Toggles open/closed; AI can infer current state from snapshot |
 | `increment` | Raw `AccessibleAction` description compare | `AccessibleAction.INCREMENT` static constant | `swing_increment` | Safe to match by raw constant — `JSlider`/`JSpinner` use the static field directly, no UIManager variant exists |
 | `decrement` | Raw `AccessibleAction` description compare | `AccessibleAction.DECREMENT` static constant | `swing_decrement` | Same rationale as `increment` |

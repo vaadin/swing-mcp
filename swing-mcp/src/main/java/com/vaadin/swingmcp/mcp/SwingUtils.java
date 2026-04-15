@@ -5,6 +5,7 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JInternalFrame;
+import javax.swing.JMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTabbedPane;
@@ -121,6 +122,16 @@ public final class SwingUtils {
      * @see <a href="architecture.md">architecture.md § 4 — Detecting Click Support</a>
      */
     public static Runnable supportsClick(Accessible a) {
+        // --- DR-012: JMenu is a structural container, not a click target ---
+        // The JMenu's JMenuItem children are already directly clickable via
+        // their own refs; exposing click on the menu title would only add
+        // duplication (open popup surfaces the same items a second time),
+        // round-trips (click menu → snapshot → click item), and a broken
+        // toggle (doClick opens on the first call but not on subsequent ones).
+        // See decisions.md § DR-012.
+        if (a instanceof JMenu) {
+            return null;
+        }
         // --- Tier 1: AccessibleAction ---
         AccessibleContext ac = a.getAccessibleContext();
         if (ac != null) {
