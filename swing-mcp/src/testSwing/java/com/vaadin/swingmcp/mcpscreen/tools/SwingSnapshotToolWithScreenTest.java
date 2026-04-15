@@ -192,7 +192,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
                 + "  - JLabel (label) \"Username\"\n"
                 + "  - JTextField (text) \"Username\" [ref=1] actions: get_text, set_text\n"
                 + "  - JLabel (label) \"Password\"\n"
-                + "  - JPasswordField (password_text) \"Password\" [ref=2] actions: get_text, set_text\n"
+                + "  - JPasswordField (password_text) \"Password\" [ref=2] actions: set_text\n"
                 + "  - JCheckBox (check_box) \"Remember me\" [ref=3] actions: click\n"
                 + "  - JButton (push_button) \"Sign In\" [ref=4] actions: click\n"
                 + "  - JButton (push_button) \"Cancel\" [ref=5] actions: click",

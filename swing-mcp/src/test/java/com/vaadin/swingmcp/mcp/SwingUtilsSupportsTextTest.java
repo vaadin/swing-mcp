@@ -337,4 +337,49 @@ class SwingUtilsSupportsTextTest {
         assertNotNull(child);
         assertFalse(SwingUtils.supportsSetText(child));
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // hasPasswordRole (DR-011)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jPasswordField_hasPasswordRole() {
+        assertTrue(SwingUtils.hasPasswordRole(new JPasswordField("secret")));
+    }
+
+    @Test
+    void jTextField_doesNotHavePasswordRole() {
+        assertFalse(SwingUtils.hasPasswordRole(new JTextField("text")));
+    }
+
+    @Test
+    void jTextArea_doesNotHavePasswordRole() {
+        assertFalse(SwingUtils.hasPasswordRole(new JTextArea("text")));
+    }
+
+    @Test
+    void jButton_doesNotHavePasswordRole() {
+        assertFalse(SwingUtils.hasPasswordRole(new JButton("OK")));
+    }
+
+    @Test
+    void customComponentWithPasswordRole_hasPasswordRole() {
+        // DR-011 gate is role-based, not class-based. A component that is not a
+        // JPasswordField but claims AccessibleRole.PASSWORD_TEXT still trips the gate.
+        JTextField fake = new JTextField("secret") {
+            @Override
+            public AccessibleContext getAccessibleContext() {
+                if (accessibleContext == null) {
+                    accessibleContext = new AccessibleJTextField() {
+                        @Override
+                        public javax.accessibility.AccessibleRole getAccessibleRole() {
+                            return javax.accessibility.AccessibleRole.PASSWORD_TEXT;
+                        }
+                    };
+                }
+                return accessibleContext;
+            }
+        };
+        assertTrue(SwingUtils.hasPasswordRole(fake));
+    }
 }

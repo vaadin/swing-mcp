@@ -717,14 +717,16 @@ class SnapshotNode {
         // Step 4: text
         // Read-only text fields (hasEditableText but not EDITABLE) now emit set_text too;
         // BR-08 will prefix it with "!" since the component is read-only.
+        // DR-011: password-role accessibles never advertise get_text.
+        boolean isPasswordRole = SwingUtils.hasPasswordRole(accessible);
         if (SwingUtils.supportsSetText(accessible)) {
-            actions.add("get_text");
+            if (!isPasswordRole) actions.add("get_text");
             actions.add("set_text");
         } else if (SwingUtils.hasEditableText(accessible)) {
             // Read-only text field: has AccessibleEditableText but lacks EDITABLE state
-            actions.add("get_text");
+            if (!isPasswordRole) actions.add("get_text");
             actions.add("set_text");
-        } else if (SwingUtils.supportsGetText(accessible)) {
+        } else if (SwingUtils.supportsGetText(accessible) && !isPasswordRole) {
             actions.add("get_text");
         }
 

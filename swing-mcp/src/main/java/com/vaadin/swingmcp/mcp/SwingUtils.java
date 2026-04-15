@@ -202,6 +202,19 @@ public final class SwingUtils {
     }
 
     /**
+     * Returns {@code true} if the accessible's role is
+     * {@link AccessibleRole#PASSWORD_TEXT} — i.e. {@link javax.swing.JPasswordField}
+     * or any component that adopts the password role. Per DR-011, password-role
+     * accessibles must not advertise {@code get_text} and {@code swing_get_text}
+     * must refuse to read them.
+     */
+    public static boolean hasPasswordRole(Accessible a) {
+        AccessibleContext ac = a.getAccessibleContext();
+        if (ac == null) return false;
+        return AccessibleRole.PASSWORD_TEXT.equals(ac.getAccessibleRole());
+    }
+
+    /**
      * Returns {@code true} if the accessible exposes {@link AccessibleEditableText}
      * <em>and</em> is currently editable (has the {@link AccessibleState#EDITABLE} state).
      * A text component with {@code setEditable(false)} returns {@code false} here.

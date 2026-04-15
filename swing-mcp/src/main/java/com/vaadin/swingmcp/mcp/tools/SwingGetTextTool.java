@@ -28,7 +28,8 @@ public class SwingGetTextTool extends AbstractSwingTool {
 
     @Override
     public String getDescription() {
-        return "Read the text content of a UI component by ref. Requires a ref obtained from swing_snapshot or swing_get_cells.";
+        return "Read the text content of a UI component by ref. Requires a ref obtained from swing_snapshot or swing_get_cells. "
+                + "JPasswordField contents are not readable — use swing_set_text if you need to write a known value.";
     }
 
     @Override
@@ -45,6 +46,14 @@ public class SwingGetTextTool extends AbstractSwingTool {
 
         // BR-02: look up the accessible by ref (throws MCPServerException if not found)
         Accessible accessible = context.getAccessibleByRef(ref);
+
+        // BR-06 (DR-011): password-role accessibles are not readable.
+        // This check runs before BR-04 so the AI gets the specific rule rather than
+        // the generic "does not support get_text".
+        if (SwingUtils.hasPasswordRole(accessible)) {
+            throw new MCPErrorResponseException(
+                    "JPasswordField content is not readable. Use swing_set_text if you need to write a known value.");
+        }
 
         // BR-04: check get_text support
         if (!SwingUtils.supportsGetText(accessible)) {
