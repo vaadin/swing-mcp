@@ -1177,3 +1177,247 @@ other components" (LABEL role), not "labels are editable text"
   snapshot itself: the action isn't advertised, so the AI never
   calls the tool in well-behaved sequences. A generic error is
   sufficient for stale-ref recovery cases.
+
+---
+
+## DR-016 — Modal-stack annotation on snapshot roots
+
+**Status:** Accepted
+**Applies to:** UC-002 (BR-03 line format, Main Flow, BR-14),
+`SnapshotNode` / `SwingSnapshotTool` render path, `SwingUtils`
+**Decided:** 2026-04-15
+
+**Decision.** When a root in the snapshot is a **modal** `Dialog`
+whose `getOwner()` chain contains at least one **visible** window,
+the renderer emits a header line immediately above the root's first
+line:
+
+    [modal stack (N, topmost first): Class0 "Name0" / Class1 "Name1" / ... / ClassN-1 "NameN-1"]
+
+- `N` — total chain length including the rendered root. Minimum `N`
+  for header emission is **2**; shorter chains produce no header.
+- `topmost first` — literal annotation inside the parenthesis to
+  state the ordering convention inline, so a reader parsing the
+  header on its own does not need spec knowledge to know which
+  entry is the active/topmost.
+- `Class0` — the rendered root, leftmost, topmost of the stack.
+- `ClassN-1` — the outermost *live* ancestor (usually a `JFrame`).
+- `Class` — concrete simple class name, resolved via
+  `ComponentClassResolver.resolveDisplayClass(accessible).getSimpleName()`
+  so anonymous / synthetic / runtime-proxy / `javax.swing.plaf.*` /
+  JDK-internal nested classes are stripped the same way they are in
+  the snapshot body (BR-11 consistency).
+- `"Name"` — `AccessibleContext.getAccessibleName()`, sanitised via
+  `SwingUtils.sanitizeForQuotedSlot` (BR-13). The quoted slot is
+  omitted entirely when the name is null/blank — the chain entry
+  then reads as just `Class`.
+- `/` — ASCII forward slash with a space on each side. Deliberately
+  not an arrow: the BR-11 identity slot already uses `->` for the
+  `Concrete -> JClass` custom-subclass form, and reusing arrow glyphs
+  in the same format invites miscategorisation.
+- **Per-root.** The header is emitted independently for each
+  considered component that satisfies the modal-plus-live-owner
+  predicate. Per DR-017 the current implementation returns only the
+  topmost modal, so in practice exactly one header appears when a
+  modal is up; the per-root design generalises cleanly if DR-017 is
+  ever revisited.
+
+**Scope: modal-only.**
+
+- A non-modal `JDialog` with a visible owner frame does **not** get
+  the header. The motivation is return-state context — what will be
+  revealed when I close this — and a non-modal dialog does not block
+  its owner, so "return state" is not a concept that applies.
+- A `JFrame` root never gets the header: frames are top-level and
+  `getOwner()` is `null` for them by construction.
+
+**Visibility filter.**
+`Dialog.getOwner()` can return `Window`s that are not visible — most
+notably the **shared hidden frame** created by
+`JOptionPane.showMessageDialog(null, ...)` or
+`JDialog((Frame) null, ...)`. The chain walk skips any ancestor
+where `SwingUtils.isVisible(owner)` returns `false`. After filtering,
+if only the rendered root remains (length 1), no header is emitted —
+a standalone modal with no live parent reads as "nothing to return
+to", which the absence of a header conveys correctly.
+
+**Placement.** The header line is emitted by `SwingSnapshotTool`
+just before delegating to `root.render(0, sb)` for each root. The
+render call itself is unchanged. No indentation — the header sits at
+column 0 like the root line.
+
+**Filter interaction.** Under `filter_substring` (BR-09), root
+separators are already dropped. The modal-stack header is likewise
+**dropped from filtered output** — the filter is a content-matching
+tool, and a header that never contains matchable ref-bearing
+content would add noise without signal. If a use case emerges for
+surfacing the header in filtered output (e.g. when any descendant
+matches), revisit; the current default is "strip".
+
+**Why a header, not extra roots.**
+
+- **Zero ref pressure.** Including owner windows as sibling roots
+  would either assign refs to components the AI cannot currently
+  interact with (per DR-017 — blocked by the modal) or require a
+  new "hidden" ref state. Header-as-metadata sidesteps both.
+- **Unambiguous about liveness.** The rendered root is the only
+  tree the AI can act on right now. A single annotated line
+  communicates "there's a stack, here's what's in it" without
+  implying anything behind it is currently interactive.
+- **Ownership ordering is the load-bearing fact.** The AI's
+  question is "what state do I return to when I close this?" —
+  precisely what `Dialog.getOwner()` answers. A flat inventory
+  without ordering would force the AI to infer dismissal order.
+
+**Why per-root, not one header for the whole snapshot.**
+`Dialog.ModalityType.DOCUMENT_MODAL` permits multiple modals alive
+at once in independent owner hierarchies (e.g. a multi-document
+editor with two JFrames, each showing its own modal). A global
+header cannot represent two chains; a per-root header generalises
+cleanly. Under today's DR-017 scope only one modal is ever a root,
+so per-root reduces to "header appears above the single root" —
+future-compatible at zero present cost.
+
+**Relationship to DR-017.** DR-017 fixes the contract: tools see
+only windows the user can interact with, which means the owner
+chain behind a modal is never reachable as refs. DR-016 restores
+the *planning* signal — "what state do I return to" — as pure
+metadata, without reopening DR-017's decision. The division is
+strict: DR-017 owns the ref surface; DR-016 owns the informational
+surface.
+
+**Alternatives considered.**
+
+- **Top-level flat window inventory — `[windows: JOptionPane
+  (active, modal), LoginDialog (hidden, modal), JFrame "Billing
+  App" (hidden)]`.** Rejected — encodes `active`/`hidden`/`modal`
+  but not ownership, so the AI still has to guess dismissal order
+  for chained modals.
+- **Include ancestor windows as sibling roots, rendered with
+  children replaced by a "[hidden beneath modal]" stub.** Rejected
+  — see "zero ref pressure" above. Doubles the visible surface in
+  the common single-modal case for a marginal gain, and undermines
+  DR-017's ref-surface contract.
+- **Single global header spanning all roots.** Rejected — cannot
+  represent multi-hierarchy document-modal cases; also misleading
+  when a snapshot contains non-modal frames alongside one modal
+  dialog (today impossible under DR-017, but the per-root rule is
+  forward-compatible).
+- **Render the header after the root subtree (footer).** Rejected
+  — the AI reads top-to-bottom; header is orientation information
+  that belongs before the tree it annotates.
+- **Include role parenthetical (`JDialog (dialog) "Login Failed"`)
+  in chain entries, matching BR-11.** Rejected — every chain entry
+  is a `Window` (Dialog or Frame); the role is fixed and adds no
+  signal. Compact concrete-class-only keeps the header short.
+- **Emit for non-modal dialogs too, renamed to `[owner chain:
+  ...]`.** Rejected (scope) — non-modal dialogs do not block their
+  owner, so the "return state" motivation does not apply. If
+  surfacing non-modal ownership becomes valuable (palette dialogs
+  attached to a document frame, etc.), revisit under a separate DR.
+- **Unicode arrow `←` (U+2190) instead of `/`.** Rejected — any
+  arrow glyph conflicts semantically with BR-11's `->`. The slash
+  is visually orthogonal.
+- **ASCII `<-` arrow.** Rejected for the same reason — mirrors
+  BR-11's arrow direction, inviting confusion.
+- **Comma separator with an `(active)` marker on the first entry
+  (`JDialog "Login Failed" (active), JDialog "Login", ...`).**
+  Rejected — self-documenting but redundant: the rendered root
+  below the header is already the only active thing. Slash is
+  terser and the inline `topmost first` annotation in the header
+  handles the ordering convention.
+- **Preposition `over` (`JDialog "Login Failed" over JDialog
+  "Login" over JFrame "Billing App"`).** Rejected — most readable
+  English but most verbose; `/` is tighter for the same signal.
+
+---
+
+## DR-017 — Tools consider only user-interactable windows
+
+**Status:** Accepted
+**Applies to:** `MCPServer.getConsideredComponents()`, UC-002
+(snapshot), UC-003 (screenshot), all future read and mutation tools
+that operate against
+`SwingToolContext.getConsideredComponents()`
+**Decided:** 2026-04-15 (formalising a pre-existing decision
+documented as mechanism in project-context.md §5)
+
+**Decision.** `MCPServer.getConsideredComponents()` returns the
+windows a human user can interact with *right now*, and nothing
+else:
+
+- If a modal `Dialog` is showing, return exactly that one modal.
+  Subordinate windows (owner frame, prior modal in the chain) are
+  excluded.
+- Otherwise, return every visible `Window`.
+
+This is **not** a default to be refined later. It is the
+load-bearing contract every tool operates under: a ref can only
+address a component the user could click. There is no
+`include_blocked_windows` flag, no "return all modals across owner
+hierarchies", no exposure of hidden parents as additional roots.
+The owner chain of a modal is surfaced as **metadata** (DR-016
+modal-stack header), not as interactable roots.
+
+**Why.**
+
+- **Tool safety is sourced from the user-interaction invariant.**
+  Every mutation tool (`swing_click`, `swing_set_text`, …) assumes
+  the target is reachable by the user. If a ref could address a
+  window blocked by a modal, the mutation would either no-op
+  silently (framework swallows the event) or bypass the modal's
+  intent (setter APIs that skip event dispatch). Both are worse
+  than refusing to advertise the ref.
+- **The snapshot is a decision surface, not a component
+  inventory.** The AI reads the snapshot to decide what to do
+  next. Including windows the AI cannot act on inflates the
+  decision surface with non-options and dilutes ref numbering — a
+  blocked `JButton` that gets `ref=7` is a footgun waiting to
+  misfire.
+- **Consistency across tools.** Every tool, read or mutation, sees
+  the same set of roots. Screenshot, snapshot, and future tools
+  all inherit the invariant from `getConsideredComponents()`
+  without per-tool carveouts.
+- **Screenshot honesty.** The PNG reflects what the user sees as
+  actionable — a full stack would either overlap (hiding the
+  modal) or arrange windows vertically in a way that does not
+  match any real screen state.
+
+**Interaction with DR-016.** DR-016 exposes the owner chain of a
+modal root as a `[modal stack ...]` header. This adds
+**informational context** for planning (what state returns when
+this modal closes) without adding interactable roots. The
+separation is deliberate: metadata lives in the header; refs live
+in the body.
+
+**Alternatives considered and rejected.**
+
+- **Return every visible modal (support `DOCUMENT_MODAL`
+  multi-hierarchy cases).** Rejected — topmost-only matches how
+  nearly every Swing app uses modality in practice, and the
+  per-root design of DR-016 means adding this later is a
+  mechanical change in `getConsideredComponents()` alone. Not
+  pre-built because speculative generality without a real-world
+  case hurts today's clarity for tomorrow's maybe.
+- **Return the modal *and* its owner chain as additional roots.**
+  Rejected — see "decision surface" above. Refs on owner frames
+  would allow mutations the framework blocks, producing confusing
+  silent failures.
+- **Expose an `include_blocked_windows` parameter.** Rejected —
+  any flag with two modes where only one is ever correct is
+  bureaucracy. The blocked case is handled by DR-016's metadata
+  header; a flag would reintroduce the footgun it was designed to
+  avoid.
+- **Return everything always and let the AI figure out what is
+  blocked from the `[modal]` state.** Rejected — this inverts the
+  contract ("tool output is what the user can do" → "tool output
+  is everything the framework knows about"). Every downstream tool
+  would need its own "is this ref blocked?" check, and the AI
+  would do ref-arithmetic across a soup of unreachable components.
+
+**Why this DR exists even though project-context.md §5 documents
+the mechanism.** §5 reads as operational rules that could evolve;
+this DR declares the rules as a design commitment that will not
+evolve, with the rejected alternatives captured so future sessions
+(AI or human) do not re-litigate them. If §5's rules ever change,
+this DR must be **superseded explicitly**, not amended silently.

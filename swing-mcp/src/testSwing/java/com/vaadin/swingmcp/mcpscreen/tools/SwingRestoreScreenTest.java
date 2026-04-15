@@ -75,7 +75,37 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
             return null;
         });
         executeOnEDT(() -> { frame.setExtendedState(Frame.ICONIFIED); return null; });
+        awaitExtendedState(frame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
         return frame;
+    }
+
+    /**
+     * Polls {@link Frame#getExtendedState()} until {@code (state & mask) == expected}
+     * or {@code timeoutMs} elapses. Silently returns on timeout — the caller's
+     * subsequent assertion produces the diagnostic.
+     *
+     * <p><b>Why this exists.</b> {@code Frame.setExtendedState} posts a state-change
+     * request to the native window manager and returns immediately. On X11 the
+     * reported state can lag the call by tens of milliseconds, and chaining two
+     * requests in quick succession (e.g. {@code MAXIMIZED_BOTH} then
+     * {@code ICONIFIED}) can silently drop the second one if the first has not
+     * fully settled. Tests that read {@code getExtendedState()} directly after
+     * a {@code setExtendedState} call are therefore race-prone. Polling closes
+     * the gap with no commitment on the timing of individual WMs.
+     */
+    private static void awaitExtendedState(Frame frame, int mask, int expected, long timeoutMs) {
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        while (System.currentTimeMillis() < deadline) {
+            if ((frame.getExtendedState() & mask) == expected) {
+                return;
+            }
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
     }
 
     private JInternalFrame showInternalFrame(boolean iconifiable) throws Exception {
@@ -107,6 +137,7 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
 
         snapshot(frame);
         restore(context.getRefOf(frame));
+        awaitExtendedState(frame, Frame.ICONIFIED, 0, 2000);
 
         assertEquals(0, frame.getExtendedState() & Frame.ICONIFIED,
                 "frame should no longer be iconified");
@@ -155,12 +186,17 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
             frame.setVisible(true);
             return null;
         });
-        // Maximize first, then iconify — mirrors real user interaction
+        // Maximize first, then iconify — mirrors real user interaction. Wait
+        // after each setExtendedState so the first change has time to settle
+        // before the next request arrives; on X11 chaining the two without a
+        // wait can silently drop the second one (observed on Linux 2026-04-15).
         executeOnEDT(() -> { frame.setExtendedState(Frame.MAXIMIZED_BOTH); return null; });
+        awaitExtendedState(frame, Frame.MAXIMIZED_BOTH, Frame.MAXIMIZED_BOTH, 2000);
         executeOnEDT(() -> {
             frame.setExtendedState(frame.getExtendedState() | Frame.ICONIFIED);
             return null;
         });
+        awaitExtendedState(frame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
 
         int preState = frame.getExtendedState();
         assertTrue((preState & Frame.ICONIFIED) != 0,
@@ -168,6 +204,7 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
 
         snapshot(frame);
         restore(context.getRefOf(frame));
+        awaitExtendedState(frame, Frame.ICONIFIED, 0, 2000);
 
         int state = frame.getExtendedState();
         assertEquals(0, state & Frame.ICONIFIED, "ICONIFIED bit should be cleared");
