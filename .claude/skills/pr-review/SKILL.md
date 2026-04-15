@@ -12,6 +12,8 @@ When reviewing a PR, follow these rules: check that:
 
 When grabbing a diff of the PR, use three-dotted version of git diff: diff from the merge base, not from the head of the target branch. Reason: the git branch may not be rebased on top of the target branch and you would get code removals, which is just noise.
 
+Also check all PR reviews, there might be some already in the "request changes" state.
+
 When this project is a GitHub project:
 
 - You can use `gh pr diff PR_ID` to get the PR's diff
