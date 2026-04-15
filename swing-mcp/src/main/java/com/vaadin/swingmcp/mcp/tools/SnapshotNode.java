@@ -309,6 +309,16 @@ class SnapshotNode {
             return PruneResult.DROP;
         }
 
+        // HE-5: JPopupMenu belonging to an open JMenu. The JMenu already exposes
+        // the same JMenuItem instances as its accessible children (via its
+        // internal popupMenu), so the popup would duplicate every entry once
+        // the menu is open. Right-click / context popups — whose invoker is not
+        // a JMenu — are kept as usual.
+        if (accessible instanceof JPopupMenu
+                && ((JPopupMenu) accessible).getInvoker() instanceof JMenu) {
+            return PruneResult.DROP;
+        }
+
         // HE-3: glass pane of JRootPane
         if (accessible instanceof Component) {
             Component comp = (Component) accessible;
