@@ -159,6 +159,11 @@ components. The ref system is shared across all tools and follows these rules:
    swing_set_text ref=1 …  → refs invalidated
    swing_snapshot          → get fresh refs
    ```
+   Tool calls must be issued **sequentially**, not in parallel. DR-007's
+   `toolLock` serialises concurrent calls on the server side, so state stays
+   consistent — but the second of two parallel mutations will always see a
+   cleared ref map and fail with a stale-ref error. The `MCPServer`
+   `INSTRUCTIONS` blurb surfaces this rule to clients at `initialize` time.
 
 ---
 
