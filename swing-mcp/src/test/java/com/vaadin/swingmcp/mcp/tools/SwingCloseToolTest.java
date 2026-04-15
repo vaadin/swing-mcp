@@ -221,11 +221,13 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenu() throws Exception {
+        // DR-012: JMenu has no actions (no ref); register under a test ref to
+        // exercise the tool error path.
         JMenu menu = new JMenu("File");
         menu.add(new JMenuItem("Open"));
-        snapshot(menu);
+        context.putRef(99, (javax.accessibility.Accessible) menu);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> close(context.getRefOf(menu)));
+                () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
         assertTrue(ex.getMessage().contains("does not support close"));
     }
 

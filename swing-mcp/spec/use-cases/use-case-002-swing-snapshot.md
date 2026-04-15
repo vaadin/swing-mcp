@@ -44,6 +44,7 @@ but adapted for Swing's `javax.accessibility` API and the migration use case.
 | HE-2 | **CellRendererPane** | `component instanceof CellRendererPane` | Internal rendering artifact used by JTable, JList, JTree, JComboBox for stamp-painting cells. Not a real UI element; actual cell data comes from the accessibility API's virtual children. |
 | HE-3 | **Empty glass pane** | Glass pane of a `JRootPane` with zero accessible children | Almost always an empty transparent overlay. If it *does* have accessible children (custom overlay UI), apply transparent pruning instead — drop the glass pane node but promote its children. |
 | HE-4 | **JTableHeader** | `component instanceof JTableHeader` | Column header names are shown via the `columns:` annotation on the JTable node (SC-6). The header component itself (which appears as a panel with label children inside the JScrollPane) is a rendering artifact, not semantic content. |
+| HE-5 | **`JPopupMenu` belonging to a `JMenu`** | `component instanceof JPopupMenu` AND `getInvoker() instanceof JMenu` | The `JMenu` already exposes its `JMenuItem` instances as accessible children; the popup (whether rendered on the root pane or in a heavyweight popup window) would duplicate them. See DR-012. Right-click / context popups, whose invoker is a `JButton`, `JTable`, etc., are unaffected. |
 
 ### Stage 2 — Transparent Pruning (node removed, children promoted to parent)
 
@@ -240,11 +241,11 @@ survives pruning, and what it looks like in the snapshot output.
 | Swing Component | `AccessibleRole` | Pruned? | Snapshot Example |
 |---|---|---|---|
 | `JMenuBar` | `MENU_BAR` | No | `- JMenuBar (menu_bar)` |
-| `JMenu` | `MENU` | No | `- JMenu (menu) "File" [ref=1] actions: click` |
-| `JMenuItem` | `MENU_ITEM` | No | `- JMenuItem (menu_item) "Open" [ref=2] actions: click` |
-| `JCheckBoxMenuItem` | `CHECK_BOX` | No | `- JCheckBoxMenuItem (check_box) "Word Wrap" [ref=3, checked] actions: click` |
-| `JRadioButtonMenuItem` | `RADIO_BUTTON` | No | `- JRadioButtonMenuItem (radio_button) "Light Theme" [ref=4] actions: click` |
-| `JPopupMenu` | `POPUP_MENU` | No | `- JPopupMenu (popup_menu)` |
+| `JMenu` | `MENU` | No (structural) | `- JMenu (menu) "File"` — no `click` action, no ref. See **DR-012**. The menu's `JMenuItem` children render underneath it. |
+| `JMenuItem` | `MENU_ITEM` | No | `- JMenuItem (menu_item) "Open" [ref=1] actions: click` |
+| `JCheckBoxMenuItem` | `CHECK_BOX` | No | `- JCheckBoxMenuItem (check_box) "Word Wrap" [ref=2, checked] actions: click` |
+| `JRadioButtonMenuItem` | `RADIO_BUTTON` | No | `- JRadioButtonMenuItem (radio_button) "Light Theme" [ref=3] actions: click` |
+| `JPopupMenu` | `POPUP_MENU` | Pruned (HE-5) when `getInvoker() instanceof JMenu`; otherwise kept | `- JPopupMenu (popup_menu)` |
 
 ### Custom Subclasses and Non-Component Accessibles
 
@@ -396,7 +397,7 @@ A depth-first traversal that serialises each node to a line of text per BR-03, u
 
 For each node, collect actions by running the following checks in order. All detection methods are defined in **architecture.md §§ 4–5**.
 
-1. `supportsClick()` returns non-null → add `click` (covers both AccessibleAction and MouseListener fallback — see **architecture.md § 4 "Detecting Click Support"**)
+1. `supportsClick()` returns non-null → add `click` (covers both AccessibleAction and MouseListener fallback — see **architecture.md § 4 "Detecting Click Support"**). **Exception — `JMenu` (DR-012):** `supportsClick()` returns `null` for `JMenu`, so `click` is never emitted on a menu title. The menu's items remain directly clickable via their own refs.
 2. `supportsTogglePopup()` → add `toggle_popup`
 3. Iterate `AccessibleAction` descriptions; for each that equals a known constant (`AccessibleAction.INCREMENT`, `DECREMENT`, `TOGGLE_EXPAND`), normalize to lower-case underscore format and add it (`increment`, `decrement`, `toggle_expand`)
 4. `supportsSetText()` **and** `AccessibleStateSet` contains `EDITABLE` → add `get_text`, `set_text`; else if `supportsSetText()` without `EDITABLE` (read-only text field) → add `get_text`, `set_text` (the `set_text` will be prefixed with `!` by BR-08 since the component is read-only); else `supportsGetText()` → add `get_text`. **Exception — password fields (DR-011):** if the accessible's role is `AccessibleRole.PASSWORD_TEXT`, `get_text` is suppressed in every branch. Password fields thus advertise `set_text` alone when editable and `!set_text` alone when non-editable — never `get_text`. Non-editable password fields retain their ref (see DR-011 "pathological case") so the AI can see the component exists.
@@ -453,6 +454,9 @@ In headless mode, use `JPanel` as the root instead of `JFrame`/`JDialog` (top-le
   - [x] A truncated `JList` advertises `get_cell_count` and `get_cells` (BR-06 step 6b) — `largeJListAdvertisesGetCellsAndGetCellCount`.
   - [x] A truncated `JTree` advertises `get_cell_count` and `get_cells` (BR-06 step 6b) — `largeJTreeAdvertisesGetCellsAndGetCellCount`.
   - [x] Menu items appear in the tree even when the menu is not open.
+  - [x] A `JMenu` renders without a `click` action and without a ref (DR-012). Its `JMenuItem` children still receive refs with `click`. Locked in by `jMenuAppearsAsMenu` / `jMenuBarAppearsAsMenuBar` / `jMenuItemAppearsAsMenuItem` / `menuItemsAppearEvenWhenMenuIsClosed`.
+  - [x] HE-5 prune (positive case, headless): a `JPopupMenu` whose `getInvoker()` is a `JMenu` is dropped from the snapshot — `jPopupMenuWithJMenuInvokerIsPruned`.
+  - [x] HE-5 prune (negative case / regression guard, headless): a `JPopupMenu` whose `getInvoker()` is a `JButton` is NOT dropped — `contextJPopupMenuWithNonJMenuInvokerIsNotPruned`.
   - [x] JTabbedPane shows tab items; selected tab has `SELECTED` state; non-selected tab content is not included.
   - [x] JTabbedPane tabs render with 0-based index: `- (page_tab) N "title"` (SC-2; BR-11 Case C). Locked in by `tabbedPane_fourTabs_indicesAscendFromZero` plus the multi-tab / selected-tab / nested-content tests.
   - [x] A tab disabled via `setEnabledAt(i, false)` renders as `[disabled]` on the `page_tab` line (`tabbedPane_tabDisabledViaSetEnabledAt_marksOnlyThatTabDisabled` — commit 043a71b).
@@ -519,3 +523,4 @@ Uses real `JFrame`/`JDialog` instances on an actual display. The snapshot tool i
 - [x] A visible `JDialog` with child components produces a snapshot tree rooted at the dialog's content (framework-internal wrappers pruned).
 - [x] A visible `JInternalFrame` inside a `JDesktopPane` (inside `JFrame`) produces a snapshot subtree for the internal frame with correct roles, names, and refs.
 - [x] A `JDesktopPane` with multiple `JInternalFrame`s shows all internal frames in the snapshot.
+- [x] HE-5 end-to-end (screen): when a `JMenu`'s popup is opened via real Swing mechanics (`JMenu.doClick()` on a visible `JFrame`), the resulting `JPopupMenu` node is pruned and the menu's `JMenuItem` children appear only once — under the `JMenu`, not duplicated under a sibling `JPopupMenu`. The `JMenu` carries `[selected, checked]` state to signal the popup is open. `openJMenuPopup_doesNotDuplicateItems_HE5`.

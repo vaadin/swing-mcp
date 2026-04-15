@@ -189,13 +189,13 @@ class SwingTogglePopupTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenuBar() throws Exception {
+        // DR-012: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
-        snapshot(mb);
-        int ref = context.getRefOf(menu);
+        context.putRef(99, (javax.accessibility.Accessible) menu);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> togglePopup(ref));
+                () -> togglePopup(99));
         assertEquals(
                 "Component does not support toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());

@@ -328,26 +328,25 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenuBar() throws Exception {
+        // DR-012: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
-        snapshot(mb);
-        // JMenuBar itself has no ref; JMenu has click but not get_text
-        int ref = context.getRefOf(menu);
+        context.putRef(99, (javax.accessibility.Accessible) menu);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getText(ref));
+                () -> getText(99));
         assertTrue(ex.getMessage().contains("does not support get_text"));
     }
 
     @Test
     void componentMatrix_JMenu() throws Exception {
+        // DR-012: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
-        snapshot(mb);
-        int ref = context.getRefOf(menu);
+        context.putRef(99, (javax.accessibility.Accessible) menu);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getText(ref));
+                () -> getText(99));
         assertTrue(ex.getMessage().contains("does not support get_text"));
     }
 
