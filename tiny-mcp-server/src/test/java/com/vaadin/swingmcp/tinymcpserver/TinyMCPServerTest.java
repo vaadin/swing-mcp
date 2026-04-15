@@ -15,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TinyMCPServerTest {
 
-    private static final int TEST_PORT = 18089;
     private static TinyMCPServer server;
     private static McpSyncClient client;
 
@@ -24,11 +23,12 @@ class TinyMCPServerTest {
         MCPProtocol.Implementation serverInfo = new MCPProtocol.Implementation();
         serverInfo.setName("Test Server");
         serverInfo.setVersion("1.0");
-        server = new TinyMCPServer(TEST_PORT, "/mcp", serverInfo);
+        // Port 0 → OS-assigned ephemeral port, so parallel test runs don't collide.
+        server = new TinyMCPServer(0, "/mcp", serverInfo);
         server.start();
 
         HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport
-                .builder("http://127.0.0.1:" + TEST_PORT + "/mcp")
+                .builder(server.getUrl())
                 .openConnectionOnStartup(false)
                 .build();
 
@@ -91,21 +91,21 @@ class TinyMCPServerTest {
 
     @Test
     void addToolRejectsNullName() {
-        TinyMCPServer s = new TinyMCPServer(19001, "/mcp");
+        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
         assertThrows(IllegalArgumentException.class, () ->
                 s.addTool(null, "desc", new InputSchemaBuilder().build(), params -> null));
     }
 
     @Test
     void addToolRejectsBlankName() {
-        TinyMCPServer s = new TinyMCPServer(19002, "/mcp");
+        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
         assertThrows(IllegalArgumentException.class, () ->
                 s.addTool("  ", "desc", new InputSchemaBuilder().build(), params -> null));
     }
 
     @Test
     void addToolRejectsInvalidName() {
-        TinyMCPServer s = new TinyMCPServer(19009, "/mcp");
+        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
         assertThrows(IllegalArgumentException.class, () ->
                 s.addTool("1tool", "desc", new InputSchemaBuilder().build(), params -> null));
         assertThrows(IllegalArgumentException.class, () ->
@@ -116,35 +116,35 @@ class TinyMCPServerTest {
 
     @Test
     void addToolRejectsNullDescription() {
-        TinyMCPServer s = new TinyMCPServer(19003, "/mcp");
+        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
         assertThrows(IllegalArgumentException.class, () ->
                 s.addTool("my_tool", null, new InputSchemaBuilder().build(), params -> null));
     }
 
     @Test
     void addToolRejectsBlankDescription() {
-        TinyMCPServer s = new TinyMCPServer(19004, "/mcp");
+        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
         assertThrows(IllegalArgumentException.class, () ->
                 s.addTool("my_tool", "  ", new InputSchemaBuilder().build(), params -> null));
     }
 
     @Test
     void addToolRejectsNullInputSchema() {
-        TinyMCPServer s = new TinyMCPServer(19005, "/mcp");
+        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
         assertThrows(IllegalArgumentException.class, () ->
                 s.addTool("my_tool", "desc", null, params -> null));
     }
 
     @Test
     void addToolRejectsNullFunction() {
-        TinyMCPServer s = new TinyMCPServer(19006, "/mcp");
+        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
         assertThrows(IllegalArgumentException.class, () ->
                 s.addTool("my_tool", "desc", new InputSchemaBuilder().build(), null));
     }
 
     @Test
     void addToolAfterStartThrows() throws Exception {
-        TinyMCPServer s = new TinyMCPServer(19007, "/mcp");
+        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
         s.start();
         try {
             assertThrows(IllegalStateException.class, () ->
@@ -156,7 +156,7 @@ class TinyMCPServerTest {
 
     @Test
     void addToolDuplicateNameThrows() {
-        TinyMCPServer s = new TinyMCPServer(19008, "/mcp");
+        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
         s.addTool("my_tool", "desc", new InputSchemaBuilder().build(), params -> null);
         assertThrows(IllegalStateException.class, () ->
                 s.addTool("my_tool", "other desc", new InputSchemaBuilder().build(), params -> null));

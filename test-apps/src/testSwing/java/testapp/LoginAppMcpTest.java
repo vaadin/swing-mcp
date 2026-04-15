@@ -34,7 +34,8 @@ class LoginAppMcpTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        mcpServer = new MCPServer();
+        // Port 0 → OS-assigned ephemeral port, so parallel test runs don't collide.
+        mcpServer = new MCPServer(0, "/mcp");
         mcpServer.start();
 
         Duration timeout = Duration.ofSeconds(10);

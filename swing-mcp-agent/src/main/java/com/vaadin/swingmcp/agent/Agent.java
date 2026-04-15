@@ -13,10 +13,23 @@ import java.util.logging.Logger;
  * <p>
  * The MCP server is started on a daemon thread so it does not
  * prevent the JVM from shutting down.
+ * <p>
+ * The port defaults to the built-in MCP server default, but can be overridden via the
+ * {@code swing.mcp.port} system property. A value of {@code 0} selects an OS-assigned
+ * ephemeral port (useful for tests).
  */
 public final class Agent {
 
     private static final Logger LOG = Logger.getLogger(Agent.class.getName());
+
+    /** System property that overrides the MCP server port. */
+    public static final String PORT_PROPERTY = "swing.mcp.port";
+
+    /**
+     * The started server instance, or {@code null} if startup has not completed yet
+     * (or failed). Package-private for test introspection.
+     */
+    static volatile MCPServer server;
 
     private Agent() {
     }
@@ -27,14 +40,29 @@ public final class Agent {
     public static void premain(String agentArgs, Instrumentation inst) {
         Thread starter = new Thread(() -> {
             try {
-                MCPServer server = new MCPServer();
-                server.startAndAutoStop();
-                LOG.info("Swing MCP agent started");
+                MCPServer s = buildServer();
+                s.startAndAutoStop();
+                server = s;
+                LOG.info("Swing MCP agent started on " + s.getUrl());
             } catch (Exception e) {
                 LOG.log(Level.SEVERE, "Failed to start Swing MCP agent", e);
             }
         }, "swing-mcp-agent-starter");
         starter.setDaemon(true);
         starter.start();
+    }
+
+    private static MCPServer buildServer() {
+        String value = System.getProperty(PORT_PROPERTY);
+        if (value == null || value.isBlank()) {
+            return new MCPServer();
+        }
+        try {
+            int port = Integer.parseInt(value.trim());
+            return new MCPServer(port, "/mcp");
+        } catch (NumberFormatException e) {
+            LOG.warning("Invalid " + PORT_PROPERTY + "=" + value + "; using default port");
+            return new MCPServer();
+        }
     }
 }

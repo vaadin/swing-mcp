@@ -9,7 +9,8 @@ class MCPServerTest extends AbstractHeadlessTest {
 
     @Test
     void smokeTestStartAndStop() throws Exception {
-        MCPServer s = new MCPServer(18091, "/mcp");
+        // Port 0 → OS-assigned ephemeral port, so parallel test runs don't collide.
+        MCPServer s = new MCPServer(0, "/mcp");
         s.start();
         s.stop();
     }
