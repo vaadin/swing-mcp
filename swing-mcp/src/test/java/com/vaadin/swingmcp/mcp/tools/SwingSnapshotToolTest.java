@@ -64,7 +64,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         assertEquals(
                 "- JPanel (panel)\n"
                 + "  - JButton (push_button) \"Save\" [ref=1] actions: click\n"
-                + "  - JTextField (text) [ref=2] actions: get_text, set_text",
+                + "  - JTextField (text) [ref=2] text=\"\" actions: get_text, set_text",
                 output);
     }
 
@@ -249,10 +249,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 + "    - JList (list) [ref=1] actions: multi-selection\n"
                 + "      - (label) \"A\" [ref=2] actions: click\n"
                 + "      - (label) \"B\" [ref=3] actions: click\n"
-                + "    - JScrollBar (scroll_bar) [ref=4, vertical] actions: get_value, set_value\n"
+                + "    - JScrollBar (scroll_bar) [ref=4, vertical] value=0 actions: get_value, set_value\n"
                 + "      - JButton (push_button) [ref=5] actions: click\n"
                 + "      - JButton (push_button) [ref=6] actions: click\n"
-                + "    - JScrollBar (scroll_bar) [ref=7, horizontal] actions: get_value, set_value\n"
+                + "    - JScrollBar (scroll_bar) [ref=7, horizontal] value=0 actions: get_value, set_value\n"
                 + "      - JButton (push_button) [ref=8] actions: click\n"
                 + "      - JButton (push_button) [ref=9] actions: click",
                 output);
@@ -361,10 +361,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 + "    - JTable (table) [ref=1] columns: [ID, Name, City] actions: multi-selection\n"
                 + "      - row 0: 1 | Alice | NY\n"
                 + "      - row 1: 2 | Bob | LA\n"
-                + "    - JScrollBar (scroll_bar) [ref=2, vertical] actions: get_value, set_value\n"
+                + "    - JScrollBar (scroll_bar) [ref=2, vertical] value=0 actions: get_value, set_value\n"
                 + "      - JButton (push_button) [ref=3] actions: click\n"
                 + "      - JButton (push_button) [ref=4] actions: click\n"
-                + "    - JScrollBar (scroll_bar) [ref=5, horizontal] actions: get_value, set_value\n"
+                + "    - JScrollBar (scroll_bar) [ref=5, horizontal] value=0 actions: get_value, set_value\n"
                 + "      - JButton (push_button) [ref=6] actions: click\n"
                 + "      - JButton (push_button) [ref=7] actions: click",
                 output);
@@ -402,10 +402,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 "- JPanel (panel)\n"
                 + "  - JScrollPane (scroll_pane)\n"
                 + "    - JTable (table) [ref=1] columns: [] actions: multi-selection\n"
-                + "    - JScrollBar (scroll_bar) [ref=2, vertical] actions: get_value, set_value\n"
+                + "    - JScrollBar (scroll_bar) [ref=2, vertical] value=0 actions: get_value, set_value\n"
                 + "      - JButton (push_button) [ref=3] actions: click\n"
                 + "      - JButton (push_button) [ref=4] actions: click\n"
-                + "    - JScrollBar (scroll_bar) [ref=5, horizontal] actions: get_value, set_value\n"
+                + "    - JScrollBar (scroll_bar) [ref=5, horizontal] value=0 actions: get_value, set_value\n"
                 + "      - JButton (push_button) [ref=6] actions: click\n"
                 + "      - JButton (push_button) [ref=7] actions: click",
                 output);
@@ -447,10 +447,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 + "  - JScrollPane (scroll_pane)\n"
                 + "    - JTable (table) [ref=1] columns: [Name] actions: multi-selection\n"
                 + "      - row 0: Alice\n"
-                + "    - JScrollBar (scroll_bar) [ref=2, vertical] actions: get_value, set_value\n"
+                + "    - JScrollBar (scroll_bar) [ref=2, vertical] value=0 actions: get_value, set_value\n"
                 + "      - JButton (push_button) [ref=3] actions: click\n"
                 + "      - JButton (push_button) [ref=4] actions: click\n"
-                + "    - JScrollBar (scroll_bar) [ref=5, horizontal] actions: get_value, set_value\n"
+                + "    - JScrollBar (scroll_bar) [ref=5, horizontal] value=0 actions: get_value, set_value\n"
                 + "      - JButton (push_button) [ref=6] actions: click\n"
                 + "      - JButton (push_button) [ref=7] actions: click",
                 output);
@@ -623,7 +623,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- JPanel (panel)\n"
-                + "  - JSlider (slider) [ref=1, disabled, horizontal] actions: !increment, !decrement, get_value, !set_value",
+                + "  - JSlider (slider) [ref=1, disabled, horizontal] value=50 actions: !increment, !decrement, get_value, !set_value",
                 output);
     }
 
@@ -703,7 +703,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- JPanel (panel)\n"
-                + "  - JTextField (text) [ref=1] actions: get_text, set_text",
+                + "  - JTextField (text) [ref=1] text=\"\" actions: get_text, set_text",
                 snapshot(panel));
     }
 
@@ -763,6 +763,264 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 snapshot(panel));
     }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // BR-12 / DR-013 — inline text="..." / value=N previews
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void br12_jTextFieldWithContent_rendersInlineTextPreview() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JTextField("admin"));
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JTextField (text) [ref=1] text=\"admin\" actions: get_text, set_text",
+                snapshot(panel));
+    }
+
+    @Test
+    void br12_jTextFieldLongerThanCap_truncatesTo14CharsPlusEllipsis() throws Exception {
+        // 30 chars — longer than PREVIEW_MAX_LENGTH (15). DR-010 convention:
+        // first 14 chars + U+2026.
+        JPanel panel = new JPanel();
+        panel.add(new JTextField("Lorem ipsum dolor sit amet ipl"));
+
+        // "Lorem ipsum do" (14 chars) + "…"
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JTextField (text) [ref=1] text=\"Lorem ipsum do…\" actions: get_text, set_text",
+                snapshot(panel));
+    }
+
+    @Test
+    void br12_jTextFieldAt15Chars_rendersFullValue() throws Exception {
+        // Boundary case: exactly 15 chars is emitted in full (no ellipsis).
+        JPanel panel = new JPanel();
+        panel.add(new JTextField("123456789012345"));
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JTextField (text) [ref=1] text=\"123456789012345\" actions: get_text, set_text",
+                snapshot(panel));
+    }
+
+    @Test
+    void br12_emptyJTextField_rendersEmptyStringPreview() throws Exception {
+        // Empty JTextField yields text="" — distinct from "no preview" (which
+        // would be the case if supportsGetText were false). Matches UC-005
+        // BR-08's "field exists and is empty" semantics.
+        JPanel panel = new JPanel();
+        panel.add(new JTextField());
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JTextField (text) [ref=1] text=\"\" actions: get_text, set_text",
+                snapshot(panel));
+    }
+
+    @Test
+    void br12_jTextAreaWithNewlines_collapsesWhitespaceBeforeTruncation() throws Exception {
+        // Newlines and whitespace runs are collapsed to single spaces
+        // (matches BR-10's HTML cleanup convention) before the 15-char cap.
+        // Source: "line one\nline two" (17 chars) → collapsed: "line one line two"
+        // (17 chars after collapse — still 17 because the newline replaced by
+        // a single space). Cap: first 14 chars + "…".
+        JPanel panel = new JPanel();
+        panel.add(new JTextArea("line one\nline two"));
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JTextArea (text) [ref=1, multi_line] text=\"line one line…\" actions: get_text, set_text",
+                snapshot(panel));
+    }
+
+    @Test
+    void br12_editableJPasswordField_doesNotEmitTextPreview() throws Exception {
+        // DR-011 / BR-12 gate parity: supportsGetText() returns false for
+        // PASSWORD_TEXT, so no text="..." annotation is emitted even though
+        // the field has content. set_text is unaffected.
+        JPanel panel = new JPanel();
+        JPasswordField pw = new JPasswordField();
+        pw.setText("hunter2");
+        panel.add(pw);
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JPasswordField (password_text) [ref=1] actions: set_text",
+                snapshot(panel));
+    }
+
+    @Test
+    void br12_jSliderWithValue_rendersInlineValuePreview() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JSlider(0, 100, 42));
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JSlider (slider) [ref=1, horizontal] value=42 actions: increment, decrement, get_value, set_value",
+                snapshot(panel));
+    }
+
+    @Test
+    void br12_jSpinnerWithFractionalValue_rendersDecimalValue() throws Exception {
+        // Fractional numbers render with a decimal point per DR-010's number
+        // convention. Double(3.5) → "value=3.5" (not "value=3").
+        JPanel panel = new JPanel();
+        panel.add(new JSpinner(new SpinnerNumberModel(3.5, 0.0, 10.0, 0.5)));
+
+        String out = snapshot(panel);
+        assertTrue(out.contains("value=3.5"),
+                "Expected fractional value=3.5 in snapshot, got:\n" + out);
+    }
+
+    @Test
+    void br12_jProgressBarWithMax_rendersCurrentOverMax() throws Exception {
+        // PROGRESS_BAR exception: when getMaximumAccessibleValue() is non-null,
+        // render as value=current/max.
+        JPanel panel = new JPanel();
+        JProgressBar bar = new JProgressBar(0, 100);
+        bar.setValue(37);
+        panel.add(bar);
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JProgressBar (progress_bar) [ref=1, horizontal] value=37/100 actions: get_value",
+                snapshot(panel));
+    }
+
+    @Test
+    void br12_jProgressBarWithNullMax_rendersBareValue() throws Exception {
+        // Fallback for a progress bar that returns null from
+        // getMaximumAccessibleValue(): bare value=N. In standard Swing
+        // AccessibleJProgressBar always returns the model max, so we have to
+        // mock the AccessibleValue to exercise the null-max path.
+        JPanel panel = new JPanel();
+        JProgressBar bar = new JProgressBar(0, 100) {
+            @Override
+            public AccessibleContext getAccessibleContext() {
+                if (accessibleContext == null) {
+                    accessibleContext = new AccessibleJProgressBar() {
+                        @Override
+                        public AccessibleValue getAccessibleValue() {
+                            return new AccessibleValue() {
+                                @Override
+                                public Number getCurrentAccessibleValue() { return 37; }
+                                @Override
+                                public boolean setCurrentAccessibleValue(Number n) { return false; }
+                                @Override
+                                public Number getMinimumAccessibleValue() { return 0; }
+                                @Override
+                                public Number getMaximumAccessibleValue() { return null; }
+                            };
+                        }
+                    };
+                }
+                return accessibleContext;
+            }
+        };
+        bar.setValue(37);
+        panel.add(bar);
+
+        String out = snapshot(panel);
+        assertTrue(out.contains("value=37 actions"),
+                "Expected bare value=37 when max is null, got:\n" + out);
+        assertFalse(out.contains("value=37/"),
+                "Should not render denominator when max is null, got:\n" + out);
+    }
+
+    @Test
+    void br12_jCheckBox_emitsNoInlinePreview() throws Exception {
+        // Neither gate fires for CHECK_BOX (AccessibleValue is suppressed per
+        // SUPPRESSED_VALUE_ROLES; no AccessibleText). State [checked]
+        // already carries the signal.
+        JPanel panel = new JPanel();
+        JCheckBox cb = new JCheckBox("Accept");
+        cb.setSelected(true);
+        panel.add(cb);
+
+        String out = snapshot(panel);
+        assertFalse(out.contains(" text="),
+                "JCheckBox should not emit inline text=, got:\n" + out);
+        assertFalse(out.contains(" value="),
+                "JCheckBox should not emit inline value=, got:\n" + out);
+    }
+
+    @Test
+    void br12_jButton_emitsNoInlinePreview() throws Exception {
+        // Neither gate fires for PUSH_BUTTON.
+        JPanel panel = new JPanel();
+        panel.add(new JButton("Save"));
+
+        String out = snapshot(panel);
+        assertFalse(out.contains(" text="),
+                "JButton should not emit inline text=, got:\n" + out);
+        assertFalse(out.contains(" value="),
+                "JButton should not emit inline value=, got:\n" + out);
+    }
+
+    @Test
+    void br12_defensiveRead_throwingAccessibleText_omitsAnnotationKeepsNode() throws Exception {
+        // If the accessible's AccessibleText impl throws at snapshot time, the
+        // single text="..." annotation is omitted — but the component still
+        // appears in the tree. Exercised via a custom JTextField subclass
+        // whose AccessibleText throws on getCharCount().
+        JPanel panel = new JPanel();
+        JTextField tf = new JTextField("admin") {
+            @Override
+            public AccessibleContext getAccessibleContext() {
+                if (accessibleContext == null) {
+                    accessibleContext = new AccessibleJTextField() {
+                        @Override
+                        public AccessibleText getAccessibleText() {
+                            AccessibleText real = super.getAccessibleText();
+                            if (real == null) return null;
+                            return new AccessibleText() {
+                                @Override
+                                public int getIndexAtPoint(java.awt.Point p) { return real.getIndexAtPoint(p); }
+                                @Override
+                                public java.awt.Rectangle getCharacterBounds(int i) { return real.getCharacterBounds(i); }
+                                @Override
+                                public int getCharCount() { throw new RuntimeException("boom"); }
+                                @Override
+                                public int getCaretPosition() { return real.getCaretPosition(); }
+                                @Override
+                                public String getAtIndex(int part, int idx) { return real.getAtIndex(part, idx); }
+                                @Override
+                                public String getAfterIndex(int part, int idx) { return real.getAfterIndex(part, idx); }
+                                @Override
+                                public String getBeforeIndex(int part, int idx) { return real.getBeforeIndex(part, idx); }
+                                @Override
+                                public javax.swing.text.AttributeSet getCharacterAttribute(int i) { return real.getCharacterAttribute(i); }
+                                @Override
+                                public int getSelectionStart() { return real.getSelectionStart(); }
+                                @Override
+                                public int getSelectionEnd() { return real.getSelectionEnd(); }
+                                @Override
+                                public String getSelectedText() { return real.getSelectedText(); }
+                            };
+                        }
+                    };
+                }
+                return accessibleContext;
+            }
+        };
+        panel.add(tf);
+
+        // The custom AccessibleJTextField still exposes AccessibleEditableText,
+        // so supportsGetText is true and get_text/set_text are advertised.
+        // The throw happens inside readText → computeInlinePreview catches it
+        // and omits the annotation. Component line still renders.
+        String out = snapshot(panel);
+        assertTrue(out.contains("- JTextField (text) [ref=1]"),
+                "Throwing component should still appear in snapshot, got:\n" + out);
+        assertFalse(out.contains("text=\""),
+                "Throwing AccessibleText should cause text= annotation to be omitted, got:\n" + out);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // End of BR-12 / DR-013 tests
+    // ══════════════════════════════════════════════════════════════════════════
+
     @Test
     void jTextAreaAppearsAsMultiLineText() throws Exception {
         JPanel panel = new JPanel();
@@ -770,7 +1028,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- JPanel (panel)\n"
-                + "  - JTextArea (text) [ref=1, multi_line] actions: get_text, set_text",
+                + "  - JTextArea (text) [ref=1, multi_line] text=\"\" actions: get_text, set_text",
                 snapshot(panel));
     }
 
@@ -783,7 +1041,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- JPanel (panel)\n"
-                + "  - JTextField (text) [ref=1, read_only] actions: get_text, !set_text",
+                + "  - JTextField (text) [ref=1, read_only] text=\"\" actions: get_text, !set_text",
                 snapshot(panel));
     }
 
@@ -796,7 +1054,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- JPanel (panel)\n"
-                + "  - JTextArea (text) [ref=1, read_only, multi_line] actions: get_text, !set_text",
+                + "  - JTextArea (text) [ref=1, read_only, multi_line] text=\"\" actions: get_text, !set_text",
                 snapshot(panel));
     }
 
@@ -856,10 +1114,14 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         JPanel panel = new JPanel();
         panel.add(new JSpinner(new SpinnerNumberModel(1, 0, 10, 1)));
 
+        // BR-12: JSpinner's AccessibleJSpinner delegates AccessibleText to the
+        // inner JFormattedTextField so supportsGetText is true — both text=
+        // and value= are emitted on the spinner line. The inner editor gets
+        // its own text= preview.
         assertEquals(
                 "- JPanel (panel)\n"
-                + "  - JSpinner (spin_box) [ref=1] actions: increment, decrement, get_text, get_value, set_value\n"
-                + "    - JFormattedTextField (text) [ref=2] actions: get_text, set_text",
+                + "  - JSpinner (spin_box) [ref=1] text=\"1\" value=1 actions: increment, decrement, get_text, get_value, set_value\n"
+                + "    - JFormattedTextField (text) [ref=2] text=\"1\" actions: get_text, set_text",
                 snapshot(panel));
     }
 
@@ -870,7 +1132,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- JPanel (panel)\n"
-                + "  - JSlider (slider) [ref=1, horizontal] actions: increment, decrement, get_value, set_value",
+                + "  - JSlider (slider) [ref=1, horizontal] value=50 actions: increment, decrement, get_value, set_value",
                 snapshot(panel));
     }
 
@@ -881,9 +1143,11 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 new JLabel("Left"), new JLabel("Right"));
         panel.add(splitPane);
 
+        // BR-12: unrealized JSplitPane reports -1 from getCurrentAccessibleValue;
+        // value preview mirrors that fidelity (UC-012 Component Matrix note).
         assertEquals(
                 "- JPanel (panel)\n"
-                + "  - JSplitPane (split_pane) [ref=1, horizontal] actions: get_value, set_value\n"
+                + "  - JSplitPane (split_pane) [ref=1, horizontal] value=-1 actions: get_value, set_value\n"
                 + "    - JLabel (label) \"Left\"\n"
                 + "    - JLabel (label) \"Right\"",
                 snapshot(panel));
@@ -909,7 +1173,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- JPanel (panel)\n"
-                + "  - JProgressBar (progress_bar) [ref=1, horizontal] actions: get_value",
+                + "  - JProgressBar (progress_bar) [ref=1, horizontal] value=42/100 actions: get_value",
                 snapshot(panel));
     }
 
@@ -951,10 +1215,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 "- JPanel (panel)\n"
                 + "  - JScrollPane (scroll_pane)\n"
                 + "    - JLabel (label) \"Content\"\n"
-                + "    - JScrollBar (scroll_bar) [ref=1, vertical] actions: get_value, set_value\n"
+                + "    - JScrollBar (scroll_bar) [ref=1, vertical] value=0 actions: get_value, set_value\n"
                 + "      - JButton (push_button) [ref=2] actions: click\n"
                 + "      - JButton (push_button) [ref=3] actions: click\n"
-                + "    - JScrollBar (scroll_bar) [ref=4, horizontal] actions: get_value, set_value\n"
+                + "    - JScrollBar (scroll_bar) [ref=4, horizontal] value=0 actions: get_value, set_value\n"
                 + "      - JButton (push_button) [ref=5] actions: click\n"
                 + "      - JButton (push_button) [ref=6] actions: click",
                 output);
@@ -1158,7 +1422,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 "- JPanel (panel)\n"
                 + "  - JPanel (panel) \"Login\"\n"
                 + "    - JLabel (label) \"Username\"\n"
-                + "    - JTextField (text) \"Username\" [ref=1] actions: get_text, set_text\n"
+                + "    - JTextField (text) \"Username\" [ref=1] text=\"\" actions: get_text, set_text\n"
                 + "    - JLabel (label) \"Password\"\n"
                 + "    - JPasswordField (password_text) \"Password\" [ref=2] actions: set_text\n"
                 + "    - JCheckBox (check_box) \"Remember me\" [ref=3] actions: click\n"
@@ -1349,7 +1613,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         // "text" also matches push_button's "set_text" in actions... but let's
         // check that the text field is definitely included with its ancestor
-        assertTrue(output.contains("- JTextField (text) [ref=2] actions: get_text, set_text"),
+        assertTrue(output.contains("- JTextField (text) [ref=2] text=\"\" actions: get_text, set_text"),
                 "Text field should be in output");
         assertTrue(output.startsWith(filterHeader("text")),
                 "Output should start with filter header");
@@ -1364,7 +1628,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         String output = snapshot("set_text", panel);
 
         // "set_text" matches the text field's actions line
-        assertTrue(output.contains("- JTextField (text) [ref=2] actions: get_text, set_text"),
+        assertTrue(output.contains("- JTextField (text) [ref=2] text=\"\" actions: get_text, set_text"),
                 "Text field should be in output");
         assertTrue(output.startsWith(filterHeader("set_text")),
                 "Output should start with filter header");
@@ -1515,7 +1779,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         // Slider has interactive role — Tier 2 skipped. No click action.
         assertEquals(
-                "- JSlider (slider) [ref=1, horizontal] actions: increment, decrement, get_value, set_value",
+                "- JSlider (slider) [ref=1, horizontal] value=50 actions: increment, decrement, get_value, set_value",
                 snapshot(slider));
     }
 

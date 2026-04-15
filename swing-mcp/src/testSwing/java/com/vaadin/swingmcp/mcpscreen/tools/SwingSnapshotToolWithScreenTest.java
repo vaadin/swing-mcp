@@ -232,7 +232,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
         assertEquals(
                 "- JDialog (dialog) \"Login\"\n"
                 + "  - JLabel (label) \"Username\"\n"
-                + "  - JTextField (text) \"Username\" [ref=1] actions: get_text, set_text\n"
+                + "  - JTextField (text) \"Username\" [ref=1] text=\"\" actions: get_text, set_text\n"
                 + "  - JLabel (label) \"Password\"\n"
                 + "  - JPasswordField (password_text) \"Password\" [ref=2] actions: set_text\n"
                 + "  - JCheckBox (check_box) \"Remember me\" [ref=3] actions: click\n"

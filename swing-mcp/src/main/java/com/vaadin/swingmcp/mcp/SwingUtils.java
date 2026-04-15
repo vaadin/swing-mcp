@@ -1049,4 +1049,87 @@ public final class SwingUtils {
         }
         return d;
     }
+
+    /**
+     * Reads up to {@code maxChars} characters of the accessible's text content
+     * via the accessibility API.
+     *
+     * <p>Returns {@code ""} if the accessible exposes no {@link AccessibleText},
+     * its content is empty, or the JDK returns {@code null} for any character
+     * — matching what the user sees for an empty
+     * {@link javax.swing.JTextField}. Per UC-002 BR-12 / DR-013, used both by
+     * the snapshot inline preview and by {@code swing_get_text} so the two
+     * paths share a single read.
+     *
+     * <p>Primary read path is
+     * {@link AccessibleEditableText#getTextRange(int, int)} when available
+     * (efficient bulk retrieval on all
+     * {@link javax.swing.text.JTextComponent} subclasses); otherwise falls
+     * back to character-by-character via
+     * {@link AccessibleText#getAtIndex(int, int)}.
+     *
+     * @param a        the accessible to read from
+     * @param maxChars maximum number of characters to read; the returned
+     *                 string is at most this length. Use
+     *                 {@link Integer#MAX_VALUE} for no cap.
+     * @return the text content, never {@code null}
+     */
+    public static String readText(Accessible a, int maxChars) {
+        AccessibleContext ac = a.getAccessibleContext();
+        if (ac == null) return "";
+        AccessibleText at = ac.getAccessibleText();
+        if (at == null) return "";
+        int len = at.getCharCount();
+        if (len <= 0) return "";
+        int readLen = Math.min(len, maxChars);
+
+        // Primary path: AccessibleEditableText.getTextRange (efficient bulk)
+        AccessibleEditableText editable = ac.getAccessibleEditableText();
+        if (editable != null) {
+            String text = editable.getTextRange(0, readLen);
+            return text != null ? text : "";
+        }
+
+        // Fallback: character-by-character (rare — a read-only AccessibleText
+        // that does not implement AccessibleEditableText). Kept as defensive
+        // code per UC-005 Algorithm step 8.
+        StringBuilder sb = new StringBuilder(readLen);
+        for (int i = 0; i < readLen; i++) {
+            String ch = at.getAtIndex(AccessibleText.CHARACTER, i);
+            if (ch != null) sb.append(ch);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Reads the current numeric value of an accessible via
+     * {@link AccessibleValue#getCurrentAccessibleValue()}.
+     *
+     * <p>Callers must first gate on {@link #supportsGetValue(Accessible)}; this
+     * method assumes the gate has passed and throws {@link IllegalStateException}
+     * if the accessibility API returns unexpected nulls. The return value is
+     * the raw {@link Number} from the JDK — apply {@link #serializeNumber} to
+     * convert to an int/long/double for output formatting.
+     *
+     * <p>Per UC-002 BR-12 / DR-013, used both by the snapshot inline preview
+     * and by {@code swing_get_value} so the two paths share a single read.
+     *
+     * @throws IllegalStateException if the accessible does not expose a
+     *         usable {@link AccessibleValue} (gate contract violation)
+     */
+    public static Number readValue(Accessible a) {
+        AccessibleContext ac = a.getAccessibleContext();
+        if (ac == null) {
+            throw new IllegalStateException("readValue called on accessible with no AccessibleContext");
+        }
+        AccessibleValue av = ac.getAccessibleValue();
+        if (av == null) {
+            throw new IllegalStateException("readValue called on accessible with no AccessibleValue (gate violation)");
+        }
+        Number current = av.getCurrentAccessibleValue();
+        if (current == null) {
+            throw new IllegalStateException("AccessibleValue.getCurrentAccessibleValue() returned null (gate violation)");
+        }
+        return current;
+    }
 }

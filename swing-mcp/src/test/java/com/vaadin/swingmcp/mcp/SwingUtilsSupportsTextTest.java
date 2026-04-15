@@ -399,4 +399,100 @@ class SwingUtilsSupportsTextTest {
         };
         assertTrue(SwingUtils.hasPasswordRole(fake));
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // BR-12 / DR-013 — readText helper contract
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void readText_withContent_returnsString() {
+        assertEquals("hello", SwingUtils.readText(new JTextField("hello"), 1000));
+    }
+
+    @Test
+    void readText_appliesMaxCharsCap() {
+        // Cap below content length: returns the first N chars only.
+        assertEquals("hello", SwingUtils.readText(new JTextField("hello world"), 5));
+    }
+
+    @Test
+    void readText_emptyField_returnsEmptyString() {
+        // UC-005 BR-08 semantics: empty content is "" (the field exists and is
+        // empty), never null.
+        assertEquals("", SwingUtils.readText(new JTextField(), 1000));
+    }
+
+    @Test
+    void readText_componentWithoutAccessibleText_returnsEmptyString() {
+        // JButton has no AccessibleText — the helper returns "" rather than
+        // throwing, so callers gated on supportsGetText() need no extra
+        // null-check. (Still defensive: BR-12 wraps the call in try/catch
+        // anyway.)
+        assertEquals("", SwingUtils.readText(new JButton("Save"), 1000));
+    }
+
+    @Test
+    void readText_customAccessibleTextReturningNullContent_normalizedToEmpty() {
+        // Regression guard (BR-12 relies on null-normalisation): a custom
+        // AccessibleEditableText whose getTextRange returns null must be
+        // normalised to "" rather than propagated.
+        JTextField fake = new JTextField("anything") {
+            @Override
+            public AccessibleContext getAccessibleContext() {
+                if (accessibleContext == null) {
+                    accessibleContext = new AccessibleJTextField() {
+                        @Override
+                        public javax.accessibility.AccessibleEditableText getAccessibleEditableText() {
+                            return new javax.accessibility.AccessibleEditableText() {
+                                @Override
+                                public String getTextRange(int start, int end) { return null; }
+                                @Override
+                                public void setTextContents(String s) {}
+                                @Override
+                                public void insertTextAtIndex(int i, String s) {}
+                                @Override
+                                public void delete(int s, int e) {}
+                                @Override
+                                public void cut(int s, int e) {}
+                                @Override
+                                public void paste(int i) {}
+                                @Override
+                                public void replaceText(int s, int e, String t) {}
+                                @Override
+                                public void selectText(int s, int e) {}
+                                @Override
+                                public void setAttributes(int s, int e, javax.swing.text.AttributeSet a) {}
+                                // AccessibleText delegates — unused for this
+                                // test but required by the interface contract.
+                                @Override
+                                public int getIndexAtPoint(java.awt.Point p) { return -1; }
+                                @Override
+                                public java.awt.Rectangle getCharacterBounds(int i) { return null; }
+                                @Override
+                                public int getCharCount() { return 5; }
+                                @Override
+                                public int getCaretPosition() { return 0; }
+                                @Override
+                                public String getAtIndex(int p, int i) { return null; }
+                                @Override
+                                public String getAfterIndex(int p, int i) { return null; }
+                                @Override
+                                public String getBeforeIndex(int p, int i) { return null; }
+                                @Override
+                                public javax.swing.text.AttributeSet getCharacterAttribute(int i) { return null; }
+                                @Override
+                                public int getSelectionStart() { return 0; }
+                                @Override
+                                public int getSelectionEnd() { return 0; }
+                                @Override
+                                public String getSelectedText() { return null; }
+                            };
+                        }
+                    };
+                }
+                return accessibleContext;
+            }
+        };
+        assertEquals("", SwingUtils.readText(fake, 1000));
+    }
 }
