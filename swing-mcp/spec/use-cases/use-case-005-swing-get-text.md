@@ -56,8 +56,8 @@ Execution order:
 - [x] `SwingGetTextTest`
   - [x] Reading a `JTextField` with content returns the expected text.
   - [x] Reading a `JTextArea` with multi-line content returns the full text including newlines.
-  - [ ] Reading a `JPasswordField` returns an MCP error with `isError: true` and the dedicated message `"JPasswordField content is not readable. Use swing_set_text if you need to write a known value."` (DR-011). The real password is never emitted, not even masked.
-  - [ ] Reading a custom component whose `AccessibleContext` reports `AccessibleRole.PASSWORD_TEXT` (without extending `JPasswordField`) returns the same error — the gate is role-based (DR-011).
+  - [x] Reading a `JPasswordField` returns an MCP error with `isError: true` and the dedicated message `"JPasswordField content is not readable. Use swing_set_text if you need to write a known value."` (DR-011). The real password is never emitted, not even masked.
+  - [x] Reading a custom component whose `AccessibleContext` reports `AccessibleRole.PASSWORD_TEXT` (without extending `JPasswordField`) returns the same error — the gate is role-based (DR-011).
   - [x] Reading an empty `JTextField` returns an empty string.
   - [x] Reading with an invalid ref returns an MCP error with `isError: true`.
   - [x] The error message suggests calling `swing_snapshot` to refresh refs.
@@ -70,13 +70,13 @@ Execution order:
 
 - [x] `SwingGetTextScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
   - [x] Reading a `JTextField` inside `JFrame` returns its content.
-  - [ ] Reading a `JPasswordField` inside `JFrame` returns the DR-011 MCP error.
+  - [x] Reading a `JPasswordField` inside `JFrame` returns the DR-011 MCP error.
   - [x] Reading a `JTextArea` inside `JFrame` returns multi-line content.
   - [x] Reading a `JTextField` inside `JDialog` returns its content.
-  - [ ] Reading a `JPasswordField` inside `JDialog` returns the DR-011 MCP error.
+  - [x] Reading a `JPasswordField` inside `JDialog` returns the DR-011 MCP error.
   - [x] Reading an empty `JTextField` inside `JDialog` returns an empty string.
   - [x] Reading a `JTextField` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) returns its content.
-  - [ ] Reading a `JPasswordField` inside `JInternalFrame` returns the DR-011 MCP error.
+  - [x] Reading a `JPasswordField` inside `JInternalFrame` returns the DR-011 MCP error.
 
 ### Component matrix
 
