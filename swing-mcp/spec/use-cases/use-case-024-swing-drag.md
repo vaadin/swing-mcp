@@ -5,7 +5,7 @@
 
 Drag-and-drop primitive for palette→canvas drops, node-to-node edge drawing, component-to-component transfers, reordering, and canvas repositioning — needed because the snapshot exposes no drag action and the AI must infer drag capability from context.
 
-**Tool description:** "Drag from one location to another. Dispatches mouse drag events (PRESSED → DRAGGED → RELEASED). Source: provide source_ref (component reference, drags from center) or source_x/source_y (window-relative pixel coordinates, for custom-painted items without refs). Target: provide target_ref (component reference, drops at center) or target_x/target_y (window-relative pixel coordinates). Refs are obtained from swing_snapshot or swing_get_cells."
+**Tool description:** "Drag a UI component to another location. Dispatches mouse drag events (PRESSED → DRAGGED → RELEASED). Source: source_ref identifies the component; by default drags from its center. Provide optional source_x/source_y (component-relative pixel offsets) to start from a specific point within the component (e.g. a painted node on a canvas). Target: target_ref identifies the drop component; by default drops at its center. Provide optional target_x/target_y (component-relative pixel offsets) to drop at a specific point within the target component. Refs are obtained from swing_snapshot or swing_get_cells."
 
 ---
 
@@ -13,28 +13,27 @@ Drag-and-drop primitive for palette→canvas drops, node-to-node edge drawing, c
 
 | ID | Rule |
 |----|------|
-| BR-01 | **Source specification.** The caller provides EITHER `source_ref` (integer) OR both `source_x` and `source_y` (integers, window-relative pixel coordinates). If `source_ref` is provided, `source_x`/`source_y` are ignored. If neither `source_ref` nor both `source_x`/`source_y` are provided, return an `INVALID_PARAMS` error. If only one of `source_x`/`source_y` is present (and no `source_ref`), return an `INVALID_PARAMS` error. |
+| BR-01 | **Source specification.** `source_ref` is required — identifies the component to drag from. By default the drag starts from the component's center. Optional `source_x`/`source_y` (integers, component-relative pixel offsets) override the start point within the component (e.g. to target a specific painted node on a canvas). If only one of `source_x`/`source_y` is provided, return an `INVALID_PARAMS` error. |
 | BR-02 | If the source ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | **Target specification.** The caller provides EITHER `target_ref` (integer) OR both `target_x` and `target_y` (integers, window-relative pixel coordinates). If `target_ref` is provided, `target_x`/`target_y` are ignored. If neither `target_ref` nor both `target_x`/`target_y` are provided, return an `INVALID_PARAMS` error. |
-| BR-04 | If `target_ref` is provided and not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-05 | When `source_ref` is used, the source must be effectively enabled (`isEffectivelyEnabled`). If not, return an MCP-level error (`isError: true`) explaining the component is disabled. Skipped when `source_x`/`source_y` is used (no accessible to check). |
-| BR-06 | **Virtual accessible child resolution.** If the source ref resolves to a virtual accessible child (e.g., a JList item, JTree node) that is not a `Component`, the tool walks up via `getAccessibleParent()` to the host `Component` and computes the pixel coordinates of the child within it using `child.getAccessibleContext().getAccessibleComponent().getBounds()`. The press point is the center of the child's bounds within the host component. The same resolution applies to `target_ref` when it resolves to a virtual child. If no `Component` ancestor is found, return an MCP-level error. |
-| BR-07 | In synthetic mode, all events are dispatched to the **source host component** (not the target). Target coordinates are translated to the source component's local coordinate system using `SwingUtilities.convertPoint()`. For `target_x`/`target_y` (window-relative), the conversion uses the source component's `Window` ancestor as the origin. In Robot mode, all coordinates are converted to screen-absolute. |
+| BR-03 | **Target specification.** `target_ref` is required — identifies the component to drop onto. By default the drop lands at the component's center. Optional `target_x`/`target_y` (integers, component-relative pixel offsets) override the drop point within the target component. If only one of `target_x`/`target_y` is provided, return an `INVALID_PARAMS` error. |
+| BR-04 | If the target ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
+| BR-05 | The source must be effectively enabled (`isEffectivelyEnabled`). If not, return an MCP-level error (`isError: true`) explaining the component is disabled. |
+| BR-06 | **Virtual accessible child resolution.** If the source ref resolves to a virtual accessible child (e.g., a JList item, JTree node) that is not a `Component`, the tool walks up via `getAccessibleParent()` to the host `Component` and computes the pixel coordinates of the child within it using `child.getAccessibleContext().getAccessibleComponent().getBounds()`. The press point is the center of the child's bounds within the host component (overridden by `source_x`/`source_y` if provided). The same resolution applies to `target_ref` when it resolves to a virtual child. If no `Component` ancestor is found, return an MCP-level error. |
+| BR-07 | In synthetic mode, all events are dispatched to the **source host component** (not the target). The target point (component center or `target_x`/`target_y` offset within the target component) is translated to the source component's local coordinate system using `SwingUtilities.convertPoint()`. In Robot mode, both source and target points are converted to screen-absolute using their respective component's `getLocationOnScreen()`. |
 | BR-08 | **Synthetic event sequence** (headless / non-showing mode): 7 events: (1) `MOUSE_PRESSED` at the source press point with `BUTTON1_DOWN_MASK` modifier and `BUTTON1` button, click count 0; (2) five `MOUSE_DRAGGED` events linearly interpolated from press point to target position, with `BUTTON1_DOWN_MASK` modifier and `NOBUTTON` button (AWT convention), click count 0; (3) `MOUSE_RELEASED` at the target position with modifier 0 and `BUTTON1` button, click count 0. Timestamps start at `System.currentTimeMillis()` and increment by 16ms per event. |
 | BR-09 | `swing_drag` is a **mutation tool** — it clears the ref map in a `finally` block after execution, regardless of success or failure (see **architecture.md §3 rule 3**). |
 | BR-10 | All validation runs on the EDT inside `runInEDT()`. The drag action is posted via `SwingUtilities.invokeLater()` (synthetic mode) or a new `Thread` (Robot mode) and the tool returns `null` immediately (fire-and-forget — see **architecture.md § 2 — Fire-and-Forget Mutation Dispatch**). |
 | BR-11 | No `drag` action is advertised in the snapshot. The tool is always callable — the AI infers drag capability from context. |
-| BR-12 | **Auto-detection of dispatch strategy.** When `source_ref` is used: if a graphical display is available (`!GraphicsEnvironment.isHeadless()`) AND the source component is showing on screen (`source.component.isShowing()`), uses `java.awt.Robot`; otherwise falls back to synthetic `Component.dispatchEvent()`. When `source_x`/`source_y` are used: always uses `java.awt.Robot` (there is no source Component for synthetic dispatch). If headless or no showing window is found, returns an MCP error. |
-| BR-13 | **Coordinate-only source requires a display.** When `source_x`/`source_y` are used, a graphical display must be available and at least one considered window must be showing. If headless, return an MCP error: "Coordinate-based drag requires a graphical display but the environment is headless." If no showing window, return an MCP error: "No showing window found for coordinate-based drag." |
+| BR-12 | **Auto-detection of dispatch strategy.** If a graphical display is available (`!GraphicsEnvironment.isHeadless()`) AND the source component is showing on screen (`source.component.isShowing()`), uses `java.awt.Robot` for real OS-level mouse events (compatible with both MouseListener-based drag and Java's DnD framework). Otherwise falls back to synthetic `Component.dispatchEvent()`. The AI caller does not choose the mode — it is selected automatically. |
 
 ### DnD scenarios covered
 
 | Source | Target | Example |
 |--------|--------|---------|
-| `source_ref` | `target_x`/`target_y` | Palette → canvas (drag a shape onto a graph canvas) |
-| `source_x`/`source_y` | `target_x`/`target_y` | Canvas → canvas (draw edges, reposition nodes) |
-| `source_ref` | `target_ref` | Component → component (JTree→JTable, dual JList) |
-| `source_x`/`source_y` | `target_ref` | Canvas → component (drag a drawn object onto a drop zone) |
+| `source_ref` | `target_ref` | Component → component (JTree→JTable, dual JList, reordering) — center to center |
+| `source_ref` | `target_ref` + `target_x`/`target_y` | Palette → canvas (drag a shape onto a specific position on a canvas component) |
+| `source_ref` + `source_x`/`source_y` | `target_ref` + `target_x`/`target_y` | Canvas edge drawing (both refs point to the canvas; offsets identify the source and target nodes within it) |
+| `source_ref` + `source_x`/`source_y` | `target_ref` | Canvas → component (drag from a specific point on a canvas onto an accessible drop zone) |
 
 **Excluded:** Cross-window drag (source and target in different top-level windows).
 
@@ -44,17 +43,17 @@ Drag-and-drop primitive for palette→canvas drops, node-to-node edge drawing, c
 
 2. **Single-window only.** Both source and target must share a `Window` ancestor (synthetic mode) or be on the same screen (Robot mode).
 
-3. **Coordinate-only source not available in headless.** When `source_x`/`source_y` are used, Robot is required (no Component for synthetic dispatch). This mode is not available in headless environments.
-
 ### Execution order
 
-1. **BR-01** — source specification validation (fail fast if neither ref nor coords provided).
-2. **BR-03** — target specification validation.
-3. **BR-02** — ref lookup for `source_ref` (if used).
-4. **BR-06** — resolve source to Component + press point (if `source_ref`).
-5. **BR-05** — `isEffectivelyEnabled(accessible)` — only checked when `source_ref` is used.
-6. **BR-12** — auto-detect dispatch strategy.
-7. Fire-and-forget drag dispatch — return `null`.
+1. **BR-01** — validate `source_ref` (required) and optional `source_x`/`source_y` pair.
+2. **BR-03** — validate `target_ref` (required) and optional `target_x`/`target_y` pair.
+3. **BR-02** — ref lookup for `source_ref`.
+4. **BR-06** — resolve source to Component + press point (center by default; overridden by `source_x`/`source_y`).
+5. **BR-04** — ref lookup for `target_ref`.
+6. **BR-06** — resolve target to Component + drop point (center by default; overridden by `target_x`/`target_y`).
+7. **BR-05** — `isEffectivelyEnabled(accessible)`.
+8. **BR-12** — auto-detect dispatch strategy.
+9. Fire-and-forget drag dispatch — return `null`.
 
 ---
 
@@ -64,18 +63,17 @@ Drag-and-drop primitive for palette→canvas drops, node-to-node edge drawing, c
 
 - [x] `SwingDragToolTest` (headless — verifies synthetic dispatch path and validation)
   - [x] Drag with `source_ref` + `target_ref` — assert `wasDragged()`.
-  - [x] Drag with `source_ref` + `target_x`/`target_y` — assert correct release coordinates.
+  - [x] Drag with `target_ref` + `target_x`/`target_y` — assert correct release coordinates at target offset.
   - [x] Headless environment uses synthetic dispatch — events arrive at source, not target.
-  - [x] `source_ref` takes precedence over `source_x`/`source_y` when both provided.
+  - [x] `source_x`/`source_y` overrides default center — press event at custom offset.
+  - [x] Missing `source_ref` returns `INVALID_PARAMS`.
   - [x] Invalid `source_ref` returns MCP error with `isError: true` and recovery message.
   - [x] Invalid `target_ref` returns MCP error with `isError: true` and recovery message.
-  - [x] No source specification returns `INVALID_PARAMS`.
+  - [x] Missing `target_ref` returns `INVALID_PARAMS`.
   - [x] `source_x` without `source_y` returns `INVALID_PARAMS`.
   - [x] `source_y` without `source_x` returns `INVALID_PARAMS`.
-  - [x] No target specification returns `INVALID_PARAMS`.
   - [x] `target_x` without `target_y` returns `INVALID_PARAMS`.
   - [x] Disabled source (via `source_ref`) returns MCP error with `isError: true`.
-  - [x] `source_x`/`source_y` in headless returns MCP error mentioning headless.
   - [x] Exactly 5 `MOUSE_DRAGGED` events are received.
   - [x] Event button/modifier values match BR-08.
   - [x] Drag events are linearly interpolated between source and target.
@@ -89,5 +87,5 @@ A `JPanel` subclass in `src/test` that registers both a `MouseAdapter` and a `Mo
 
 - [x] `SwingDragScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
   - [x] Drag between panels inside a `JFrame` using `source_ref` + `target_ref`.
-  - [x] Drag to coordinates inside a `JFrame` using `source_ref` + `target_x`/`target_y`.
+  - [x] Drag with target offset inside a `JFrame` using `target_ref` + `target_x`/`target_y`.
   - [x] Drag between panels inside a `JDialog`.

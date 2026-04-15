@@ -57,12 +57,14 @@ class SwingDragToolTest extends AbstractHeadlessTest {
     }
 
     /**
-     * Drags source_ref to window-relative coordinates. Drains the EDT.
+     * Drags source_ref to target_ref with component-relative target offsets. Drains the EDT.
      */
-    private MCPProtocol.Content dragToCoords(int sourceRef, int x, int y) throws Exception {
+    private MCPProtocol.Content dragToRefWithOffset(int sourceRef, int targetRef,
+                                                     int targetX, int targetY) throws Exception {
         try {
             MCPProtocol.Content result = dragTool.execute(
-                    new Parameters(Map.of("source_ref", sourceRef, "target_x", x, "target_y", y)),
+                    new Parameters(Map.of("source_ref", sourceRef, "target_ref", targetRef,
+                            "target_x", targetX, "target_y", targetY)),
                     context);
             SwingUtilities.invokeAndWait(() -> {}); // drain EDT
             return result;
@@ -99,33 +101,40 @@ class SwingDragToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Happy path — source_ref + target_x/target_y
+    // Happy path — source_ref + target_ref with component-relative offsets
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void dragToWindowRelativeCoordinates() throws Exception {
+    void dragToTargetWithComponentRelativeOffset() throws Exception {
         DragRecordingPanel source = new DragRecordingPanel();
         source.setSize(100, 50);
+        DragRecordingPanel target = new DragRecordingPanel();
+        target.setSize(200, 100);
 
         JPanel root = new JPanel(null);
         root.setSize(400, 200);
         source.setBounds(10, 10, 100, 50);
+        target.setBounds(150, 50, 200, 100);
         root.add(source);
+        root.add(target);
 
         snapshot(root);
         int sourceRef = context.getRefOf(source);
+        int targetRef = context.getRefOf(target);
 
-        // Drag to (300, 100) in root-relative coordinates
-        MCPProtocol.Content result = dragToCoords(sourceRef, 300, 100);
+        // Drag to offset (20, 10) within target (not center)
+        MCPProtocol.Content result = dragToRefWithOffset(sourceRef, targetRef, 20, 10);
         assertNull(result, "Successful drag should return null");
         assertTrue(source.wasDragged(), "Source should have received a valid drag sequence");
 
-        // Verify the release event coordinates are correct (300, 100) in root coords
-        // = (290, 90) in source-local coords (source is at 10, 10 within root)
+        // Verify the release event coordinates
+        // Target offset (20, 10) in target-local coords → convert to source-local:
+        // target is at (150, 50), source is at (10, 10)
+        // so (150+20 - 10, 50+10 - 10) = (160, 50) in source-local coords
         MouseEvent release = source.getReleaseEvent();
         assertNotNull(release);
-        assertEquals(290, release.getX(), "Release X should be 300-10=290 in source-local coords");
-        assertEquals(90, release.getY(), "Release Y should be 100-10=90 in source-local coords");
+        assertEquals(160, release.getX(), "Release X should be (150+20)-10=160 in source-local coords");
+        assertEquals(50, release.getY(), "Release Y should be (50+10)-10=50 in source-local coords");
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -159,11 +168,11 @@ class SwingDragToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // source_ref takes precedence over source_x/source_y
+    // source_x/source_y as component-relative offsets
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void sourceRefTakesPrecedenceOverSourceCoords() throws Exception {
+    void sourceXYOverridesDefaultCenter() throws Exception {
         DragRecordingPanel source = new DragRecordingPanel();
         source.setSize(100, 50);
         DragRecordingPanel target = new DragRecordingPanel();
@@ -180,18 +189,23 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         int sourceRef = context.getRefOf(source);
         int targetRef = context.getRefOf(target);
 
-        // Provide both source_ref and source_x/source_y — ref should win
+        // Provide source_x/source_y to override center (10, 5 instead of 50, 25)
         MCPProtocol.Content result = dragTool.execute(
                 new Parameters(Map.of(
                         "source_ref", sourceRef,
-                        "source_x", 999, "source_y", 999,
+                        "source_x", 10, "source_y", 5,
                         "target_ref", targetRef)),
                 context);
         SwingUtilities.invokeAndWait(() -> {}); // drain EDT
 
         assertNull(result);
-        assertTrue(source.wasDragged(),
-                "source_ref should take precedence; drag should succeed via ref path");
+        assertTrue(source.wasDragged(), "Drag with custom offset should succeed");
+
+        // Verify press event is at the custom offset, not the center
+        MouseEvent press = source.getPressEvent();
+        assertNotNull(press);
+        assertEquals(10, press.getX(), "Press X should be at custom offset 10, not center 50");
+        assertEquals(5, press.getY(), "Press Y should be at custom offset 5, not center 25");
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -199,20 +213,29 @@ class SwingDragToolTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void noSourceSpecificationReturnsInvalidParams() {
+    void missingSourceRefReturnsInvalidParams() {
         MCPServerException ex = assertThrows(MCPServerException.class,
                 () -> dragTool.execute(
                         new Parameters(Map.of("target_x", 100, "target_y", 200)), context));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
-        assertTrue(ex.getMessage().contains("source_ref") || ex.getMessage().contains("source_x"),
-                "Error should mention source params, got: " + ex.getMessage());
+        assertTrue(ex.getMessage().contains("source_ref"),
+                "Error should mention source_ref, got: " + ex.getMessage());
     }
 
     @Test
-    void sourceXWithoutSourceYReturnsInvalidParams() {
+    void sourceXWithoutSourceYReturnsInvalidParams() throws Exception {
+        DragRecordingPanel source = new DragRecordingPanel();
+        JPanel root = new JPanel(null);
+        root.setSize(200, 100);
+        source.setBounds(0, 0, 100, 50);
+        root.add(source);
+        snapshot(root);
+        int ref = context.getRefOf(source);
+
         MCPServerException ex = assertThrows(MCPServerException.class,
                 () -> dragTool.execute(
-                        new Parameters(Map.of("source_x", 10, "target_x", 100, "target_y", 200)),
+                        new Parameters(Map.of("source_ref", ref,
+                                "source_x", 10, "target_x", 100, "target_y", 200)),
                         context));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
         assertTrue(ex.getMessage().contains("source_x") || ex.getMessage().contains("source_y"),
@@ -220,10 +243,19 @@ class SwingDragToolTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void sourceYWithoutSourceXReturnsInvalidParams() {
+    void sourceYWithoutSourceXReturnsInvalidParams() throws Exception {
+        DragRecordingPanel source = new DragRecordingPanel();
+        JPanel root = new JPanel(null);
+        root.setSize(200, 100);
+        source.setBounds(0, 0, 100, 50);
+        root.add(source);
+        snapshot(root);
+        int ref = context.getRefOf(source);
+
         MCPServerException ex = assertThrows(MCPServerException.class,
                 () -> dragTool.execute(
-                        new Parameters(Map.of("source_y", 20, "target_x", 100, "target_y", 200)),
+                        new Parameters(Map.of("source_ref", ref,
+                                "source_y", 20, "target_x", 100, "target_y", 200)),
                         context));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
         assertTrue(ex.getMessage().contains("source_x") || ex.getMessage().contains("source_y"),
@@ -263,10 +295,10 @@ class SwingDragToolTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void missingBothTargetRefAndCoordsReturnsInvalidParams() {
+    void missingTargetRefReturnsInvalidParams() {
         DragRecordingPanel source = new DragRecordingPanel();
 
-        assertThrows(MCPServerException.class, () -> {
+        MCPServerException ex = assertThrows(MCPServerException.class, () -> {
             snapshot(source);
             int ref = context.getRefOf(source);
             try {
@@ -275,18 +307,32 @@ class SwingDragToolTest extends AbstractHeadlessTest {
                 context.clearRefMap();
             }
         });
+        assertTrue(ex.getMessage().contains("target_ref"),
+                "Error should mention target_ref, got: " + ex.getMessage());
     }
 
     @Test
-    void targetXWithoutTargetYReturnsInvalidParams() {
+    void targetXWithoutTargetYReturnsInvalidParams() throws Exception {
         DragRecordingPanel source = new DragRecordingPanel();
+        DragRecordingPanel target = new DragRecordingPanel();
+
+        JPanel root = new JPanel(null);
+        root.setSize(300, 100);
+        source.setBounds(0, 0, 100, 50);
+        target.setBounds(200, 0, 100, 50);
+        root.add(source);
+        root.add(target);
+
+        snapshot(root);
+        int srcRef = context.getRefOf(source);
+        int tgtRef = context.getRefOf(target);
 
         MCPServerException ex = assertThrows(MCPServerException.class, () -> {
-            snapshot(source);
-            int ref = context.getRefOf(source);
             try {
                 dragTool.execute(
-                        new Parameters(Map.of("source_ref", ref, "target_x", 100)), context);
+                        new Parameters(Map.of("source_ref", srcRef,
+                                "target_ref", tgtRef, "target_x", 100)),
+                        context);
             } finally {
                 context.clearRefMap();
             }
@@ -320,20 +366,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
                 () -> dragToRef(sourceRef, targetRef));
         assertTrue(ex.getMessage().contains("disabled"),
                 "Error should mention disabled, got: " + ex.getMessage());
-    }
-
-    @Test
-    void sourceXYInHeadlessModeReturnsError() {
-        // Coordinate-only source requires Robot, which requires a display.
-        // In headless mode (this test suite), should return a clear error.
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> dragTool.execute(
-                        new Parameters(Map.of(
-                                "source_x", 50, "source_y", 50,
-                                "target_x", 200, "target_y", 100)),
-                        context));
-        assertTrue(ex.getMessage().contains("headless"),
-                "Error should mention headless, got: " + ex.getMessage());
     }
 
     // ══════════════════════════════════════════════════════════════════════════

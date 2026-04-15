@@ -46,10 +46,12 @@ class SwingDragScreenTest extends AbstractScreenTest {
         }
     }
 
-    private void dragToCoords(int sourceRef, int x, int y) throws Exception {
+    private void dragWithTargetOffset(int sourceRef, int targetRef,
+                                      int targetX, int targetY) throws Exception {
         try {
             executeOnEDT(() -> dragTool.execute(
-                    new Parameters(Map.of("source_ref", sourceRef, "target_x", x, "target_y", y)),
+                    new Parameters(Map.of("source_ref", sourceRef, "target_ref", targetRef,
+                            "target_x", targetX, "target_y", targetY)),
                     context));
             executeOnEDT(() -> null); // drain EDT
         } finally {
@@ -82,20 +84,24 @@ class SwingDragScreenTest extends AbstractScreenTest {
     }
 
     @Test
-    void dragToCoordsInsideJFrame() throws Exception {
+    void dragWithTargetOffsetInsideJFrame() throws Exception {
         JFrame frame = new JFrame("Drag Test");
         frame.setSize(400, 200);
 
         DragRecordingPanel source = new DragRecordingPanel();
         source.setBounds(10, 10, 100, 50);
+        DragRecordingPanel target = new DragRecordingPanel();
+        target.setBounds(200, 50, 150, 100);
 
         frame.getContentPane().setLayout(null);
         frame.getContentPane().add(source);
+        frame.getContentPane().add(target);
 
         snapshot(frame);
-        dragToCoords(context.getRefOf(source), 300, 100);
+        // Drag to offset (10, 10) within target instead of center
+        dragWithTargetOffset(context.getRefOf(source), context.getRefOf(target), 10, 10);
         assertTrue(source.wasDragged(),
-                "Drag to coordinates in JFrame should work");
+                "Drag to target with component-relative offset in JFrame should work");
     }
 
     // ══════════════════════════════════════════════════════════════════════════
