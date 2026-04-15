@@ -95,7 +95,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setText(context.getRefOf(slider), "value"));
         assertEquals(
-                "Component does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JSlider does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -247,8 +247,9 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         }
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setText(ref, "value"));
+        String expectedClass = ComponentClassResolver.resolveClassName((javax.accessibility.Accessible) component);
         assertEquals(
-                "Component does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                expectedClass + " does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -314,7 +315,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
             MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                     () -> setText(ref, "value"));
             assertEquals(
-                    "Component does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                    "JTabbedPane does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
                     ex.getMessage());
         } catch (IllegalStateException e) {
             // No ref assigned — acceptable
@@ -349,7 +350,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setText(99, "value"));
         assertEquals(
-                "Component does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JMenu does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -363,7 +364,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setText(99, "value"));
         assertEquals(
-                "Component does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JMenu does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -379,7 +380,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setText(ref, "value"));
         assertEquals(
-                "Component does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JMenuItem does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -393,7 +394,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setText(ref, "value"));
         assertEquals(
-                "Component does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JButton does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 

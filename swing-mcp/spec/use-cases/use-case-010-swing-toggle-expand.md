@@ -14,7 +14,7 @@ Expands or collapses a `JTree` node so the AI can navigate a hierarchy to find n
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
 | BR-03 | The toggle-expand action is fired by scanning the node's `AccessibleAction` descriptions for `AccessibleAction.TOGGLE_EXPAND` (`"toggleexpand"`) to get action index `i`, then posting `doAccessibleAction(i)` via `SwingUtilities.invokeLater()`. No UIManager lookup is needed — the standard `JTree` implementation uses the static constant directly. See **architecture.md § 2 — Fire-and-Forget Mutation Dispatch**. |
-| BR-04 | If the target does not support toggle-expand (i.e. `SwingUtils.supportsToggleExpand(accessible)` returns `-1`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions". This covers leaf nodes (which do not receive the `TOGGLE_EXPAND` action) and all non-tree components. |
+| BR-04 | If the target does not support toggle-expand (i.e. `SwingUtils.supportsToggleExpand(accessible)` returns `-1`), the tool returns an MCP-level error (`isError: true`) with the message "<ClassName> does not support toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions". This covers leaf nodes (which do not receive the `TOGGLE_EXPAND` action) and all non-tree components. |
 | BR-05 | All validation runs on the EDT inside `runInEDT()`. The action is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
 | BR-06 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. |
 | BR-08 | `swing_toggle_expand` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after invocation (even on failure, via `finally`). |
@@ -63,4 +63,4 @@ Execution order:
 
 **Succeed (`toggle_expand` supported):** `JTree` non-leaf nodes only.
 
-**Fail with "Component does not support toggle_expand":** `JTree` leaf nodes; all other matrix components.
+**Fail with "<ClassName> does not support toggle_expand":** `JTree` leaf nodes; all other matrix components.

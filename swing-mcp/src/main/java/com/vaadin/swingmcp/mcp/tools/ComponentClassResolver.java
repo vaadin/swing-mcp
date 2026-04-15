@@ -39,6 +39,29 @@ public final class ComponentClassResolver {
     }
 
     /**
+     * Returns just the class-name portion of the identity slot, for use in
+     * error messages per the "class names everywhere else" convention
+     * (snapshot keeps the role parenthetical; tool descriptions and errors
+     * use class names only).
+     *
+     * <p>Resolution mirrors {@link #resolveIdentitySlot}: runs
+     * {@link #findDisplayClass} over the concrete class, then returns either
+     * the qualifying ancestor's simple name (Case A / Case B — standard or
+     * custom Swing component) or {@code "Component"} when no ancestor
+     * qualifies (Case C — non-Component accessibles such as
+     * {@code JTabbedPane.Page}) so the surrounding message degrades gracefully
+     * to {@code "Component does not support …"}.</p>
+     */
+    public static String resolveClassName(Accessible accessible) {
+        Class<?> displayClass = findDisplayClass(accessible.getClass());
+        Class<?> qualifying = findQualifyingAncestor(displayClass);
+        if (qualifying == null) {
+            return "Component";
+        }
+        return qualifying.getSimpleName();
+    }
+
+    /**
      * Returns the component-identity slot for the given accessible, including
      * the surrounding parentheses around the role. The caller appends this
      * directly after the list marker ({@code "- "}) of the snapshot line.

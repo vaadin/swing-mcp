@@ -57,7 +57,8 @@ public class SwingGetTextTool extends AbstractSwingTool {
         // BR-04: check get_text support
         if (!SwingUtils.supportsGetText(accessible)) {
             throw new MCPErrorResponseException(
-                    "Component does not support get_text. Call swing_snapshot or swing_get_cells to verify the list of actions");
+                    ComponentClassResolver.resolveClassName(accessible)
+                            + " does not support get_text. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
         // BR-05: all access happens on EDT (guaranteed by MCPServer.registerTool)

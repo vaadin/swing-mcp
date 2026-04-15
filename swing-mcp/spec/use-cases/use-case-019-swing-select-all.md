@@ -15,7 +15,7 @@ Selects every item in a multi-selection component — saves the AI from enumerat
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | If the target does not support selection (i.e. `SwingUtils.supportsSelection(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`). The error message depends on why selection is unsupported: (a) If the target is a `JTable` that fails the row-selection gate (UC-014 BR-10): *"JTable is not in row-selection mode. Only row selection is supported."* (b) Otherwise: *"Component does not support select_all. Call swing_snapshot or swing_get_cells to verify the list of actions."* Same detection logic as UC-014 BR-03. |
+| BR-03 | If the target does not support selection (i.e. `SwingUtils.supportsSelection(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`). The error message depends on why selection is unsupported: (a) If the target is a `JTable` that fails the row-selection gate (UC-014 BR-10): *"JTable is not in row-selection mode. Only row selection is supported."* (b) Otherwise: *"<ClassName> does not support select_all. Call swing_snapshot or swing_get_cells to verify the list of actions."* Same detection logic as UC-014 BR-03. |
 | BR-04 | If the target supports selection but is in **single-selection mode** (`SwingUtils.supportsSingleSelection(accessible)` returns `true`), the tool returns an MCP-level error (`isError: true`) with the message *"Component is in single-selection mode. select_all requires multi-selection."* |
 | BR-05 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. |
 | BR-06 | All validation runs on the EDT inside `runInEDT()`. The selection mutation is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously (fire-and-forget). |
@@ -34,7 +34,7 @@ Execution order:
 4. **BR-05** — `SwingUtils.isEffectivelyEnabled(accessible)` — if `false`, fail with "disabled" error.
 5. **Fire-and-forget dispatch** via `SwingUtilities.invokeLater()`:
 
-**Validation ordering rationale.** Capability checks (steps 3–4) precede the enabled check (step 5). A disabled `JButton` gets "does not support select_all" — the real problem is lack of selection support, not the disabled state. The "disabled" error is only reachable for components that actually support multi-selection (JList, JTable) but happen to be disabled, which is the correct and most actionable error message.
+**Validation ordering rationale.** Capability checks (steps 3–4) precede the enabled check (step 5). A disabled `JButton` gets "JButton does not support select_all" — the real problem is lack of selection support, not the disabled state. The "disabled" error is only reachable for components that actually support multi-selection (JList, JTable) but happen to be disabled, which is the correct and most actionable error message.
 
    a. **If the target is a JTable** — call `table.selectAll()` (BR-09).
    b. **Otherwise** — obtain `AccessibleSelection as = ac.getAccessibleSelection()`, call `as.selectAllAccessibleSelection()` (BR-10).
@@ -133,7 +133,7 @@ Each matrix component from `verification.md` gets a dedicated test method.
 
 **Fail with "single-selection mode" error:** `JList` (single-selection), `JTabbedPane`, `JComboBox`, `JTable` (single-row-selection).
 
-**Fail with "Component does not support select_all":**
+**Fail with "<ClassName> does not support select_all":**
 - `JTree` — suppressed.
 - `JTable` in column/cell/no-selection modes — suppressed by row-selection gate.
 - All other matrix components.

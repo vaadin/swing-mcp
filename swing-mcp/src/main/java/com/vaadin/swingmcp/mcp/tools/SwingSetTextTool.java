@@ -52,7 +52,8 @@ public class SwingSetTextTool extends AbstractSwingTool {
         // BR-04: set_text structural support check
         if (!SwingUtils.hasEditableText(accessible)) {
             throw new MCPErrorResponseException(
-                    "Component does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions");
+                    ComponentClassResolver.resolveClassName(accessible)
+                            + " does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
         // BR-06: effectively enabled check

@@ -137,7 +137,7 @@ class SwingIncrementTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> increment(context.getRefOf(button)));
         assertEquals(
-                "Component does not support increment. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JButton does not support increment. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -229,8 +229,9 @@ class SwingIncrementTest extends AbstractHeadlessTest {
         }
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> increment(ref));
+        String expectedClass = ComponentClassResolver.resolveClassName((javax.accessibility.Accessible) component);
         assertEquals(
-                "Component does not support increment. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                expectedClass + " does not support increment. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -324,7 +325,7 @@ class SwingIncrementTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> increment(99));
         assertEquals(
-                "Component does not support increment. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JMenu does not support increment. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -349,7 +350,7 @@ class SwingIncrementTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> increment(ref));
         assertEquals(
-                "Component does not support increment. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JMenuItem does not support increment. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -362,7 +363,7 @@ class SwingIncrementTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> increment(ref));
         assertEquals(
-                "Component does not support increment. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JButton does not support increment. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 

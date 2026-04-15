@@ -53,7 +53,8 @@ public class SwingSetValueTool extends AbstractSwingTool {
         // BR-03: set_value support check
         if (!SwingUtils.supportsSetValue(accessible)) {
             throw new MCPErrorResponseException(
-                    "Component does not support set_value. Call swing_snapshot or swing_get_cells to verify the list of actions");
+                    ComponentClassResolver.resolveClassName(accessible)
+                            + " does not support set_value. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
         // BR-05: effectively enabled check

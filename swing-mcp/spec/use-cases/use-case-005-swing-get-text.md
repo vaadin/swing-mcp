@@ -14,7 +14,7 @@ Reads the full text content via the accessibility API. The snapshot carries a 15
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
 | BR-03 | The text is read via the accessibility API. Primary path: `AccessibleEditableText.getTextRange(0, charCount)` for efficient bulk retrieval. Fallback (when only `AccessibleText` is available): character-by-character via `AccessibleText.getAtIndex(CHARACTER, i)`. See **Algorithm** section below. |
-| BR-04 | If the target does not support `get_text` (i.e. `SwingUtils.supportsGetText(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support get_text. Call swing_snapshot or swing_get_cells to verify the list of actions". |
+| BR-04 | If the target does not support `get_text` (i.e. `SwingUtils.supportsGetText(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "<ClassName> does not support get_text. Call swing_snapshot or swing_get_cells to verify the list of actions". |
 | BR-05 | All Swing component access happens on the EDT via `runInEDT()`. |
 | BR-06 | **Password fields are not readable (DR-011).** If the target's `AccessibleRole` is `AccessibleRole.PASSWORD_TEXT` (canonically `JPasswordField` and its subclasses; any third-party component that adopts the role is also covered), the tool returns an MCP-level error (`isError: true`) with the dedicated message: `"JPasswordField content is not readable. Use swing_set_text if you need to write a known value."`. The check runs **before** the generic `supportsGetText` gate in BR-04 so the AI receives the specific rule rather than a generic "does not support get_text". Rationale: the default `AccessibleJPasswordField` returns echo characters (`••••••`), which (a) misleads the AI into reading it as literal bullet content and (b) leaks the real password length — both contradict the asymmetric security posture declared in UC-006 BR-12. See DR-011 for the full decision. |
 | BR-07 | `swing_get_text` is a read-only tool: `isMutation()` returns `false` and the ref map is **not** cleared after invocation. |
@@ -28,7 +28,7 @@ Reads the full text content via the accessibility API. The snapshot carries a 15
 
 Execution order:
 1. **BR-02** — ref lookup (fail fast if ref is invalid).
-2. **BR-06** — password-role check (DR-011). If `accessible.getAccessibleContext().getAccessibleRole() == AccessibleRole.PASSWORD_TEXT`, fail with the dedicated error: `"JPasswordField content is not readable. Use swing_set_text if you need to write a known value."`. This runs before BR-04 so the AI gets the specific rule instead of the generic "does not support get_text".
+2. **BR-06** — password-role check (DR-011). If `accessible.getAccessibleContext().getAccessibleRole() == AccessibleRole.PASSWORD_TEXT`, fail with the dedicated error: `"JPasswordField content is not readable. Use swing_set_text if you need to write a known value."`. This runs before BR-04 so the AI gets the specific rule instead of the generic "<ClassName> does not support get_text".
 3. **BR-04** — `SwingUtils.supportsGetText(accessible)` — if `false`, fail with the generic error.
 4. Obtain `AccessibleText at = ac.getAccessibleText()`.
 5. Get the total character count: `int len = at.getCharCount()`.
@@ -86,4 +86,4 @@ Each matrix component from `verification.md` gets a dedicated test method.
 
 **Fail with the dedicated DR-011 error:** `JPasswordField` (and any custom component with `AccessibleRole.PASSWORD_TEXT`).
 
-All other matrix components return the generic `Component does not support get_text`.
+All other matrix components return the generic `<ClassName> does not support get_text`.
