@@ -559,7 +559,7 @@ short per-tool suffix as a backstop.
 
 **Status:** Accepted
 **Applies to:** UC-002 (snapshot action list), UC-005 (`swing_get_text`),
-UC-006 (`swing_set_text` BR-12)
+UC-006 (`swing_set_text` BR-12, BR-13 echo asymmetry)
 **Decided:** 2026-04-15
 
 **Decision.** Any accessible whose role is `AccessibleRole.PASSWORD_TEXT`

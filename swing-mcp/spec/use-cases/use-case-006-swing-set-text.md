@@ -23,7 +23,7 @@ Writes text into text fields, text areas, and other editable text components.
 | BR-10 | No length limit on the `text` parameter — the AI is not expected to send very large text, and Swing text components can handle arbitrary lengths. |
 | BR-11 | `setTextContents()` fires `DocumentListener` events but does **not** fire `ActionEvent` (like pressing Enter in a `JTextField` would). This is the default behavior of the accessibility API — we delegate entirely to `setTextContents()` and trust the API to do the right thing. Practically, the underlying `JTextComponent.setText()` implementation fires a `removeUpdate` followed by an `insertUpdate` (two events, not one atomic replacement); consumers with `DocumentListener`s will see both. The AI filling a field will not automatically submit a form — it must follow up with `swing_click` on the submit button. This is the intended workflow. |
 | BR-12 | `JPasswordField` is a supported target for `set_text`. Setting text on a password field updates the actual password (bypassing echo-char masking), which is necessary for AI-driven login-form filling. This is intentionally asymmetric with `swing_get_text`, which **refuses** to read password-role accessibles and returns a dedicated error — see **DR-011** and UC-005 BR-06. The asymmetry is acceptable: the AI can write a known credential but cannot read back the real value to exfiltrate it. The snapshot reflects this asymmetry directly — password fields advertise `set_text` but not `get_text` (UC-002 BR-06 step 4, DR-011). |
-| BR-13 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Posted set-text on ref=<N> to "<text>"` — `<text>` double-quoted and truncated at 15 characters (≤15 → full; else first 14 + `…`). See **DR-010** for value-rendering rules. |
+| BR-13 | **Return message.** On success, the tool returns a single text-content item. For non-password targets the echo is `Posted set-text on ref=<N> to "<text>"` — `<text>` double-quoted and truncated at 15 characters (≤15 → full; else first 14 + `…`), per **DR-010**. For password-role accessibles (gated by `SwingUtils.hasPasswordRole` — see **DR-011**) the echo is the bare form `Posted set-text on ref=<N>` with no value. The value is suppressed so the MCP response channel never carries credential material, even though the LLM supplied it as input; this keeps DR-011's write-allowed/no-readback posture symmetric (the password is never repeated in any MCP tool output). |
 
 ### Algorithm: replacing the text content
 
@@ -34,7 +34,8 @@ Execution order:
 4. **BR-06** — `SwingUtils.isEffectivelyEnabled(accessible)` — if `false`, fail with "disabled" error.
 5. **BR-07** — Check `AccessibleStateSet` contains `AccessibleState.EDITABLE` — if not, fail with "not editable" error.
 6. Obtain `AccessibleEditableText aet = ac.getAccessibleEditableText()`.
-7. `SwingUtilities.invokeLater(() -> aet.setTextContents(text))` — fire-and-forget; return `null`.
+7. `SwingUtilities.invokeLater(() -> aet.setTextContents(text))` — fire-and-forget.
+8. Return the DR-010 echo (BR-13): `Posted set-text on ref=<N> to "<text>"` for non-password targets, or the bare `Posted set-text on ref=<N>` for password-role accessibles (`SwingUtils.hasPasswordRole`).
 
 **Accessibility API methods used:**
 - `AccessibleContext.getAccessibleEditableText()` — detection (returns `AccessibleEditableText` or `null`)
@@ -63,6 +64,9 @@ Execution order:
   - [x] The ref map is cleared after a failed `swing_set_text` call on a disabled component.
   - [x] Setting text on a `JTextField` fires a `DocumentListener` event.
   - [x] Each component from the component matrix is tested (dedicated test method per component).
+  - [x] Success on a `JTextField` returns the DR-010 echo `Posted set-text on ref=<N> to "<text>"` with the text value double-quoted (BR-13).
+  - [x] Success with a long text (>15 chars) returns a truncated value per DR-010 (first 14 chars + `…`).
+  - [x] Success on a `JPasswordField` returns the bare echo `Posted set-text on ref=<N>` with no value (BR-13, DR-011).
 
 - [x] `SwingSetTextScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
   - [x] Setting text on a `JTextField` inside `JFrame` replaces its content.
