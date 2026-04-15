@@ -155,50 +155,28 @@ row-dumping tools — do not resurrect cell-indexed access.
 
 ## DR-005 — `swing_close` dispatches WM events then verifies out-of-band
 
-**Status:** Accepted
+**Status:** Superseded by DR-006 on 2026-04-15
 **Applies to:** UC-011
 **Decided:** 2026-04-01
+**Superseded:** 2026-04-15
 
-**Decision bundle for `swing_close`:**
+Originally specified an `invokeAndWait` + `PostVerification` polling model
+(delay schedule `{100, 200, 700}` ms) for `swing_close` to detect whether the
+window had actually closed and return either `""` or an informational message
+to the client. Replaced when DR-006 made fire-and-forget the **universal**
+dispatch model for mutations: `swing_close` now posts `WINDOW_CLOSING` (or
+`doDefaultCloseAction()` for JInternalFrame) via `SwingUtilities.invokeLater()`
+and returns `null` immediately, with no synchronous outcome check. The client
+verifies outcome by calling `swing_snapshot` (UC-011 BR-03/BR-04). The
+HIDE_ON_CLOSE and DO_NOTHING_ON_CLOSE branches collapse into the same
+fire-and-forget path; the snapshot is the source of truth.
 
-1. **DO_NOTHING_ON_CLOSE.** Dispatch `WINDOW_CLOSING` (mirroring what clicking
-   the OS X button does — custom `WindowListener`s still fire), then check
-   `isShowing()` synchronously in the same `invokeAndWait` block. Return `""`
-   if the window closed, an informational message if still showing. No
-   PostVerification polling on this path.
-2. **Undecorated windows.** `supportsClose()` returns `false`, no exceptions.
-3. **HIDE_ON_CLOSE.** No special-case. After dispatch, `isShowing()` returns
-   `false`, PostVerification sees `isDone = true`, tool returns `""`.
-4. **EXIT_ON_CLOSE stale-ref refusal.** Covered by a screen test only (no
-   headless test); `EXIT_ON_CLOSE` frames are `Window` instances and cannot
-   be instantiated headless.
-5. **PostVerification delay schedule `{100, 200, 700}` ms** (total ~1 s).
-   Front-loads short waits for the common fast-dispose path; 700 ms tail
-   covers slow/animated close transitions. Revisit only on empirical
-   evidence.
-
-**Why (per item).**
-- (1) Early spec said "don't dispatch for DO_NOTHING" — changed because the OS
-  always dispatches the event and a custom listener might still close the
-  window. Skipping PostVerification is safe because `dispatchEvent()` is
-  synchronous: any synchronous listener disposal is visible immediately. Async
-  disposal via `invokeLater` on a DO_NOTHING window is an unusual pattern;
-  accepted tradeoff for simpler code.
-- (2) Custom "X" buttons inside undecorated windows (e.g. `new JButton("X")`)
-  are already discoverable via the `click` action in the snapshot. There is
-  no deterministic way to detect them as "close buttons" — asking the AI to
-  click them by ref is simpler than adding fragile heuristics.
-- (3) From the tool's perspective, a hidden window is gone from the UI. The
-  next `swing_snapshot` won't include it. No extra code needed.
-- (5) Gut feel / exponential backoff. 1 s total budget is acceptable.
-
-**Alternatives considered.**
-- **Special-case HIDE_ON_CLOSE to report "hidden, not disposed".** Rejected —
-  adds code for a distinction the AI doesn't need to act on.
-- **Detect "custom close button" inside undecorated windows by label match
-  (`"X"`, `"Close"`, `"✕"`).** Rejected as fragile and locale-dependent.
-- **Fixed-interval PostVerification polling (e.g. 100 ms × 10).** Rejected —
-  wastes budget on the fast path, no additional coverage of slow path.
+**Carryovers still in force** (now documented directly in UC-011, not here):
+- Undecorated windows are refused via `supportsClose() == false` (UC-011 BR-05).
+- `EXIT_ON_CLOSE` frames are refused via `supportsClose() == false`
+  (UC-011 BR-09); stale-ref path is covered by a screen test only because
+  `EXIT_ON_CLOSE` frames are `Window` instances and can't be instantiated
+  headless.
 
 ---
 
