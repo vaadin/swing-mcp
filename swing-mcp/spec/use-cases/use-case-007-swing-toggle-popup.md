@@ -14,7 +14,7 @@ Opens or closes a combo-box popup so the AI can reveal its items before making a
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
 | BR-03 | The toggle-popup action is invoked by posting `doAccessibleAction(i)` via `SwingUtilities.invokeLater()`, where `i` is the index returned by `SwingUtils.supportsTogglePopup(accessible)` during validation. See **architecture.md § 4 — Detecting Toggle-Popup Support** and **architecture.md § 2 — Fire-and-Forget Mutation Dispatch**. |
-| BR-04 | If the target does not support toggle-popup (i.e. `SwingUtils.supportsTogglePopup(accessible)` returns `-1`), the tool returns an MCP-level error (`isError: true`) with the message "Component does not support toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions". |
+| BR-04 | If the target does not support toggle-popup (i.e. `SwingUtils.supportsTogglePopup(accessible)` returns `-1`), the tool returns an MCP-level error (`isError: true`) with the message "<ClassName> does not support toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions". |
 | BR-05 | All validation runs on the EDT inside `runInEDT()`. The action is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
 | BR-06 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. |
 | BR-08 | `swing_toggle_popup` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after invocation (even on failure, via `finally`). The AI must call `swing_snapshot` after every `swing_toggle_popup` call to obtain fresh refs. This may be relaxed in the future. |
@@ -62,4 +62,4 @@ Each matrix component from `verification.md` gets a dedicated test method.
 
 **Succeed (`toggle_popup` supported):** `JComboBox`.
 
-All other matrix components return `Component does not support toggle_popup`.
+All other matrix components return `<ClassName> does not support toggle_popup`.

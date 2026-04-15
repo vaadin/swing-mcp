@@ -26,6 +26,15 @@ tautological (`JButton (push_button)`). In tool descriptions, parameter
 documentation, and error messages, refer to components by Swing class name only
 (`JButton`, `JTextField`, `JTable`) — never by role.
 
+For the recurring "unsupported action" error the canonical template is
+`<ClassName> does not support <action>. Call swing_snapshot or swing_get_cells to verify the list of actions`
+(e.g. `JFrame does not support click. …`). `<ClassName>` is the qualifying
+Swing ancestor per BR-11 — standard widget for a custom subclass
+(`SearchField extends JTextField` → `JTextField`), and `Component` as a
+graceful fallback for non-`Component` accessibles (`JTabbedPane.Page`,
+`JList` / `JTree` children) so the sentence still reads naturally. Produced
+via `ComponentClassResolver.resolveClassName(accessible)`.
+
 **Why.**
 - **Uniform presence in the snapshot** makes non-standard roles a clean
   attention signal. If we dropped the parenthetical for tautological cases, the
@@ -575,8 +584,8 @@ MCP layer:
    MCP-level error (`isError: true`) with the dedicated message:
    `"JPasswordField content is not readable. Use swing_set_text if you
    need to write a known value."`. This error is distinct from the
-   generic "Component does not support get_text" so the AI can learn the
-   rule rather than assume the capability is simply absent.
+   generic `<ClassName> does not support get_text` (per DR-001) so the AI
+   can learn the rule rather than assume the capability is simply absent.
 
 **Why.** UC-006 BR-12 already declares the asymmetric posture: the AI may
 *write* a known credential into a password field (necessary for
@@ -659,8 +668,8 @@ interactive target:
    does).
 2. `swing_click` invoked on a `JMenu` ref (possible only from a stale
    ref obtained before this change, or from a race) returns the generic
-   `"Component does not support click"` error — no dedicated message,
-   since a well-behaved client never sees this.
+   `"JMenu does not support click"` error (per DR-001) — no dedicated
+   message, since a well-behaved client never sees this.
 3. When the menu's popup is open (any origin — the user tabbed in, a
    keyboard accelerator fired, the app opened it programmatically), the
    resulting `JPopupMenu` node is pruned from the snapshot whenever its

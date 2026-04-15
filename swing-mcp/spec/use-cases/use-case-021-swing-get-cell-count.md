@@ -15,7 +15,7 @@ Returns the total cell count so the AI can plan paging through `swing_get_cells`
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | If the target does not support `get_cell_count`, the tool returns an MCP-level error (`isError: true`). JTable targets receive the message *"JTable does not support get_cell_count. Use swing_get_item_count to get the row count."* All other unsupported targets receive *"Component does not support get_cell_count. Call swing_snapshot or swing_get_cells to verify the list of actions."* `get_cell_count` is supported when the component's role is `LIST` or `TREE` (`isGetCellsSupported` — same eligibility as UC-020 BR-03). `TABLE` is explicitly excluded — see UC-020 BR-03 for the rationale. No child count threshold is enforced at runtime. |
+| BR-03 | If the target does not support `get_cell_count`, the tool returns an MCP-level error (`isError: true`). JTable targets receive the message *"JTable does not support get_cell_count. Use swing_get_item_count to get the row count."* All other unsupported targets receive *"<ClassName> does not support get_cell_count. Call swing_snapshot or swing_get_cells to verify the list of actions."* `get_cell_count` is supported when the component's role is `LIST` or `TREE` (`isGetCellsSupported` — same eligibility as UC-020 BR-03). `TABLE` is explicitly excluded — see UC-020 BR-03 for the rationale. No child count threshold is enforced at runtime. |
 | BR-04 | All Swing component access happens on the EDT via `runInEDT()`. |
 | BR-05 | `swing_get_cell_count` is a read-only tool: `isMutation()` returns `false` and the ref map is **not** cleared after invocation. |
 | BR-06 | No enabled check is performed — counting cells is always allowed, even on disabled components. |
@@ -72,4 +72,4 @@ Each matrix component from `verification.md` gets a dedicated test method.
 
 **Fail with a JTable-specific error redirecting to `swing_get_item_count`:** `JTable`.
 
-**Fail with "Component does not support get_cell_count":** all other matrix components.
+**Fail with "<ClassName> does not support get_cell_count":** all other matrix components.

@@ -15,7 +15,7 @@ Returns the total item count so the AI can plan paging through `swing_get_items`
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | If the target does not support `get_item_count` (i.e. `SwingUtils.supportsGetItems(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message *"Component does not support get_item_count. Call swing_snapshot or swing_get_cells to verify the list of actions."* `supportsGetItems` accepts `JList`, `JComboBox`, and `JTable` only — **`JTabbedPane` is rejected** (dropped per P-001; tabs are inline in the snapshot per UC-002 SC-2), and JTable is accepted regardless of selection mode. Same gate as UC-017 BR-03. |
+| BR-03 | If the target does not support `get_item_count` (i.e. `SwingUtils.supportsGetItems(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message *"<ClassName> does not support get_item_count. Call swing_snapshot or swing_get_cells to verify the list of actions."* `supportsGetItems` accepts `JList`, `JComboBox`, and `JTable` only — **`JTabbedPane` is rejected** (dropped per P-001; tabs are inline in the snapshot per UC-002 SC-2), and JTable is accepted regardless of selection mode. Same gate as UC-017 BR-03. |
 | BR-04 | All Swing component access happens on the EDT via `runInEDT()`. |
 | BR-05 | `swing_get_item_count` is a read-only tool: `isMutation()` returns `false` and the ref map is **not** cleared after invocation. |
 | BR-06 | No enabled check is performed — counting items is always allowed, even on disabled components. |
@@ -75,7 +75,7 @@ Each matrix component from `verification.md` gets a dedicated test method.
 
 **Succeed (`get_item_count` supported):** `JList`, `JComboBox`, `JTable` (any selection mode — read path is selection-mode agnostic per BR-03).
 
-**Fail with "Component does not support get_item_count":**
+**Fail with "<ClassName> does not support get_item_count":**
 - `JTabbedPane` — dropped per P-001.
 - `JTree` — suppressed.
 - All other matrix components.

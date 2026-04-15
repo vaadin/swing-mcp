@@ -105,7 +105,8 @@ public abstract class AbstractSwingTool {
                         "JTable is not in row-selection mode. Only row selection is supported.");
             }
             throw new MCPErrorResponseException(
-                    "Component does not support " + toolName
+                    ComponentClassResolver.resolveClassName(accessible)
+                            + " does not support " + toolName
                             + ". Call swing_snapshot or swing_get_cells to verify the list of actions.");
         }
     }
@@ -131,7 +132,8 @@ public abstract class AbstractSwingTool {
             return;
         }
         throw new MCPErrorResponseException(
-                "Component does not support " + toolName
+                ComponentClassResolver.resolveClassName(accessible)
+                        + " does not support " + toolName
                         + ". Call swing_snapshot or swing_get_cells to verify the list of actions.");
     }
 
@@ -167,7 +169,8 @@ public abstract class AbstractSwingTool {
                             + jtableRedirectTo + " to page through rows.");
         }
         throw new MCPErrorResponseException(
-                "Component does not support " + toolName
+                ComponentClassResolver.resolveClassName(accessible)
+                        + " does not support " + toolName
                         + ". Call swing_snapshot or swing_get_cells to verify the list of actions.");
     }
 

@@ -139,6 +139,42 @@ class ComponentClassResolverTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    // resolveClassName — error-message variant (class names only, no role)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void resolveClassName_caseA_returnsStandardSwingClass() {
+        assertEquals("JButton", ComponentClassResolver.resolveClassName(new JButton("OK")));
+        assertEquals("JTextField", ComponentClassResolver.resolveClassName(new JTextField()));
+    }
+
+    @Test
+    void resolveClassName_caseB_returnsQualifyingAncestor() {
+        // Custom subclasses resolve to the standard Swing ancestor the AI
+        // recognises — not the concrete subclass. Errors target the canonical
+        // Swing vocabulary, per project_accessibility_vocabulary.md.
+        assertEquals("JButton", ComponentClassResolver.resolveClassName(new FancyButton()));
+        assertEquals("JTextField", ComponentClassResolver.resolveClassName(new SearchField()));
+    }
+
+    @Test
+    void resolveClassName_anonymousSubclass_stripsToRealParent() {
+        JButton anon = new JButton("A") { };
+        assertEquals("JButton", ComponentClassResolver.resolveClassName(anon));
+    }
+
+    @Test
+    void resolveClassName_caseC_fallsBackToComponent() {
+        // JTabbedPane.Page has no Swing/AWT qualifying ancestor — degrade
+        // gracefully so "Component does not support …" still reads cleanly.
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.addTab("T", new JPanel());
+        Accessible page = tabs.getAccessibleContext().getAccessibleChild(0);
+        assertNotNull(page);
+        assertEquals("Component", ComponentClassResolver.resolveClassName(page));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     // Algorithm primitives — findDisplayClass / isQualifying / isRuntimeProxy
     // ══════════════════════════════════════════════════════════════════════════
 
