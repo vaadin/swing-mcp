@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.sun.net.httpserver.HttpExchange;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -63,6 +64,12 @@ class JsonRpcExchange {
         result.setIsError(true);
         result.setContent(Collections.singletonList(MCPProtocol.Content.text(message)));
         sendResponse(result);
+    }
+
+    String readBody() throws IOException {
+        try (InputStream is = exchange.getRequestBody()) {
+            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        }
     }
 
     void sendPlain(int statusCode, String body) throws IOException {

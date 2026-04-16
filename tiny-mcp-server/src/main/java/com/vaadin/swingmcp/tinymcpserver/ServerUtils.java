@@ -1,22 +1,11 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
-import com.sun.net.httpserver.HttpExchange;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-
 /**
  * Stateless utility methods used by TinyMCPServer.
  */
 class ServerUtils {
 
     private ServerUtils() {}
-
-    static String readBody(HttpExchange exchange) throws IOException {
-        try (InputStream is = exchange.getRequestBody()) {
-            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
-        }
-    }
 
     static int levenshteinDistance(String a, String b) {
         int m = a.length(), n = b.length();

@@ -260,7 +260,7 @@ public class TinyMCPServer {
             }
         }
 
-        String body = ServerUtils.readBody(rpc.getHttpExchange());
+        String body = rpc.readBody();
         LOG.fine("Received POST: " + body);
 
         // Parse as a generic JsonElement first so we can distinguish
