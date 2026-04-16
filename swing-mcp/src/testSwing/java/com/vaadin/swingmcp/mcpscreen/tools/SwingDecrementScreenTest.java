@@ -122,9 +122,12 @@ class SwingDecrementScreenTest extends AbstractScreenTest {
         iframe.getContentPane().add(spinner);
         iframe.setSize(150, 80);
         desktop.add(iframe);
-        host.pack();
-        host.setVisible(true);
-        iframe.setVisible(true);
+        executeOnEDT(() -> {
+            host.setSize(400, 300);
+            host.setVisible(true);
+            iframe.setVisible(true);
+            return null;
+        });
         try {
             snapshot(host);
             int ref = context.getRefOf(spinner);
