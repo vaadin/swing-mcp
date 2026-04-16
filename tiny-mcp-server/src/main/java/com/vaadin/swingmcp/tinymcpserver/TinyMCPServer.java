@@ -5,10 +5,7 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executors;
@@ -64,21 +61,6 @@ public class TinyMCPServer {
         MCPProtocol.Content call(Map<String, Object> params) throws Exception;
     }
 
-    private static class RegisteredTool {
-        final MCPParameterParser parser;
-        final ToolFunction function;
-        final MCPProtocol.Tool descriptor;
-
-        RegisteredTool(String name, String description, MCPProtocol.InputSchema inputSchema, ToolFunction function) {
-            this.parser = new MCPParameterParser(name, inputSchema);
-            this.function = function;
-            this.descriptor = new MCPProtocol.Tool();
-            this.descriptor.setName(name);
-            this.descriptor.setDescription(description);
-            this.descriptor.setInputSchema(inputSchema);
-        }
-    }
-
     /**
      * The port requested in the constructor. May be {@code 0}, meaning
      * "let the OS pick an ephemeral port at bind time". After {@link #start()},
@@ -88,7 +70,7 @@ public class TinyMCPServer {
     private final String contextPath;
     private final MCPProtocol.Implementation serverInfo;
     private final String instructions;
-    private final Map<String, RegisteredTool> tools = new LinkedHashMap<>();
+    private final MCPToolHandler toolHandler = new MCPToolHandler();
     private volatile boolean started = false;
     private HttpServer httpServer;
     /** Populated by {@link #start()} once the OS has assigned a port. */
@@ -141,28 +123,10 @@ public class TinyMCPServer {
      * @throws IllegalStateException    if a tool with the same name is already registered
      */
     public void addTool(String name, String description, MCPProtocol.InputSchema inputSchema, ToolFunction function) {
-        if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Tool name must not be null or blank");
-        }
-        if (!name.matches("[a-zA-Z_][a-zA-Z0-9_]*")) {
-            throw new IllegalArgumentException("Tool name must start with a letter or underscore and contain only alphanumeric characters and underscores: " + name);
-        }
-        if (description == null || description.isBlank()) {
-            throw new IllegalArgumentException("Tool description must not be null or blank");
-        }
-        if (inputSchema == null) {
-            throw new IllegalArgumentException("InputSchema must not be null");
-        }
-        if (function == null) {
-            throw new IllegalArgumentException("ToolFunction must not be null");
-        }
         if (started) {
             throw new IllegalStateException("Cannot add tools after server has been started");
         }
-        if (tools.containsKey(name)) {
-            throw new IllegalStateException("A tool with name '" + name + "' is already registered");
-        }
-        tools.put(name, new RegisteredTool(name, description, inputSchema, function));
+        toolHandler.addTool(name, description, inputSchema, function);
     }
 
     public void start() throws IOException {
@@ -317,55 +281,11 @@ public class TinyMCPServer {
     }
 
     private void handleToolsList(JsonRpcExchange rpc) throws IOException {
-        MCPProtocol.ListToolsResult result = new MCPProtocol.ListToolsResult();
-        List<MCPProtocol.Tool> toolList = new ArrayList<>();
-        for (RegisteredTool rt : tools.values()) {
-            toolList.add(rt.descriptor);
-        }
-        result.setTools(toolList);
-        rpc.sendResponse(result);
+        toolHandler.handleToolsList(rpc);
     }
 
     private void handleToolsCall(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) throws IOException {
-        MCPProtocol.CallToolParams params = request.getParamsAs(MCPProtocol.CallToolParams.class);
-        if (params == null || params.getName() == null) {
-            rpc.sendError(-32601, "Method not found");
-            return;
-        }
-
-        String toolName = params.getName();
-        RegisteredTool tool = tools.get(toolName);
-        if (tool == null) {
-            rpc.sendError(-32601, "Method not found: " + toolName);
-            return;
-        }
-
-        Map<String, Object> rawArgs = params.getArguments() != null ? params.getArguments() : Collections.emptyMap();
-        Map<String, Object> callArgs = tool.parser.parse(rpc, rawArgs);
-        if (callArgs == null) {
-            return; // parser already sent the error response
-        }
-
-        // Invoke the tool function
-        try {
-            MCPProtocol.Content content = tool.function.call(callArgs);
-            MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
-            if (content == null) {
-                result.setContent(Collections.emptyList());
-            } else {
-                result.setContent(Collections.singletonList(content));
-            }
-            rpc.sendResponse(result);
-        } catch (MCPErrorResponseException e) {
-            LOG.fine("Tool '" + toolName + "' returned error response: " + e.getMessage());
-            rpc.sendToolError(e.getMessage());
-        } catch (MCPServerException e) {
-            LOG.log(Level.FINE, "Tool '" + toolName + "' threw MCPServerException (code=" + e.getCode() + ")", e);
-            rpc.sendError(e.getCode(), e.getMessage());
-        } catch (Exception e) {
-            LOG.log(Level.WARNING, "Tool '" + toolName + "' threw an exception", e);
-            rpc.sendToolError(e.toString());
-        }
+        toolHandler.handleToolsCall(rpc, request);
     }
 
 
