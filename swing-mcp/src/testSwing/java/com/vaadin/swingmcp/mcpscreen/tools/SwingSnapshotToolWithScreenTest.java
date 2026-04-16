@@ -544,9 +544,6 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
     // SC-8 / DR-019 — iconified Frame children suppressed
     // ══════════════════════════════════════════════════════════════════════════
 
-    private static final String ICONIFIED_PLACEHOLDER =
-            "[Contents hidden — window is iconified. Call swing_restore to interact with this window.]";
-
     /**
      * Polls {@link Frame#getExtendedState()} until {@code (state & mask) == expected}
      * or {@code timeoutMs} elapses.
@@ -579,7 +576,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
 
             assertEquals(
                     "- JFrame (frame) \"App\" [ref=1, iconified] actions: close, restore\n"
-                    + "  - " + ICONIFIED_PLACEHOLDER,
+                    + "  - [Contents hidden — window is iconified. Call swing_restore to interact with this window.]",
                     snapshot(frame));
         } finally {
             executeOnEDT(() -> { frame.dispose(); return null; });
@@ -608,7 +605,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
             // Take snapshot while iconified — button ref is not assigned
             assertEquals(
                     "- JFrame (frame) \"App\" [ref=1, iconified] actions: close, restore\n"
-                    + "  - " + ICONIFIED_PLACEHOLDER,
+                    + "  - [Contents hidden — window is iconified. Call swing_restore to interact with this window.]",
                     snapshot(frame));
             assertThrows(IllegalStateException.class, () -> context.getRefOf(button));
         } finally {
@@ -629,7 +626,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
 
             assertEquals(
                     "- JFrame (frame) \"App\" [ref=1, iconified] actions: close, restore\n"
-                    + "  - " + ICONIFIED_PLACEHOLDER,
+                    + "  - [Contents hidden — window is iconified. Call swing_restore to interact with this window.]",
                     snapshot(frame));
 
             // Restore
@@ -669,7 +666,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
 
             assertEquals(
                     "- JFrame (frame) \"Minimized\" [ref=1, iconified] actions: close, restore\n"
-                    + "  - " + ICONIFIED_PLACEHOLDER + "\n"
+                    + "  - [Contents hidden — window is iconified. Call swing_restore to interact with this window.]\n"
                     + "---\n"
                     + "- JFrame (frame) \"Active\" [ref=2] actions: close, iconify\n"
                     + "  - JButton (push_button) \"Visible\" [ref=3] actions: click",
@@ -719,7 +716,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
             assertTrue(text.startsWith("- JFrame (frame) \"Host\""), "host frame present");
             assertTrue(text.contains("JDesktopIcon (desktop_icon) \"Doc\""),
                     "JDesktopIcon appears (SC-5). Got:\n" + text);
-            assertFalse(text.contains(ICONIFIED_PLACEHOLDER),
+            assertFalse(text.contains("[Contents hidden"),
                     "SC-8 placeholder must not appear for JInternalFrame");
         } finally {
             executeOnEDT(() -> { host.dispose(); return null; });
