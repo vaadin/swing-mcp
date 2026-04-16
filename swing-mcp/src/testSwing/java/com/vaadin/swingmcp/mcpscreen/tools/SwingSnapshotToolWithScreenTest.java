@@ -570,7 +570,6 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
     void sc8_iconifiedJFrame_childrenSuppressedWithPlaceholder() throws Exception {
         JFrame frame = new JFrame("App");
         frame.getContentPane().add(new JButton("OK"));
-        frame.getContentPane().add(new JTextField("hello"));
         try {
             executeOnEDT(() -> { frame.setSize(300, 200); frame.setVisible(true); return null; });
 
@@ -578,21 +577,10 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
             executeOnEDT(() -> { frame.setExtendedState(Frame.ICONIFIED); return null; });
             awaitExtendedState(frame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
 
-            String text = snapshot(frame);
-
-            // Frame node should be present with [iconified] and restore/close actions
-            assertTrue(text.contains("JFrame (frame) \"App\""), "frame node present");
-            assertTrue(text.contains("iconified"), "shows [iconified]");
-            assertTrue(text.contains("restore"), "has restore action");
-            assertTrue(text.contains("close"), "has close action");
-            assertTrue(text.contains("[ref="), "frame has a ref");
-
-            // Children suppressed — no button or text field
-            assertFalse(text.contains("JButton"), "button suppressed");
-            assertFalse(text.contains("JTextField"), "text field suppressed");
-
-            // Placeholder line present
-            assertTrue(text.contains(ICONIFIED_PLACEHOLDER), "placeholder shown");
+            assertEquals(
+                    "- JFrame (frame) \"App\" [ref=1, iconified] actions: close, restore\n"
+                    + "  - " + ICONIFIED_PLACEHOLDER,
+                    snapshot(frame));
         } finally {
             executeOnEDT(() -> { frame.dispose(); return null; });
         }
@@ -607,22 +595,22 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
             executeOnEDT(() -> { frame.setSize(300, 200); frame.setVisible(true); return null; });
 
             // Take snapshot while normal — button gets a ref
-            String normalText = snapshot(frame);
-            assertTrue(normalText.contains("JButton"), "precondition: button visible in normal snapshot");
-            int buttonRef = context.getRefOf(button);
-            assertTrue(buttonRef > 0, "precondition: button has a ref in normal snapshot");
+            assertEquals(
+                    "- JFrame (frame) \"App\" [ref=1] actions: close, iconify\n"
+                    + "  - JButton (push_button) \"OK\" [ref=2] actions: click",
+                    snapshot(frame));
+            assertEquals(2, context.getRefOf(button));
 
             // Iconify
             executeOnEDT(() -> { frame.setExtendedState(Frame.ICONIFIED); return null; });
             awaitExtendedState(frame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
 
-            // Take snapshot while iconified
-            String iconifiedText = snapshot(frame);
-            assertFalse(iconifiedText.contains("JButton"), "button suppressed in iconified snapshot");
-
-            // The old ref should not be in the ref map — context was rebuilt
-            assertThrows(IllegalStateException.class, () -> context.getRefOf(button),
-                    "button ref should not be assigned in iconified snapshot");
+            // Take snapshot while iconified — button ref is not assigned
+            assertEquals(
+                    "- JFrame (frame) \"App\" [ref=1, iconified] actions: close, restore\n"
+                    + "  - " + ICONIFIED_PLACEHOLDER,
+                    snapshot(frame));
+            assertThrows(IllegalStateException.class, () -> context.getRefOf(button));
         } finally {
             executeOnEDT(() -> { frame.dispose(); return null; });
         }
@@ -639,8 +627,10 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
             executeOnEDT(() -> { frame.setExtendedState(Frame.ICONIFIED); return null; });
             awaitExtendedState(frame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
 
-            String iconifiedText = snapshot(frame);
-            assertTrue(iconifiedText.contains(ICONIFIED_PLACEHOLDER), "precondition: placeholder shown");
+            assertEquals(
+                    "- JFrame (frame) \"App\" [ref=1, iconified] actions: close, restore\n"
+                    + "  - " + ICONIFIED_PLACEHOLDER,
+                    snapshot(frame));
 
             // Restore
             executeOnEDT(() -> {
@@ -649,11 +639,10 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
             });
             awaitExtendedState(frame, Frame.ICONIFIED, 0, 2000);
 
-            String restoredText = snapshot(frame);
-            assertFalse(restoredText.contains(ICONIFIED_PLACEHOLDER), "no placeholder after restore");
-            assertTrue(restoredText.contains("JButton"), "button reappears after restore");
-            assertTrue(restoredText.contains("[ref="), "refs assigned after restore");
-            assertFalse(restoredText.contains("iconified"), "no [iconified] after restore");
+            assertEquals(
+                    "- JFrame (frame) \"App\" [ref=1] actions: close, iconify\n"
+                    + "  - JButton (push_button) \"OK\" [ref=2] actions: click",
+                    snapshot(frame));
         } finally {
             executeOnEDT(() -> { frame.dispose(); return null; });
         }
@@ -678,27 +667,21 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
             executeOnEDT(() -> { iconifiedFrame.setExtendedState(Frame.ICONIFIED); return null; });
             awaitExtendedState(iconifiedFrame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
 
-            String text = snapshot(iconifiedFrame, normalFrame);
+            assertEquals(
+                    "- JFrame (frame) \"Minimized\" [ref=1, iconified] actions: close, restore\n"
+                    + "  - " + ICONIFIED_PLACEHOLDER + "\n"
+                    + "---\n"
+                    + "- JFrame (frame) \"Active\" [ref=2] actions: close, iconify\n"
+                    + "  - JButton (push_button) \"Visible\" [ref=3] actions: click",
+                    snapshot(iconifiedFrame, normalFrame));
 
-            // Iconified frame: placeholder, no children
-            assertTrue(text.contains(ICONIFIED_PLACEHOLDER), "placeholder on iconified frame");
-            assertFalse(text.contains("\"Hidden\""), "iconified frame's button suppressed");
+            // Ref assertions: iconified frame node has ref, its children do not
+            assertEquals(1, context.getRefOf(iconifiedFrame));
+            assertThrows(IllegalStateException.class,
+                    () -> context.getRefOf((JButton) iconifiedFrame.getContentPane().getComponent(0)));
 
-            // Normal frame: full tree with refs
-            assertTrue(text.contains("\"Visible\""), "normal frame's button present");
-
-            // The "Visible" button should have a ref
-            JButton visibleButton = (JButton) normalFrame.getContentPane().getComponent(0);
-            assertTrue(context.getRefOf(visibleButton) > 0, "normal frame's button has a ref");
-
-            // The "Hidden" button should not
-            JButton hiddenButton = (JButton) iconifiedFrame.getContentPane().getComponent(0);
-            assertThrows(IllegalStateException.class, () -> context.getRefOf(hiddenButton),
-                    "iconified frame's button has no ref");
-
-            // The iconified frame node itself should have a ref (for restore/close)
-            assertTrue(context.getRefOf(iconifiedFrame) > 0,
-                    "iconified frame node has a ref");
+            // Normal frame's button has a ref
+            assertEquals(3, context.getRefOf((JButton) normalFrame.getContentPane().getComponent(0)));
         } finally {
             executeOnEDT(() -> {
                 iconifiedFrame.dispose();
@@ -714,7 +697,6 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
         JDesktopPane desktop = new JDesktopPane();
         host.setContentPane(desktop);
         JInternalFrame iframe = new JInternalFrame("Doc", false, true, false, true);
-        iframe.getContentPane().add(new JButton("Inside"));
         iframe.setSize(150, 80);
         desktop.add(iframe);
         try {
@@ -727,17 +709,18 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
 
             // Iconify the internal frame and drain the EDT
             executeOnEDT(() -> { iframe.setIcon(true); return null; });
-            // Extra EDT drain — property listeners may fire asynchronously
             executeOnEDT(() -> null);
 
             assertTrue(iframe.isIcon(), "precondition: internal frame is iconified");
 
             String text = snapshot(host);
 
-            // SC-5: JDesktopIcon should appear, not the placeholder
-            assertTrue(text.contains("JDesktopIcon"), "JDesktopIcon appears (SC-5)");
+            // SC-5: JDesktopIcon replaces the JInternalFrame; SC-8 placeholder must not appear
+            assertTrue(text.startsWith("- JFrame (frame) \"Host\""), "host frame present");
+            assertTrue(text.contains("JDesktopIcon (desktop_icon) \"Doc\""),
+                    "JDesktopIcon appears (SC-5). Got:\n" + text);
             assertFalse(text.contains(ICONIFIED_PLACEHOLDER),
-                    "SC-8 placeholder should NOT appear for JInternalFrame");
+                    "SC-8 placeholder must not appear for JInternalFrame");
         } finally {
             executeOnEDT(() -> { host.dispose(); return null; });
         }
