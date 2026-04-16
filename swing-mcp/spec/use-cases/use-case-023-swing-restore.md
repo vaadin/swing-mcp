@@ -19,7 +19,7 @@ Restores (de-iconifies) an iconified Frame (including JFrame) or JDesktopIcon (i
 | BR-04 | All validation runs on the EDT inside `runInEDT()`. The restore dispatch is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
 | BR-05 | If `supportsRestore()` returns false, the tool returns an MCP-level error (`isError: true`). The error message is derived by inspecting the component to pick the most specific explanation: **Frame — not iconified:** "Frame is not iconified". **Fallback:** "<ClassName> does not support restore. Call swing_snapshot or swing_get_cells to verify the list of actions". |
 | BR-06 | `isEffectivelyEnabled()` is **not** checked. Restoring is a window-level action; it does not depend on the component's enabled state. |
-| BR-07 | `swing_restore` is a **mutation tool** — it clears the ref map in a `finally` block after execution, regardless of success or failure (see **architecture.md §3 rule 3**). |
+| BR-07 | `swing_restore` is a **mutation tool** — it clears the ref map after successful execution (see **architecture.md §3 rule 3**). A pre-dispatch validation error (`MCPErrorResponseException`) does **not** clear the ref map. |
 | BR-08 | **Snapshot action:** `restore` is listed in the actions of a Frame or JDesktopIcon when `supportsRestore()` returns true. |
 | BR-09 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Posted restore on ref=<N>` (see **DR-010**). |
 
