@@ -135,7 +135,7 @@ class TinyMCPServerToolTest {
                     throw new MCPErrorResponseException("clean error message");
                 });
 
-        // Tool: unknown_params_tool — has no defined params, to test unknown param warning
+        // Tool: no_params_tool — has no defined params, to test unknown param rejection
         server.addTool("no_params_tool", "Tool with no params",
                 new InputSchemaBuilder().build(),
                 params -> {
@@ -338,15 +338,40 @@ class TinyMCPServerToolTest {
     }
 
     @Test
-    void callToolUnknownParametersIgnored() {
-        // Pass extra "unknown_param" — should be silently ignored, not cause an error
+    void callToolUnknownParameterReturnsIsError() {
         lastCallArgs.set(null);
-        assertDoesNotThrow(() -> client.callTool(
+        McpSchema.CallToolResult result = client.callTool(
                 new McpSchema.CallToolRequest("no_params_tool",
-                        Map.of("unknown_param", "surprise"))));
-        Map<String, Object> received = lastCallArgs.get();
-        assertNotNull(received);
-        assertFalse(received.containsKey("unknown_param"));
+                        Map.of("unknown_param", "surprise")));
+        assertTrue(Boolean.TRUE.equals(result.isError()));
+        McpSchema.TextContent text = (McpSchema.TextContent) result.content().get(0);
+        assertTrue(text.text().contains("Unknown parameter 'unknown_param'"));
+        assertTrue(text.text().contains("no_params_tool"));
+        // Tool should NOT have been invoked
+        assertNull(lastCallArgs.get());
+    }
+
+    @Test
+    void callToolUnknownParameterDidYouMean() {
+        McpSchema.CallToolResult result = client.callTool(
+                new McpSchema.CallToolRequest("echo_text",
+                        Map.of("mesage", "hello")));
+        assertTrue(Boolean.TRUE.equals(result.isError()));
+        McpSchema.TextContent text = (McpSchema.TextContent) result.content().get(0);
+        assertTrue(text.text().contains("'mesage'"), "should mention the unknown param");
+        assertTrue(text.text().contains("did you mean 'message'"), "should suggest closest match");
+    }
+
+    @Test
+    void callToolUnknownParameterListsValidParameters() {
+        McpSchema.CallToolResult result = client.callTool(
+                new McpSchema.CallToolRequest("add_integers",
+                        Map.of("x", 1, "y", 2)));
+        assertTrue(Boolean.TRUE.equals(result.isError()));
+        McpSchema.TextContent text = (McpSchema.TextContent) result.content().get(0);
+        assertTrue(text.text().contains("Valid parameters:"));
+        assertTrue(text.text().contains("a"));
+        assertTrue(text.text().contains("b"));
     }
 
     @Test
@@ -579,5 +604,29 @@ class TinyMCPServerToolTest {
         assertTrue(Boolean.TRUE.equals(result.isError()));
         assertEquals(1, result.content().size());
         assertInstanceOf(McpSchema.TextContent.class, result.content().get(0));
+    }
+
+    // ===== Levenshtein distance =====
+
+    @Test
+    void levenshteinIdenticalStrings() {
+        assertEquals(0, TinyMCPServer.levenshteinDistance("abc", "abc"));
+    }
+
+    @Test
+    void levenshteinSingleEdit() {
+        assertEquals(1, TinyMCPServer.levenshteinDistance("mesage", "message"));
+    }
+
+    @Test
+    void levenshteinCompletelyDifferent() {
+        assertEquals(3, TinyMCPServer.levenshteinDistance("abc", "xyz"));
+    }
+
+    @Test
+    void levenshteinEmptyStrings() {
+        assertEquals(0, TinyMCPServer.levenshteinDistance("", ""));
+        assertEquals(3, TinyMCPServer.levenshteinDistance("abc", ""));
+        assertEquals(3, TinyMCPServer.levenshteinDistance("", "abc"));
     }
 }

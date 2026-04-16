@@ -399,11 +399,51 @@ public class TinyMCPServer {
         List<String> required =
                 schema.getRequired() != null ? schema.getRequired() : Collections.emptyList();
 
-        // Warn about unknown parameters
+        // Reject unknown parameters with isError:true and did-you-mean hints
+        List<String> unknownParams = new ArrayList<>();
         for (String key : rawArgs.keySet()) {
             if (!properties.containsKey(key)) {
-                LOG.warning("Unknown parameter '" + key + "' for tool '" + toolName + "', ignoring");
+                unknownParams.add(key);
             }
+        }
+        if (!unknownParams.isEmpty()) {
+            StringBuilder msg = new StringBuilder("Unknown parameter");
+            msg.append(unknownParams.size() == 1 ? " " : "s ");
+            for (int i = 0; i < unknownParams.size(); i++) {
+                if (i > 0) msg.append(", ");
+                String unknown = unknownParams.get(i);
+                msg.append("'").append(unknown).append("'");
+                if (!properties.isEmpty()) {
+                    String closest = null;
+                    int bestDist = Integer.MAX_VALUE;
+                    for (String known : properties.keySet()) {
+                        int dist = levenshteinDistance(unknown, known);
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            closest = known;
+                        }
+                    }
+                    int threshold = Math.max(unknown.length(), closest.length()) / 2;
+                    if (bestDist <= threshold) {
+                        msg.append(" (did you mean '").append(closest).append("'?)");
+                    }
+                }
+            }
+            msg.append(" for tool '").append(toolName).append("'.");
+            if (!properties.isEmpty()) {
+                msg.append(" Valid parameters: ");
+                int i = 0;
+                for (String name : properties.keySet()) {
+                    if (i++ > 0) msg.append(", ");
+                    msg.append(name);
+                }
+            }
+
+            MCPProtocol.CallToolResult errorResult = new MCPProtocol.CallToolResult();
+            errorResult.setIsError(true);
+            errorResult.setContent(Collections.singletonList(MCPProtocol.Content.text(msg.toString())));
+            sendJsonRpcResponse(exchange, request.getId(), errorResult);
+            return;
         }
 
         // Validate and coerce parameters
@@ -581,5 +621,19 @@ public class TinyMCPServer {
         try (InputStream is = exchange.getRequestBody()) {
             return new String(is.readAllBytes(), StandardCharsets.UTF_8);
         }
+    }
+
+    static int levenshteinDistance(String a, String b) {
+        int m = a.length(), n = b.length();
+        int[][] d = new int[m + 1][n + 1];
+        for (int i = 0; i <= m; i++) d[i][0] = i;
+        for (int j = 0; j <= n; j++) d[0][j] = j;
+        for (int i = 1; i <= m; i++) {
+            for (int j = 1; j <= n; j++) {
+                int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+                d[i][j] = Math.min(Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1), d[i - 1][j - 1] + cost);
+            }
+        }
+        return d[m][n];
     }
 }
