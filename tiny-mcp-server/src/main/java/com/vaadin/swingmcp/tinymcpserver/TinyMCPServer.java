@@ -243,20 +243,6 @@ public class TinyMCPServer {
     }
 
     private void handlePost(JsonRpcExchange rpc) throws IOException {
-        // --- Session ID validation (pre-parse) ---
-        String incomingSessionId = rpc.getHttpExchange().getRequestHeaders().getFirst("Mcp-Session-Id");
-        if (incomingSessionId != null) {
-            synchronized (this) {
-                if (!incomingSessionId.equals(activeSessionId)) {
-                    LOG.warning("Rejecting request: Mcp-Session-Id mismatch (received="
-                            + incomingSessionId + ", active=" + activeSessionId + ")");
-                    rpc.sendError(404,
-                            MCPServerException.SERVER_NOT_INITIALIZED, "Session not found.");
-                    return;
-                }
-            }
-        }
-
         MCPProtocol.JsonRpcRequest request = rpc.parsePost();
         if (request == null) return;
 

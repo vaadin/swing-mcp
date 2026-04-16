@@ -35,7 +35,6 @@ class JsonRpcExchange {
     }
 
     HttpExchange getHttpExchange() { return exchange; }
-    void setRequestId(Object requestId) { this.requestId = requestId; }
     void setSessionId(String sessionId) { this.sessionId = sessionId; }
 
     void sendResponse(Object result) throws IOException {
@@ -85,6 +84,18 @@ class JsonRpcExchange {
      * or notification).
      */
     MCPProtocol.JsonRpcRequest parsePost() throws IOException {
+        // --- Session ID validation (pre-parse) ---
+        String incomingSessionId = getHttpExchange().getRequestHeaders().getFirst("Mcp-Session-Id");
+        if (incomingSessionId != null) {
+            if (!incomingSessionId.equals(sessionId)) {
+                LOG.warning("Rejecting request: Mcp-Session-Id mismatch (received="
+                        + incomingSessionId + ", active=" + sessionId + ")");
+                sendError(404,
+                        MCPServerException.SERVER_NOT_INITIALIZED, "Session not found.");
+                return null;
+            }
+        }
+
         String body = readBody();
         LOG.fine("Received POST: " + body);
 
