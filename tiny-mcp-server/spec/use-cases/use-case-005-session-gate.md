@@ -40,7 +40,7 @@ is parsed — so invalid sessions are rejected cheaply.
 | absent | null (no session) | `initialize` | OK — create session |
 | absent | null | `ping` | OK |
 | absent | null | anything else | **HTTP 400** + JSON-RPC error |
-| absent | non-null (session active) | `initialize` | 409 — already active (existing behavior) |
+| absent | non-null (session active) | `initialize` | **HTTP 409** + JSON-RPC error — already active |
 | absent | non-null | `ping` | OK |
 | absent | non-null | anything else | **HTTP 400** + JSON-RPC error |
 | matches `activeSessionId` | non-null | any | OK — normal dispatch |
@@ -130,8 +130,8 @@ call, then calls `context.clearRefMap()`.
 
 ### Existing behavior preserved
 
-- `handleInitialize` still returns HTTP 409 when `activeSessionId != null`
-  (DR-003).
+- `handleInitialize` still returns HTTP 409 with a JSON-RPC error when
+  `activeSessionId != null` (DR-003).
 - `ping` works at all times with no session ID requirement.
 - `handleDelete` with no active session still returns 200 (idempotent).
 - All response helpers still attach the `Mcp-Session-Id` header when

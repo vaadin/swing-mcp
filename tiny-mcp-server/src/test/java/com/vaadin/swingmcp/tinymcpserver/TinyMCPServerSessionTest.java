@@ -181,6 +181,13 @@ class TinyMCPServerSessionTest {
     }
 
     @Test
+    void doubleInitializeReturnsJsonRpcError409() throws Exception {
+        initialize();
+        HttpResponse<String> resp = post(jsonRpc("initialize", 2), null);
+        assertJsonRpcError(resp, 409, -32002, "Another session is already active");
+    }
+
+    @Test
     void pingWithWrongSessionIdReturns404() throws Exception {
         initialize();
         HttpResponse<String> resp = post(jsonRpc("ping", 2), "wrong-session-id");

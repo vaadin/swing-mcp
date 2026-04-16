@@ -42,7 +42,7 @@ Therefore, the server supports at most a single session:
 - A session is allowed to be opened only if there is no other session ongoing.
 - Only after a session is terminated, a new session is allowed to be started.
 - If a second session is attempted via a MCP initialization request,
-  that request is denied with HTTP 409 Conflict and response body `"Another session is already active"`.
+  that request is denied with HTTP 409 Conflict and a JSON-RPC error response (`-32002`, `"Another session is already active"`).
 - The blocked client simply fails — no queuing or retry mechanism.
 
 ### Stuck sessions
