@@ -188,7 +188,7 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(table);
         MCPProtocol.Content result = setSelectionTool.execute(
                 new Parameters(Map.of("ref", ref, "indices", List.of(1.0))), context);
-        assertEquals("Posted set-selection on ref=" + ref + " to [1]", result.getText());
+        assertEquals("Dispatched set-selection on ref=" + ref + " to [1] — call swing_snapshot to verify the outcome", result.getText());
     }
 
     @Test
@@ -201,7 +201,7 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(table);
         MCPProtocol.Content result = setSelectionTool.execute(
                 new Parameters(Map.of("ref", ref, "indices", List.of(0.0, 2.0))), context);
-        assertEquals("Posted set-selection on ref=" + ref + " to [0, 2]", result.getText());
+        assertEquals("Dispatched set-selection on ref=" + ref + " to [0, 2] — call swing_snapshot to verify the outcome", result.getText());
     }
 
     @Test
@@ -215,7 +215,7 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(table);
         MCPProtocol.Content result = setSelectionTool.execute(
                 new Parameters(Map.of("ref", ref, "indices", List.of())), context);
-        assertEquals("Posted set-selection on ref=" + ref + " to []", result.getText());
+        assertEquals("Dispatched set-selection on ref=" + ref + " to [] — call swing_snapshot to verify the outcome", result.getText());
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -471,7 +471,7 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
         // addAccessibleSelection is a no-op in headless mode — just verify success
         MCPProtocol.Content result = setSelectionTool.execute(
                 new Parameters(Map.of("ref", ref, "indices", List.of(0.0))), context);
-        assertEquals("Posted set-selection on ref=" + ref + " to [0]", result.getText());
+        assertEquals("Dispatched set-selection on ref=" + ref + " to [0] — call swing_snapshot to verify the outcome", result.getText());
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -655,9 +655,9 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
                         Map.of("ref", 1, "indices", List.of(0, 2))));
 
         assertNotEquals(Boolean.TRUE, result.isError(), "set_selection should succeed");
-        // DR-010: mutation tools echo "Posted <action> on ref=<N> [to <value>]"
+        // DR-010: mutation tools echo "Dispatched <action> on ref=<N> [to <value>]"
         assertEquals(1, result.content().size(), "Mutation tools return a one-item echo");
-        assertEquals("Posted set-selection on ref=1 to [0, 2]",
+        assertEquals("Dispatched set-selection on ref=1 to [0, 2] — call swing_snapshot to verify the outcome",
                 ((McpSchema.TextContent) result.content().get(0)).text());
     }
 }

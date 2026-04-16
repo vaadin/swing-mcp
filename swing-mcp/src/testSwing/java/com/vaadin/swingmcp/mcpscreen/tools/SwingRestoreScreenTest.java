@@ -337,7 +337,7 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
         int ref = context.getRefOf(icon);
         MCPProtocol.Content result = restore(ref);
 
-        assertEquals("Posted restore on ref=" + ref, result.getText(),
+        assertEquals("Dispatched restore on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText(),
                 "DR-010: tool returns echo on dispatch even when listener vetoes");
         // Frame should still be iconified
         assertTrue(iframe.isIcon(), "vetoed restore should leave frame iconified");

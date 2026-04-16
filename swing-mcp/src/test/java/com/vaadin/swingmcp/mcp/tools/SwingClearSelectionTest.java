@@ -83,7 +83,7 @@ class SwingClearSelectionTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(list);
         MCPProtocol.Content result = clearSelectionTool.execute(
                 new Parameters(Map.of("ref", ref)), context);
-        assertEquals("Posted clear-selection on ref=" + ref, result.getText());
+        assertEquals("Dispatched clear-selection on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
     }
 
     @Test

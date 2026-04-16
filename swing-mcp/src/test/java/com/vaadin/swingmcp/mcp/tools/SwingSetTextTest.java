@@ -156,7 +156,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
 
         MCPProtocol.Content result = setTextTool.execute(
                 new Parameters(Map.of("ref", ref, "text", "new")), context);
-        assertEquals("Posted set-text on ref=" + ref + " to \"new\"", result.getText());
+        assertEquals("Dispatched set-text on ref=" + ref + " to \"new\" — call swing_snapshot to verify the outcome", result.getText());
     }
 
     @Test
@@ -168,7 +168,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
 
         MCPProtocol.Content result = setTextTool.execute(
                 new Parameters(Map.of("ref", ref, "text", "this is a pretty long message")), context);
-        assertEquals("Posted set-text on ref=" + ref + " to \"this is a pret\u2026\"",
+        assertEquals("Dispatched set-text on ref=" + ref + " to \"this is a pret\u2026\" — call swing_snapshot to verify the outcome",
                 result.getText());
     }
 
@@ -183,7 +183,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
 
         MCPProtocol.Content result = setTextTool.execute(
                 new Parameters(Map.of("ref", ref, "text", "hunter2")), context);
-        assertEquals("Posted set-text on ref=" + ref + " to \"hunter2\"", result.getText());
+        assertEquals("Dispatched set-text on ref=" + ref + " to \"hunter2\" — call swing_snapshot to verify the outcome", result.getText());
     }
 
     @Test

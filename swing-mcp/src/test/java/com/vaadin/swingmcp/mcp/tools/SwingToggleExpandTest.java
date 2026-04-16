@@ -65,7 +65,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
         context.putRef(1, rootNodeAcc);
 
         MCPProtocol.Content result = toggleExpand(1);
-        assertEquals("Posted toggle-expand on ref=1", result.getText());
+        assertEquals("Dispatched toggle-expand on ref=1 — call swing_snapshot to verify the outcome", result.getText());
         assertTrue(tree.isExpanded(new TreePath(root)), "Root should be expanded after toggle");
     }
 
@@ -80,7 +80,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
         context.putRef(1, rootNodeAcc);
 
         MCPProtocol.Content result = toggleExpand(1);
-        assertEquals("Posted toggle-expand on ref=1", result.getText());
+        assertEquals("Dispatched toggle-expand on ref=1 — call swing_snapshot to verify the outcome", result.getText());
         assertFalse(tree.isExpanded(new TreePath(root)), "Root should be collapsed after toggle");
     }
 
@@ -151,7 +151,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
         Accessible rootNodeAcc = tree.getAccessibleContext().getAccessibleChild(0);
         context.putRef(1, rootNodeAcc);
 
-        assertEquals("Posted toggle-expand on ref=1", toggleExpand(1).getText());
+        assertEquals("Dispatched toggle-expand on ref=1 — call swing_snapshot to verify the outcome", toggleExpand(1).getText());
     }
 
     @Test

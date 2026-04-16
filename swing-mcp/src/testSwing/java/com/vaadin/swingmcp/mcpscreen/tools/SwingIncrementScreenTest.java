@@ -60,7 +60,7 @@ class SwingIncrementScreenTest extends AbstractScreenTest {
             snapshot(frame);
             int ref = context.getRefOf(spinner);
             MCPProtocol.Content result = increment(ref);
-            assertEquals("Posted increment on ref=" + ref, result.getText());
+            assertEquals("Dispatched increment on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
             assertEquals(6, spinner.getValue());
         } finally {
             frame.dispose();
@@ -78,7 +78,7 @@ class SwingIncrementScreenTest extends AbstractScreenTest {
             snapshot(frame);
             int ref = context.getRefOf(slider);
             MCPProtocol.Content result = increment(ref);
-            assertEquals("Posted increment on ref=" + ref, result.getText());
+            assertEquals("Dispatched increment on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
             assertEquals(51, slider.getValue());
         } finally {
             frame.dispose();
@@ -101,7 +101,7 @@ class SwingIncrementScreenTest extends AbstractScreenTest {
             snapshot(dialog);
             int ref = context.getRefOf(spinner);
             MCPProtocol.Content result = increment(ref);
-            assertEquals("Posted increment on ref=" + ref, result.getText());
+            assertEquals("Dispatched increment on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
             assertEquals(4, spinner.getValue());
         } finally {
             dialog.dispose();
@@ -129,7 +129,7 @@ class SwingIncrementScreenTest extends AbstractScreenTest {
             snapshot(host);
             int ref = context.getRefOf(spinner);
             MCPProtocol.Content result = increment(ref);
-            assertEquals("Posted increment on ref=" + ref, result.getText());
+            assertEquals("Dispatched increment on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
             assertEquals(6, spinner.getValue());
         } finally {
             host.dispose();

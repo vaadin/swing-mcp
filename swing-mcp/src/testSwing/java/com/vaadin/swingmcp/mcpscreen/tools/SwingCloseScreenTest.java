@@ -140,7 +140,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         int ref = context.getRefOf(frame);
         MCPProtocol.Content result = close(ref);
 
-        assertEquals("Posted close on ref=" + ref, result.getText(),
+        assertEquals("Dispatched close on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText(),
                 "DR-010: tool returns echo on dispatch even when listener vetoes");
         assertTrue(frame.isShowing(), "frame should still be showing — DO_NOTHING_ON_CLOSE");
     }
@@ -157,7 +157,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         int ref = context.getRefOf(dialog);
         MCPProtocol.Content result = close(ref);
 
-        assertEquals("Posted close on ref=" + ref, result.getText(),
+        assertEquals("Dispatched close on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText(),
                 "DR-010: tool returns echo on dispatch even when listener vetoes");
         assertTrue(dialog.isShowing(), "dialog should still be showing — DO_NOTHING_ON_CLOSE");
     }
@@ -316,7 +316,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         int ref = context.getRefOf(iframe);
         MCPProtocol.Content result = close(ref);
 
-        assertEquals("Posted close on ref=" + ref, result.getText(),
+        assertEquals("Dispatched close on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText(),
                 "DR-010: tool returns echo on dispatch even when listener vetoes");
         assertTrue(iframe.isShowing(), "internal frame should still be showing — DO_NOTHING_ON_CLOSE");
     }
@@ -411,7 +411,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         int ref = context.getRefOf(icon);
         MCPProtocol.Content result = close(ref);
 
-        assertEquals("Posted close on ref=" + ref, result.getText(),
+        assertEquals("Dispatched close on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText(),
                 "DR-010: tool returns echo on dispatch even when listener vetoes");
         assertTrue(icon.isShowing(), "desktop icon should still be showing — DO_NOTHING_ON_CLOSE");
     }

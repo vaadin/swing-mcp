@@ -204,7 +204,7 @@ class SwingSetValueTest extends AbstractHeadlessTest {
         var result = setValueTool.execute(
                 new Parameters(Map.of("ref", ref, "value", 75.0)), context);
         // JSlider uses Integer model → 75.0 is converted to Integer 75 → echoed as "75"
-        assertEquals("Posted set-value on ref=" + ref + " to 75", result.getText());
+        assertEquals("Dispatched set-value on ref=" + ref + " to 75 — call swing_snapshot to verify the outcome", result.getText());
     }
 
     // ══════════════════════════════════════════════════════════════════════════
