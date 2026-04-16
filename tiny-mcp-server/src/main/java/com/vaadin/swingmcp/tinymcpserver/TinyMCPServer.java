@@ -233,10 +233,10 @@ public class TinyMCPServer {
                 handlePing(rpc);
                 break;
             case "tools/list":
-                handleToolsList(rpc);
+                toolHandler.handleToolsList(rpc);
                 break;
             case "tools/call":
-                handleToolsCall(rpc, request);
+                toolHandler.handleToolsCall(rpc, request);
                 break;
             case "resources/list":
                 handleResourcesList(rpc);
@@ -280,16 +280,6 @@ public class TinyMCPServer {
         rpc.sendResponseRaw("{}");
     }
 
-    private void handleToolsList(JsonRpcExchange rpc) throws IOException {
-        toolHandler.handleToolsList(rpc);
-    }
-
-    private void handleToolsCall(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) throws IOException {
-        toolHandler.handleToolsCall(rpc, request);
-    }
-
-
-
     private void handleResourcesList(JsonRpcExchange rpc) throws IOException {
         MCPProtocol.ListResourcesResult result = new MCPProtocol.ListResourcesResult();
         result.setResources(Collections.emptyList());
@@ -331,5 +321,4 @@ public class TinyMCPServer {
     protected void onSessionClosed() {
         // no-op by default
     }
-
 }
