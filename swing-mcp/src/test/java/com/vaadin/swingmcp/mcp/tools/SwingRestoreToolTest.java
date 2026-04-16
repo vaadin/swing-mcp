@@ -61,7 +61,7 @@ class SwingRestoreToolTest extends AbstractHeadlessTest {
         snapshot(button);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> restore(context.getRefOf(button)));
-        assertTrue(ex.getMessage().contains("does not support restore"));
+        assertTrue(ex.getMessage().contains("does not support swing_restore"));
     }
 
     @Test
@@ -70,7 +70,7 @@ class SwingRestoreToolTest extends AbstractHeadlessTest {
         snapshot(cb);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> restore(context.getRefOf(cb)));
-        assertTrue(ex.getMessage().contains("does not support restore"));
+        assertTrue(ex.getMessage().contains("does not support swing_restore"));
     }
 
     @Test
@@ -79,7 +79,7 @@ class SwingRestoreToolTest extends AbstractHeadlessTest {
         snapshot(field);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> restore(context.getRefOf(field)));
-        assertTrue(ex.getMessage().contains("does not support restore"));
+        assertTrue(ex.getMessage().contains("does not support swing_restore"));
     }
 
     @Test
@@ -88,7 +88,7 @@ class SwingRestoreToolTest extends AbstractHeadlessTest {
         snapshot(slider);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> restore(context.getRefOf(slider)));
-        assertTrue(ex.getMessage().contains("does not support restore"));
+        assertTrue(ex.getMessage().contains("does not support swing_restore"));
     }
 
     @Test
@@ -97,7 +97,7 @@ class SwingRestoreToolTest extends AbstractHeadlessTest {
         snapshot(combo);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> restore(context.getRefOf(combo)));
-        assertTrue(ex.getMessage().contains("does not support restore"));
+        assertTrue(ex.getMessage().contains("does not support swing_restore"));
     }
 
     @Test
@@ -106,7 +106,7 @@ class SwingRestoreToolTest extends AbstractHeadlessTest {
         snapshot(list);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> restore(context.getRefOf(list)));
-        assertTrue(ex.getMessage().contains("does not support restore"));
+        assertTrue(ex.getMessage().contains("does not support swing_restore"));
     }
 
     @Test
@@ -116,7 +116,7 @@ class SwingRestoreToolTest extends AbstractHeadlessTest {
         snapshot(tp);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> restore(context.getRefOf(tp)));
-        assertTrue(ex.getMessage().contains("does not support restore"));
+        assertTrue(ex.getMessage().contains("does not support swing_restore"));
     }
 
     @Test
@@ -125,7 +125,7 @@ class SwingRestoreToolTest extends AbstractHeadlessTest {
         snapshot(spinner);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> restore(context.getRefOf(spinner)));
-        assertTrue(ex.getMessage().contains("does not support restore"));
+        assertTrue(ex.getMessage().contains("does not support swing_restore"));
     }
 
     @Test
@@ -135,7 +135,7 @@ class SwingRestoreToolTest extends AbstractHeadlessTest {
         snapshot(pb);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> restore(context.getRefOf(pb)));
-        assertTrue(ex.getMessage().contains("does not support restore"));
+        assertTrue(ex.getMessage().contains("does not support swing_restore"));
     }
 
     @Test
@@ -144,7 +144,7 @@ class SwingRestoreToolTest extends AbstractHeadlessTest {
         snapshot(field);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> restore(context.getRefOf(field)));
-        assertTrue(ex.getMessage().contains("does not support restore"));
+        assertTrue(ex.getMessage().contains("does not support swing_restore"));
     }
 
     @Test

@@ -88,7 +88,7 @@ class SwingSetValueTest extends AbstractHeadlessTest {
 
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setValue(context.getRefOf(button), 42.0));
-        assertTrue(ex.getMessage().contains("does not support set_value"),
+        assertTrue(ex.getMessage().contains("does not support swing_set_value"),
                 "Error should mention set_value, got: " + ex.getMessage());
         assertTrue(ex.getMessage().contains("swing_snapshot"),
                 "Error should suggest calling swing_snapshot, got: " + ex.getMessage());
@@ -102,7 +102,7 @@ class SwingSetValueTest extends AbstractHeadlessTest {
 
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setValue(context.getRefOf(pb), 75.0));
-        assertTrue(ex.getMessage().contains("does not support set_value"));
+        assertTrue(ex.getMessage().contains("does not support swing_set_value"));
     }
 
     @Test
@@ -310,7 +310,7 @@ class SwingSetValueTest extends AbstractHeadlessTest {
         }
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setValue(ref, 42.0));
-        assertTrue(ex.getMessage().contains("does not support set_value"),
+        assertTrue(ex.getMessage().contains("does not support swing_set_value"),
                 "Expected set_value not supported for " + component.getClass().getSimpleName()
                         + ", got: " + ex.getMessage());
     }
@@ -399,7 +399,7 @@ class SwingSetValueTest extends AbstractHeadlessTest {
             int ref = context.getRefOf(tp);
             MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                     () -> setValue(ref, 1.0));
-            assertTrue(ex.getMessage().contains("does not support set_value"));
+            assertTrue(ex.getMessage().contains("does not support swing_set_value"));
         } catch (IllegalStateException e) {
             // No ref assigned — acceptable
         }
@@ -414,7 +414,7 @@ class SwingSetValueTest extends AbstractHeadlessTest {
         context.putRef(99, (javax.accessibility.Accessible) menu);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setValue(99, 42.0));
-        assertTrue(ex.getMessage().contains("does not support set_value"));
+        assertTrue(ex.getMessage().contains("does not support swing_set_value"));
     }
 
     @Test
@@ -426,7 +426,7 @@ class SwingSetValueTest extends AbstractHeadlessTest {
         context.putRef(99, (javax.accessibility.Accessible) menu);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setValue(99, 42.0));
-        assertTrue(ex.getMessage().contains("does not support set_value"));
+        assertTrue(ex.getMessage().contains("does not support swing_set_value"));
     }
 
     @Test
@@ -440,7 +440,7 @@ class SwingSetValueTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(item);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setValue(ref, 42.0));
-        assertTrue(ex.getMessage().contains("does not support set_value"));
+        assertTrue(ex.getMessage().contains("does not support swing_set_value"));
     }
 
     @Test
@@ -452,7 +452,7 @@ class SwingSetValueTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(button);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setValue(ref, 42.0));
-        assertTrue(ex.getMessage().contains("does not support set_value"));
+        assertTrue(ex.getMessage().contains("does not support swing_set_value"));
     }
 
     @Test
@@ -462,7 +462,7 @@ class SwingSetValueTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(list);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setValue(ref, 42.0));
-        assertTrue(ex.getMessage().contains("does not support set_value"));
+        assertTrue(ex.getMessage().contains("does not support swing_set_value"));
     }
 
     @Test

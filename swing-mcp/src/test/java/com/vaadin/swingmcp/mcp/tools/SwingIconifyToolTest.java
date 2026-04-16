@@ -61,7 +61,7 @@ class SwingIconifyToolTest extends AbstractHeadlessTest {
         snapshot(button);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> iconify(context.getRefOf(button)));
-        assertTrue(ex.getMessage().contains("does not support iconify"));
+        assertTrue(ex.getMessage().contains("does not support swing_iconify"));
     }
 
     @Test
@@ -70,7 +70,7 @@ class SwingIconifyToolTest extends AbstractHeadlessTest {
         snapshot(cb);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> iconify(context.getRefOf(cb)));
-        assertTrue(ex.getMessage().contains("does not support iconify"));
+        assertTrue(ex.getMessage().contains("does not support swing_iconify"));
     }
 
     @Test
@@ -79,7 +79,7 @@ class SwingIconifyToolTest extends AbstractHeadlessTest {
         snapshot(field);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> iconify(context.getRefOf(field)));
-        assertTrue(ex.getMessage().contains("does not support iconify"));
+        assertTrue(ex.getMessage().contains("does not support swing_iconify"));
     }
 
     @Test
@@ -88,7 +88,7 @@ class SwingIconifyToolTest extends AbstractHeadlessTest {
         snapshot(slider);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> iconify(context.getRefOf(slider)));
-        assertTrue(ex.getMessage().contains("does not support iconify"));
+        assertTrue(ex.getMessage().contains("does not support swing_iconify"));
     }
 
     @Test
@@ -97,7 +97,7 @@ class SwingIconifyToolTest extends AbstractHeadlessTest {
         snapshot(combo);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> iconify(context.getRefOf(combo)));
-        assertTrue(ex.getMessage().contains("does not support iconify"));
+        assertTrue(ex.getMessage().contains("does not support swing_iconify"));
     }
 
     @Test
@@ -106,7 +106,7 @@ class SwingIconifyToolTest extends AbstractHeadlessTest {
         snapshot(list);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> iconify(context.getRefOf(list)));
-        assertTrue(ex.getMessage().contains("does not support iconify"));
+        assertTrue(ex.getMessage().contains("does not support swing_iconify"));
     }
 
     @Test
@@ -116,7 +116,7 @@ class SwingIconifyToolTest extends AbstractHeadlessTest {
         snapshot(tp);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> iconify(context.getRefOf(tp)));
-        assertTrue(ex.getMessage().contains("does not support iconify"));
+        assertTrue(ex.getMessage().contains("does not support swing_iconify"));
     }
 
     @Test
@@ -125,7 +125,7 @@ class SwingIconifyToolTest extends AbstractHeadlessTest {
         snapshot(spinner);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> iconify(context.getRefOf(spinner)));
-        assertTrue(ex.getMessage().contains("does not support iconify"));
+        assertTrue(ex.getMessage().contains("does not support swing_iconify"));
     }
 
     @Test
@@ -135,7 +135,7 @@ class SwingIconifyToolTest extends AbstractHeadlessTest {
         snapshot(pb);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> iconify(context.getRefOf(pb)));
-        assertTrue(ex.getMessage().contains("does not support iconify"));
+        assertTrue(ex.getMessage().contains("does not support swing_iconify"));
     }
 
     @Test
@@ -144,7 +144,7 @@ class SwingIconifyToolTest extends AbstractHeadlessTest {
         snapshot(field);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> iconify(context.getRefOf(field)));
-        assertTrue(ex.getMessage().contains("does not support iconify"));
+        assertTrue(ex.getMessage().contains("does not support swing_iconify"));
     }
 
     @Test

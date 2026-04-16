@@ -55,7 +55,7 @@ public class SwingToggleExpandTool extends AbstractSwingTool {
         if (actionIndex < 0) {
             throw new MCPErrorResponseException(
                     ComponentClassResolver.resolveClassName(accessible)
-                            + " does not support toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions");
+                            + " does not support swing_toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
         // BR-03: fire the action asynchronously (fire-and-forget)

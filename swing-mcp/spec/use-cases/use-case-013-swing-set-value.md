@@ -15,7 +15,7 @@ Sets the numeric value on sliders, spinners, and split-pane dividers.
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. The `value` parameter is required and must be a number. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | If the target does not support `set_value` (i.e. `SwingUtils.supportsSetValue(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "<ClassName> does not support set_value. Call swing_snapshot or swing_get_cells to verify the list of actions". |
+| BR-03 | If the target does not support `set_value` (i.e. `SwingUtils.supportsSetValue(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "<ClassName> does not support swing_set_value. Call swing_snapshot or swing_get_cells to verify the list of actions". |
 | BR-04 | All validation runs on the EDT inside `runInEDT()`. The `setCurrentAccessibleValue()` call is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
 | BR-05 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. The enabled check runs before the range check (BR-07). |
 | BR-06 | `swing_set_value` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after successful invocation. A pre-dispatch validation error (`MCPErrorResponseException`) does **not** clear the ref map — the UI state hasn't changed, so existing refs remain valid and the AI can retry without re-snapshotting. |
@@ -101,7 +101,7 @@ Each matrix component from `verification.md` gets a dedicated test method.
 
 **Succeed (`set_value` supported):** `JSlider`, `JSpinner(SpinnerNumberModel)`, `JSplitPane`.
 
-**Fail with "<ClassName> does not support set_value":**
+**Fail with "<ClassName> does not support swing_set_value":**
 - `JProgressBar` — read-only value role.
 - `JSpinner(SpinnerDateModel)`, `JSpinner(SpinnerListModel)` — non-Number models.
 - All other matrix components.

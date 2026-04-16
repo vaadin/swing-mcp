@@ -64,7 +64,7 @@ class SwingTogglePopupTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> togglePopup(context.getRefOf(button)));
         assertEquals(
-                "JButton does not support toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JButton does not support swing_toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -96,7 +96,7 @@ class SwingTogglePopupTest extends AbstractHeadlessTest {
                 () -> togglePopup(ref));
         String expectedClass = ComponentClassResolver.resolveClassName((javax.accessibility.Accessible) component);
         assertEquals(
-                expectedClass + " does not support toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                expectedClass + " does not support swing_toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -195,7 +195,7 @@ class SwingTogglePopupTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> togglePopup(99));
         assertEquals(
-                "JMenu does not support toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JMenu does not support swing_toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -220,7 +220,7 @@ class SwingTogglePopupTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> togglePopup(ref));
         assertEquals(
-                "JMenuItem does not support toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JMenuItem does not support swing_toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -233,7 +233,7 @@ class SwingTogglePopupTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> togglePopup(ref));
         assertEquals(
-                "JButton does not support toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JButton does not support swing_toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 

@@ -27,8 +27,12 @@ documentation, and error messages, refer to components by Swing class name only
 (`JButton`, `JTextField`, `JTable`) — never by role.
 
 For the recurring "unsupported action" error the canonical template is
-`<ClassName> does not support <action>. Call swing_snapshot or swing_get_cells to verify the list of actions`
-(e.g. `JFrame does not support click. …`). `<ClassName>` is the qualifying
+`<ClassName> does not support <tool_name>. Call swing_snapshot or swing_get_cells to verify the list of actions`
+(e.g. `JFrame does not support swing_click. …`). `<tool_name>` is the full MCP
+tool name including the `swing_` prefix (e.g. `swing_get_text`, not `get_text`),
+so the AI client can match the error directly to the tool it called.
+The snapshot's action labels still use the bare verb (e.g. `get_text`) to save
+tokens — the `swing_` prefix is mechanical and predictable. `<ClassName>` is the qualifying
 Swing ancestor per BR-11 — standard widget for a custom subclass
 (`SearchField extends JTextField` → `JTextField`), and `Component` as a
 graceful fallback for non-`Component` accessibles (`JTabbedPane.Page`,
@@ -584,7 +588,7 @@ MCP layer:
    MCP-level error (`isError: true`) with the dedicated message:
    `"JPasswordField content is not readable. Use swing_set_text if you
    need to write a known value."`. This error is distinct from the
-   generic `<ClassName> does not support get_text` (per DR-001) so the AI
+   generic `<ClassName> does not support swing_get_text` (per DR-001) so the AI
    can learn the rule rather than assume the capability is simply absent.
 
 **Why.** UC-006 BR-12 already declares the asymmetric posture: the AI may
@@ -668,7 +672,7 @@ interactive target:
    does).
 2. `swing_click` invoked on a `JMenu` ref (possible only from a stale
    ref obtained before this change, or from a race) returns the generic
-   `"JMenu does not support click"` error (per DR-001) — no dedicated
+   `"JMenu does not support swing_click"` error (per DR-001) — no dedicated
    message, since a well-behaved client never sees this.
 3. When the menu's popup is open (any origin — the user tabbed in, a
    keyboard accelerator fired, the app opened it programmatically), the
@@ -1065,7 +1069,7 @@ single gate:
 3. No inline `text="..."` preview is emitted (BR-12 keys off
    `supportsGetText`; the gate change propagates for free).
 4. `swing_get_text` called on a LABEL-role accessible returns the
-   generic "Component does not support get_text" error. A dedicated
+   generic "Component does not support swing_get_text" error. A dedicated
    error (parallel to DR-011's password message) would reveal more
    than it teaches — the rule is "labels are read from the snapshot
    name slot, not via a tool", which the AI already learns by

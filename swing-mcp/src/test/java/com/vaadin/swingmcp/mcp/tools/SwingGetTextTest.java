@@ -126,7 +126,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getText(context.getRefOf(slider)));
-        assertTrue(ex.getMessage().contains("does not support get_text"),
+        assertTrue(ex.getMessage().contains("does not support swing_get_text"),
                 "Error should mention get_text, got: " + ex.getMessage());
         assertTrue(ex.getMessage().contains("swing_snapshot"),
                 "Error should suggest calling swing_snapshot, got: " + ex.getMessage());
@@ -193,7 +193,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
     @Test
     void componentMatrix_JPasswordField() throws Exception {
         // DR-011: JPasswordField fails with a dedicated error, distinct from the
-        // generic "does not support get_text".
+        // generic "does not support swing_get_text".
         JPasswordField field = new JPasswordField("pass");
         snapshot(field);
         int ref = context.getRefOf(field);
@@ -227,7 +227,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         }
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getText(ref));
-        assertTrue(ex.getMessage().contains("does not support get_text"),
+        assertTrue(ex.getMessage().contains("does not support swing_get_text"),
                 "Expected get_text not supported for " + component.getClass().getSimpleName()
                         + ", got: " + ex.getMessage());
     }
@@ -300,7 +300,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
             int ref = context.getRefOf(tp);
             MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                     () -> getText(ref));
-            assertTrue(ex.getMessage().contains("does not support get_text"));
+            assertTrue(ex.getMessage().contains("does not support swing_get_text"));
         } catch (IllegalStateException e) {
             // No ref assigned — acceptable
         }
@@ -329,7 +329,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         context.putRef(99, (javax.accessibility.Accessible) label);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getText(99));
-        assertTrue(ex.getMessage().contains("does not support get_text"),
+        assertTrue(ex.getMessage().contains("does not support swing_get_text"),
                 "DR-015: plain JLabel must fail with generic error, got: " + ex.getMessage());
     }
 
@@ -343,7 +343,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         context.putRef(99, (javax.accessibility.Accessible) html);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getText(99));
-        assertTrue(ex.getMessage().contains("does not support get_text"),
+        assertTrue(ex.getMessage().contains("does not support swing_get_text"),
                 "DR-015: HTML JLabel must fail with generic error, got: " + ex.getMessage());
     }
 
@@ -382,7 +382,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         final int ref = cellRef;
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getText(ref));
-        assertTrue(ex.getMessage().contains("does not support get_text"),
+        assertTrue(ex.getMessage().contains("does not support swing_get_text"),
                 "DR-015: JList cell must fail with generic error, got: " + ex.getMessage());
     }
 
@@ -402,7 +402,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         context.putRef(99, (javax.accessibility.Accessible) menu);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getText(99));
-        assertTrue(ex.getMessage().contains("does not support get_text"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_text"));
     }
 
     @Test
@@ -414,7 +414,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         context.putRef(99, (javax.accessibility.Accessible) menu);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getText(99));
-        assertTrue(ex.getMessage().contains("does not support get_text"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_text"));
     }
 
     @Test
@@ -428,7 +428,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(item);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getText(ref));
-        assertTrue(ex.getMessage().contains("does not support get_text"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_text"));
     }
 
     @Test
@@ -440,7 +440,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(button);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getText(ref));
-        assertTrue(ex.getMessage().contains("does not support get_text"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_text"));
     }
 
     @Test
@@ -450,7 +450,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(list);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getText(ref));
-        assertTrue(ex.getMessage().contains("does not support get_text"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_text"));
     }
 
     @Test

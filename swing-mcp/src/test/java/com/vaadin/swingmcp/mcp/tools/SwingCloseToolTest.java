@@ -61,7 +61,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         snapshot(button);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> close(context.getRefOf(button)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -70,7 +70,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         snapshot(cb);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> close(context.getRefOf(cb)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -79,7 +79,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         snapshot(field);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> close(context.getRefOf(field)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -88,7 +88,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         snapshot(area);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> close(context.getRefOf(area)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -97,7 +97,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         snapshot(slider);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> close(context.getRefOf(slider)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -106,7 +106,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         snapshot(spinner);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> close(context.getRefOf(spinner)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -115,7 +115,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         snapshot(combo);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> close(context.getRefOf(combo)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -125,7 +125,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         snapshot(pb);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> close(context.getRefOf(pb)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -134,7 +134,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         snapshot(sp);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> close(context.getRefOf(sp)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -143,7 +143,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         snapshot(field);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> close(context.getRefOf(field)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -152,7 +152,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         snapshot(rb);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> close(context.getRefOf(rb)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -161,7 +161,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         snapshot(tb);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> close(context.getRefOf(tb)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -172,7 +172,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         context.putRef(99, (javax.accessibility.Accessible) panel);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -182,7 +182,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         context.putRef(99, (javax.accessibility.Accessible) sp);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -192,7 +192,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         snapshot(tp);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> close(context.getRefOf(tp)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -202,7 +202,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         context.putRef(99, (javax.accessibility.Accessible) label);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -213,7 +213,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         context.putRef(99, (javax.accessibility.Accessible) mb);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -225,7 +225,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         context.putRef(99, (javax.accessibility.Accessible) menu);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -234,7 +234,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         snapshot(item);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> close(context.getRefOf(item)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -245,7 +245,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         context.putRef(99, (javax.accessibility.Accessible) tb);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -254,7 +254,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         snapshot(list);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> close(context.getRefOf(list)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test
@@ -272,7 +272,7 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         context.putRef(99, (javax.accessibility.Accessible) optionPane);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     @Test

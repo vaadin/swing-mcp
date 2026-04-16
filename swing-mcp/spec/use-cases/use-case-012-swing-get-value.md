@@ -15,7 +15,7 @@ Reads the numeric value of sliders, spinners, progress bars, and split-pane divi
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | If the target does not support `get_value` (i.e. `SwingUtils.supportsGetValue(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "<ClassName> does not support get_value. Call swing_snapshot or swing_get_cells to verify the list of actions". `supportsGetValue()` checks: (1) `getAccessibleValue() != null`, (2) role not in `SUPPRESSED_VALUE_ROLES`, and (3) `getCurrentAccessibleValue() != null` — see design notes. |
+| BR-03 | If the target does not support `get_value` (i.e. `SwingUtils.supportsGetValue(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "<ClassName> does not support swing_get_value. Call swing_snapshot or swing_get_cells to verify the list of actions". `supportsGetValue()` checks: (1) `getAccessibleValue() != null`, (2) role not in `SUPPRESSED_VALUE_ROLES`, and (3) `getCurrentAccessibleValue() != null` — see design notes. |
 | BR-04 | All Swing component access happens on the EDT via `runInEDT()`. |
 | BR-05 | `swing_get_value` is a read-only tool: `isMutation()` returns `false` and the ref map is **not** cleared after invocation. |
 | BR-06 | The tool returns a JSON object via `Content.json()`. `current` (from `getCurrentAccessibleValue()`) is always present. `min` (from `getMinimumAccessibleValue()`) and `max` (from `getMaximumAccessibleValue()`) are included only when non-null (see BR-08). All values are JSON numbers. Example full result: `{"current": 42, "min": 0, "max": 100}`. |
@@ -86,7 +86,7 @@ Each matrix component from `verification.md` gets a dedicated test method.
 
 **Succeed (`get_value` supported):** `JSlider`, `JSpinner(SpinnerNumberModel)`, `JProgressBar`, `JSplitPane`.
 
-**Fail with "<ClassName> does not support get_value":**
+**Fail with "<ClassName> does not support swing_get_value":**
 - `JSpinner(SpinnerDateModel)`, `JSpinner(SpinnerListModel)` — non-Number models (see architecture.md § 5).
 - `JTabbedPane` — role `PAGE_TAB_LIST`; `getAccessibleValue()` returns `null` (verified by probe test).
 - All other matrix components.

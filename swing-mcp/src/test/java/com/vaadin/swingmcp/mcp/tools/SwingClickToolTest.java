@@ -107,7 +107,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         snapshot(slider);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> click(context.getRefOf(slider)));
-        assertEquals("JSlider does not support click. Call swing_snapshot or swing_get_cells to verify the list of actions",
+        assertEquals("JSlider does not support swing_click. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -232,7 +232,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         // JTextField has dynamic text actions, not click
         int ref = context.getRefOf(field);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support click"));
+        assertTrue(ex.getMessage().contains("does not support swing_click"));
     }
 
     @Test
@@ -242,7 +242,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         snapshot(field);
         int ref = context.getRefOf(field);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support click"));
+        assertTrue(ex.getMessage().contains("does not support swing_click"));
     }
 
     @Test
@@ -252,7 +252,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         snapshot(area);
         int ref = context.getRefOf(area);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support click"));
+        assertTrue(ex.getMessage().contains("does not support swing_click"));
     }
 
     @Test
@@ -285,7 +285,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         // JComboBox has toggle_popup, not click
         int ref = context.getRefOf(combo);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support click"));
+        assertTrue(ex.getMessage().contains("does not support swing_click"));
     }
 
     @Test
@@ -306,7 +306,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         // JSpinner has increment/decrement, not click
         int ref = context.getRefOf(spinner);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support click"));
+        assertTrue(ex.getMessage().contains("does not support swing_click"));
     }
 
     @Test
@@ -317,7 +317,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         // JSlider has increment/decrement, not click
         int ref = context.getRefOf(slider);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support click"));
+        assertTrue(ex.getMessage().contains("does not support swing_click"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -363,7 +363,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         // JSplitPane has AccessibleValue (get_value/set_value) but no click
         int ref = context.getRefOf(sp);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support click"));
+        assertTrue(ex.getMessage().contains("does not support swing_click"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -388,7 +388,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         // JProgressBar has get_value but no click
         int ref = context.getRefOf(pb);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support click"));
+        assertTrue(ex.getMessage().contains("does not support swing_click"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -420,7 +420,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         context.putRef(99, menu);
 
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(99));
-        assertEquals("JMenu does not support click. Call swing_snapshot or swing_get_cells to verify the list of actions",
+        assertEquals("JMenu does not support swing_click. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -471,7 +471,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         // JList itself gets a ref (selection actions, no click)
         int listRef = context.getRefOf(list);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(listRef));
-        assertTrue(ex.getMessage().contains("does not support click"));
+        assertTrue(ex.getMessage().contains("does not support swing_click"));
 
         // Re-snapshot to get fresh refs after the failed click cleared the map
         snapshot(list);
@@ -574,7 +574,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         snapshot(sp);
         int ref = context.getRefOf(sp);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support click"));
+        assertTrue(ex.getMessage().contains("does not support swing_click"));
     }
 
     @Test
@@ -589,6 +589,6 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         snapshot(slider);
         int ref = context.getRefOf(slider);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support click"));
+        assertTrue(ex.getMessage().contains("does not support swing_click"));
     }
 }
