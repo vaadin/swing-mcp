@@ -14,7 +14,7 @@ Steps a spinner or slider down by one unit — mirror of `swing_increment`.
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
 | BR-03 | The decrement action is fired by scanning the component's `AccessibleAction` descriptions for `AccessibleAction.DECREMENT` (`"decrement"`) to get action index `i`, then posting `doAccessibleAction(i)` via `SwingUtilities.invokeLater()`. No UIManager lookup is needed — `JSlider` and `JSpinner` use the static constant directly. See **architecture.md § 2 — Fire-and-Forget Mutation Dispatch**. |
-| BR-04 | If the target does not support decrement (i.e. `SwingUtils.supportsDecrement(accessible)` returns `-1`), the tool returns an MCP-level error (`isError: true`) with the message "<ClassName> does not support decrement. Call swing_snapshot or swing_get_cells to verify the list of actions". |
+| BR-04 | If the target does not support swing_decrement (i.e. `SwingUtils.supportsDecrement(accessible)` returns `-1`), the tool returns an MCP-level error (`isError: true`) with the message "<ClassName> does not support swing_decrement. Call swing_snapshot or swing_get_cells to verify the list of actions". |
 | BR-05 | All validation runs on the EDT inside `runInEDT()`. The action is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
 | BR-06 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. |
 | BR-08 | `swing_decrement` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after successful invocation. A pre-dispatch validation error (`MCPErrorResponseException`) does **not** clear the ref map — the UI state hasn't changed, so existing refs remain valid and the AI can retry without re-snapshotting. |
@@ -66,4 +66,4 @@ Each matrix component from `verification.md` gets a dedicated test method.
 
 **Succeed (`decrement` supported):** `JSpinner`, `JSlider`.
 
-All other matrix components return `<ClassName> does not support decrement`.
+All other matrix components return `<ClassName> does not support swing_decrement`.
