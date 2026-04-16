@@ -30,10 +30,10 @@ subprojects {
     tasks.withType<Test> {
         useJUnitPlatform()
         testLogging {
-            // to see the exceptions of failed tests in CI console.
-            exceptionFormat = TestExceptionFormat.FULL
+            // Print each failed test by name (not just an aggregate) with full
+            // stack trace, so CI logs name the failure inline.
             events = setOf(TestLogEvent.FAILED)
-            showStandardStreams = true
+            exceptionFormat = TestExceptionFormat.FULL
         }
     }
 
