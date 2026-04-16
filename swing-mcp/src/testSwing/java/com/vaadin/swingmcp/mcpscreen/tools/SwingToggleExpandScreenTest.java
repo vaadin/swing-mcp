@@ -84,7 +84,7 @@ class SwingToggleExpandScreenTest extends AbstractScreenTest {
                         toggleExpandTool.execute(new Parameters(Map.of("ref", ref)), context);
                         return null;
                     }));
-            assertTrue(ex.getMessage().contains("does not support toggle_expand"));
+            assertTrue(ex.getMessage().contains("does not support swing_toggle_expand"));
         } finally {
             host.dispose();
         }
@@ -105,7 +105,7 @@ class SwingToggleExpandScreenTest extends AbstractScreenTest {
                         toggleExpandTool.execute(new Parameters(Map.of("ref", 99)), context);
                         return null;
                     }));
-            assertTrue(ex.getMessage().contains("does not support toggle_expand"));
+            assertTrue(ex.getMessage().contains("does not support swing_toggle_expand"));
         } finally {
             host.dispose();
         }

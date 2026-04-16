@@ -291,7 +291,7 @@ class SwingIconifyScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JDesktopIcon — does not support iconify
+    // JDesktopIcon — does not support swing_iconify
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -314,7 +314,7 @@ class SwingIconifyScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JDesktopPane component matrix — does not support iconify
+    // JDesktopPane component matrix — does not support swing_iconify
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -330,6 +330,6 @@ class SwingIconifyScreenTest extends AbstractScreenTest {
         context.putRef(99, (Accessible) desktop);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> iconifyTool.execute(new Parameters(Map.of("ref", 99)), context)));
-        assertTrue(ex.getMessage().contains("does not support iconify"));
+        assertTrue(ex.getMessage().contains("does not support swing_iconify"));
     }
 }

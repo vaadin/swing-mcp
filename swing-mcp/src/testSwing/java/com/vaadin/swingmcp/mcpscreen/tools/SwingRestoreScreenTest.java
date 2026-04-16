@@ -367,7 +367,7 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JDesktopPane component matrix — does not support restore
+    // JDesktopPane component matrix — does not support swing_restore
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -383,6 +383,6 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
         context.putRef(99, (Accessible) desktop);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> restoreTool.execute(new Parameters(Map.of("ref", 99)), context)));
-        assertTrue(ex.getMessage().contains("does not support restore"));
+        assertTrue(ex.getMessage().contains("does not support swing_restore"));
     }
 }

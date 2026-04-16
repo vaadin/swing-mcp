@@ -49,7 +49,7 @@ public class SwingClickTool extends AbstractSwingTool {
         if (click == null) {
             throw new MCPErrorResponseException(
                     ComponentClassResolver.resolveClassName(accessible)
-                            + " does not support click. Call swing_snapshot or swing_get_cells to verify the list of actions");
+                            + " does not support swing_click. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
         // BR-05: check effectively enabled

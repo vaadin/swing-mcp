@@ -149,7 +149,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> decrement(context.getRefOf(button)));
         assertEquals(
-                "JButton does not support decrement. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JButton does not support swing_decrement. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -243,7 +243,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
                 () -> decrement(ref));
         String expectedClass = ComponentClassResolver.resolveClassName((javax.accessibility.Accessible) component);
         assertEquals(
-                expectedClass + " does not support decrement. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                expectedClass + " does not support swing_decrement. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -337,7 +337,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> decrement(99));
         assertEquals(
-                "JMenu does not support decrement. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JMenu does not support swing_decrement. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -362,7 +362,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> decrement(ref));
         assertEquals(
-                "JMenuItem does not support decrement. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JMenuItem does not support swing_decrement. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -375,7 +375,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> decrement(ref));
         assertEquals(
-                "JButton does not support decrement. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JButton does not support swing_decrement. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 

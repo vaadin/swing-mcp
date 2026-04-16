@@ -53,7 +53,7 @@ public class SwingSetTextTool extends AbstractSwingTool {
         if (!SwingUtils.hasEditableText(accessible)) {
             throw new MCPErrorResponseException(
                     ComponentClassResolver.resolveClassName(accessible)
-                            + " does not support set_text. Call swing_snapshot or swing_get_cells to verify the list of actions");
+                            + " does not support swing_set_text. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
         // BR-06: effectively enabled check

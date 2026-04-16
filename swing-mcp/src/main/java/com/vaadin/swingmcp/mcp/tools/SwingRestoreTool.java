@@ -85,7 +85,7 @@ public class SwingRestoreTool extends AbstractSwingTool {
             return "Frame is not iconified";
         }
         return ComponentClassResolver.resolveClassName(accessible)
-                + " does not support restore. Call swing_snapshot or swing_get_cells to verify the list of actions";
+                + " does not support swing_restore. Call swing_snapshot or swing_get_cells to verify the list of actions";
     }
 
     @Override

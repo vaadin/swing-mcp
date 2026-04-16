@@ -48,7 +48,7 @@ public class SwingGetTextTool extends AbstractSwingTool {
 
         // BR-06 (DR-011): password-role accessibles are not readable.
         // This check runs before BR-04 so the AI gets the specific rule rather than
-        // the generic "does not support get_text".
+        // the generic "does not support swing_get_text".
         if (SwingUtils.hasPasswordRole(accessible)) {
             throw new MCPErrorResponseException(
                     "JPasswordField content is not readable. Use swing_set_text if you need to write a known value.");
@@ -58,7 +58,7 @@ public class SwingGetTextTool extends AbstractSwingTool {
         if (!SwingUtils.supportsGetText(accessible)) {
             throw new MCPErrorResponseException(
                     ComponentClassResolver.resolveClassName(accessible)
-                            + " does not support get_text. Call swing_snapshot or swing_get_cells to verify the list of actions");
+                            + " does not support swing_get_text. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
         // BR-05: all access happens on EDT (guaranteed by MCPServer.registerTool)

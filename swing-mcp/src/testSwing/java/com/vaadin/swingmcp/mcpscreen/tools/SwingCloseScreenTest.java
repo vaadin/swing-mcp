@@ -183,7 +183,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         context.putRef(99, (Accessible) frame);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -204,7 +204,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         assertTrue(ref > 0, "EXIT_ON_CLOSE frame should have a ref (iconify action)");
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", ref)), context)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -222,7 +222,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         context.putRef(99, (Accessible) frame);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -244,7 +244,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         context.putRef(99, (Accessible) optionPane);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -264,7 +264,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         context.putRef(99, (Accessible) desktop);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -336,7 +336,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         context.putRef(99, (Accessible) iframe);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -351,7 +351,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         context.putRef(99, (Accessible) iframe);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -428,7 +428,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         context.putRef(99, (Accessible) icon);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -443,6 +443,6 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         context.putRef(99, (Accessible) icon);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
-        assertTrue(ex.getMessage().contains("does not support close"));
+        assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 }

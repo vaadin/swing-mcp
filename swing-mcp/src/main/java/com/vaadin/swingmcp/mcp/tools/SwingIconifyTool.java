@@ -85,7 +85,7 @@ public class SwingIconifyTool extends AbstractSwingTool {
             if (iframe.isIcon()) return "JInternalFrame is already iconified";
         }
         return ComponentClassResolver.resolveClassName(accessible)
-                + " does not support iconify. Call swing_snapshot or swing_get_cells to verify the list of actions";
+                + " does not support swing_iconify. Call swing_snapshot or swing_get_cells to verify the list of actions";
     }
 
     @Override

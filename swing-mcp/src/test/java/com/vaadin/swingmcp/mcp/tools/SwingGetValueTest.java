@@ -97,7 +97,7 @@ class SwingGetValueTest extends AbstractHeadlessTest {
 
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getValue(context.getRefOf(button)));
-        assertTrue(ex.getMessage().contains("does not support get_value"),
+        assertTrue(ex.getMessage().contains("does not support swing_get_value"),
                 "Error should mention get_value, got: " + ex.getMessage());
         assertTrue(ex.getMessage().contains("swing_snapshot"),
                 "Error should suggest calling swing_snapshot, got: " + ex.getMessage());
@@ -194,7 +194,7 @@ class SwingGetValueTest extends AbstractHeadlessTest {
         }
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getValue(ref));
-        assertTrue(ex.getMessage().contains("does not support get_value"),
+        assertTrue(ex.getMessage().contains("does not support swing_get_value"),
                 "Expected get_value not supported for " + component.getClass().getSimpleName()
                         + ", got: " + ex.getMessage());
     }
@@ -276,7 +276,7 @@ class SwingGetValueTest extends AbstractHeadlessTest {
             int ref = context.getRefOf(tp);
             MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                     () -> getValue(ref));
-            assertTrue(ex.getMessage().contains("does not support get_value"));
+            assertTrue(ex.getMessage().contains("does not support swing_get_value"));
         } catch (IllegalStateException e) {
             // No ref assigned — acceptable
         }
@@ -291,7 +291,7 @@ class SwingGetValueTest extends AbstractHeadlessTest {
         context.putRef(99, (javax.accessibility.Accessible) menu);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getValue(99));
-        assertTrue(ex.getMessage().contains("does not support get_value"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_value"));
     }
 
     @Test
@@ -303,7 +303,7 @@ class SwingGetValueTest extends AbstractHeadlessTest {
         context.putRef(99, (javax.accessibility.Accessible) menu);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getValue(99));
-        assertTrue(ex.getMessage().contains("does not support get_value"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_value"));
     }
 
     @Test
@@ -317,7 +317,7 @@ class SwingGetValueTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(item);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getValue(ref));
-        assertTrue(ex.getMessage().contains("does not support get_value"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_value"));
     }
 
     @Test
@@ -329,7 +329,7 @@ class SwingGetValueTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(button);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getValue(ref));
-        assertTrue(ex.getMessage().contains("does not support get_value"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_value"));
     }
 
     @Test
@@ -339,7 +339,7 @@ class SwingGetValueTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(list);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getValue(ref));
-        assertTrue(ex.getMessage().contains("does not support get_value"));
+        assertTrue(ex.getMessage().contains("does not support swing_get_value"));
     }
 
     @Test

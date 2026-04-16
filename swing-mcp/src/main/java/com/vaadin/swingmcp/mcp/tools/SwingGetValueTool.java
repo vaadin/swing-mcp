@@ -50,7 +50,7 @@ public class SwingGetValueTool extends AbstractSwingTool {
         if (!SwingUtils.supportsGetValue(accessible)) {
             throw new MCPErrorResponseException(
                     ComponentClassResolver.resolveClassName(accessible)
-                            + " does not support get_value. Call swing_snapshot or swing_get_cells to verify the list of actions");
+                            + " does not support swing_get_value. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
         // BR-04: all access happens on EDT (guaranteed by MCPServer.registerTool)

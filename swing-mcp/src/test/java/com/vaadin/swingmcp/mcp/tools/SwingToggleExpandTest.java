@@ -111,7 +111,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> toggleExpand(1));
         assertEquals(
-                "Component does not support toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "Component does not support swing_toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -123,7 +123,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> toggleExpand(context.getRefOf(button)));
         assertEquals(
-                "JButton does not support toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JButton does not support swing_toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -211,7 +211,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
                 () -> toggleExpand(ref));
         String expectedClass = ComponentClassResolver.resolveClassName((javax.accessibility.Accessible) component);
         assertEquals(
-                expectedClass + " does not support toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                expectedClass + " does not support swing_toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -315,7 +315,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> toggleExpand(99));
         assertEquals(
-                "JMenu does not support toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JMenu does not support swing_toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -340,7 +340,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> toggleExpand(ref));
         assertEquals(
-                "JMenuItem does not support toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JMenuItem does not support swing_toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -353,7 +353,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> toggleExpand(ref));
         assertEquals(
-                "JButton does not support toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                "JButton does not support swing_toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 

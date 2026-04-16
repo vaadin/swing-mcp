@@ -54,7 +54,7 @@ public class SwingCloseTool extends AbstractSwingTool {
         if (!SwingUtils.supportsClose(accessible)) {
             throw new MCPErrorResponseException(
                     ComponentClassResolver.resolveClassName(accessible)
-                            + " does not support close. Call swing_snapshot or swing_get_cells to verify the list of actions");
+                            + " does not support swing_close. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
         // BR-03: fire the close event asynchronously (fire-and-forget)
