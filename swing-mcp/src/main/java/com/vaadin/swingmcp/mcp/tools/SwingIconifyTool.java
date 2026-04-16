@@ -77,12 +77,12 @@ public class SwingIconifyTool extends AbstractSwingTool {
     private static String iconifyErrorMessage(Accessible accessible) {
         if (accessible instanceof Frame) {
             Frame frame = (Frame) accessible;
-            if (frame.isUndecorated()) return "Frame is undecorated and cannot be iconified";
-            if ((frame.getExtendedState() & Frame.ICONIFIED) != 0) return "Frame is already iconified";
+            if (frame.isUndecorated()) return "Frame is undecorated and cannot be iconified. Call swing_snapshot to verify the current state";
+            if ((frame.getExtendedState() & Frame.ICONIFIED) != 0) return "Frame is already iconified. Call swing_snapshot to verify the current state";
         } else if (accessible instanceof JInternalFrame) {
             JInternalFrame iframe = (JInternalFrame) accessible;
-            if (!iframe.isIconifiable()) return "JInternalFrame is not iconifiable";
-            if (iframe.isIcon()) return "JInternalFrame is already iconified";
+            if (!iframe.isIconifiable()) return "JInternalFrame is not iconifiable. Call swing_snapshot to verify the current state";
+            if (iframe.isIcon()) return "JInternalFrame is already iconified. Call swing_snapshot to verify the current state";
         }
         return ComponentClassResolver.resolveClassName(accessible)
                 + " does not support swing_iconify. Call swing_snapshot or swing_get_cells to verify the list of actions";
