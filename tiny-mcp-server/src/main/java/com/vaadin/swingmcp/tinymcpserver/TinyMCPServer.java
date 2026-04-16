@@ -246,6 +246,20 @@ public class TinyMCPServer {
     }
 
     private void handlePost(HttpExchange exchange) throws IOException {
+        // --- Session ID validation (pre-parse) ---
+        String incomingSessionId = exchange.getRequestHeaders().getFirst("Mcp-Session-Id");
+        if (incomingSessionId != null) {
+            synchronized (this) {
+                if (!incomingSessionId.equals(activeSessionId)) {
+                    LOG.warning("Rejecting request: Mcp-Session-Id mismatch (received="
+                            + incomingSessionId + ", active=" + activeSessionId + ")");
+                    sendJsonRpcError(exchange, 404, null,
+                            MCPServerException.SERVER_NOT_INITIALIZED, "Session not found.");
+                    return;
+                }
+            }
+        }
+
         String body = readBody(exchange);
         LOG.fine("Received POST: " + body);
 
@@ -263,6 +277,20 @@ public class TinyMCPServer {
         if (request.getId() == null) {
             sendPlainResponse(exchange, 202, "");
             return;
+        }
+
+        // --- Session required check (post-parse) ---
+        // initialize and ping are always allowed; everything else requires an active session.
+        if (!"initialize".equals(rpcMethod) && !"ping".equals(rpcMethod)) {
+            synchronized (this) {
+                if (activeSessionId == null) {
+                    LOG.warning("Rejecting '" + rpcMethod + "': no active session");
+                    sendJsonRpcError(exchange, 400, request.getId(),
+                            MCPServerException.SERVER_NOT_INITIALIZED,
+                            "Server not initialized. Send 'initialize' first.");
+                    return;
+                }
+            }
         }
 
         switch (rpcMethod != null ? rpcMethod : "") {
@@ -446,13 +474,33 @@ public class TinyMCPServer {
     }
 
     private void handleDelete(HttpExchange exchange) throws IOException {
+        boolean wasActive;
         synchronized (this) {
-            if (activeSessionId != null) {
+            wasActive = activeSessionId != null;
+            if (wasActive) {
                 LOG.info("Session terminated: " + activeSessionId);
                 activeSessionId = null;
             }
         }
+        if (wasActive) {
+            onSessionClosed();
+        }
         sendPlainResponse(exchange, 200, "");
+    }
+
+    /**
+     * Called when a session has been closed (via HTTP DELETE), <em>after</em>
+     * {@code activeSessionId} has been set to {@code null}. Subclasses can
+     * override this to release session-scoped resources.
+     * <p>
+     * The default implementation does nothing.
+     * <p>
+     * This method is called <em>outside</em> the server's intrinsic lock,
+     * so implementations may safely acquire their own locks (e.g. to
+     * serialise with in-flight tool calls).
+     */
+    protected void onSessionClosed() {
+        // no-op by default
     }
 
     // ===== Response helpers =====
