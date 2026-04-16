@@ -67,7 +67,17 @@ public class MCPServer {
         MCPProtocol.Implementation serverInfo = new MCPProtocol.Implementation();
         serverInfo.setName(SERVER_NAME);
         serverInfo.setVersion(SERVER_VERSION);
-        this.server = new TinyMCPServer(port, contextPath, serverInfo, INSTRUCTIONS);
+        this.server = new TinyMCPServer(port, contextPath, serverInfo, INSTRUCTIONS) {
+            @Override
+            protected void onSessionClosed() {
+                toolLock.lock();
+                try {
+                    context.clearRefMap();
+                } finally {
+                    toolLock.unlock();
+                }
+            }
+        };
         registerTools();
     }
 

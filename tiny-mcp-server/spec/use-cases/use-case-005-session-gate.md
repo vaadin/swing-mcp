@@ -5,7 +5,7 @@ or that carry a wrong/missing session ID. Needed because the server currently
 dispatches every method regardless of session state, which is non-compliant
 with the MCP specification (2025-03-26 §Lifecycle, §Session Management).
 
-**Status:** Draft
+**Status:** Implemented
 **Date:** 2026-04-16
 
 ---
@@ -45,9 +45,7 @@ is parsed — so invalid sessions are rejected cheaply.
 | absent | non-null | anything else | **HTTP 400** + JSON-RPC error |
 | matches `activeSessionId` | non-null | any | OK — normal dispatch |
 | doesn't match | non-null | any (including `initialize`, `ping`) | **HTTP 404** + JSON-RPC error |
-| any value | null | `initialize` | OK — create session |
-| any value | null | `ping` | OK |
-| any value | null | not `initialize`/`ping` | **HTTP 400** + JSON-RPC error |
+| doesn't match | null | any (including `initialize`, `ping`) | **HTTP 404** + JSON-RPC error |
 
 Implementation notes:
 
@@ -143,21 +141,21 @@ call, then calls `context.clearRefMap()`.
 
 ## Acceptance Criteria
 
-- [ ] POST with no `Mcp-Session-Id` and no active session, method other than
+- [x] POST with no `Mcp-Session-Id` and no active session, method other than
       `initialize`/`ping` → HTTP 400 + JSON-RPC error (-32002,
       "Server not initialized. Send 'initialize' first.")
-- [ ] POST with wrong `Mcp-Session-Id` → HTTP 404 + JSON-RPC error (-32002,
+- [x] POST with wrong `Mcp-Session-Id` → HTTP 404 + JSON-RPC error (-32002,
       "Session not found.")
-- [ ] POST with correct `Mcp-Session-Id` → normal dispatch (200)
-- [ ] POST `ping` without session ID, before init → succeeds (200)
-- [ ] POST `ping` without session ID, after init → succeeds (200)
-- [ ] POST `initialize` without session ID → succeeds (creates session)
-- [ ] After `DELETE`, tools return HTTP 400 (session cleared)
-- [ ] After `DELETE`, `initialize` succeeds (new session)
-- [ ] After `DELETE`, component ref map is cleared (MCPServer layer)
-- [ ] `MCPServerException.SERVER_NOT_INITIALIZED` constant exists (-32002)
-- [ ] `TinyMCPServer.onSessionClosed()` is protected and no-op by default
-- [ ] `MCPServer` overrides `onSessionClosed()` to clear ref map under
+- [x] POST with correct `Mcp-Session-Id` → normal dispatch (200)
+- [x] POST `ping` without session ID, before init → succeeds (200)
+- [x] POST `ping` without session ID, after init → succeeds (200)
+- [x] POST `initialize` without session ID → succeeds (creates session)
+- [x] After `DELETE`, tools return HTTP 400 (session cleared)
+- [x] After `DELETE`, `initialize` succeeds (new session)
+- [x] After `DELETE`, component ref map is cleared (MCPServer layer)
+- [x] `MCPServerException.SERVER_NOT_INITIALIZED` constant exists (-32002)
+- [x] `TinyMCPServer.onSessionClosed()` is protected and no-op by default
+- [x] `MCPServer` overrides `onSessionClosed()` to clear ref map under
       `toolLock`
 
 ---
@@ -172,26 +170,32 @@ client) so we can control headers precisely and assert HTTP status codes.
 
 ### TinyMCPServerTest (tiny-mcp-server)
 
-- [ ] `toolsCallBeforeInitializeReturns400` — POST `tools/list` with no
+- [x] `toolsListBeforeInitializeReturns400` — POST `tools/list` with no
       session ID, no prior init → HTTP 400, JSON-RPC error code -32002
-- [ ] `toolsCallWithWrongSessionIdReturns404` — initialize, then POST
+- [x] `toolsCallBeforeInitializeReturns400` — POST `tools/call` with no
+      session ID, no prior init → HTTP 400, JSON-RPC error code -32002
+- [x] `toolsListWithWrongSessionIdReturns404` — initialize, then POST
       `tools/list` with wrong `Mcp-Session-Id` → HTTP 404, JSON-RPC error
       code -32002
-- [ ] `toolsCallWithCorrectSessionIdSucceeds` — initialize, extract session
+- [x] `toolsListWithCorrectSessionIdSucceeds` — initialize, extract session
       ID from response header, POST `tools/list` with that ID → HTTP 200
-- [ ] `pingBeforeInitializeSucceeds` — POST `ping` with no session ID,
+- [x] `pingBeforeInitializeSucceeds` — POST `ping` with no session ID,
       no prior init → HTTP 200
-- [ ] `pingAfterInitializeWithoutSessionIdSucceeds` — initialize, then POST
+- [x] `pingAfterInitializeWithoutSessionIdSucceeds` — initialize, then POST
       `ping` with no session ID → HTTP 200
-- [ ] `initializeAfterDeleteSucceeds` — initialize, DELETE, initialize
+- [x] `initializeAfterDeleteSucceeds` — initialize, DELETE, initialize
       again → HTTP 200, new session ID
-- [ ] `toolsCallAfterDeleteReturns400` — initialize, DELETE, POST
+- [x] `toolsListAfterDeleteReturns400` — initialize, DELETE, POST
       `tools/list` (no session ID) → HTTP 400
-- [ ] `toolsCallAfterDeleteWithStaleSessionIdReturns404` — initialize
-      (capture session ID), DELETE, POST `tools/list` with old session ID
+- [x] `toolsCallAfterDeleteWithStaleSessionIdReturns404` — initialize
+      (capture session ID), DELETE, POST `tools/call` with old session ID
       → HTTP 404
+- [x] `unknownSessionIdWhenNoActiveSessionReturns404` — POST `initialize`
+      with unknown session ID, no active session → HTTP 404
+- [x] `pingWithWrongSessionIdReturns404` — initialize, POST `ping` with
+      wrong session ID → HTTP 404
 
-### SwingToolContext / MCPServer (swing-mcp)
+### SessionCloseTest (swing-mcp)
 
-- [ ] `onSessionClosedClearsRefMap` — populate ref map via snapshot, trigger
-      session close, verify ref map is empty
+- [x] `sessionDeleteClearsRefMap` — populate ref map via snapshot, terminate
+      session via DELETE, re-init, verify ref lookup fails with stale error
