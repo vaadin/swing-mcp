@@ -1349,7 +1349,8 @@ else:
 - If a modal `Dialog` is showing, return exactly that one modal.
   Subordinate windows (owner frame, prior modal in the chain) are
   excluded.
-- Otherwise, return every visible `Window`.
+- Otherwise, return every visible `Window`, **excluding redundant
+  heavyweight popup containers** (see below).
 
 This is **not** a default to be refined later. It is the
 load-bearing contract every tool operates under: a ref can only
@@ -1414,6 +1415,27 @@ in the body.
   is everything the framework knows about"). Every downstream tool
   would need its own "is this ref blocked?" check, and the AI
   would do ref-arithmetic across a soup of unreachable components.
+
+**Heavyweight popup window exclusion (amended 2026-04-16).**
+When a `JComboBox` or `JMenu` popup is open, Swing's `PopupFactory`
+may create a heavyweight `JWindow` to host the `JPopupMenu`. This
+window appears in `Window.getWindows()` as a separate root, but the
+same popup content is already exposed as accessible children of the
+invoking component (`JComboBox` or `JMenu`). Including both produces
+duplicate `JPopupMenu`/`JList` subtrees with different refs — an LLM
+picking the standalone copy gets refs that belong to the wrong tree.
+
+`getConsideredComponents()` filters these out via
+`SwingUtils.isRedundantPopupWindow(Window)`: a `JWindow` whose
+content pane contains a `JPopupMenu` with an invoker that is a
+`JComboBox` or `JMenu` is excluded. Context-menu popups (whose
+invoker is something else) are kept — the popup window is their
+only representation.
+
+This is consistent with HE-5 (UC-002), which prunes the `JPopupMenu`
+node inside a `JMenu`'s accessibility tree for the same duplication
+reason. The heavyweight-window filter catches the case at the
+root-selection layer; HE-5 catches it at the pruning layer.
 
 **Why this DR exists even though project-context.md §5 documents
 the mechanism.** §5 reads as operational rules that could evolve;

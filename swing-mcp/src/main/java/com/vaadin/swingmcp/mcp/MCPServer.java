@@ -268,7 +268,7 @@ public class MCPServer {
 
         List<Component> visible = new ArrayList<>();
         for (Window w : windows) {
-            if (SwingUtils.isVisible(w)) {
+            if (SwingUtils.isVisible(w) && !SwingUtils.isRedundantPopupWindow(w)) {
                 visible.add(w);
             }
         }
