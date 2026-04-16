@@ -539,4 +539,198 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
             });
         }
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // SC-8 / DR-019 — iconified Frame children suppressed
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Polls {@link Frame#getExtendedState()} until {@code (state & mask) == expected}
+     * or {@code timeoutMs} elapses.
+     */
+    private static void awaitExtendedState(Frame frame, int mask, int expected, long timeoutMs) {
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        while (System.currentTimeMillis() < deadline) {
+            if ((frame.getExtendedState() & mask) == expected) {
+                return;
+            }
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+    }
+
+    /**
+     * Creates a JFrame that will never receive WM focus, so the snapshot
+     * output is deterministic (no WM-dependent {@code [focused]} state).
+     */
+    private static JFrame newUnfocusableFrame(String title) {
+        JFrame f = new JFrame(title);
+        f.setFocusableWindowState(false);
+        return f;
+    }
+
+    @Test
+    void sc8_iconifiedJFrame_childrenSuppressedWithPlaceholder() throws Exception {
+        JFrame frame = newUnfocusableFrame("App");
+        frame.getContentPane().add(new JButton("OK"));
+        try {
+            executeOnEDT(() -> { frame.setSize(300, 200); frame.setVisible(true); return null; });
+
+            // Iconify
+            executeOnEDT(() -> { frame.setExtendedState(Frame.ICONIFIED); return null; });
+            awaitExtendedState(frame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
+
+            assertEquals(
+                    "- JFrame (frame) \"App\" [ref=1, iconified] actions: close, restore\n"
+                    + "  - [Contents hidden — window is iconified. Call swing_restore to interact with this window.]",
+                    snapshot(frame));
+        } finally {
+            executeOnEDT(() -> { frame.dispose(); return null; });
+        }
+    }
+
+    @Test
+    void sc8_iconifiedJFrame_childRefsNotAssigned() throws Exception {
+        JFrame frame = newUnfocusableFrame("App");
+        JButton button = new JButton("OK");
+        frame.getContentPane().add(button);
+        try {
+            executeOnEDT(() -> { frame.setSize(300, 200); frame.setVisible(true); return null; });
+
+            // Take snapshot while normal — button gets a ref
+            assertEquals(
+                    "- JFrame (frame) \"App\" [ref=1] actions: close, iconify\n"
+                    + "  - JButton (push_button) \"OK\" [ref=2] actions: click",
+                    snapshot(frame));
+            assertEquals(2, context.getRefOf(button));
+
+            // Iconify
+            executeOnEDT(() -> { frame.setExtendedState(Frame.ICONIFIED); return null; });
+            awaitExtendedState(frame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
+
+            // Take snapshot while iconified — button ref is not assigned
+            assertEquals(
+                    "- JFrame (frame) \"App\" [ref=1, iconified] actions: close, restore\n"
+                    + "  - [Contents hidden — window is iconified. Call swing_restore to interact with this window.]",
+                    snapshot(frame));
+            assertThrows(IllegalStateException.class, () -> context.getRefOf(button));
+        } finally {
+            executeOnEDT(() -> { frame.dispose(); return null; });
+        }
+    }
+
+    @Test
+    void sc8_restoredJFrame_childrenReappear() throws Exception {
+        JFrame frame = newUnfocusableFrame("App");
+        frame.getContentPane().add(new JButton("OK"));
+        try {
+            executeOnEDT(() -> { frame.setSize(300, 200); frame.setVisible(true); return null; });
+
+            // Iconify
+            executeOnEDT(() -> { frame.setExtendedState(Frame.ICONIFIED); return null; });
+            awaitExtendedState(frame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
+
+            assertEquals(
+                    "- JFrame (frame) \"App\" [ref=1, iconified] actions: close, restore\n"
+                    + "  - [Contents hidden — window is iconified. Call swing_restore to interact with this window.]",
+                    snapshot(frame));
+
+            // Restore
+            executeOnEDT(() -> {
+                frame.setExtendedState(frame.getExtendedState() & ~Frame.ICONIFIED);
+                return null;
+            });
+            awaitExtendedState(frame, Frame.ICONIFIED, 0, 2000);
+
+            assertEquals(
+                    "- JFrame (frame) \"App\" [ref=1] actions: close, iconify\n"
+                    + "  - JButton (push_button) \"OK\" [ref=2] actions: click",
+                    snapshot(frame));
+        } finally {
+            executeOnEDT(() -> { frame.dispose(); return null; });
+        }
+    }
+
+    @Test
+    void sc8_mixedIconifiedAndNormalFrames_refsOnlyOnNormal() throws Exception {
+        JFrame iconifiedFrame = newUnfocusableFrame("Minimized");
+        JButton hiddenBtn = new JButton("Hidden");
+        iconifiedFrame.getContentPane().add(hiddenBtn);
+        JFrame normalFrame = newUnfocusableFrame("Active");
+        JButton visibleBtn = new JButton("Visible");
+        normalFrame.getContentPane().add(visibleBtn);
+        try {
+            executeOnEDT(() -> {
+                iconifiedFrame.setSize(300, 200);
+                iconifiedFrame.setVisible(true);
+                normalFrame.setSize(300, 200);
+                normalFrame.setVisible(true);
+                return null;
+            });
+
+            // Iconify only the first frame
+            executeOnEDT(() -> { iconifiedFrame.setExtendedState(Frame.ICONIFIED); return null; });
+            awaitExtendedState(iconifiedFrame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
+
+            assertEquals(
+                    "- JFrame (frame) \"Minimized\" [ref=1, iconified] actions: close, restore\n"
+                    + "  - [Contents hidden — window is iconified. Call swing_restore to interact with this window.]\n"
+                    + "---\n"
+                    + "- JFrame (frame) \"Active\" [ref=2] actions: close, iconify\n"
+                    + "  - JButton (push_button) \"Visible\" [ref=3] actions: click",
+                    snapshot(iconifiedFrame, normalFrame));
+
+            // Ref assertions: iconified frame node has ref, its children do not
+            assertEquals(1, context.getRefOf(iconifiedFrame));
+            assertThrows(IllegalStateException.class, () -> context.getRefOf(hiddenBtn));
+
+            // Normal frame's button has a ref
+            assertEquals(3, context.getRefOf(visibleBtn));
+        } finally {
+            executeOnEDT(() -> {
+                iconifiedFrame.dispose();
+                normalFrame.dispose();
+                return null;
+            });
+        }
+    }
+
+    @Test
+    void sc8_iconifiedJInternalFrame_handledBySC5NotSC8() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", false, true, false, true);
+        iframe.setSize(150, 80);
+        desktop.add(iframe);
+        try {
+            executeOnEDT(() -> {
+                host.setSize(400, 300);
+                host.setVisible(true);
+                iframe.setVisible(true);
+                return null;
+            });
+
+            // Iconify the internal frame and drain the EDT
+            executeOnEDT(() -> { iframe.setIcon(true); return null; });
+            executeOnEDT(() -> null);
+
+            assertTrue(iframe.isIcon(), "precondition: internal frame is iconified");
+
+            String text = snapshot(host);
+
+            // SC-5: JDesktopIcon replaces the JInternalFrame; SC-8 placeholder must not appear
+            assertTrue(text.startsWith("- JFrame (frame) \"Host\""), "host frame present");
+            assertTrue(text.contains("JDesktopIcon (desktop_icon) \"Doc\""),
+                    "JDesktopIcon appears (SC-5). Got:\n" + text);
+            assertFalse(text.contains("[Contents hidden"),
+                    "SC-8 placeholder must not appear for JInternalFrame");
+        } finally {
+            executeOnEDT(() -> { host.dispose(); return null; });
+        }
+    }
 }

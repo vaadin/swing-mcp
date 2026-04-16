@@ -37,6 +37,13 @@ class SnapshotNode {
     static final int MAX_DATA_ROW_NODES = 5;
 
     /**
+     * Placeholder line emitted under an iconified Frame in place of its
+     * suppressed children (SC-8 / DR-019).
+     */
+    static final String ICONIFIED_PLACEHOLDER =
+            "[Contents hidden — window is iconified. Call swing_restore to interact with this window.]";
+
+    /**
      * Maximum length of a rendered description (BR-10). Strings longer than
      * this are truncated to this many characters and a trailing U+2026
      * appended. Applies symmetrically to real {@code accessibleDescription}
@@ -205,6 +212,17 @@ class SnapshotNode {
 
     SnapshotNode(Accessible accessible) {
         this.accessible = accessible;
+    }
+
+    /**
+     * Returns {@code true} when this node is a {@link Frame} (including
+     * {@code JFrame}) whose extended state includes {@link Frame#ICONIFIED}.
+     * Does not apply to {@link JInternalFrame} — those are handled by SC-5
+     * (replaced by {@code JDesktopIcon} in the tree).
+     */
+    boolean isIconifiedFrame() {
+        return accessible instanceof Frame
+                && (((Frame) accessible).getExtendedState() & Frame.ICONIFIED) != 0;
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -492,10 +510,28 @@ class SnapshotNode {
         } else {
             ref = 0;
         }
+        // SC-8 / DR-019: iconified Frame — skip children (no refs assigned).
+        if (isIconifiedFrame()) {
+            markChildRefsZero();
+            return nextRef;
+        }
         for (SnapshotNode child : children) {
             nextRef = child.assignRefs(nextRef, context);
         }
         return nextRef;
+    }
+
+    /**
+     * Recursively sets {@link #ref} to {@code 0} on all descendants.
+     * Used by SC-8 to ensure suppressed children have a non-null ref
+     * (so {@link #getSelfLine()} does not throw) without assigning
+     * real ref numbers.
+     */
+    private void markChildRefsZero() {
+        for (SnapshotNode child : children) {
+            child.ref = 0;
+            child.markChildRefsZero();
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -629,6 +665,12 @@ class SnapshotNode {
      */
     void render(int depth, StringBuilder sb) {
         renderSelfLine(depth, sb);
+
+        // SC-8 / DR-019: iconified Frame — emit placeholder instead of children.
+        if (isIconifiedFrame()) {
+            sb.append("  ".repeat(depth + 1)).append("- ").append(ICONIFIED_PLACEHOLDER).append('\n');
+            return;
+        }
 
         // Children
         for (SnapshotNode child : children) {
