@@ -36,12 +36,9 @@ class SwingSetTextScreenTest extends AbstractScreenTest {
     }
 
     private void setText(int ref, String text) throws Exception {
-        try {
-            executeOnEDT(() -> setTextTool.execute(new Parameters(Map.of("ref", ref, "text", text)), context));
-            executeOnEDT(() -> null); // drain EDT so fire-and-forget action has run
-        } finally {
-            context.clearRefMap();
-        }
+        executeOnEDT(() -> setTextTool.execute(new Parameters(Map.of("ref", ref, "text", text)), context));
+        context.clearRefMap();
+        executeOnEDT(() -> null); // drain EDT so fire-and-forget action has run
     }
 
     // ══════════════════════════════════════════════════════════════════════════

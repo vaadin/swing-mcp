@@ -37,14 +37,11 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
     }
 
     private MCPProtocol.Content selectAll(int ref) throws Exception {
-        try {
-            MCPProtocol.Content result = selectAllTool.execute(
-                    new Parameters(Map.of("ref", ref)), context);
-            SwingUtilities.invokeAndWait(() -> {}); // drain EDT
-            return result;
-        } finally {
-            context.clearRefMap();
-        }
+        MCPProtocol.Content result = selectAllTool.execute(
+                new Parameters(Map.of("ref", ref)), context);
+        context.clearRefMap();
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT
+        return result;
     }
 
     private String getSelection(int ref) throws Exception {
@@ -299,18 +296,18 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void refMapClearedAfterFailedSelectAllOnDisabledComponent() throws Exception {
+    void refMapPreservedAfterFailedSelectAllOnDisabledComponent() throws Exception {
         JList<String> list = new JList<>(new String[]{"A", "B"});
         list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         list.setEnabled(false);
         snapshot(list);
         int ref = context.getRefOf(list);
         assertThrows(MCPErrorResponseException.class,
-                () -> selectAll(ref));
-        // Ref map should still be cleared
-        MCPServerException ex = assertThrows(MCPServerException.class,
-                () -> selectAll(ref));
-        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+                () -> selectAllTool.execute(new Parameters(Map.of("ref", ref)), context));
+        // Validation error — ref map must still be intact so the AI can retry
+        list.setEnabled(true);
+        selectAll(ref);
+        assertArrayEquals(new int[]{0, 1}, list.getSelectedIndices());
     }
 
     // ══════════════════════════════════════════════════════════════════════════

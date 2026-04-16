@@ -56,15 +56,12 @@ class SwingCloseScreenTest extends AbstractScreenTest {
      * Returns the tool's success Content (DR-010 echo) so callers can assert on it.
      */
     private MCPProtocol.Content close(int ref) throws Exception {
-        try {
-            MCPProtocol.Content result = executeOnEDT(
-                    () -> closeTool.execute(new Parameters(Map.of("ref", ref)), context));
-            // Drain the EDT: this no-op is queued after the fire-and-forget invokeLater
-            executeOnEDT(() -> null);
-            return result;
-        } finally {
-            context.clearRefMap();
-        }
+        MCPProtocol.Content result = executeOnEDT(
+                () -> closeTool.execute(new Parameters(Map.of("ref", ref)), context));
+        context.clearRefMap();
+        // Drain the EDT: this no-op is queued after the fire-and-forget invokeLater
+        executeOnEDT(() -> null);
+        return result;
     }
 
     // ══════════════════════════════════════════════════════════════════════════

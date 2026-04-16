@@ -44,13 +44,10 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
     }
 
     private MCPProtocol.Content toggleExpand(int ref) throws Exception {
-        try {
-            MCPProtocol.Content result = toggleExpandTool.execute(new Parameters(Map.of("ref", ref)), context);
-            SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
-            return result;
-        } finally {
-            context.clearRefMap();
-        }
+        MCPProtocol.Content result = toggleExpandTool.execute(new Parameters(Map.of("ref", ref)), context);
+        context.clearRefMap();
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
+        return result;
     }
 
     // ══════════════════════════════════════════════════════════════════════════

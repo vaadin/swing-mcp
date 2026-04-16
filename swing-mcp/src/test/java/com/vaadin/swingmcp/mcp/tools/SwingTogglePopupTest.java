@@ -37,11 +37,8 @@ class SwingTogglePopupTest extends AbstractHeadlessTest {
     }
 
     private void togglePopup(int ref) throws Exception {
-        try {
-            togglePopupTool.execute(new Parameters(Map.of("ref", ref)), context);
-        } finally {
-            context.clearRefMap();
-        }
+        togglePopupTool.execute(new Parameters(Map.of("ref", ref)), context);
+        context.clearRefMap();
     }
 
     // ══════════════════════════════════════════════════════════════════════════

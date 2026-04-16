@@ -124,13 +124,11 @@ public class MCPServer {
             try {
                 return runInEDT(() -> {
                     context.setConsideredComponents(getConsideredComponents());
-                    try {
-                        return tool.execute(new Parameters(params), context);
-                    } finally {
-                        if (tool.isMutation()) {
-                            context.clearRefMap();
-                        }
+                    MCPProtocol.Content result = tool.execute(new Parameters(params), context);
+                    if (tool.isMutation()) {
+                        context.clearRefMap();
                     }
+                    return result;
                 });
             } finally {
                 toolLock.unlock();

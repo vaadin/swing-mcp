@@ -32,13 +32,10 @@ class SwingClearSelectionTest extends AbstractHeadlessTest {
     }
 
     private void clearSelection(int ref) throws Exception {
-        try {
-            clearSelectionTool.execute(
-                    new Parameters(Map.of("ref", ref)), context);
-            SwingUtilities.invokeAndWait(() -> {}); // drain EDT
-        } finally {
-            context.clearRefMap();
-        }
+        clearSelectionTool.execute(
+                new Parameters(Map.of("ref", ref)), context);
+        context.clearRefMap();
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT
     }
 
     @Test

@@ -35,12 +35,9 @@ class SwingSetValueTest extends AbstractHeadlessTest {
     }
 
     private void setValue(int ref, Number value) throws Exception {
-        try {
-            setValueTool.execute(new Parameters(Map.of("ref", ref, "value", value)), context);
-            SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
-        } finally {
-            context.clearRefMap();
-        }
+        setValueTool.execute(new Parameters(Map.of("ref", ref, "value", value)), context);
+        context.clearRefMap();
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -185,18 +182,19 @@ class SwingSetValueTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void refMapClearedAfterFailedSetValueOnDisabledComponent() throws Exception {
+    void refMapPreservedAfterFailedSetValueOnDisabledComponent() throws Exception {
         JSlider slider = new JSlider(0, 100, 50);
         slider.setEnabled(false);
         snapshot(slider);
         int ref = context.getRefOf(slider);
 
-        assertThrows(MCPErrorResponseException.class, () -> setValue(ref, 75.0));
+        assertThrows(MCPErrorResponseException.class, () ->
+                setValueTool.execute(new Parameters(Map.of("ref", ref, "value", 75.0)), context));
 
-        // ref map should be cleared
-        MCPServerException ex = assertThrows(MCPServerException.class,
-                () -> setValue(ref, 80.0));
-        assertTrue(ex.getMessage().contains("swing_snapshot"));
+        // Validation error — ref map must still be intact so the AI can retry
+        slider.setEnabled(true);
+        setValue(ref, 80.0);
+        assertEquals(80, slider.getValue());
     }
 
     @Test

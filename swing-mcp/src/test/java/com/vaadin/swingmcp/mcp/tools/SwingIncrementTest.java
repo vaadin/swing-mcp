@@ -43,13 +43,10 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     }
 
     private MCPProtocol.Content increment(int ref) throws Exception {
-        try {
-            MCPProtocol.Content result = incrementTool.execute(new Parameters(Map.of("ref", ref)), context);
-            SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
-            return result;
-        } finally {
-            context.clearRefMap();
-        }
+        MCPProtocol.Content result = incrementTool.execute(new Parameters(Map.of("ref", ref)), context);
+        context.clearRefMap();
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
+        return result;
     }
 
     // ══════════════════════════════════════════════════════════════════════════
