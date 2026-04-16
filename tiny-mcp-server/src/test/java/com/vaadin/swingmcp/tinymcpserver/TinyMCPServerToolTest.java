@@ -606,27 +606,4 @@ class TinyMCPServerToolTest {
         assertInstanceOf(McpSchema.TextContent.class, result.content().get(0));
     }
 
-    // ===== Levenshtein distance =====
-
-    @Test
-    void levenshteinIdenticalStrings() {
-        assertEquals(0, TinyMCPServer.levenshteinDistance("abc", "abc"));
-    }
-
-    @Test
-    void levenshteinSingleEdit() {
-        assertEquals(1, TinyMCPServer.levenshteinDistance("mesage", "message"));
-    }
-
-    @Test
-    void levenshteinCompletelyDifferent() {
-        assertEquals(3, TinyMCPServer.levenshteinDistance("abc", "xyz"));
-    }
-
-    @Test
-    void levenshteinEmptyStrings() {
-        assertEquals(0, TinyMCPServer.levenshteinDistance("", ""));
-        assertEquals(3, TinyMCPServer.levenshteinDistance("abc", ""));
-        assertEquals(3, TinyMCPServer.levenshteinDistance("", "abc"));
-    }
 }

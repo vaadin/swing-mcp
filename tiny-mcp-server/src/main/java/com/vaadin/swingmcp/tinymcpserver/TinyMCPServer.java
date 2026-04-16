@@ -8,7 +8,6 @@ import com.google.gson.JsonSyntaxException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -262,7 +261,7 @@ public class TinyMCPServer {
             }
         }
 
-        String body = readBody(exchange);
+        String body = ServerUtils.readBody(exchange);
         LOG.fine("Received POST: " + body);
 
         // Parse as a generic JsonElement first so we can distinguish
@@ -456,7 +455,7 @@ public class TinyMCPServer {
                     String closest = null;
                     int bestDist = Integer.MAX_VALUE;
                     for (String known : properties.keySet()) {
-                        int dist = levenshteinDistance(unknown, known);
+                        int dist = ServerUtils.levenshteinDistance(unknown, known);
                         if (dist < bestDist) {
                             bestDist = dist;
                             closest = known;
@@ -630,23 +629,4 @@ public class TinyMCPServer {
         exchange.close();
     }
 
-    private String readBody(HttpExchange exchange) throws IOException {
-        try (InputStream is = exchange.getRequestBody()) {
-            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
-        }
-    }
-
-    static int levenshteinDistance(String a, String b) {
-        int m = a.length(), n = b.length();
-        int[][] d = new int[m + 1][n + 1];
-        for (int i = 0; i <= m; i++) d[i][0] = i;
-        for (int j = 0; j <= n; j++) d[0][j] = j;
-        for (int i = 1; i <= m; i++) {
-            for (int j = 1; j <= n; j++) {
-                int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
-                d[i][j] = Math.min(Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1), d[i - 1][j - 1] + cost);
-            }
-        }
-        return d[m][n];
-    }
 }
