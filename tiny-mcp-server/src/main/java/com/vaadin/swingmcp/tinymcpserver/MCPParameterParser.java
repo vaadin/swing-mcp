@@ -1,6 +1,5 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -23,10 +22,12 @@ class MCPParameterParser {
 
     /**
      * Validates and coerces raw tool arguments against the tool's input schema.
-     * Returns the validated parameter map on success, or {@code null} if validation
-     * failed (in which case the appropriate error response has already been sent).
+     *
+     * @throws MCPErrorResponseException for unknown parameters (produces {@code isError: true})
+     * @throws MCPServerException        with {@code INVALID_PARAMS} for missing required
+     *                                   parameters or type coercion failures
      */
-    Map<String, Object> parse(JsonRpcExchange rpc, Map<String, Object> rawArgs) throws IOException {
+    Map<String, Object> parse(Map<String, Object> rawArgs) {
         Map<String, MCPProtocol.PropertySchema> properties =
                 schema.getProperties() != null ? schema.getProperties() : Collections.emptyMap();
         List<String> required =
@@ -72,8 +73,7 @@ class MCPParameterParser {
                 }
             }
 
-            rpc.sendToolError(msg.toString());
-            return null;
+            throw new MCPErrorResponseException(msg.toString());
         }
 
         // Validate and coerce known parameters
@@ -86,9 +86,8 @@ class MCPParameterParser {
 
             if (value == null) {
                 if (isRequired) {
-                    rpc.sendError(-32602,
+                    throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                             "Missing required parameter '" + paramName + "'");
-                    return null;
                 }
                 // optional and absent: omit from callArgs
                 continue;
@@ -98,23 +97,20 @@ class MCPParameterParser {
                 if (value instanceof Long) {
                     long l = (Long) value;
                     if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
-                        rpc.sendError(-32602,
+                        throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                                 "Parameter '" + paramName + "' value " + l + " is out of 32-bit integer range");
-                        return null;
                     }
                     value = (int) l;
                 } else if (value instanceof Double) {
                     double d = (Double) value;
                     if (Double.isNaN(d) || Double.isInfinite(d) || d != Math.floor(d)) {
-                        rpc.sendError(-32602,
+                        throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                                 "Parameter '" + paramName + "' must be a whole number, got " + d);
-                        return null;
                     }
                     long l = (long) d;
                     if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
-                        rpc.sendError(-32602,
+                        throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                                 "Parameter '" + paramName + "' value " + l + " is out of 32-bit integer range");
-                        return null;
                     }
                     value = (int) l;
                 }

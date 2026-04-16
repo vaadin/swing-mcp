@@ -94,13 +94,10 @@ class MCPToolHandler {
         }
 
         Map<String, Object> rawArgs = params.getArguments() != null ? params.getArguments() : Collections.emptyMap();
-        Map<String, Object> callArgs = tool.parser.parse(rpc, rawArgs);
-        if (callArgs == null) {
-            return; // parser already sent the error response
-        }
 
-        // Invoke the tool function
+        // Parse parameters and invoke the tool function
         try {
+            Map<String, Object> callArgs = tool.parser.parse(rawArgs);
             MCPProtocol.Content content = tool.function.call(callArgs);
             MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
             if (content == null) {
