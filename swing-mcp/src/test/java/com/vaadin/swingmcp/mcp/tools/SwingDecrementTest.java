@@ -137,8 +137,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
 
         MCPServerException ex = assertThrows(MCPServerException.class, () -> decrement(999));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
-        assertTrue(ex.getMessage().contains("swing_snapshot"),
-                "Error should suggest calling swing_snapshot, got: " + ex.getMessage());
+        assertEquals("Component with ref 999 does not exist (valid refs: 1\u20132).", ex.getMessage());
     }
 
     @Test
