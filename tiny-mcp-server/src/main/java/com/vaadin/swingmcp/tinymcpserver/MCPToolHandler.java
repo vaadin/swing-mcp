@@ -82,15 +82,13 @@ class MCPToolHandler {
     void handleToolsCall(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) throws IOException {
         MCPProtocol.CallToolParams params = request.getParamsAs(MCPProtocol.CallToolParams.class);
         if (params == null || params.getName() == null) {
-            rpc.sendError(-32601, "Method not found");
-            return;
+            throw new MCPServerException(MCPServerException.METHOD_NOT_FOUND, "Method not found");
         }
 
         String toolName = params.getName();
         RegisteredTool tool = tools.get(toolName);
         if (tool == null) {
-            rpc.sendError(-32601, "Method not found: " + toolName);
-            return;
+            throw new MCPServerException(MCPServerException.METHOD_NOT_FOUND, "Method not found: " + toolName);
         }
 
         Map<String, Object> rawArgs = params.getArguments() != null ? params.getArguments() : Collections.emptyMap();
@@ -110,8 +108,8 @@ class MCPToolHandler {
             LOG.fine("Tool '" + toolName + "' returned error response: " + e.getMessage());
             rpc.sendToolError(e.getMessage());
         } catch (MCPServerException e) {
-            LOG.log(Level.FINE, "Tool '" + toolName + "' threw MCPServerException (code=" + e.getCode() + ")", e);
-            rpc.sendError(e.getCode(), e.getMessage());
+            // Protocol-level error — let MCPSession.handlePost translate to JSON-RPC error.
+            throw e;
         } catch (Exception e) {
             LOG.log(Level.WARNING, "Tool '" + toolName + "' threw an exception", e);
             rpc.sendToolError(e.toString());

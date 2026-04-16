@@ -2,6 +2,7 @@ package com.vaadin.swingmcp.tinymcpserver;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -41,22 +42,30 @@ public class MCPSession {
      */
     void handlePost(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) throws IOException {
         String rpcMethod = request.getMethod();
-        switch (rpcMethod != null ? rpcMethod : "") {
-            case "tools/list":
-                toolHandler.handleToolsList(rpc);
-                break;
-            case "tools/call":
-                toolHandler.handleToolsCall(rpc, request);
-                break;
-            case "resources/list":
-                handleResourcesList(rpc);
-                break;
-            case "prompts/list":
-                handlePromptsList(rpc);
-                break;
-            default:
-                rpc.sendError(-32601, "Method not found: " + rpcMethod);
-                break;
+        try {
+            switch (rpcMethod != null ? rpcMethod : "") {
+                case "tools/list":
+                    toolHandler.handleToolsList(rpc);
+                    break;
+                case "tools/call":
+                    toolHandler.handleToolsCall(rpc, request);
+                    break;
+                case "resources/list":
+                    handleResourcesList(rpc);
+                    break;
+                case "prompts/list":
+                    handlePromptsList(rpc);
+                    break;
+                default:
+                    rpc.sendError(-32601, "Method not found: " + rpcMethod);
+                    break;
+            }
+        } catch (MCPServerException e) {
+            LOG.log(Level.FINE, "Method '" + rpcMethod + "' threw MCPServerException (code=" + e.getCode() + ")", e);
+            rpc.sendError(e.getCode(), e.getMessage());
+        } catch (RuntimeException e) {
+            LOG.log(Level.WARNING, "Method '" + rpcMethod + "' threw an exception", e);
+            rpc.sendError(MCPServerException.INTERNAL_ERROR, "Internal error: " + e);
         }
     }
 
