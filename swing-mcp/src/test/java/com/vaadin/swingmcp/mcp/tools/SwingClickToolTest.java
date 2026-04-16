@@ -118,7 +118,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
 
         MCPProtocol.Content result = clickTool.execute(
                 new Parameters(Map.of("ref", ref)), context);
-        assertEquals("Posted click on ref=" + ref, result.getText());
+        assertEquals("Dispatched click on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
     }
 
     @Test

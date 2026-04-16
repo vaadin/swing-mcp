@@ -59,7 +59,7 @@ class SwingIncrementTest extends AbstractHeadlessTest {
         snapshot(spinner);
         int ref = context.getRefOf(spinner);
         MCPProtocol.Content result = increment(ref);
-        assertEquals("Posted increment on ref=" + ref, result.getText());
+        assertEquals("Dispatched increment on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
         assertEquals(6, spinner.getValue());
     }
 
@@ -89,7 +89,7 @@ class SwingIncrementTest extends AbstractHeadlessTest {
         snapshot(slider);
         int ref = context.getRefOf(slider);
         MCPProtocol.Content result = increment(ref);
-        assertEquals("Posted increment on ref=" + ref, result.getText());
+        assertEquals("Dispatched increment on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
         assertEquals(51, slider.getValue());
     }
 
@@ -106,7 +106,7 @@ class SwingIncrementTest extends AbstractHeadlessTest {
         snapshot(spinner);
         int ref = context.getRefOf(spinner);
         MCPProtocol.Content result = increment(ref);
-        assertEquals("Posted increment on ref=" + ref, result.getText(),
+        assertEquals("Dispatched increment on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText(),
                 "Tool returns DR-010 echo on dispatch; the EDT action's no-op outcome is not reflected");
         assertEquals(10, spinner.getValue(), "Value should stay at max");
     }
@@ -155,7 +155,7 @@ class SwingIncrementTest extends AbstractHeadlessTest {
         snapshot(spinner);
         int ref = context.getRefOf(spinner);
         MCPProtocol.Content result = increment(ref);
-        assertEquals("Posted increment on ref=" + ref, result.getText());
+        assertEquals("Dispatched increment on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
     }
 
     @Test
@@ -197,7 +197,7 @@ class SwingIncrementTest extends AbstractHeadlessTest {
         snapshot(spinner);
         int ref = context.getRefOf(spinner);
         MCPProtocol.Content result = increment(ref);
-        assertEquals("Posted increment on ref=" + ref, result.getText());
+        assertEquals("Dispatched increment on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
         assertEquals(6, spinner.getValue());
     }
 
@@ -207,7 +207,7 @@ class SwingIncrementTest extends AbstractHeadlessTest {
         snapshot(slider);
         int ref = context.getRefOf(slider);
         MCPProtocol.Content result = increment(ref);
-        assertEquals("Posted increment on ref=" + ref, result.getText());
+        assertEquals("Dispatched increment on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
         assertEquals(51, slider.getValue());
     }
 

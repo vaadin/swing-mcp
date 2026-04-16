@@ -87,7 +87,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         context.putRef(99, list);
         MCPProtocol.Content result = selectAll(99);
 
-        assertEquals("Posted select-all on ref=99", result.getText());
+        assertEquals("Dispatched select-all on ref=99 — call swing_snapshot to verify the outcome", result.getText());
         assertEquals(0, list.getSelectedIndices().length);
     }
 
@@ -109,7 +109,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(table);
         MCPProtocol.Content result = selectAllTool.execute(
                 new Parameters(Map.of("ref", ref)), context);
-        assertEquals("Posted select-all on ref=" + ref, result.getText());
+        assertEquals("Dispatched select-all on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
     }
 
     @Test
@@ -121,7 +121,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         // Empty table may not get a ref; force one
         context.putRef(99, table);
         MCPProtocol.Content result = selectAll(99);
-        assertEquals("Posted select-all on ref=99", result.getText());
+        assertEquals("Dispatched select-all on ref=99 — call swing_snapshot to verify the outcome", result.getText());
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -348,7 +348,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(list);
         MCPProtocol.Content result = selectAllTool.execute(
                 new Parameters(Map.of("ref", ref)), context);
-        assertEquals("Posted select-all on ref=" + ref, result.getText());
+        assertEquals("Dispatched select-all on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
     }
 
     @Test
@@ -361,7 +361,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(table);
         MCPProtocol.Content result = selectAllTool.execute(
                 new Parameters(Map.of("ref", ref)), context);
-        assertEquals("Posted select-all on ref=" + ref, result.getText());
+        assertEquals("Dispatched select-all on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
     }
 
     // ══════════════════════════════════════════════════════════════════════════

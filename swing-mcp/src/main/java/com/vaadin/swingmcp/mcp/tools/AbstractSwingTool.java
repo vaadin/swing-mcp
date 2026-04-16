@@ -224,18 +224,19 @@ public abstract class AbstractSwingTool {
 
     /**
      * Composes the DR-010 success echo without a value:
-     * {@code Posted <action> on ref=<N>}.
+     * {@code Dispatched <action> on ref=<N> — call swing_snapshot to verify the outcome}.
      *
      * @param ref the component ref that was acted on
      * @return a single text-content item carrying the echo
      */
     protected final MCPProtocol.Content echo(int ref) {
-        return MCPProtocol.Content.text("Posted " + getEchoAction() + " on ref=" + ref);
+        return MCPProtocol.Content.text("Dispatched " + getEchoAction() + " on ref=" + ref
+                + " — call swing_snapshot to verify the outcome");
     }
 
     /**
      * Composes the DR-010 success echo with a value:
-     * {@code Posted <action> on ref=<N> to <renderedValue>}. The caller is
+     * {@code Dispatched <action> on ref=<N> to <renderedValue> — call swing_snapshot to verify the outcome}. The caller is
      * responsible for rendering {@code renderedValue} per DR-010 — strings via
      * {@link #renderEchoString}, numbers via {@link #renderEchoNumber}, arrays
      * via {@link #renderEchoIntArray}.
@@ -246,7 +247,8 @@ public abstract class AbstractSwingTool {
      */
     protected final MCPProtocol.Content echo(int ref, String renderedValue) {
         return MCPProtocol.Content.text(
-                "Posted " + getEchoAction() + " on ref=" + ref + " to " + renderedValue);
+                "Dispatched " + getEchoAction() + " on ref=" + ref + " to " + renderedValue
+                        + " — call swing_snapshot to verify the outcome");
     }
 
     /**

@@ -28,7 +28,7 @@ Closing a window may terminate the application (e.g. `EXIT_ON_CLOSE` on the main
 | BR-10 | `JInternalFrame` with `isClosable() == false` is refused: `supportsClose()` returns `false`. This is the JInternalFrame analog of the undecorated-window refusal — when `isClosable()` is false, the internal frame has no close button in its title bar, so the user cannot close it through normal UI. |
 | BR-11 | **JDesktopIcon** (iconified JInternalFrame): `supportsClose()` checks `isShowing()` on the **icon itself** (the visible component on the desktop — the underlying frame is detached with `isShowing() == false`), then delegates `isClosable()` and `EXIT_ON_CLOSE` checks to the underlying JInternalFrame via `getInternalFrame()` (BR-09, BR-10). |
 | BR-12 | **Tool description** must mention windows, dialogs, internal frames, and desktop icons (iconified internal frames). |
-| BR-13 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Posted close on ref=<N>` (see **DR-010**). The echo confirms only that `WINDOW_CLOSING` (or `doDefaultCloseAction()`) was dispatched on the EDT — not that the window actually closed. The client calls `swing_snapshot` to verify outcome. |
+| BR-13 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched close on ref=<N> — call swing_snapshot to verify the outcome` (see **DR-010**). The echo confirms only that `WINDOW_CLOSING` (or `doDefaultCloseAction()`) was dispatched on the EDT — not that the window actually closed. The client calls `swing_snapshot` to verify outcome. |
 
 ### Algorithm: detecting and invoking close
 
@@ -60,7 +60,7 @@ sees it in the snapshot and can decide how to proceed.
 - [x] `SwingCloseScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
   - [x] Calling `swing_close` on a JFrame ref (with `DISPOSE_ON_CLOSE`) fires the close event; frame is dismissed (verified after EDT drains).
   - [x] Calling `swing_close` on a JDialog ref fires the close event; dialog is dismissed (verified after EDT drains).
-  - [x] Calling `swing_close` on a JFrame with `DO_NOTHING_ON_CLOSE` returns the DR-010 echo `Posted close on ref=N`; window is still showing (verified via `isShowing()` after EDT drains).
+  - [x] Calling `swing_close` on a JFrame with `DO_NOTHING_ON_CLOSE` returns the DR-010 echo `Dispatched close on ref=N — call swing_snapshot to verify the outcome`; window is still showing (verified via `isShowing()` after EDT drains).
   - [x] Calling `swing_close` on a JDialog with `DO_NOTHING_ON_CLOSE` returns the DR-010 echo; dialog is still showing (verified via `isShowing()` after EDT drains).
   - [x] Calling `swing_close` on an undecorated JFrame returns an MCP error with `isError: true`.
   - [x] A JFrame with `EXIT_ON_CLOSE` does not appear with a `close` action in the snapshot.
