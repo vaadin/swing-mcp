@@ -393,7 +393,46 @@ public class TinyMCPServer {
         }
 
         Map<String, Object> rawArgs = params.getArguments() != null ? params.getArguments() : Collections.emptyMap();
-        MCPProtocol.InputSchema schema = tool.inputSchema;
+        Map<String, Object> callArgs = parseParameters(exchange, request, toolName, tool.inputSchema, rawArgs);
+        if (callArgs == null) {
+            return; // parseParameters already sent the error response
+        }
+
+        // Invoke the tool function
+        try {
+            MCPProtocol.Content content = tool.function.call(callArgs);
+            MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
+            if (content == null) {
+                result.setContent(Collections.emptyList());
+            } else {
+                result.setContent(Collections.singletonList(content));
+            }
+            sendJsonRpcResponse(exchange, request.getId(), result);
+        } catch (MCPErrorResponseException e) {
+            LOG.fine("Tool '" + toolName + "' returned error response: " + e.getMessage());
+            MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
+            result.setIsError(true);
+            result.setContent(Collections.singletonList(MCPProtocol.Content.text(e.getMessage())));
+            sendJsonRpcResponse(exchange, request.getId(), result);
+        } catch (MCPServerException e) {
+            LOG.log(Level.FINE, "Tool '" + toolName + "' threw MCPServerException (code=" + e.getCode() + ")", e);
+            sendJsonRpcError(exchange, request.getId(), e.getCode(), e.getMessage());
+        } catch (Exception e) {
+            LOG.log(Level.WARNING, "Tool '" + toolName + "' threw an exception", e);
+            MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
+            result.setIsError(true);
+            result.setContent(Collections.singletonList(MCPProtocol.Content.text(e.toString())));
+            sendJsonRpcResponse(exchange, request.getId(), result);
+        }
+    }
+
+    /**
+     * Validates and coerces raw tool arguments against the tool's input schema.
+     * Returns the validated parameter map on success, or {@code null} if validation
+     * failed (in which case the appropriate error response has already been sent).
+     */
+    private Map<String, Object> parseParameters(HttpExchange exchange, MCPProtocol.JsonRpcRequest request,
+            String toolName, MCPProtocol.InputSchema schema, Map<String, Object> rawArgs) throws IOException {
         Map<String, MCPProtocol.PropertySchema> properties =
                 schema.getProperties() != null ? schema.getProperties() : Collections.emptyMap();
         List<String> required =
@@ -443,10 +482,10 @@ public class TinyMCPServer {
             errorResult.setIsError(true);
             errorResult.setContent(Collections.singletonList(MCPProtocol.Content.text(msg.toString())));
             sendJsonRpcResponse(exchange, request.getId(), errorResult);
-            return;
+            return null;
         }
 
-        // Validate and coerce parameters
+        // Validate and coerce known parameters
         Map<String, Object> callArgs = new HashMap<>();
         for (Map.Entry<String, MCPProtocol.PropertySchema> entry : properties.entrySet()) {
             String paramName = entry.getKey();
@@ -458,7 +497,7 @@ public class TinyMCPServer {
                 if (isRequired) {
                     sendJsonRpcError(exchange, request.getId(), -32602,
                             "Missing required parameter '" + paramName + "'");
-                    return;
+                    return null;
                 }
                 // optional and absent: omit from callArgs
                 continue;
@@ -470,7 +509,7 @@ public class TinyMCPServer {
                     if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
                         sendJsonRpcError(exchange, request.getId(), -32602,
                                 "Parameter '" + paramName + "' value " + l + " is out of 32-bit integer range");
-                        return;
+                        return null;
                     }
                     value = (int) l;
                 } else if (value instanceof Double) {
@@ -478,13 +517,13 @@ public class TinyMCPServer {
                     if (Double.isNaN(d) || Double.isInfinite(d) || d != Math.floor(d)) {
                         sendJsonRpcError(exchange, request.getId(), -32602,
                                 "Parameter '" + paramName + "' must be a whole number, got " + d);
-                        return;
+                        return null;
                     }
                     long l = (long) d;
                     if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
                         sendJsonRpcError(exchange, request.getId(), -32602,
                                 "Parameter '" + paramName + "' value " + l + " is out of 32-bit integer range");
-                        return;
+                        return null;
                     }
                     value = (int) l;
                 }
@@ -492,33 +531,7 @@ public class TinyMCPServer {
 
             callArgs.put(paramName, value);
         }
-
-        // Invoke the tool function
-        try {
-            MCPProtocol.Content content = tool.function.call(callArgs);
-            MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
-            if (content == null) {
-                result.setContent(Collections.emptyList());
-            } else {
-                result.setContent(Collections.singletonList(content));
-            }
-            sendJsonRpcResponse(exchange, request.getId(), result);
-        } catch (MCPErrorResponseException e) {
-            LOG.fine("Tool '" + toolName + "' returned error response: " + e.getMessage());
-            MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
-            result.setIsError(true);
-            result.setContent(Collections.singletonList(MCPProtocol.Content.text(e.getMessage())));
-            sendJsonRpcResponse(exchange, request.getId(), result);
-        } catch (MCPServerException e) {
-            LOG.log(Level.FINE, "Tool '" + toolName + "' threw MCPServerException (code=" + e.getCode() + ")", e);
-            sendJsonRpcError(exchange, request.getId(), e.getCode(), e.getMessage());
-        } catch (Exception e) {
-            LOG.log(Level.WARNING, "Tool '" + toolName + "' threw an exception", e);
-            MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
-            result.setIsError(true);
-            result.setContent(Collections.singletonList(MCPProtocol.Content.text(e.toString())));
-            sendJsonRpcResponse(exchange, request.getId(), result);
-        }
+        return callArgs;
     }
 
     private void handleResourcesList(HttpExchange exchange, MCPProtocol.JsonRpcRequest request) throws IOException {
