@@ -2021,14 +2021,14 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void br10_tooltipLongerThan120Chars_isTruncatedWithEllipsis() throws Exception {
-        // 150 'x's → 120 'x's + U+2026
+        // 150 'x's → 120 'x's + U+2026; capped description triggers get_description (UC-024)
         String longTooltip = "x".repeat(150);
         JButton button = new JButton("OK");
         button.setToolTipText(longTooltip);
 
         String expectedDesc = "x".repeat(120) + "\u2026";
         assertEquals(
-                "- JButton (push_button) \"OK\" \"" + expectedDesc + "\" [ref=1] actions: click",
+                "- JButton (push_button) \"OK\" \"" + expectedDesc + "\" [ref=1] actions: click, get_description",
                 snapshot(button));
     }
 
@@ -2036,13 +2036,14 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     void br10_descriptionLongerThan120Chars_isTruncatedWithEllipsis_symmetricCap()
             throws Exception {
         // Symmetric cap: real accessibleDescription is also truncated.
+        // Capped description triggers get_description (UC-024).
         String longDesc = "y".repeat(150);
         JButton button = new JButton("OK");
         button.getAccessibleContext().setAccessibleDescription(longDesc);
 
         String expectedDesc = "y".repeat(120) + "\u2026";
         assertEquals(
-                "- JButton (push_button) \"OK\" \"" + expectedDesc + "\" [ref=1] actions: click",
+                "- JButton (push_button) \"OK\" \"" + expectedDesc + "\" [ref=1] actions: click, get_description",
                 snapshot(button));
     }
 

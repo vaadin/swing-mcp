@@ -797,6 +797,29 @@ public final class SwingUtils {
     }
 
     /**
+     * Resolves the description of a component using the same logic as the
+     * snapshot description slot (UC-002 BR-10): tries
+     * {@code accessibleDescription} first (with HTML cleanup), then falls
+     * back to tooltip text. The result is sanitised via
+     * {@link #sanitizeForQuotedSlot} but <strong>not</strong> capped at 120
+     * characters — callers that need the cap should apply it separately.
+     *
+     * @return the resolved, sanitised description, or {@code null} if the
+     *         component has no description from either source.
+     */
+    public static String resolveDescription(Accessible a) {
+        if (a == null) return null;
+        AccessibleContext ctx = a.getAccessibleContext();
+        String desc = ctx != null
+                ? htmlToPlainText(ctx.getAccessibleDescription())
+                : null;
+        if (desc == null) {
+            desc = getTooltipAsText(a);
+        }
+        return sanitizeForQuotedSlot(desc);
+    }
+
+    /**
      * Returns whether the given accessible is effectively enabled — i.e.
      * whether the user (or AI client) may actually interact with it in the
      * running Swing app.
