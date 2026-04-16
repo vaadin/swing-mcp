@@ -987,15 +987,12 @@ invariant. The escape for `"` follows the same logic — the slot is
 quoted in the line format, so embedded quotes must not terminate the
 string visually.
 
-**Long-description retrieval — deferred.** For the rare case where a
-description is longer than 120 chars and the AI needs the full value,
-a future `swing_get_description` tool is a clean escape valve:
-nodes whose description was truncated would receive a ref and a
-`get_description` action, and the tool would return the sanitized
-but uncapped string. Out of scope here — not implemented until a
-real case demands it. Referencing this option in DR-014 ensures the
-120-char cap doesn't get re-litigated when someone hits a truncated
-tooltip.
+**Long-description retrieval — implemented (UC-024).** When a
+description exceeds 120 chars and is capped with `…`, the node
+advertises `get_description` in the snapshot action list and
+receives a ref (even if `get_description` is its sole action).
+`swing_get_description` returns the sanitized but uncapped string
+(up to 1000 chars). See UC-024 for full specification.
 
 **Interaction with other rules.** The sanitizer runs *before* the
 DR-010 15-char truncation convention and *before* the 120-char
