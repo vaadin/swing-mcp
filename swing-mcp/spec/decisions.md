@@ -1527,3 +1527,83 @@ pure fire-and-forget design explored here.
   insufficient — invisible bail-outs (Problem 2) mean the AI
   cannot even detect when the tool failed, let alone recover.
   Documentation helps only when the failure is observable.
+
+## DR-019 — Snapshot suppresses children of iconified Frames
+
+**Status:** Draft
+**Applies to:** UC-002 (swing_snapshot), SC-8
+**Decided:** 2026-04-16
+
+**Motivation.** UX feedback from an AI-client session: when a
+`JFrame` is iconified (minimized), `swing_screenshot` still renders
+the full window content via `printAll()` — producing an image
+identical to the normal state. Meanwhile the snapshot correctly
+tags the frame as `[iconified]`, but also lists all its children
+with refs and actions. The result is a mixed signal: the screenshot
+shows a normal-looking window, the snapshot shows clickable
+children, but none of those children can be interacted with
+because the window is minimized. The AI attempts clicks that
+silently fail.
+
+**Decision.** When a snapshot root (or sub-root) is a `Frame`
+(including `JFrame`) whose extended state includes
+`Frame.ICONIFIED`, the snapshot:
+
+1. **Renders the Frame node itself normally** — with `[iconified]`
+   state, its ref, and its actions (`restore`, `close`). These
+   window-level actions remain valid on an iconified frame.
+2. **Suppresses all children** — they are not walked during
+   Phase 3 (assignRefs) and not rendered during Phase 4 (render).
+   No refs are assigned to any descendant of the iconified frame.
+3. **Emits a single placeholder line** indented one level under
+   the frame node:
+   `[Contents hidden — window is iconified. Call swing_restore to interact with this window.]`
+
+Phase 2 (prune) still runs on the children so the pruned tree
+is structurally ready if the frame is later restored within the
+same snapshot call (defensive — not currently possible, but
+costs nothing).
+
+**Scope.** Applies only to top-level `Frame`/`JFrame`. Does not
+apply to `JInternalFrame` — iconified internal frames are already
+handled by SC-5 / DR-008 (replaced by `JDesktopIcon` in the
+accessibility tree).
+
+**`swing_screenshot` is unchanged.** The screenshot tool continues
+to render iconified frames via `printAll()`. This is intentional:
+the screenshot is a raw rendering view (what Swing can paint),
+while the snapshot is the semantic/interaction view (what the
+agent can work with). The two serve different purposes and the
+`[iconified]` tag plus child suppression in the snapshot is
+sufficient to prevent the AI from attempting interactions.
+
+**Why not filter iconified frames out of `getConsideredComponents()`?**
+Removing them entirely would hide the frame from both snapshot and
+screenshot. The agent would lose the ability to see that the window
+exists and to call `swing_restore` on it.
+
+**Why not show children but strip their refs?** Children without
+refs are still visible in the snapshot. The AI would see a full
+component tree it cannot interact with — confusing without being
+actionable. The placeholder line is a clearer signal.
+
+**Why not return a warning alongside the screenshot image?**
+The screenshot's job is to show pixels. Mixing text warnings
+into image responses adds parsing complexity for the agent and
+conflates two information channels (visual vs. semantic). The
+snapshot is the right place for semantic signals.
+
+**Alternatives considered.**
+
+- **Dim or overlay the screenshot image for iconified frames.**
+  Complex image manipulation, fragile across L&F themes, and the
+  AI may not interpret a dimmed image correctly. Rejected.
+- **Return text-only from `swing_screenshot` for iconified
+  frames.** Changes the screenshot contract (always returns an
+  image). The screenshot could still be useful — e.g. Windows
+  shows previews of minimized windows on hover, and some agents
+  may want to see the rendered content for analysis. Rejected.
+- **Show children as read-only (all actions `!`-prefixed).**
+  Misleading — `!click` means "disabled", not "window is
+  minimized". The agent would try `swing_restore` only after
+  failing multiple interaction attempts. Rejected.
