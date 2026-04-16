@@ -2,6 +2,8 @@ package com.vaadin.swingmcp.tinymcpserver;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonSyntaxException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -263,12 +265,30 @@ public class TinyMCPServer {
         String body = readBody(exchange);
         LOG.fine("Received POST: " + body);
 
-        MCPProtocol.JsonRpcRequest request;
+        // Parse as a generic JsonElement first so we can distinguish
+        // malformed JSON (-32700) from valid-JSON-but-wrong-shape (-32600).
+        JsonElement jsonElement;
         try {
-            request = MCPProtocol.fromJson(body, MCPProtocol.JsonRpcRequest.class);
+            jsonElement = MCPProtocol.fromJson(body, JsonElement.class);
         } catch (JsonSyntaxException e) {
             LOG.log(Level.WARNING, "Malformed JSON in request", e);
             sendJsonRpcError(exchange, 400, null, MCPServerException.PARSE_ERROR, "Parse error");
+            return;
+        }
+
+        if (jsonElement instanceof JsonArray) {
+            LOG.warning("Batch requests are not supported");
+            sendJsonRpcError(exchange, 400, null,
+                    MCPServerException.INVALID_REQUEST, "Batch requests are not supported");
+            return;
+        }
+
+        MCPProtocol.JsonRpcRequest request;
+        try {
+            request = MCPProtocol.gson().fromJson(jsonElement, MCPProtocol.JsonRpcRequest.class);
+        } catch (JsonSyntaxException e) {
+            LOG.log(Level.WARNING, "Invalid JSON-RPC request", e);
+            sendJsonRpcError(exchange, 400, null, MCPServerException.INVALID_REQUEST, "Invalid Request");
             return;
         }
         String rpcMethod = request.getMethod();
