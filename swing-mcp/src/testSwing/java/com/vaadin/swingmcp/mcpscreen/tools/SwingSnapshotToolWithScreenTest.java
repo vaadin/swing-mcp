@@ -587,6 +587,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
     void sc8_iconifiedJFrame_childRefsNotAssigned() throws Exception {
         JFrame frame = new JFrame("App");
         JButton button = new JButton("OK");
+        button.setFocusable(false); // avoid WM-dependent [focused]
         frame.getContentPane().add(button);
         try {
             executeOnEDT(() -> { frame.setSize(300, 200); frame.setVisible(true); return null; });
@@ -616,7 +617,9 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
     @Test
     void sc8_restoredJFrame_childrenReappear() throws Exception {
         JFrame frame = new JFrame("App");
-        frame.getContentPane().add(new JButton("OK"));
+        JButton btn = new JButton("OK");
+        btn.setFocusable(false); // avoid WM-dependent [focused] after restore
+        frame.getContentPane().add(btn);
         try {
             executeOnEDT(() -> { frame.setSize(300, 200); frame.setVisible(true); return null; });
 
@@ -648,9 +651,13 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
     @Test
     void sc8_mixedIconifiedAndNormalFrames_refsOnlyOnNormal() throws Exception {
         JFrame iconifiedFrame = new JFrame("Minimized");
-        iconifiedFrame.getContentPane().add(new JButton("Hidden"));
+        JButton hiddenBtn = new JButton("Hidden");
+        hiddenBtn.setFocusable(false);
+        iconifiedFrame.getContentPane().add(hiddenBtn);
         JFrame normalFrame = new JFrame("Active");
-        normalFrame.getContentPane().add(new JButton("Visible"));
+        JButton visibleBtn = new JButton("Visible");
+        visibleBtn.setFocusable(false);
+        normalFrame.getContentPane().add(visibleBtn);
         try {
             executeOnEDT(() -> {
                 iconifiedFrame.setSize(300, 200);
@@ -674,11 +681,10 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
 
             // Ref assertions: iconified frame node has ref, its children do not
             assertEquals(1, context.getRefOf(iconifiedFrame));
-            assertThrows(IllegalStateException.class,
-                    () -> context.getRefOf((JButton) iconifiedFrame.getContentPane().getComponent(0)));
+            assertThrows(IllegalStateException.class, () -> context.getRefOf(hiddenBtn));
 
             // Normal frame's button has a ref
-            assertEquals(3, context.getRefOf((JButton) normalFrame.getContentPane().getComponent(0)));
+            assertEquals(3, context.getRefOf(visibleBtn));
         } finally {
             executeOnEDT(() -> {
                 iconifiedFrame.dispose();
