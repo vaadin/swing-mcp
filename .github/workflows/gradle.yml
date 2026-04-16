@@ -53,4 +53,14 @@ jobs:
         _JAVA_OPTIONS: -Dapple.awt.UIElement=true
       # --debug so we can see the last Gradle action before a hang.
       run: ./gradlew clean build --stacktrace --debug --no-daemon
+    - name: Upload test reports on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-reports-${{ matrix.os }}-java${{ matrix.java }}
+        path: |
+          **/build/reports/tests/
+          **/build/reports/testSwing/
+          **/build/test-results/
+        if-no-files-found: ignore
 

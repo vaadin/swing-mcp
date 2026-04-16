@@ -1,4 +1,5 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
     java
@@ -31,6 +32,8 @@ subprojects {
         testLogging {
             // to see the exceptions of failed tests in CI console.
             exceptionFormat = TestExceptionFormat.FULL
+            events = setOf(TestLogEvent.FAILED)
+            showStandardStreams = true
         }
     }
 
