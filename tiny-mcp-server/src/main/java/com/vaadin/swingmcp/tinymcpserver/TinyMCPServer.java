@@ -358,7 +358,7 @@ public class TinyMCPServer {
             if (value == null) {
                 if (isRequired) {
                     sendJsonRpcError(exchange, request.getId(), -32602,
-                            "Invalid parameter '" + paramName + "'");
+                            "Missing required parameter '" + paramName + "'");
                     return;
                 }
                 // optional and absent: omit from callArgs
@@ -370,7 +370,7 @@ public class TinyMCPServer {
                     long l = (Long) value;
                     if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
                         sendJsonRpcError(exchange, request.getId(), -32602,
-                                "Invalid parameter '" + paramName + "'");
+                                "Parameter '" + paramName + "' value " + l + " is out of 32-bit integer range");
                         return;
                     }
                     value = (int) l;
@@ -378,13 +378,13 @@ public class TinyMCPServer {
                     double d = (Double) value;
                     if (Double.isNaN(d) || Double.isInfinite(d) || d != Math.floor(d)) {
                         sendJsonRpcError(exchange, request.getId(), -32602,
-                                "Invalid parameter '" + paramName + "'");
+                                "Parameter '" + paramName + "' must be a whole number, got " + d);
                         return;
                     }
                     long l = (long) d;
                     if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
                         sendJsonRpcError(exchange, request.getId(), -32602,
-                                "Invalid parameter '" + paramName + "'");
+                                "Parameter '" + paramName + "' value " + l + " is out of 32-bit integer range");
                         return;
                     }
                     value = (int) l;
