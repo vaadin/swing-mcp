@@ -6,12 +6,14 @@ import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JInternalFrame;
 import javax.swing.JMenu;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTabbedPane;
 import javax.swing.JViewport;
 import javax.swing.ListSelectionModel;
 import javax.swing.UIManager;
+import javax.swing.JWindow;
 import javax.swing.WindowConstants;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumnModel;
@@ -907,6 +909,38 @@ public final class SwingUtils {
             if (c.isShowing() && (c.getWidth() <= 0 || c.getHeight() <= 0)) return false;
         }
         return true;
+    }
+
+    /**
+     * Returns {@code true} if the window is a heavyweight popup container
+     * whose content is already exposed in the accessibility tree of the
+     * invoking component — including it as a separate snapshot root would
+     * duplicate the popup subtree.
+     * <p>
+     * Swing's {@code PopupFactory} creates a {@link JWindow} and adds the
+     * {@link JPopupMenu} directly to its content pane. When the invoker is
+     * a {@link JComboBox} or {@link JMenu}, the popup items are already
+     * accessible children of the invoker, so the standalone window is
+     * redundant. Context-menu popups (whose invoker is something else) are
+     * kept, because the popup window is the <em>only</em> place the content
+     * appears.
+     *
+     * @param w the window to check
+     * @return {@code true} if the window is a redundant popup container
+     */
+    public static boolean isRedundantPopupWindow(Window w) {
+        if (!(w instanceof JWindow)) {
+            return false;
+        }
+        Container contentPane = ((JWindow) w).getContentPane();
+        for (int i = 0; i < contentPane.getComponentCount(); i++) {
+            Component child = contentPane.getComponent(i);
+            if (child instanceof JPopupMenu) {
+                Component invoker = ((JPopupMenu) child).getInvoker();
+                return invoker instanceof JComboBox || invoker instanceof JMenu;
+            }
+        }
+        return false;
     }
 
     /**
