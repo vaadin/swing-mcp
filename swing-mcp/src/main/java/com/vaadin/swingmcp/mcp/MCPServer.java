@@ -55,7 +55,7 @@ public class MCPServer {
             "- `swing_snapshot` and `swing_screenshot` return the current state immediately.\n" +
             "- Interaction tools (`swing_click`, `swing_set_text`, etc.) dispatch the action to the Swing event thread asynchronously and return a one-line echo of the form `Posted <action> on ref=N [to <value>]` to acknowledge dispatch. The echo does NOT mean the UI changed — listeners can veto, revert, or open a dialog. Always follow up with `swing_snapshot` to verify the outcome.\n" +
             "- `ref` values may change after UI transitions (dialogs opening/closing, navigation). Re-snapshot after significant state changes before using stale refs.\n" +
-            "- Do not call mutation tools in parallel — each mutation clears the ref map, so the second call will fail with a stale-ref error. Issue tool calls sequentially.\n" +
+            "- Do not call mutation tools in parallel — each successful mutation clears the ref map, so the second call will fail with a stale-ref error. Issue tool calls sequentially.\n" +
             "- `swing_close` on a window with unsaved changes may trigger a confirmation dialog — snapshot afterward to detect it.";
 
     private final TinyMCPServer server;
