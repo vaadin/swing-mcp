@@ -164,6 +164,20 @@ public class Parameters {
     }
 
     /**
+     * Returns the value of an optional integer-array parameter, or {@code null} if absent.
+     * Same validation as {@link #getIntArray(String)} but returns {@code null} instead
+     * of throwing when the key is missing.
+     *
+     * @throws MCPServerException if the value is present but not a List of whole numbers
+     */
+    public List<Integer> getIntArrayOrNull(String key) {
+        if (!raw.containsKey(key)) {
+            return null;
+        }
+        return getIntArray(key);
+    }
+
+    /**
      * Returns the value of an optional integer parameter, or {@code null} if absent.
      *
      * @throws MCPServerException if the value is present but not a Number

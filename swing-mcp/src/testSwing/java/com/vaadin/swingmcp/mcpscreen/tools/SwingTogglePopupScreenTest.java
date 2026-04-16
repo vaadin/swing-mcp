@@ -63,7 +63,7 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
             snapshot(frame);
             int ref = context.getRefOf(combo);
             MCPProtocol.Content result = togglePopup(ref);
-            assertEquals("Posted toggle-popup on ref=" + ref, result.getText());
+            assertEquals("Dispatched toggle-popup on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
             assertTrue(combo.isPopupVisible(), "Popup should be open after toggle");
         } finally {
             frame.dispose();
@@ -214,6 +214,70 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
         snapshot(dialog);
         // JOptionPane itself has no toggle_popup action — it has no ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(optionPane));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Combo box popup duplication (HE-6 candidate)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Reproducer for the combo box popup duplication bug.
+     * When Window.getWindows() is used to collect roots (as in production),
+     * the heavyweight popup window appears as a separate root AND as a nested
+     * child inside the JComboBox, causing duplicate JPopupMenu/JList nodes.
+     */
+    @Test
+    void openComboPopupShouldNotDuplicateInSnapshot() throws Exception {
+        JFrame frame = new JFrame("Test");
+        JComboBox<String> combo = new JComboBox<>(new String[]{"Alpha", "Beta", "Gamma"});
+        frame.getContentPane().add(combo);
+        frame.pack();
+        frame.setVisible(true);
+        try {
+            // Open the popup
+            executeOnEDT(() -> { combo.setPopupVisible(true); return null; });
+            assertTrue(combo.isPopupVisible(), "Popup should be open");
+
+            // Simulate production: collect all visible windows, applying the
+            // same isRedundantPopupWindow filter as MCPServer.getConsideredComponents()
+            java.util.List<Component> allVisible = new java.util.ArrayList<>();
+            for (Window w : Window.getWindows()) {
+                if (com.vaadin.swingmcp.mcp.SwingUtils.isVisible(w)
+                        && !com.vaadin.swingmcp.mcp.SwingUtils.isRedundantPopupWindow(w)) {
+                    allVisible.add(w);
+                }
+            }
+
+            // Snapshot with all visible windows as roots
+            context.setConsideredComponents(allVisible);
+            String output = executeOnEDT(() ->
+                    snapshotTool.execute(new Parameters(Map.of()), context).getText());
+
+            System.out.println("=== Snapshot with open combo popup ===");
+            System.out.println(output);
+            System.out.println("=== Visible windows: " + allVisible.size() + " ===");
+            for (Component c : allVisible) {
+                System.out.println("  " + c.getClass().getSimpleName()
+                        + " size=" + c.getWidth() + "x" + c.getHeight());
+            }
+
+            // Count JPopupMenu and JList occurrences — should appear at most once each
+            long popupMenuCount = output.lines()
+                    .filter(l -> l.contains("JPopupMenu") || l.contains("popup_menu"))
+                    .count();
+            long jlistCount = output.lines()
+                    .filter(l -> l.contains("JList") || l.contains("(list)"))
+                    .count();
+
+            assertTrue(popupMenuCount <= 1,
+                    "JPopupMenu should appear at most once, but appeared " + popupMenuCount
+                    + " times. Snapshot:\n" + output);
+            assertTrue(jlistCount <= 1,
+                    "JList should appear at most once, but appeared " + jlistCount
+                    + " times. Snapshot:\n" + output);
+        } finally {
+            frame.dispose();
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════════

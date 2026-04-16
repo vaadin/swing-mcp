@@ -53,7 +53,7 @@ public class MCPServer {
             "## Key behaviors\n" +
             "\n" +
             "- `swing_snapshot` and `swing_screenshot` return the current state immediately.\n" +
-            "- Interaction tools (`swing_click`, `swing_set_text`, etc.) dispatch the action to the Swing event thread asynchronously and return a one-line echo of the form `Posted <action> on ref=N [to <value>]` to acknowledge dispatch. The echo does NOT mean the UI changed — listeners can veto, revert, or open a dialog. Always follow up with `swing_snapshot` to verify the outcome.\n" +
+            "- Interaction tools (`swing_click`, `swing_set_text`, etc.) dispatch the action to the Swing event thread asynchronously and return a one-line echo of the form `Dispatched <action> on ref=N [to <value>] — call swing_snapshot to verify the outcome`. The echo does NOT mean the UI changed — listeners can veto, revert, or open a dialog.\n" +
             "- `ref` values may change after UI transitions (dialogs opening/closing, navigation). Re-snapshot after significant state changes before using stale refs.\n" +
             "- Do not call mutation tools in parallel — each successful mutation clears the ref map, so the second call will fail with a stale-ref error. Issue tool calls sequentially.\n" +
             "- `swing_close` on a window with unsaved changes may trigger a confirmation dialog — snapshot afterward to detect it.";
@@ -67,7 +67,17 @@ public class MCPServer {
         MCPProtocol.Implementation serverInfo = new MCPProtocol.Implementation();
         serverInfo.setName(SERVER_NAME);
         serverInfo.setVersion(SERVER_VERSION);
-        this.server = new TinyMCPServer(port, contextPath, serverInfo, INSTRUCTIONS);
+        this.server = new TinyMCPServer(port, contextPath, serverInfo, INSTRUCTIONS) {
+            @Override
+            protected void onSessionClosed() {
+                toolLock.lock();
+                try {
+                    context.clearRefMap();
+                } finally {
+                    toolLock.unlock();
+                }
+            }
+        };
         registerTools();
     }
 
@@ -103,6 +113,7 @@ public class MCPServer {
         registerTool(new com.vaadin.swingmcp.mcp.tools.SwingGetCellCountTool());
         registerTool(new com.vaadin.swingmcp.mcp.tools.SwingIconifyTool());
         registerTool(new com.vaadin.swingmcp.mcp.tools.SwingRestoreTool());
+        registerTool(new com.vaadin.swingmcp.mcp.tools.SwingDragTool());
     }
 
     private final SwingToolContext context = new SwingToolContext();
@@ -268,7 +279,7 @@ public class MCPServer {
 
         List<Component> visible = new ArrayList<>();
         for (Window w : windows) {
-            if (SwingUtils.isVisible(w)) {
+            if (SwingUtils.isVisible(w) && !SwingUtils.isRedundantPopupWindow(w)) {
                 visible.add(w);
             }
         }

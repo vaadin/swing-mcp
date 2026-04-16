@@ -283,7 +283,7 @@ class SwingIconifyScreenTest extends AbstractScreenTest {
         int ref = context.getRefOf(iframe);
         MCPProtocol.Content result = iconify(ref);
 
-        assertEquals("Posted iconify on ref=" + ref, result.getText(),
+        assertEquals("Dispatched iconify on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText(),
                 "DR-010: tool returns echo on dispatch even when listener vetoes");
         // Frame should still be showing, not iconified
         assertFalse(iframe.isIcon(), "vetoed iconify should leave frame non-iconified");

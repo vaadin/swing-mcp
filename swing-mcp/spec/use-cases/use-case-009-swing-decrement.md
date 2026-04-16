@@ -20,7 +20,7 @@ Steps a spinner or slider down by one unit — mirror of `swing_increment`.
 | BR-08 | `swing_decrement` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after successful invocation. A pre-dispatch validation error (`MCPErrorResponseException`) does **not** clear the ref map — the UI state hasn't changed, so existing refs remain valid and the AI can retry without re-snapshotting. |
 | BR-09 | The step size and boundary behaviour are determined entirely by the component and the accessibility API. The tool invokes the action once per call and accepts whatever the API does. The AI must call `swing_decrement` multiple times to decrement by more than one step. |
 | BR-10 | `doAccessibleAction` for decrement works correctly in headless mode for both `JSpinner` and `JSlider`. All happy-path tests can therefore run headless; `SwingDecrementScreenTest` exists solely for `JFrame`/`JDialog` coverage required by the component matrix. |
-| BR-11 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Posted decrement on ref=<N>` (see **DR-010**). |
+| BR-11 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched decrement on ref=<N> — call swing_snapshot to verify the outcome` (see **DR-010**). |
 
 ### Algorithm: detecting and invoking the decrement action
 
@@ -49,7 +49,7 @@ Execution order:
   - [x] The error message suggests calling `swing_snapshot` to refresh refs.
   - [x] Component without decrement support (e.g. `JButton`) returns an MCP error with `isError: true`.
   - [x] Disabled component returns an MCP error with `isError: true` explaining the component is disabled.
-  - [x] Success returns the DR-010 echo `Posted decrement on ref=N`.
+  - [x] Success returns the DR-010 echo `Dispatched decrement on ref=N — call swing_snapshot to verify the outcome`.
   - [x] Ref map is cleared after a successful call.
   - [x] MCP client smoke test.
   - [x] Each component from the component matrix is tested (dedicated test method per component).

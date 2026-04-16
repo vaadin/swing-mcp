@@ -1,5 +1,8 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
@@ -26,6 +29,7 @@ import java.util.logging.Logger;
 public class TinyMCPServer {
 
     private static final Logger LOG = Logger.getLogger(TinyMCPServer.class.getName());
+    private static final Gson GSON_WITH_NULLS = new GsonBuilder().serializeNulls().create();
 
     public static final int DEFAULT_PORT = 18088;
     public static final String DEFAULT_CONTEXT_PATH = "/mcp";
@@ -242,16 +246,51 @@ public class TinyMCPServer {
     }
 
     private void handlePost(HttpExchange exchange) throws IOException {
+        // --- Session ID validation (pre-parse) ---
+        String incomingSessionId = exchange.getRequestHeaders().getFirst("Mcp-Session-Id");
+        if (incomingSessionId != null) {
+            synchronized (this) {
+                if (!incomingSessionId.equals(activeSessionId)) {
+                    LOG.warning("Rejecting request: Mcp-Session-Id mismatch (received="
+                            + incomingSessionId + ", active=" + activeSessionId + ")");
+                    sendJsonRpcError(exchange, 404, null,
+                            MCPServerException.SERVER_NOT_INITIALIZED, "Session not found.");
+                    return;
+                }
+            }
+        }
+
         String body = readBody(exchange);
         LOG.fine("Received POST: " + body);
 
-        MCPProtocol.JsonRpcRequest request = MCPProtocol.fromJson(body, MCPProtocol.JsonRpcRequest.class);
+        MCPProtocol.JsonRpcRequest request;
+        try {
+            request = MCPProtocol.fromJson(body, MCPProtocol.JsonRpcRequest.class);
+        } catch (JsonSyntaxException e) {
+            LOG.log(Level.WARNING, "Malformed JSON in request", e);
+            sendJsonRpcError(exchange, 400, null, MCPServerException.PARSE_ERROR, "Parse error");
+            return;
+        }
         String rpcMethod = request.getMethod();
 
         // Notifications have no id — respond with 202 Accepted
         if (request.getId() == null) {
             sendPlainResponse(exchange, 202, "");
             return;
+        }
+
+        // --- Session required check (post-parse) ---
+        // initialize and ping are always allowed; everything else requires an active session.
+        if (!"initialize".equals(rpcMethod) && !"ping".equals(rpcMethod)) {
+            synchronized (this) {
+                if (activeSessionId == null) {
+                    LOG.warning("Rejecting '" + rpcMethod + "': no active session");
+                    sendJsonRpcError(exchange, 400, request.getId(),
+                            MCPServerException.SERVER_NOT_INITIALIZED,
+                            "Server not initialized. Send 'initialize' first.");
+                    return;
+                }
+            }
         }
 
         switch (rpcMethod != null ? rpcMethod : "") {
@@ -435,13 +474,33 @@ public class TinyMCPServer {
     }
 
     private void handleDelete(HttpExchange exchange) throws IOException {
+        boolean wasActive;
         synchronized (this) {
-            if (activeSessionId != null) {
+            wasActive = activeSessionId != null;
+            if (wasActive) {
                 LOG.info("Session terminated: " + activeSessionId);
                 activeSessionId = null;
             }
         }
+        if (wasActive) {
+            onSessionClosed();
+        }
         sendPlainResponse(exchange, 200, "");
+    }
+
+    /**
+     * Called when a session has been closed (via HTTP DELETE), <em>after</em>
+     * {@code activeSessionId} has been set to {@code null}. Subclasses can
+     * override this to release session-scoped resources.
+     * <p>
+     * The default implementation does nothing.
+     * <p>
+     * This method is called <em>outside</em> the server's intrinsic lock,
+     * so implementations may safely acquire their own locks (e.g. to
+     * serialise with in-flight tool calls).
+     */
+    protected void onSessionClosed() {
+        // no-op by default
     }
 
     // ===== Response helpers =====
@@ -459,6 +518,10 @@ public class TinyMCPServer {
     }
 
     private void sendJsonRpcError(HttpExchange exchange, Object id, int code, String message) throws IOException {
+        sendJsonRpcError(exchange, 200, id, code, message);
+    }
+
+    private void sendJsonRpcError(HttpExchange exchange, int httpStatus, Object id, int code, String message) throws IOException {
         MCPProtocol.ErrorObject errorObj = new MCPProtocol.ErrorObject();
         errorObj.setCode(code);
         errorObj.setMessage(message);
@@ -466,7 +529,7 @@ public class TinyMCPServer {
         MCPProtocol.JsonRpcError error = new MCPProtocol.JsonRpcError();
         error.setId(id);
         error.setError(errorObj);
-        sendJsonBody(exchange, 200, error.toJson());
+        sendJsonBody(exchange, httpStatus, GSON_WITH_NULLS.toJson(error));
     }
 
     private void sendJsonBody(HttpExchange exchange, int statusCode, String json) throws IOException {

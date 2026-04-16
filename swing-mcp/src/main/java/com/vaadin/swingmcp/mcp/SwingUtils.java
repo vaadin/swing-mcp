@@ -6,12 +6,14 @@ import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JInternalFrame;
 import javax.swing.JMenu;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTabbedPane;
 import javax.swing.JViewport;
 import javax.swing.ListSelectionModel;
 import javax.swing.UIManager;
+import javax.swing.JWindow;
 import javax.swing.WindowConstants;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumnModel;
@@ -910,6 +912,38 @@ public final class SwingUtils {
     }
 
     /**
+     * Returns {@code true} if the window is a heavyweight popup container
+     * whose content is already exposed in the accessibility tree of the
+     * invoking component — including it as a separate snapshot root would
+     * duplicate the popup subtree.
+     * <p>
+     * Swing's {@code PopupFactory} creates a {@link JWindow} and adds the
+     * {@link JPopupMenu} directly to its content pane. When the invoker is
+     * a {@link JComboBox} or {@link JMenu}, the popup items are already
+     * accessible children of the invoker, so the standalone window is
+     * redundant. Context-menu popups (whose invoker is something else) are
+     * kept, because the popup window is the <em>only</em> place the content
+     * appears.
+     *
+     * @param w the window to check
+     * @return {@code true} if the window is a redundant popup container
+     */
+    public static boolean isRedundantPopupWindow(Window w) {
+        if (!(w instanceof JWindow)) {
+            return false;
+        }
+        Container contentPane = ((JWindow) w).getContentPane();
+        for (int i = 0; i < contentPane.getComponentCount(); i++) {
+            Component child = contentPane.getComponent(i);
+            if (child instanceof JPopupMenu) {
+                Component invoker = ((JPopupMenu) child).getInvoker();
+                return invoker instanceof JComboBox || invoker instanceof JMenu;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Returns the topmost visible modal dialog, or {@code null} if no modal
      * dialog is currently visible.
      * <p>
@@ -1125,6 +1159,191 @@ public final class SwingUtils {
         if (ac == null) return "null";
         String name = ac.getAccessibleName();
         return (name != null) ? name : "null";
+    }
+
+    // ── Drag support ─────────────────────────────────────────────────────
+
+    /**
+     * A resolved component and a point within it.
+     * Used by the drag tool to resolve both real Components and virtual
+     * accessible children (JList items, JTree nodes) to a host Component
+     * and a point within that component's local coordinate system.
+     */
+    public static class ComponentAndPoint {
+        public final Component component;
+        public final int x;
+        public final int y;
+
+        public ComponentAndPoint(Component component, int x, int y) {
+            this.component = component;
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    /**
+     * Resolves an {@link Accessible} to a host {@link Component} and a point
+     * within that component's local coordinate system.
+     * <ul>
+     *   <li>If the accessible IS a Component, returns it with its center as
+     *       the point.</li>
+     *   <li>If the accessible is a virtual child (e.g., JList item, JTree node),
+     *       walks up via {@code getAccessibleParent()} to find the host Component,
+     *       then uses the child's {@code AccessibleComponent.getBounds()} to compute
+     *       the child's center within the host.</li>
+     * </ul>
+     *
+     * @return the resolved component and point, or {@code null} if no Component
+     *         ancestor can be found
+     */
+    public static ComponentAndPoint resolveComponentAndPoint(Accessible a) {
+        if (a instanceof Component) {
+            Component c = (Component) a;
+            return new ComponentAndPoint(c, c.getWidth() / 2, c.getHeight() / 2);
+        }
+
+        // Virtual accessible child — get bounds within parent and walk up to host Component
+        AccessibleContext ac = a.getAccessibleContext();
+        if (ac == null) return null;
+
+        AccessibleComponent accessibleComponent = ac.getAccessibleComponent();
+        if (accessibleComponent != null) {
+            java.awt.Rectangle bounds = accessibleComponent.getBounds();
+            if (bounds != null) {
+                int childCenterX = bounds.x + bounds.width / 2;
+                int childCenterY = bounds.y + bounds.height / 2;
+
+                // Walk up to find the host Component
+                Accessible parent = ac.getAccessibleParent();
+                while (parent != null) {
+                    if (parent instanceof Component) {
+                        return new ComponentAndPoint((Component) parent, childCenterX, childCenterY);
+                    }
+                    AccessibleContext parentAc = parent.getAccessibleContext();
+                    if (parentAc == null) break;
+                    parent = parentAc.getAccessibleParent();
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Creates a {@link Runnable} that synthesizes a drag event sequence,
+     * all dispatched to the given source component.
+     * <p>
+     * Without waypoints: 7 events (PRESSED + 5 DRAGGED + RELEASED).
+     * With waypoints: PRESSED, then interpolated DRAGGED events per segment
+     * (source→wp1, wp1→wp2, ..., wpN→target), then RELEASED.
+     * Timestamps increment by 16ms per event.
+     *
+     * @param source     the component to dispatch all events to
+     * @param pressX     the press X coordinate in source-local coords
+     * @param pressY     the press Y coordinate in source-local coords
+     * @param targetX    the release X coordinate in source-local coords
+     * @param targetY    the release Y coordinate in source-local coords
+     * @param waypoints  intermediate points in source-local coords (may be empty);
+     *                   each element is {@code int[]{x, y}}
+     * @return a Runnable that dispatches the full drag event sequence
+     */
+    public static Runnable createDragAction(Component source, int pressX, int pressY,
+                                            int targetX, int targetY,
+                                            java.util.List<int[]> waypoints) {
+        return () -> {
+            long now = System.currentTimeMillis();
+
+            // 1. MOUSE_PRESSED at press point
+            source.dispatchEvent(new MouseEvent(source, MouseEvent.MOUSE_PRESSED,
+                    now, InputEvent.BUTTON1_DOWN_MASK,
+                    pressX, pressY, 0, false, MouseEvent.BUTTON1));
+
+            // 2. MOUSE_DRAGGED — interpolate through segments
+            int fromX = pressX, fromY = pressY;
+
+            // Build segment endpoints: waypoints + target
+            java.util.List<int[]> segments = new java.util.ArrayList<>(waypoints);
+            segments.add(new int[]{targetX, targetY});
+
+            int stepsPerSegment = waypoints.isEmpty() ? 5 : 3;
+            for (int[] seg : segments) {
+                int toX = seg[0], toY = seg[1];
+                for (int i = 1; i <= stepsPerSegment; i++) {
+                    int x = fromX + (toX - fromX) * i / stepsPerSegment;
+                    int y = fromY + (toY - fromY) * i / stepsPerSegment;
+                    now += 16;
+                    source.dispatchEvent(new MouseEvent(source, MouseEvent.MOUSE_DRAGGED,
+                            now, InputEvent.BUTTON1_DOWN_MASK,
+                            x, y, 0, false, MouseEvent.NOBUTTON));
+                }
+                fromX = toX;
+                fromY = toY;
+            }
+
+            // 3. MOUSE_RELEASED at target point
+            now += 16;
+            source.dispatchEvent(new MouseEvent(source, MouseEvent.MOUSE_RELEASED,
+                    now, 0,
+                    targetX, targetY, 0, false, MouseEvent.BUTTON1));
+        };
+    }
+
+    /**
+     * Creates a {@link Runnable} that performs a drag using {@link java.awt.Robot},
+     * generating real OS-level mouse events.
+     * <p>
+     * Without waypoints: moves in 10 steps from press to target.
+     * With waypoints: moves through each waypoint with 3 intermediate steps
+     * per segment before reaching the target.
+     * All coordinates are in screen-absolute space.
+     *
+     * @param pressScreenX   the press X coordinate in screen coords
+     * @param pressScreenY   the press Y coordinate in screen coords
+     * @param targetScreenX  the release X coordinate in screen coords
+     * @param targetScreenY  the release Y coordinate in screen coords
+     * @param waypoints      intermediate points in screen coords (may be empty);
+     *                       each element is {@code int[]{screenX, screenY}}
+     * @return a Runnable that performs the full drag via Robot
+     */
+    public static Runnable createRobotDragAction(int pressScreenX, int pressScreenY,
+                                                  int targetScreenX, int targetScreenY,
+                                                  java.util.List<int[]> waypoints) {
+        return () -> {
+            try {
+                java.awt.Robot robot = new java.awt.Robot();
+                robot.setAutoDelay(50);
+
+                // 1. Move to press point and press
+                robot.mouseMove(pressScreenX, pressScreenY);
+                robot.delay(100);
+                robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+                robot.delay(100);
+
+                // 2. Drag through segments: waypoints + target
+                int fromX = pressScreenX, fromY = pressScreenY;
+
+                java.util.List<int[]> segments = new java.util.ArrayList<>(waypoints);
+                segments.add(new int[]{targetScreenX, targetScreenY});
+
+                int stepsPerSegment = waypoints.isEmpty() ? 10 : 3;
+                for (int[] seg : segments) {
+                    int toX = seg[0], toY = seg[1];
+                    for (int i = 1; i <= stepsPerSegment; i++) {
+                        int x = fromX + (toX - fromX) * i / stepsPerSegment;
+                        int y = fromY + (toY - fromY) * i / stepsPerSegment;
+                        robot.mouseMove(x, y);
+                    }
+                    fromX = toX;
+                    fromY = toY;
+                }
+
+                // 3. Release at target
+                robot.delay(100);
+                robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+            } catch (java.awt.AWTException e) {
+                throw new RuntimeException("Robot could not be created: " + e.getMessage(), e);
+            }
+        };
     }
 
     public static Number serializeNumber(Number value) {

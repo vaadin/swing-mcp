@@ -60,7 +60,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
         snapshot(spinner);
         int ref = context.getRefOf(spinner);
         MCPProtocol.Content result = decrement(ref);
-        assertEquals("Posted decrement on ref=" + ref, result.getText());
+        assertEquals("Dispatched decrement on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
         assertEquals(4, spinner.getValue());
     }
 
@@ -91,7 +91,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
         snapshot(slider);
         int ref = context.getRefOf(slider);
         MCPProtocol.Content result = decrement(ref);
-        assertEquals("Posted decrement on ref=" + ref, result.getText());
+        assertEquals("Dispatched decrement on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
         assertEquals(49, slider.getValue());
     }
 
@@ -108,7 +108,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
         snapshot(spinner);
         int ref = context.getRefOf(spinner);
         MCPProtocol.Content result = decrement(ref);
-        assertEquals("Posted decrement on ref=" + ref, result.getText());
+        assertEquals("Dispatched decrement on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
         assertEquals(0, spinner.getValue(), "Value should stay at min");
     }
 
@@ -122,7 +122,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
         snapshot(spinner);
         int ref = context.getRefOf(spinner);
         MCPProtocol.Content result = decrement(ref);
-        assertEquals("Posted decrement on ref=" + ref, result.getText());
+        assertEquals("Dispatched decrement on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
         assertEquals(min, spinner.getValue(), "Date should stay at min");
     }
 
@@ -170,7 +170,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
         snapshot(spinner);
         int ref = context.getRefOf(spinner);
         MCPProtocol.Content result = decrement(ref);
-        assertEquals("Posted decrement on ref=" + ref, result.getText());
+        assertEquals("Dispatched decrement on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
     }
 
     @Test
@@ -212,7 +212,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
         snapshot(spinner);
         int ref = context.getRefOf(spinner);
         MCPProtocol.Content result = decrement(ref);
-        assertEquals("Posted decrement on ref=" + ref, result.getText());
+        assertEquals("Dispatched decrement on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
         assertEquals(4, spinner.getValue());
     }
 
@@ -222,7 +222,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
         snapshot(slider);
         int ref = context.getRefOf(slider);
         MCPProtocol.Content result = decrement(ref);
-        assertEquals("Posted decrement on ref=" + ref, result.getText());
+        assertEquals("Dispatched decrement on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
         assertEquals(49, slider.getValue());
     }
 

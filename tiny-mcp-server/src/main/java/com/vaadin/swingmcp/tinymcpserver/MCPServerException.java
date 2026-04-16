@@ -24,6 +24,9 @@ public class MCPServerException extends RuntimeException {
     /** Internal JSON-RPC error. */
     public static final int INTERNAL_ERROR = -32603;
 
+    /** Server has not been initialized (implementation-defined server error). */
+    public static final int SERVER_NOT_INITIALIZED = -32002;
+
     private final int code;
 
     public MCPServerException(int code, String message) {

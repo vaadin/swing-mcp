@@ -21,7 +21,7 @@ Iconifies (minimizes) a Frame (including JFrame) or JInternalFrame — needed be
 | BR-06 | `isEffectivelyEnabled()` is **not** checked. Iconifying is a window-level action; it does not depend on the component's enabled state. |
 | BR-07 | `swing_iconify` is a **mutation tool** — it clears the ref map after successful execution (see **architecture.md §3 rule 3**). A pre-dispatch validation error (`MCPErrorResponseException`) does **not** clear the ref map. |
 | BR-08 | **Snapshot action:** `iconify` is listed in the actions of a Frame or JInternalFrame when `supportsIconify()` returns true. |
-| BR-09 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Posted iconify on ref=<N>` (see **DR-010**). |
+| BR-09 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched iconify on ref=<N> — call swing_snapshot to verify the outcome` (see **DR-010**). |
 
 ### Algorithm: detecting iconify support
 
@@ -69,6 +69,6 @@ The client calls `swing_snapshot` after to determine whether the frame was iconi
   - [x] Calling `swing_iconify` on a JInternalFrame with `isIconifiable() == false` returns an MCP error with `isError: true` and message "JInternalFrame is not iconifiable".
   - [x] Snapshot of a visible iconifiable JInternalFrame shows `iconify` in its actions.
   - [x] Snapshot of a JInternalFrame with `isIconifiable() == false` does not show `iconify` in its actions.
-  - [x] Calling `swing_iconify` on a JInternalFrame whose `VetoableChangeListener` rejects the iconify returns the DR-010 echo `Posted iconify on ref=N`; the internal frame is still showing (not replaced by JDesktopIcon) — verifies we call `setIcon(true)` which respects vetoes.
+  - [x] Calling `swing_iconify` on a JInternalFrame whose `VetoableChangeListener` rejects the iconify returns the DR-010 echo `Dispatched iconify on ref=N — call swing_snapshot to verify the outcome`; the internal frame is still showing (not replaced by JDesktopIcon) — verifies we call `setIcon(true)` which respects vetoes.
   - [x] JDesktopIcon does not show `iconify` in its actions.
   - [x] `JDesktopPane` component matrix: `swing_iconify` returns an MCP error with `isError: true`.
