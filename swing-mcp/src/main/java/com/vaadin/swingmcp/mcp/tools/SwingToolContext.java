@@ -51,7 +51,14 @@ public class SwingToolContext {
     public Accessible getAccessibleByRef(int ref) {
         var result = componentRefs.get(ref);
         if (result == null) {
-            throw new MCPServerException(MCPServerException.INVALID_PARAMS, "No component with ref " + ref + ". The ref map is empty or stale — it is cleared after every successful mutation. Call swing_snapshot to rebuild it.");
+            if (componentRefs.isEmpty()) {
+                throw new MCPServerException(MCPServerException.INVALID_PARAMS,
+                        "Component with ref " + ref + " invalid — the ref map is stale (empty). It is cleared after every successful mutation. Call swing_snapshot to rebuild it.");
+            }
+            int min = Collections.min(componentRefs.keySet());
+            int max = Collections.max(componentRefs.keySet());
+            throw new MCPServerException(MCPServerException.INVALID_PARAMS,
+                    "Component with ref " + ref + " does not exist (valid refs: " + min + "–" + max + ").");
         }
         return result;
     }

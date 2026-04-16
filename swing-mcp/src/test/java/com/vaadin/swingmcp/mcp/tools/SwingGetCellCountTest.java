@@ -128,7 +128,7 @@ class SwingGetCellCountTest extends AbstractHeadlessTest {
         MCPServerException ex = assertThrows(MCPServerException.class,
                 () -> getCount(999));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
-        assertTrue(ex.getMessage().contains("swing_snapshot"));
+        assertEquals("Component with ref 999 does not exist (valid refs: 1\u20132).", ex.getMessage());
     }
 
     @Test

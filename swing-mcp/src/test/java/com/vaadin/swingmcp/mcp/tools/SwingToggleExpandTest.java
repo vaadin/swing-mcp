@@ -97,8 +97,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
 
         MCPServerException ex = assertThrows(MCPServerException.class, () -> toggleExpand(999));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
-        assertTrue(ex.getMessage().contains("swing_snapshot"),
-                "Error should suggest calling swing_snapshot, got: " + ex.getMessage());
+        assertEquals("Component with ref 999 does not exist (valid refs: 1\u20131).", ex.getMessage());
     }
 
     @Test

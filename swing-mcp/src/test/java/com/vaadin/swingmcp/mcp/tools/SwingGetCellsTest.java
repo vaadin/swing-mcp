@@ -321,8 +321,7 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         snapshot(list);
         MCPServerException ex = assertThrows(MCPServerException.class,
                 () -> getCells(9999, 0, 5));
-        assertTrue(ex.getMessage().contains("swing_snapshot"),
-                "Error should suggest calling swing_snapshot, got: " + ex.getMessage());
+        assertEquals("Component with ref 9999 does not exist (valid refs: 1\u20132).", ex.getMessage());
     }
 
     @Test

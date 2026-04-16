@@ -80,8 +80,7 @@ class SwingGetDescriptionTest extends AbstractHeadlessTest {
 
         MCPServerException ex = assertThrows(MCPServerException.class,
                 () -> getDescription(9999));
-        assertTrue(ex.getMessage().contains("swing_snapshot"),
-                "Error should suggest calling swing_snapshot");
+        assertEquals("Component with ref 9999 does not exist (valid refs: 1\u20131).", ex.getMessage());
     }
 
     @Test
