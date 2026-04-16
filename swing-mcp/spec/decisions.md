@@ -1421,3 +1421,109 @@ this DR declares the rules as a design commitment that will not
 evolve, with the rejected alternatives captured so future sessions
 (AI or human) do not re-litigate them. If §5's rules ever change,
 this DR must be **superseded explicitly**, not amended silently.
+
+---
+
+## DR-018 — `swing_fill_form` batch tool deferred
+
+**Status:** Deferred
+**Applies to:** hypothetical `swing_fill_form` tool, DR-006
+(fire-and-forget dispatch)
+**Decided:** 2026-04-16
+
+**Motivation.** UX feedback from AI-client sessions identified
+form-filling as the highest-cost interaction pattern. Filling an
+N-field form requires `2N+1` tool calls: `snapshot → set_text →
+snapshot → set_text → … → snapshot → click`. Each call is a
+network round-trip plus token cost. A batch tool accepting an
+ordered list of `{ref, value}` pairs could collapse this to 3
+calls: `snapshot → fill_form → snapshot`.
+
+**Proposed design (explored, not built).**
+
+1. Accept an ordered list of `[{ref, value}, ...]`.
+2. Validate-first: resolve all refs, confirm each component
+   supports `set_text` or `set_value`, confirm each is enabled and
+   visible. Reject the entire batch if any pre-check fails.
+3. Execute sequentially on the EDT with ~20ms inter-field delay
+   (let Swing event loop process listeners between fields).
+4. Before each write, re-check: component still visible, enabled,
+   not blocked by a modal dialog. If any check fails, bail
+   immediately — do not attempt remaining fields.
+5. Auto-dispatch `set_text` vs `set_value` based on component type
+   (`supportsSetText()` → `set_text`; `supportsSetValue()` →
+   `set_value`).
+6. Fire-and-forget (mandatory per DR-006 — synchronous dispatch
+   deadlocks on blocking dialogs). Refs invalidated on return.
+
+**Why deferred — three compounding problems.**
+
+**Problem 1: fire-and-forget is architecturally hostile to
+multi-step batch operations.** DR-006's fire-and-forget model is
+sound for single-step mutations: the window between dispatch and
+completion is one EDT cycle — effectively atomic from the client's
+perspective. For a batch tool, the window spans N × 20ms, during
+which observable state can change and revert without the client
+ever seeing it. This is not a `fill_form` bug; it is a structural
+constraint of the execution model.
+
+**Problem 2: invisible bail-outs.** The batch must bail immediately
+when a field becomes inaccessible (modal dialog, disabled, hidden).
+When the obstacle is persistent (a modal dialog stays open), the
+next `swing_snapshot` reveals it and the AI can infer that
+`fill_form` stopped. But when the obstacle is *transient* — a
+field briefly goes read-only during an async fetch, a spinner
+overlay appears for 200ms, a validation listener momentarily
+disables a dependent field — `fill_form` bails, the transient
+state resolves, and by the time the AI snapshots the form looks
+normal. The AI sees a half-filled form with all fields editable
+and **no evidence** that anything went wrong. It cannot distinguish
+"fill_form completed" from "fill_form bailed and the obstacle
+cleared" from "fill_form is still running." Making `fill_form`
+synchronous (to return a result) is not an option: if a field's
+setter triggers a blocking modal dialog, the EDT blocks, the MCP
+server blocks, and the client blocks — nobody can dismiss the
+dialog (the same deadlock DR-006 was created to prevent).
+
+**Problem 3: the bootstrap paradox.** The AI cannot determine
+*a priori* whether a form is "simple" (safe for batch filling)
+or "complex" (has inter-field dependencies, async validation,
+conditional visibility). The only way to discover this is to
+interact with the form — at which point the tokens that
+`fill_form` was supposed to save have already been spent.
+Documenting "usability is limited to simple forms" pushes the
+complexity onto the AI, which has no way to evaluate it without
+the very exploration the tool was meant to skip.
+
+**Revisit trigger.** Concrete telemetry showing that form-filling
+accounts for a dominant share of token spend across real
+AI-client sessions. If the data justifies revisiting, the right
+entry point is a mechanism that can report batch outcome to the
+client — possibly a context-stored terminal state surfaced in the
+next `swing_snapshot` response — rather than iterating on the
+pure fire-and-forget design explored here.
+
+**Alternatives considered.**
+
+- **"Lightweight" vs "structural" mutation classification —
+  keep refs valid after set_text/set_value, clear only after
+  click/close.** Rejected before reaching design — any mutation
+  can trigger structural changes via listeners. A selection
+  change can rebuild a master-detail form; a text change can
+  reveal/hide dependent fields. The lightweight/structural
+  distinction does not exist in Swing's event model.
+- **Store batch terminal state in context, surface in next
+  snapshot (e.g. `"fill_form: completed 3/5, bailed at field 4:
+  modal dialog"`).** Viable in principle but adds significant
+  machinery (context state, snapshot integration, state
+  lifecycle management) for a tool whose applicability is
+  already narrow. Deferred alongside the tool itself.
+- **Synchronous batch with per-field timeout.** Rejected — does
+  not close the deadlock window. If field K's setter triggers a
+  modal, the timeout fires *on the MCP server thread* but the
+  EDT is still blocked inside the setter's event loop. The
+  server thread cannot cancel an in-progress EDT task.
+- **Accept the ambiguity, document limitations.** Rejected as
+  insufficient — invisible bail-outs (Problem 2) mean the AI
+  cannot even detect when the tool failed, let alone recover.
+  Documentation helps only when the failure is observable.
