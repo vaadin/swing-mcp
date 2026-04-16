@@ -42,8 +42,8 @@ class TinyMCPServerSessionTest {
     }
 
     /**
-     * Terminates any active session before each test so every test
-     * starts with a clean slate ({@code activeSessionId == null}).
+     * Terminates all active sessions before each test so every test
+     * starts with a clean slate.
      */
     @BeforeEach
     void resetSession() throws Exception {
@@ -175,16 +175,9 @@ class TinyMCPServerSessionTest {
 
     @Test
     void unknownSessionIdWhenNoActiveSessionReturns404() throws Exception {
-        // No init — activeSessionId is null. Any Mcp-Session-Id is unknown.
+        // No init — no sessions. Any Mcp-Session-Id is unknown.
         HttpResponse<String> resp = post(jsonRpc("initialize", 1), "some-random-id");
         assertJsonRpcError(resp, 404, -32002, "Session not found.");
-    }
-
-    @Test
-    void doubleInitializeReturnsJsonRpcError409() throws Exception {
-        initialize();
-        HttpResponse<String> resp = post(jsonRpc("initialize", 2), null);
-        assertJsonRpcError(resp, 409, -32002, "Another session is already active");
     }
 
     @Test
@@ -192,5 +185,85 @@ class TinyMCPServerSessionTest {
         initialize();
         HttpResponse<String> resp = post(jsonRpc("ping", 2), "wrong-session-id");
         assertJsonRpcError(resp, 404, -32002, "Session not found.");
+    }
+
+    // ===== Multi-session =====
+
+    @Test
+    void doubleInitializeCreatesSecondSession() throws Exception {
+        String first = initialize();
+        String second = initialize();
+        assertNotNull(second);
+        assertNotEquals(first, second, "second session should have a different ID");
+    }
+
+    @Test
+    void twoSessionsOperateIndependently() throws Exception {
+        String sessionA = initialize();
+        String sessionB = initialize();
+
+        // Session A can list tools
+        HttpResponse<String> respA = post(jsonRpc("tools/list", 10), sessionA);
+        assertEquals(200, respA.statusCode());
+        JsonObject bodyA = MCPProtocol.fromJson(respA.body(), JsonObject.class);
+        assertNotNull(bodyA.get("result"), "session A should get a result");
+
+        // Session B can list tools
+        HttpResponse<String> respB = post(jsonRpc("tools/list", 11), sessionB);
+        assertEquals(200, respB.statusCode());
+        JsonObject bodyB = MCPProtocol.fromJson(respB.body(), JsonObject.class);
+        assertNotNull(bodyB.get("result"), "session B should get a result");
+
+        // Delete session A
+        delete(sessionA);
+
+        // Session A no longer works
+        HttpResponse<String> respA2 = post(jsonRpc("tools/list", 12), sessionA);
+        assertJsonRpcError(respA2, 404, -32002, "Session not found.");
+
+        // Session B still works
+        HttpResponse<String> respB2 = post(jsonRpc("tools/list", 13), sessionB);
+        assertEquals(200, respB2.statusCode());
+    }
+
+    // ===== acceptNewSession hook =====
+
+    @Test
+    void acceptNewSessionHookCanRejectSecondSession() throws Exception {
+        TinyMCPServer singleSessionServer = new TinyMCPServer(0, "/mcp") {
+            @Override
+            protected boolean acceptNewSession() {
+                return getSessionCount() == 0;
+            }
+        };
+        singleSessionServer.addTool("echo", "Echo tool",
+                new InputSchemaBuilder().requiredString("msg", "message").build(),
+                params -> MCPProtocol.Content.text((String) params.get("msg")));
+        singleSessionServer.start();
+        try {
+            URI uri = URI.create(singleSessionServer.getUrl());
+
+            // First initialize succeeds
+            HttpResponse<String> resp1 = http.send(
+                    HttpRequest.newBuilder(uri)
+                            .header("Content-Type", "application/json")
+                            .header("Accept", "application/json, text/event-stream")
+                            .POST(HttpRequest.BodyPublishers.ofString(jsonRpc("initialize", 1)))
+                            .build(),
+                    HttpResponse.BodyHandlers.ofString());
+            assertEquals(200, resp1.statusCode());
+
+            // Second initialize rejected
+            HttpResponse<String> resp2 = http.send(
+                    HttpRequest.newBuilder(uri)
+                            .header("Content-Type", "application/json")
+                            .header("Accept", "application/json, text/event-stream")
+                            .POST(HttpRequest.BodyPublishers.ofString(jsonRpc("initialize", 2)))
+                            .build(),
+                    HttpResponse.BodyHandlers.ofString());
+            assertJsonRpcError(resp2, 409, -32002, "Another session is already active");
+        } finally {
+            singleSessionServer.stop();
+        }
     }
 }

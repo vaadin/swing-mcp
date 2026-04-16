@@ -18,7 +18,7 @@ import java.util.logging.Logger;
  * Request-scoped wrapper around {@link HttpExchange} that provides
  * JSON-RPC response helpers. Created once per incoming request; holds
  * the mutable request ID (set after parsing) and the session ID
- * (captured at construction, updatable for the initialize flow).
+ * (set by {@link TinyMCPServer} after routing to a session).
  */
 class JsonRpcExchange {
 
@@ -29,9 +29,8 @@ class JsonRpcExchange {
     private String sessionId;
     private Object requestId;
 
-    JsonRpcExchange(HttpExchange exchange, String sessionId) {
+    JsonRpcExchange(HttpExchange exchange) {
         this.exchange = exchange;
-        this.sessionId = sessionId;
     }
 
     HttpExchange getHttpExchange() { return exchange; }
@@ -82,20 +81,11 @@ class JsonRpcExchange {
      * the request ID. Returns the parsed request on success, or {@code null}
      * if the response has already been sent (parse error, batch request,
      * or notification).
+     * <p>
+     * Session ID validation is handled by {@link TinyMCPServer} before
+     * this method is called.
      */
     MCPProtocol.JsonRpcRequest parsePost() throws IOException {
-        // --- Session ID validation (pre-parse) ---
-        String incomingSessionId = getHttpExchange().getRequestHeaders().getFirst("Mcp-Session-Id");
-        if (incomingSessionId != null) {
-            if (!incomingSessionId.equals(sessionId)) {
-                LOG.warning("Rejecting request: Mcp-Session-Id mismatch (received="
-                        + incomingSessionId + ", active=" + sessionId + ")");
-                sendError(404,
-                        MCPServerException.SERVER_NOT_INITIALIZED, "Session not found.");
-                return null;
-            }
-        }
-
         String body = readBody();
         LOG.fine("Received POST: " + body);
 
