@@ -1,8 +1,5 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonSyntaxException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
@@ -260,44 +257,10 @@ public class TinyMCPServer {
             }
         }
 
-        String body = rpc.readBody();
-        LOG.fine("Received POST: " + body);
+        MCPProtocol.JsonRpcRequest request = rpc.parsePost();
+        if (request == null) return;
 
-        // Parse as a generic JsonElement first so we can distinguish
-        // malformed JSON (-32700) from valid-JSON-but-wrong-shape (-32600).
-        JsonElement jsonElement;
-        try {
-            jsonElement = MCPProtocol.fromJson(body, JsonElement.class);
-        } catch (JsonSyntaxException e) {
-            LOG.log(Level.WARNING, "Malformed JSON in request", e);
-            rpc.sendError(400, MCPServerException.PARSE_ERROR, "Parse error");
-            return;
-        }
-
-        if (jsonElement instanceof JsonArray) {
-            LOG.warning("Batch requests are not supported");
-            rpc.sendError(400,
-                    MCPServerException.INVALID_REQUEST, "Batch requests are not supported");
-            return;
-        }
-
-        MCPProtocol.JsonRpcRequest request;
-        try {
-            request = MCPProtocol.gson().fromJson(jsonElement, MCPProtocol.JsonRpcRequest.class);
-        } catch (JsonSyntaxException e) {
-            LOG.log(Level.WARNING, "Invalid JSON-RPC request", e);
-            rpc.sendError(400, MCPServerException.INVALID_REQUEST, "Invalid Request");
-            return;
-        }
         String rpcMethod = request.getMethod();
-
-        // Notifications have no id — respond with 202 Accepted
-        if (request.getId() == null) {
-            rpc.sendPlain(202, "");
-            return;
-        }
-
-        rpc.setRequestId(request.getId());
 
         // --- Session required check (post-parse) ---
         // initialize and ping are always allowed; everything else requires an active session.
