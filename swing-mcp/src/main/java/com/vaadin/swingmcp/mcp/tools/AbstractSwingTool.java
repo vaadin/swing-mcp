@@ -43,6 +43,7 @@ public abstract class AbstractSwingTool {
     public static final String TOOL_SWING_GET_CELL_COUNT = "swing_get_cell_count";
     public static final String TOOL_SWING_ICONIFY = "swing_iconify";
     public static final String TOOL_SWING_RESTORE = "swing_restore";
+    public static final String TOOL_SWING_GET_DESCRIPTION = "swing_get_description";
 
     /**
      * @return the MCP tool name (e.g. {@code "swing_snapshot"})

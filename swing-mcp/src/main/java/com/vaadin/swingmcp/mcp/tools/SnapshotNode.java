@@ -688,24 +688,11 @@ class SnapshotNode {
             sb.append(" \"").append(name).append('"');
         }
 
-        // Description (BR-10): real accessibleDescription if non-blank,
-        // else the tooltip via getTooltipAsText (covers JTabbedPane per-tab
-        // tooltips and other cases the JDK's auto-fallback misses). HTML
-        // cleanup is applied unconditionally because
-        // JComponent.AccessibleJComponent.getAccessibleDescription() already
-        // auto-falls-back to getToolTipText() inside the JDK — so an
-        // "explicit-looking" description may actually be a (potentially HTML)
-        // tooltip. Sanitised per BR-13 / DR-014 (covers non-HTML descriptions
-        // with embedded newlines/quotes that htmlToPlainText passes through).
-        // Result is capped at MAX_DESCRIPTION_LENGTH chars symmetrically
-        // across all sources (DR-014 §3 — description stays capped).
-        String desc = ctx != null
-                ? SwingUtils.htmlToPlainText(ctx.getAccessibleDescription())
-                : null;
-        if (desc == null) {
-            desc = SwingUtils.getTooltipAsText(accessible);
-        }
-        desc = SwingUtils.sanitizeForQuotedSlot(desc);
+        // Description (BR-10): resolved via SwingUtils.resolveDescription()
+        // which tries accessibleDescription (with HTML cleanup), then tooltip
+        // fallback, then sanitises. Result is capped at MAX_DESCRIPTION_LENGTH
+        // chars symmetrically across all sources (DR-014 §3).
+        String desc = SwingUtils.resolveDescription(accessible);
         if (desc != null) {
             sb.append(" \"").append(capDescription(desc)).append('"');
         }
@@ -948,6 +935,17 @@ class SnapshotNode {
         // Step 9: restore (synthetic, for iconified frames and JDesktopIcon)
         if (SwingUtils.supportsRestore(accessible)) {
             actions.add("restore");
+        }
+
+        // Step 10 (UC-024): description retrieval when description is capped.
+        // The resolved description exceeds MAX_DESCRIPTION_LENGTH → the snapshot
+        // will cap it with '…', so advertise get_description so the AI can
+        // retrieve the full text. This can be the sole action on a node
+        // (e.g. a JLabel with a long tooltip), giving it a ref it would not
+        // otherwise have.
+        String desc = SwingUtils.resolveDescription(accessible);
+        if (desc != null && desc.length() > MAX_DESCRIPTION_LENGTH) {
+            actions.add("get_description");
         }
 
         return actions;
