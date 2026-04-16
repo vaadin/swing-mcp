@@ -1,6 +1,7 @@
 package com.vaadin.swingmcp.mcp;
 
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tinymcpserver.MCPSession;
 import com.vaadin.swingmcp.tinymcpserver.TinyMCPServer;
 import javax.swing.SwingUtilities;
 import com.vaadin.swingmcp.mcp.tools.AbstractSwingTool;
@@ -69,7 +70,11 @@ public class MCPServer {
         serverInfo.setVersion(SERVER_VERSION);
         this.server = new TinyMCPServer(port, contextPath, serverInfo, INSTRUCTIONS) {
             @Override
-            protected void onSessionClosed() {
+            protected boolean acceptNewSession() {
+                return getSessionCount() == 0;
+            }
+            @Override
+            protected void onSessionClosed(MCPSession session) {
                 toolLock.lock();
                 try {
                     context.clearRefMap();

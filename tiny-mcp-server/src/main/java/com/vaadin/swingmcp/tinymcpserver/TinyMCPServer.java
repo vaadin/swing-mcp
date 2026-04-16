@@ -5,9 +5,11 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -15,6 +17,10 @@ import java.util.logging.Logger;
 /**
  * A minimal in-process MCP server using Java's built-in HttpServer.
  * Supports only HTTP transport (no STDIO), binds to 127.0.0.1 only.
+ * <p>
+ * Handles HTTP lifecycle, session creation/destruction, and routing.
+ * Protocol dispatch for session-scoped requests is delegated to
+ * {@link MCPSession}.
  */
 public class TinyMCPServer {
 
@@ -75,7 +81,10 @@ public class TinyMCPServer {
     private HttpServer httpServer;
     /** Populated by {@link #start()} once the OS has assigned a port. */
     private volatile int boundPort = -1;
-    private String activeSessionId;
+
+    private final ConcurrentHashMap<String, MCPSession> sessions = new ConcurrentHashMap<>();
+    /** Serialises {@code initialize} requests to prevent TOCTOU races in {@link #acceptNewSession()}. */
+    private final Object initializeLock = new Object();
 
     public TinyMCPServer() {
         this(DEFAULT_PORT, DEFAULT_CONTEXT_PATH);
@@ -178,10 +187,7 @@ public class TinyMCPServer {
     }
 
     private void handleRequest(HttpExchange exchange) {
-        JsonRpcExchange rpc;
-        synchronized (this) {
-            rpc = new JsonRpcExchange(exchange, activeSessionId);
-        }
+        JsonRpcExchange rpc = new JsonRpcExchange(exchange);
         try {
             String method = exchange.getRequestMethod();
             switch (method) {
@@ -206,60 +212,66 @@ public class TinyMCPServer {
     }
 
     private void handlePost(JsonRpcExchange rpc) throws IOException {
+        // Session ID header validation: if present, must match a known session
+        String incomingSessionId = rpc.getHttpExchange().getRequestHeaders()
+                .getFirst("Mcp-Session-Id");
+        if (incomingSessionId != null && !sessions.containsKey(incomingSessionId)) {
+            LOG.warning("Rejecting request: unknown Mcp-Session-Id " + incomingSessionId);
+            rpc.sendError(404,
+                    MCPServerException.SERVER_NOT_INITIALIZED, "Session not found.");
+            return;
+        }
+
         MCPProtocol.JsonRpcRequest request = rpc.parsePost();
         if (request == null) return;
 
         String rpcMethod = request.getMethod();
 
-        // --- Session required check (post-parse) ---
-        // initialize and ping are always allowed; everything else requires an active session.
-        if (!"initialize".equals(rpcMethod) && !"ping".equals(rpcMethod)) {
-            synchronized (this) {
-                if (activeSessionId == null) {
-                    LOG.warning("Rejecting '" + rpcMethod + "': no active session");
-                    rpc.sendError(400,
-                            MCPServerException.SERVER_NOT_INITIALIZED,
-                            "Server not initialized. Send 'initialize' first.");
-                    return;
-                }
-            }
+        // Server-level methods (no session required)
+        if ("initialize".equals(rpcMethod)) {
+            handleInitialize(rpc);
+            return;
+        }
+        if ("ping".equals(rpcMethod)) {
+            handlePing(rpc);
+            return;
         }
 
-        switch (rpcMethod != null ? rpcMethod : "") {
-            case "initialize":
-                handleInitialize(rpc);
-                break;
-            case "ping":
-                handlePing(rpc);
-                break;
-            case "tools/list":
-                toolHandler.handleToolsList(rpc);
-                break;
-            case "tools/call":
-                toolHandler.handleToolsCall(rpc, request);
-                break;
-            case "resources/list":
-                handleResourcesList(rpc);
-                break;
-            case "prompts/list":
-                handlePromptsList(rpc);
-                break;
-            default:
-                rpc.sendError(-32601, "Method not found: " + rpcMethod);
-                break;
+        // Session-scoped methods — require Mcp-Session-Id header
+        if (incomingSessionId == null) {
+            LOG.warning("Rejecting '" + rpcMethod + "': no Mcp-Session-Id header");
+            rpc.sendError(400,
+                    MCPServerException.SERVER_NOT_INITIALIZED,
+                    "Server not initialized. Send 'initialize' first.");
+            return;
+        }
+        MCPSession session = sessions.get(incomingSessionId);
+        if (session == null) {
+            // Race: session removed between header check and lookup
+            rpc.sendError(404,
+                    MCPServerException.SERVER_NOT_INITIALIZED, "Session not found.");
+            return;
+        }
+
+        rpc.setSessionId(session.getId());
+        synchronized (session) {
+            session.handlePost(rpc, request);
         }
     }
 
     private void handleInitialize(JsonRpcExchange rpc) throws IOException {
-        synchronized (this) {
-            if (activeSessionId != null) {
-                LOG.warning("Rejecting initialization: another session is already active (id=" + activeSessionId + ")");
+        MCPSession session;
+        synchronized (initializeLock) {
+            if (!acceptNewSession()) {
+                LOG.warning("Rejecting initialization: acceptNewSession() returned false");
                 rpc.sendError(409, -32002, "Another session is already active");
                 return;
             }
-            activeSessionId = UUID.randomUUID().toString();
-            rpc.setSessionId(activeSessionId);
+            String sessionId = UUID.randomUUID().toString();
+            session = new MCPSession(sessionId, toolHandler);
+            sessions.put(sessionId, session);
         }
+        rpc.setSessionId(session.getId());
 
         MCPProtocol.InitializeResult result = new MCPProtocol.InitializeResult();
         result.setProtocolVersion(PROTOCOL_VERSION);
@@ -280,45 +292,65 @@ public class TinyMCPServer {
         rpc.sendResponseRaw("{}");
     }
 
-    private void handleResourcesList(JsonRpcExchange rpc) throws IOException {
-        MCPProtocol.ListResourcesResult result = new MCPProtocol.ListResourcesResult();
-        result.setResources(Collections.emptyList());
-        rpc.sendResponse(result);
-    }
-
-    private void handlePromptsList(JsonRpcExchange rpc) throws IOException {
-        MCPProtocol.ListPromptsResult result = new MCPProtocol.ListPromptsResult();
-        result.setPrompts(Collections.emptyList());
-        rpc.sendResponse(result);
-    }
-
     private void handleDelete(JsonRpcExchange rpc) throws IOException {
-        boolean wasActive;
-        synchronized (this) {
-            wasActive = activeSessionId != null;
-            if (wasActive) {
-                LOG.info("Session terminated: " + activeSessionId);
-                activeSessionId = null;
+        String incomingSessionId = rpc.getHttpExchange().getRequestHeaders()
+                .getFirst("Mcp-Session-Id");
+        if (incomingSessionId != null) {
+            // Close specific session
+            MCPSession session = sessions.remove(incomingSessionId);
+            if (session != null) {
+                LOG.info("Session terminated: " + session.getId());
+                onSessionClosed(session);
             }
-        }
-        if (wasActive) {
-            onSessionClosed();
+        } else {
+            // No session ID header — close all sessions
+            List<MCPSession> closed = new ArrayList<>(sessions.values());
+            sessions.clear();
+            for (MCPSession session : closed) {
+                LOG.info("Session terminated: " + session.getId());
+                onSessionClosed(session);
+            }
         }
         rpc.sendPlain(200, "");
     }
 
     /**
+     * Called before creating a new session. Subclasses can override this
+     * to limit the number of concurrent sessions (e.g. to enforce a
+     * single-session policy).
+     * <p>
+     * The default implementation always returns {@code true} (unlimited sessions).
+     * <p>
+     * This method is called while holding the initialize lock, so the
+     * session count will not change between this check and the session
+     * being added to the map.
+     *
+     * @return {@code true} to accept the new session, {@code false} to reject
+     *         with HTTP 409
+     */
+    protected boolean acceptNewSession() {
+        return true;
+    }
+
+    /**
+     * Returns the number of active sessions.
+     */
+    protected int getSessionCount() {
+        return sessions.size();
+    }
+
+    /**
      * Called when a session has been closed (via HTTP DELETE), <em>after</em>
-     * {@code activeSessionId} has been set to {@code null}. Subclasses can
+     * the session has been removed from the session map. Subclasses can
      * override this to release session-scoped resources.
      * <p>
      * The default implementation does nothing.
      * <p>
-     * This method is called <em>outside</em> the server's intrinsic lock,
+     * This method is called <em>outside</em> any server lock,
      * so implementations may safely acquire their own locks (e.g. to
      * serialise with in-flight tool calls).
      */
-    protected void onSessionClosed() {
+    protected void onSessionClosed(MCPSession session) {
         // no-op by default
     }
 }
