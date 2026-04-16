@@ -1196,44 +1196,54 @@ public final class SwingUtils {
     }
 
     /**
-     * Creates a {@link Runnable} that synthesizes a drag event sequence from
-     * {@code (pressX, pressY)} to {@code (targetX, targetY)}, all dispatched
-     * to the given source component.
+     * Creates a {@link Runnable} that synthesizes a drag event sequence,
+     * all dispatched to the given source component.
      * <p>
-     * The sequence consists of:
-     * <ol>
-     *   <li>MOUSE_PRESSED at (pressX, pressY)</li>
-     *   <li>5 MOUSE_DRAGGED events linearly interpolated from press to target</li>
-     *   <li>MOUSE_RELEASED at (targetX, targetY)</li>
-     * </ol>
-     * Timestamps increment by 16ms per event (approximately one frame at 60fps).
+     * Without waypoints: 7 events (PRESSED + 5 DRAGGED + RELEASED).
+     * With waypoints: PRESSED, then interpolated DRAGGED events per segment
+     * (source→wp1, wp1→wp2, ..., wpN→target), then RELEASED.
+     * Timestamps increment by 16ms per event.
      *
-     * @param source  the component to dispatch all events to
-     * @param pressX  the press X coordinate in source-local coords
-     * @param pressY  the press Y coordinate in source-local coords
-     * @param targetX the release X coordinate in source-local coords
-     * @param targetY the release Y coordinate in source-local coords
+     * @param source     the component to dispatch all events to
+     * @param pressX     the press X coordinate in source-local coords
+     * @param pressY     the press Y coordinate in source-local coords
+     * @param targetX    the release X coordinate in source-local coords
+     * @param targetY    the release Y coordinate in source-local coords
+     * @param waypoints  intermediate points in source-local coords (may be empty);
+     *                   each element is {@code int[]{x, y}}
      * @return a Runnable that dispatches the full drag event sequence
      */
     public static Runnable createDragAction(Component source, int pressX, int pressY,
-                                            int targetX, int targetY) {
+                                            int targetX, int targetY,
+                                            java.util.List<int[]> waypoints) {
         return () -> {
             long now = System.currentTimeMillis();
-            int steps = 5;
 
             // 1. MOUSE_PRESSED at press point
             source.dispatchEvent(new MouseEvent(source, MouseEvent.MOUSE_PRESSED,
                     now, InputEvent.BUTTON1_DOWN_MASK,
                     pressX, pressY, 0, false, MouseEvent.BUTTON1));
 
-            // 2. MOUSE_DRAGGED — 5 intermediate points
-            for (int i = 1; i <= steps; i++) {
-                int x = pressX + (targetX - pressX) * i / steps;
-                int y = pressY + (targetY - pressY) * i / steps;
-                now += 16;
-                source.dispatchEvent(new MouseEvent(source, MouseEvent.MOUSE_DRAGGED,
-                        now, InputEvent.BUTTON1_DOWN_MASK,
-                        x, y, 0, false, MouseEvent.NOBUTTON));
+            // 2. MOUSE_DRAGGED — interpolate through segments
+            int fromX = pressX, fromY = pressY;
+
+            // Build segment endpoints: waypoints + target
+            java.util.List<int[]> segments = new java.util.ArrayList<>(waypoints);
+            segments.add(new int[]{targetX, targetY});
+
+            int stepsPerSegment = waypoints.isEmpty() ? 5 : 3;
+            for (int[] seg : segments) {
+                int toX = seg[0], toY = seg[1];
+                for (int i = 1; i <= stepsPerSegment; i++) {
+                    int x = fromX + (toX - fromX) * i / stepsPerSegment;
+                    int y = fromY + (toY - fromY) * i / stepsPerSegment;
+                    now += 16;
+                    source.dispatchEvent(new MouseEvent(source, MouseEvent.MOUSE_DRAGGED,
+                            now, InputEvent.BUTTON1_DOWN_MASK,
+                            x, y, 0, false, MouseEvent.NOBUTTON));
+                }
+                fromX = toX;
+                fromY = toY;
             }
 
             // 3. MOUSE_RELEASED at target point
@@ -1246,26 +1256,28 @@ public final class SwingUtils {
 
     /**
      * Creates a {@link Runnable} that performs a drag using {@link java.awt.Robot},
-     * generating real OS-level mouse events. This works with Java's DnD framework
-     * (DragSource/DropTarget) which requires events to flow through the native
-     * event queue — unlike {@link #createDragAction} which uses synthetic events
-     * dispatched directly to the component.
+     * generating real OS-level mouse events.
      * <p>
+     * Without waypoints: moves in 10 steps from press to target.
+     * With waypoints: moves through each waypoint with 3 intermediate steps
+     * per segment before reaching the target.
      * All coordinates are in screen-absolute space.
      *
-     * @param pressScreenX  the press X coordinate in screen coords
-     * @param pressScreenY  the press Y coordinate in screen coords
-     * @param targetScreenX the release X coordinate in screen coords
-     * @param targetScreenY the release Y coordinate in screen coords
+     * @param pressScreenX   the press X coordinate in screen coords
+     * @param pressScreenY   the press Y coordinate in screen coords
+     * @param targetScreenX  the release X coordinate in screen coords
+     * @param targetScreenY  the release Y coordinate in screen coords
+     * @param waypoints      intermediate points in screen coords (may be empty);
+     *                       each element is {@code int[]{screenX, screenY}}
      * @return a Runnable that performs the full drag via Robot
      */
     public static Runnable createRobotDragAction(int pressScreenX, int pressScreenY,
-                                                  int targetScreenX, int targetScreenY) {
+                                                  int targetScreenX, int targetScreenY,
+                                                  java.util.List<int[]> waypoints) {
         return () -> {
             try {
                 java.awt.Robot robot = new java.awt.Robot();
                 robot.setAutoDelay(50);
-                int steps = 10;
 
                 // 1. Move to press point and press
                 robot.mouseMove(pressScreenX, pressScreenY);
@@ -1273,11 +1285,22 @@ public final class SwingUtils {
                 robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
                 robot.delay(100);
 
-                // 2. Drag through intermediate points
-                for (int i = 1; i <= steps; i++) {
-                    int x = pressScreenX + (targetScreenX - pressScreenX) * i / steps;
-                    int y = pressScreenY + (targetScreenY - pressScreenY) * i / steps;
-                    robot.mouseMove(x, y);
+                // 2. Drag through segments: waypoints + target
+                int fromX = pressScreenX, fromY = pressScreenY;
+
+                java.util.List<int[]> segments = new java.util.ArrayList<>(waypoints);
+                segments.add(new int[]{targetScreenX, targetScreenY});
+
+                int stepsPerSegment = waypoints.isEmpty() ? 10 : 3;
+                for (int[] seg : segments) {
+                    int toX = seg[0], toY = seg[1];
+                    for (int i = 1; i <= stepsPerSegment; i++) {
+                        int x = fromX + (toX - fromX) * i / stepsPerSegment;
+                        int y = fromY + (toY - fromY) * i / stepsPerSegment;
+                        robot.mouseMove(x, y);
+                    }
+                    fromX = toX;
+                    fromY = toY;
                 }
 
                 // 3. Release at target

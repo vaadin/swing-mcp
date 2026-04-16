@@ -16,7 +16,7 @@ import java.util.List;
  * Tests assert via {@link #wasDragged()} — returns {@code true} only if a
  * valid drag sequence was received.
  *
- * @see <a href="use-case-024-swing-drag.md">UC-024 — DragRecordingPanel</a>
+ * @see <a href="use-case-025-swing-drag.md">UC-025 — DragRecordingPanel</a>
  */
 public class DragRecordingPanel extends JPanel {
 
