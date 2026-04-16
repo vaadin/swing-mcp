@@ -563,9 +563,19 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
         }
     }
 
+    /**
+     * Creates a JFrame that will never receive WM focus, so the snapshot
+     * output is deterministic (no WM-dependent {@code [focused]} state).
+     */
+    private static JFrame newUnfocusableFrame(String title) {
+        JFrame f = new JFrame(title);
+        f.setFocusableWindowState(false);
+        return f;
+    }
+
     @Test
     void sc8_iconifiedJFrame_childrenSuppressedWithPlaceholder() throws Exception {
-        JFrame frame = new JFrame("App");
+        JFrame frame = newUnfocusableFrame("App");
         frame.getContentPane().add(new JButton("OK"));
         try {
             executeOnEDT(() -> { frame.setSize(300, 200); frame.setVisible(true); return null; });
@@ -585,9 +595,8 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
 
     @Test
     void sc8_iconifiedJFrame_childRefsNotAssigned() throws Exception {
-        JFrame frame = new JFrame("App");
+        JFrame frame = newUnfocusableFrame("App");
         JButton button = new JButton("OK");
-        button.setFocusable(false); // avoid WM-dependent [focused]
         frame.getContentPane().add(button);
         try {
             executeOnEDT(() -> { frame.setSize(300, 200); frame.setVisible(true); return null; });
@@ -616,10 +625,8 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
 
     @Test
     void sc8_restoredJFrame_childrenReappear() throws Exception {
-        JFrame frame = new JFrame("App");
-        JButton btn = new JButton("OK");
-        btn.setFocusable(false); // avoid WM-dependent [focused] after restore
-        frame.getContentPane().add(btn);
+        JFrame frame = newUnfocusableFrame("App");
+        frame.getContentPane().add(new JButton("OK"));
         try {
             executeOnEDT(() -> { frame.setSize(300, 200); frame.setVisible(true); return null; });
 
@@ -650,13 +657,11 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
 
     @Test
     void sc8_mixedIconifiedAndNormalFrames_refsOnlyOnNormal() throws Exception {
-        JFrame iconifiedFrame = new JFrame("Minimized");
+        JFrame iconifiedFrame = newUnfocusableFrame("Minimized");
         JButton hiddenBtn = new JButton("Hidden");
-        hiddenBtn.setFocusable(false);
         iconifiedFrame.getContentPane().add(hiddenBtn);
-        JFrame normalFrame = new JFrame("Active");
+        JFrame normalFrame = newUnfocusableFrame("Active");
         JButton visibleBtn = new JButton("Visible");
-        visibleBtn.setFocusable(false);
         normalFrame.getContentPane().add(visibleBtn);
         try {
             executeOnEDT(() -> {
