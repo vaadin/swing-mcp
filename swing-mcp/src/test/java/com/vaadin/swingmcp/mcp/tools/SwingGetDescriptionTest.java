@@ -42,49 +42,35 @@ class SwingGetDescriptionTest extends AbstractHeadlessTest {
         return "a".repeat(length);
     }
 
-    /** A long description that exceeds the 120-char snapshot cap. */
-    private static String longDescription() {
-        return "This is a very long description that exceeds the 120-character limit " +
-               "set in the snapshot for description capping. It continues well beyond " +
-               "that boundary to test the get_description tool.";
-    }
-
     // ══════════════════════════════════════════════════════════════════════════
     // Tool tests
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void longDescriptionReturnedInFull() throws Exception {
-        String desc = longDescription();
-        assertTrue(desc.length() > 120, "Test setup: description must exceed 120 chars");
-
+        String desc = chars(150);
         JButton button = new JButton("OK");
         button.getAccessibleContext().setAccessibleDescription(desc);
         snapshot(button);
 
-        String result = getDescription(context.getRefOf(button));
-        assertEquals(desc, result);
+        assertEquals(desc, getDescription(context.getRefOf(button)));
     }
 
     @Test
     void shortDescriptionReturnedAsIs() throws Exception {
-        String desc = "Short tooltip";
         JButton button = new JButton("OK");
-        button.getAccessibleContext().setAccessibleDescription(desc);
+        button.getAccessibleContext().setAccessibleDescription("Short tooltip");
         snapshot(button);
 
-        String result = getDescription(context.getRefOf(button));
-        assertEquals(desc, result);
+        assertEquals("Short tooltip", getDescription(context.getRefOf(button)));
     }
 
     @Test
     void noDescriptionReturnsEmptyString() throws Exception {
         JButton button = new JButton("OK");
-        // No description, no tooltip
         snapshot(button);
 
-        String result = getDescription(context.getRefOf(button));
-        assertEquals("", result);
+        assertEquals("", getDescription(context.getRefOf(button)));
     }
 
     @Test
@@ -100,15 +86,14 @@ class SwingGetDescriptionTest extends AbstractHeadlessTest {
 
     @Test
     void refMapPreservedAfterCall() throws Exception {
-        String desc = "Some description";
         JButton button = new JButton("OK");
-        button.getAccessibleContext().setAccessibleDescription(desc);
+        button.getAccessibleContext().setAccessibleDescription("Some description");
         snapshot(button);
 
         int ref = context.getRefOf(button);
-        assertEquals(desc, getDescription(ref));
+        assertEquals("Some description", getDescription(ref));
         // Second call with same ref should still work
-        assertEquals(desc, getDescription(ref));
+        assertEquals("Some description", getDescription(ref));
     }
 
     @Test
@@ -128,9 +113,9 @@ class SwingGetDescriptionTest extends AbstractHeadlessTest {
         button.getAccessibleContext().setAccessibleDescription(desc);
         snapshot(button);
 
-        String result = getDescription(context.getRefOf(button));
-        assertTrue(result.startsWith(chars(1000)));
-        assertTrue(result.contains("(truncated, 1100 total characters)"));
+        assertEquals(
+                chars(1000) + "\n... (truncated, 1100 total characters)",
+                getDescription(context.getRefOf(button)));
     }
 
     @Test
@@ -146,44 +131,24 @@ class SwingGetDescriptionTest extends AbstractHeadlessTest {
     @Test
     void htmlTooltipDescriptionIsCleaned() throws Exception {
         JButton button = new JButton("OK");
-        button.setToolTipText("<html><b>Bold</b> text &amp; more <i>italic</i> content that goes on and on " +
-                "to make this tooltip exceed the 120 character limit in the snapshot description slot</html>");
+        button.setToolTipText("<html><b>Bold</b> text &amp; more <i>italic</i> content that goes on and on "
+                + "to make this tooltip exceed the 120 character limit in the snapshot description slot</html>");
         snapshot(button);
 
-        String result = getDescription(context.getRefOf(button));
-        // HTML tags should be stripped, entities decoded
-        assertFalse(result.contains("<b>"));
-        assertFalse(result.contains("&amp;"));
-        assertTrue(result.contains("Bold"));
-        assertTrue(result.contains("text & more"));
+        assertEquals(
+                "Bold text & more italic content that goes on and on "
+                        + "to make this tooltip exceed the 120 character limit in the snapshot description slot",
+                getDescription(context.getRefOf(button)));
     }
 
     @Test
     void tooltipFallbackReturnsFullTooltip() throws Exception {
-        String longTooltip = "This is a tooltip that exceeds 120 characters. " +
-                "It provides detailed help about the button functionality including " +
-                "edge cases and usage instructions for the user.";
-        assertTrue(longTooltip.length() > 120);
-
+        String longTooltip = chars(150);
         JButton button = new JButton("OK");
-        // No accessibleDescription set — tooltip is the fallback
         button.setToolTipText(longTooltip);
         snapshot(button);
 
         assertEquals(longTooltip, getDescription(context.getRefOf(button)));
-    }
-
-    @Test
-    void buttonWithLongTooltipHasGetDescriptionInActions() throws Exception {
-        String longTooltip = "This is a tooltip that exceeds 120 characters. " +
-                "It provides detailed help about the button functionality including " +
-                "edge cases and usage instructions for the user.";
-        JButton button = new JButton("OK");
-        button.setToolTipText(longTooltip);
-
-        String output = snapshot(button);
-        assertTrue(output.contains("get_description"), "Actions should include get_description: " + output);
-        assertTrue(output.contains("click"), "Existing actions should be preserved: " + output);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -192,16 +157,13 @@ class SwingGetDescriptionTest extends AbstractHeadlessTest {
 
     @Test
     void cappedDescriptionShowsGetDescriptionInActions() throws Exception {
-        String desc = longDescription();
+        String desc = chars(150);
         JButton button = new JButton("Save");
         button.getAccessibleContext().setAccessibleDescription(desc);
 
-        String output = snapshot(button);
-        assertTrue(output.contains("get_description"),
-                "Capped description should advertise get_description: " + output);
-        // Description should be capped with ellipsis
-        assertTrue(output.contains("\u2026"),
-                "Description should be capped with ellipsis: " + output);
+        assertEquals(
+                "- JButton (push_button) \"Save\" \"" + chars(120) + "\u2026\" [ref=1] actions: click, get_description",
+                snapshot(button));
     }
 
     @Test
@@ -209,44 +171,34 @@ class SwingGetDescriptionTest extends AbstractHeadlessTest {
         JButton button = new JButton("Save");
         button.getAccessibleContext().setAccessibleDescription("Short help");
 
-        String output = snapshot(button);
-        assertFalse(output.contains("get_description"),
-                "Short description should not advertise get_description: " + output);
+        assertEquals(
+                "- JButton (push_button) \"Save\" \"Short help\" [ref=1] actions: click",
+                snapshot(button));
     }
 
     @Test
     void labelWithLongTooltipGetsRefFromGetDescription() throws Exception {
+        String longTooltip = chars(150);
         JLabel label = new JLabel("Warning");
-        String longTooltip = "This is a very long warning message that exceeds 120 characters. " +
-                "It explains in detail what the user should be aware of before proceeding " +
-                "with the potentially dangerous operation.";
         label.setToolTipText(longTooltip);
 
-        String output = snapshot(label);
-        // Label should get a ref solely from get_description
-        assertTrue(output.contains("ref="),
-                "Label with capped description should get a ref: " + output);
-        assertTrue(output.contains("get_description"),
-                "Label should advertise get_description: " + output);
+        assertEquals(
+                "- JLabel (label) \"Warning\" \"" + chars(120) + "\u2026\" [ref=1] actions: get_description",
+                snapshot(label));
 
         // Verify we can actually call the tool on the label's ref
-        int ref = context.getRefOf(label);
-        assertEquals(longTooltip, getDescription(ref));
+        assertEquals(longTooltip, getDescription(context.getRefOf(label)));
     }
 
     @Test
     void panelWithLongDescriptionGetsRefFromGetDescription() throws Exception {
+        String longDesc = chars(150);
         JPanel panel = new JPanel();
-        String longDesc = "This panel contains all the configuration settings for the advanced mode. " +
-                "Be careful when changing these values as they affect the entire system " +
-                "behavior and cannot be undone easily.";
         panel.getAccessibleContext().setAccessibleDescription(longDesc);
 
-        String output = snapshot(panel);
-        assertTrue(output.contains("ref="),
-                "Panel with capped description should get a ref: " + output);
-        assertTrue(output.contains("get_description"),
-                "Panel should advertise get_description: " + output);
+        assertEquals(
+                "- JPanel (panel) \"" + chars(120) + "\u2026\" [ref=1] actions: get_description",
+                snapshot(panel));
     }
 
     @Test
@@ -255,23 +207,28 @@ class SwingGetDescriptionTest extends AbstractHeadlessTest {
         JButton button = new JButton("OK");
         button.getAccessibleContext().setAccessibleDescription(desc);
 
-        String output = snapshot(button);
-        assertFalse(output.contains("get_description"),
-                "Description at exactly 120 chars should not be capped: " + output);
-        assertFalse(output.contains("\u2026"),
-                "No ellipsis expected at exactly 120 chars: " + output);
+        assertEquals(
+                "- JButton (push_button) \"OK\" \"" + desc + "\" [ref=1] actions: click",
+                snapshot(button));
     }
 
     @Test
     void descriptionAt121CharsIsCapped() throws Exception {
-        String desc = chars(121);
         JButton button = new JButton("OK");
-        button.getAccessibleContext().setAccessibleDescription(desc);
+        button.getAccessibleContext().setAccessibleDescription(chars(121));
 
-        String output = snapshot(button);
-        assertTrue(output.contains("get_description"),
-                "Description at 121 chars should trigger get_description: " + output);
-        assertTrue(output.contains("\u2026"),
-                "Description at 121 chars should be capped with ellipsis: " + output);
+        assertEquals(
+                "- JButton (push_button) \"OK\" \"" + chars(120) + "\u2026\" [ref=1] actions: click, get_description",
+                snapshot(button));
+    }
+
+    @Test
+    void buttonWithLongTooltipShowsGetDescriptionAlongsideClick() throws Exception {
+        JButton button = new JButton("OK");
+        button.setToolTipText(chars(150));
+
+        assertEquals(
+                "- JButton (push_button) \"OK\" \"" + chars(120) + "\u2026\" [ref=1] actions: click, get_description",
+                snapshot(button));
     }
 }
