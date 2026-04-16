@@ -71,13 +71,8 @@ public class SwingSetTextTool extends AbstractSwingTool {
         // BR-03: fire the text replacement asynchronously (fire-and-forget)
         AccessibleEditableText aet = ac.getAccessibleEditableText();
         SwingUtilities.invokeLater(() -> aet.setTextContents(text));
-        // BR-13: DR-010 success echo. Password-role accessibles get a bare echo
-        // (no value) to preserve DR-011's non-readability posture — we never
-        // re-emit credential material into the MCP response channel, even
-        // though the LLM supplied it as input.
-        if (SwingUtils.hasPasswordRole(accessible)) {
-            return echo(ref);
-        }
+        // BR-13: DR-010 success echo — same format for all text components
+        // including password fields (the agent already supplied the value).
         return echo(ref, renderEchoString(text));
     }
 
