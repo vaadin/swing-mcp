@@ -203,11 +203,18 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
 
         snapshot(frame);
         // On macOS the ICONIFIED bit can be transient when combined with MAXIMIZED_BOTH —
-        // the WM sets it briefly then drops it back. Re-check right before restore()
-        // to skip cleanly instead of failing with "Frame is not iconified".
-        Assumptions.assumeTrue((frame.getExtendedState() & Frame.ICONIFIED) != 0,
-                "WM dropped ICONIFIED between setup and restore, skipping");
-        restore(context.getRefOf(frame));
+        // the WM may drop it between the precondition check above and when the
+        // restore tool reads it on the EDT. Catching the tool's error and
+        // aborting is strictly more robust than re-checking before the call,
+        // because the race window is inside the tool dispatch, not before it.
+        try {
+            restore(context.getRefOf(frame));
+        } catch (MCPErrorResponseException e) {
+            if (e.getMessage() != null && e.getMessage().contains("not iconified")) {
+                Assumptions.abort("WM dropped ICONIFIED during restore dispatch: " + e.getMessage());
+            }
+            throw e;
+        }
         awaitExtendedState(frame, Frame.ICONIFIED, 0, 2000);
 
         int state = frame.getExtendedState();
