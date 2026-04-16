@@ -187,4 +187,29 @@ class TinyMCPServerTest {
         assertEquals(-32700, error.get("code").getAsInt());
         assertEquals("Parse error", error.get("message").getAsString());
     }
+
+    @Test
+    void batchRequestReturnsInvalidRequestError() throws Exception {
+        // A JSON-RPC batch is a JSON array — valid JSON, but we don't support it.
+        // Must return -32600 (Invalid Request), not -32700 (Parse error).
+        String batchBody = "[{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1},"
+                + "{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":2}]";
+        HttpClient http = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(server.getUrl()))
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json, text/event-stream")
+                .POST(HttpRequest.BodyPublishers.ofString(batchBody))
+                .build();
+        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(400, response.statusCode());
+
+        JsonObject body = MCPProtocol.fromJson(response.body(), JsonObject.class);
+        assertEquals("2.0", body.get("jsonrpc").getAsString());
+        assertTrue(body.get("id").isJsonNull());
+        JsonObject error = body.getAsJsonObject("error");
+        assertEquals(-32600, error.get("code").getAsInt());
+        assertEquals("Batch requests are not supported", error.get("message").getAsString());
+    }
 }
