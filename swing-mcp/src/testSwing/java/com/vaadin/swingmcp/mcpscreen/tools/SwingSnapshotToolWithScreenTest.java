@@ -539,4 +539,207 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
             });
         }
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // SC-8 / DR-019 — iconified Frame children suppressed
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private static final String ICONIFIED_PLACEHOLDER =
+            "[Contents hidden — window is iconified. Call swing_restore to interact with this window.]";
+
+    /**
+     * Polls {@link Frame#getExtendedState()} until {@code (state & mask) == expected}
+     * or {@code timeoutMs} elapses.
+     */
+    private static void awaitExtendedState(Frame frame, int mask, int expected, long timeoutMs) {
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        while (System.currentTimeMillis() < deadline) {
+            if ((frame.getExtendedState() & mask) == expected) {
+                return;
+            }
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+    }
+
+    @Test
+    void sc8_iconifiedJFrame_childrenSuppressedWithPlaceholder() throws Exception {
+        JFrame frame = new JFrame("App");
+        frame.getContentPane().add(new JButton("OK"));
+        frame.getContentPane().add(new JTextField("hello"));
+        try {
+            executeOnEDT(() -> { frame.setSize(300, 200); frame.setVisible(true); return null; });
+
+            // Iconify
+            executeOnEDT(() -> { frame.setExtendedState(Frame.ICONIFIED); return null; });
+            awaitExtendedState(frame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
+
+            String text = snapshot(frame);
+
+            // Frame node should be present with [iconified] and restore/close actions
+            assertTrue(text.contains("JFrame (frame) \"App\""), "frame node present");
+            assertTrue(text.contains("iconified"), "shows [iconified]");
+            assertTrue(text.contains("restore"), "has restore action");
+            assertTrue(text.contains("close"), "has close action");
+            assertTrue(text.contains("[ref="), "frame has a ref");
+
+            // Children suppressed — no button or text field
+            assertFalse(text.contains("JButton"), "button suppressed");
+            assertFalse(text.contains("JTextField"), "text field suppressed");
+
+            // Placeholder line present
+            assertTrue(text.contains(ICONIFIED_PLACEHOLDER), "placeholder shown");
+        } finally {
+            executeOnEDT(() -> { frame.dispose(); return null; });
+        }
+    }
+
+    @Test
+    void sc8_iconifiedJFrame_childRefsNotAssigned() throws Exception {
+        JFrame frame = new JFrame("App");
+        JButton button = new JButton("OK");
+        frame.getContentPane().add(button);
+        try {
+            executeOnEDT(() -> { frame.setSize(300, 200); frame.setVisible(true); return null; });
+
+            // Take snapshot while normal — button gets a ref
+            String normalText = snapshot(frame);
+            assertTrue(normalText.contains("JButton"), "precondition: button visible in normal snapshot");
+            int buttonRef = context.getRefOf(button);
+            assertTrue(buttonRef > 0, "precondition: button has a ref in normal snapshot");
+
+            // Iconify
+            executeOnEDT(() -> { frame.setExtendedState(Frame.ICONIFIED); return null; });
+            awaitExtendedState(frame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
+
+            // Take snapshot while iconified
+            String iconifiedText = snapshot(frame);
+            assertFalse(iconifiedText.contains("JButton"), "button suppressed in iconified snapshot");
+
+            // The old ref should not be in the ref map — context was rebuilt
+            assertThrows(IllegalStateException.class, () -> context.getRefOf(button),
+                    "button ref should not be assigned in iconified snapshot");
+        } finally {
+            executeOnEDT(() -> { frame.dispose(); return null; });
+        }
+    }
+
+    @Test
+    void sc8_restoredJFrame_childrenReappear() throws Exception {
+        JFrame frame = new JFrame("App");
+        frame.getContentPane().add(new JButton("OK"));
+        try {
+            executeOnEDT(() -> { frame.setSize(300, 200); frame.setVisible(true); return null; });
+
+            // Iconify
+            executeOnEDT(() -> { frame.setExtendedState(Frame.ICONIFIED); return null; });
+            awaitExtendedState(frame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
+
+            String iconifiedText = snapshot(frame);
+            assertTrue(iconifiedText.contains(ICONIFIED_PLACEHOLDER), "precondition: placeholder shown");
+
+            // Restore
+            executeOnEDT(() -> {
+                frame.setExtendedState(frame.getExtendedState() & ~Frame.ICONIFIED);
+                return null;
+            });
+            awaitExtendedState(frame, Frame.ICONIFIED, 0, 2000);
+
+            String restoredText = snapshot(frame);
+            assertFalse(restoredText.contains(ICONIFIED_PLACEHOLDER), "no placeholder after restore");
+            assertTrue(restoredText.contains("JButton"), "button reappears after restore");
+            assertTrue(restoredText.contains("[ref="), "refs assigned after restore");
+            assertFalse(restoredText.contains("iconified"), "no [iconified] after restore");
+        } finally {
+            executeOnEDT(() -> { frame.dispose(); return null; });
+        }
+    }
+
+    @Test
+    void sc8_mixedIconifiedAndNormalFrames_refsOnlyOnNormal() throws Exception {
+        JFrame iconifiedFrame = new JFrame("Minimized");
+        iconifiedFrame.getContentPane().add(new JButton("Hidden"));
+        JFrame normalFrame = new JFrame("Active");
+        normalFrame.getContentPane().add(new JButton("Visible"));
+        try {
+            executeOnEDT(() -> {
+                iconifiedFrame.setSize(300, 200);
+                iconifiedFrame.setVisible(true);
+                normalFrame.setSize(300, 200);
+                normalFrame.setVisible(true);
+                return null;
+            });
+
+            // Iconify only the first frame
+            executeOnEDT(() -> { iconifiedFrame.setExtendedState(Frame.ICONIFIED); return null; });
+            awaitExtendedState(iconifiedFrame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
+
+            String text = snapshot(iconifiedFrame, normalFrame);
+
+            // Iconified frame: placeholder, no children
+            assertTrue(text.contains(ICONIFIED_PLACEHOLDER), "placeholder on iconified frame");
+            assertFalse(text.contains("\"Hidden\""), "iconified frame's button suppressed");
+
+            // Normal frame: full tree with refs
+            assertTrue(text.contains("\"Visible\""), "normal frame's button present");
+
+            // The "Visible" button should have a ref
+            JButton visibleButton = (JButton) normalFrame.getContentPane().getComponent(0);
+            assertTrue(context.getRefOf(visibleButton) > 0, "normal frame's button has a ref");
+
+            // The "Hidden" button should not
+            JButton hiddenButton = (JButton) iconifiedFrame.getContentPane().getComponent(0);
+            assertThrows(IllegalStateException.class, () -> context.getRefOf(hiddenButton),
+                    "iconified frame's button has no ref");
+
+            // The iconified frame node itself should have a ref (for restore/close)
+            assertTrue(context.getRefOf(iconifiedFrame) > 0,
+                    "iconified frame node has a ref");
+        } finally {
+            executeOnEDT(() -> {
+                iconifiedFrame.dispose();
+                normalFrame.dispose();
+                return null;
+            });
+        }
+    }
+
+    @Test
+    void sc8_iconifiedJInternalFrame_handledBySC5NotSC8() throws Exception {
+        JFrame host = new JFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", false, true, false, true);
+        iframe.getContentPane().add(new JButton("Inside"));
+        iframe.setSize(150, 80);
+        desktop.add(iframe);
+        try {
+            executeOnEDT(() -> {
+                host.setSize(400, 300);
+                host.setVisible(true);
+                iframe.setVisible(true);
+                return null;
+            });
+
+            // Iconify the internal frame and drain the EDT
+            executeOnEDT(() -> { iframe.setIcon(true); return null; });
+            // Extra EDT drain — property listeners may fire asynchronously
+            executeOnEDT(() -> null);
+
+            assertTrue(iframe.isIcon(), "precondition: internal frame is iconified");
+
+            String text = snapshot(host);
+
+            // SC-5: JDesktopIcon should appear, not the placeholder
+            assertTrue(text.contains("JDesktopIcon"), "JDesktopIcon appears (SC-5)");
+            assertFalse(text.contains(ICONIFIED_PLACEHOLDER),
+                    "SC-8 placeholder should NOT appear for JInternalFrame");
+        } finally {
+            executeOnEDT(() -> { host.dispose(); return null; });
+        }
+    }
 }

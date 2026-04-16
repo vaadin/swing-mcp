@@ -1530,7 +1530,7 @@ pure fire-and-forget design explored here.
 
 ## DR-019 — Snapshot suppresses children of iconified Frames
 
-**Status:** Draft
+**Status:** Implemented
 **Applies to:** UC-002 (swing_snapshot), SC-8
 **Decided:** 2026-04-16
 
