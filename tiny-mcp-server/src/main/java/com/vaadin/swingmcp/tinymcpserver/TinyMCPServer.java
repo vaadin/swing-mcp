@@ -323,7 +323,7 @@ public class TinyMCPServer {
         synchronized (this) {
             if (activeSessionId != null) {
                 LOG.warning("Rejecting initialization: another session is already active (id=" + activeSessionId + ")");
-                sendPlainResponse(exchange, 409, "Another session is already active");
+                sendJsonRpcError(exchange, 409, request.getId(), -32002, "Another session is already active");
                 return;
             }
             activeSessionId = UUID.randomUUID().toString();
