@@ -83,8 +83,8 @@ public class TinyMCPServer {
     private volatile int boundPort = -1;
 
     private final ConcurrentHashMap<String, MCPSession> sessions = new ConcurrentHashMap<>();
-    /** Serialises {@code initialize} requests to prevent TOCTOU races in {@link #acceptNewSession()}. */
-    private final Object initializeLock = new Object();
+    /** Guards all session-map mutations (put, remove, clear) to prevent races. */
+    private final Object sessionGuardLock = new Object();
 
     public TinyMCPServer() {
         this(DEFAULT_PORT, DEFAULT_CONTEXT_PATH);
@@ -261,7 +261,7 @@ public class TinyMCPServer {
 
     private void handleInitialize(JsonRpcExchange rpc) throws IOException {
         MCPSession session;
-        synchronized (initializeLock) {
+        synchronized (sessionGuardLock) {
             if (!acceptNewSession()) {
                 LOG.warning("Rejecting initialization: acceptNewSession() returned false");
                 rpc.sendError(409, -32002, "Another session is already active");
@@ -295,21 +295,21 @@ public class TinyMCPServer {
     private void handleDelete(JsonRpcExchange rpc) throws IOException {
         String incomingSessionId = rpc.getHttpExchange().getRequestHeaders()
                 .getFirst("Mcp-Session-Id");
-        if (incomingSessionId != null) {
-            // Close specific session
-            MCPSession session = sessions.remove(incomingSessionId);
-            if (session != null) {
-                LOG.info("Session terminated: " + session.getId());
-                onSessionClosed(session);
+        List<MCPSession> closed;
+        synchronized (sessionGuardLock) {
+            if (incomingSessionId != null) {
+                // Close specific session
+                MCPSession session = sessions.remove(incomingSessionId);
+                closed = session != null ? List.of(session) : List.of();
+            } else {
+                // No session ID header — close all sessions
+                closed = new ArrayList<>(sessions.values());
+                sessions.clear();
             }
-        } else {
-            // No session ID header — close all sessions
-            List<MCPSession> closed = new ArrayList<>(sessions.values());
-            sessions.clear();
-            for (MCPSession session : closed) {
-                LOG.info("Session terminated: " + session.getId());
-                onSessionClosed(session);
-            }
+        }
+        for (MCPSession session : closed) {
+            LOG.info("Session terminated: " + session.getId());
+            onSessionClosed(session);
         }
         rpc.sendPlain(200, "");
     }
@@ -321,9 +321,9 @@ public class TinyMCPServer {
      * <p>
      * The default implementation always returns {@code true} (unlimited sessions).
      * <p>
-     * This method is called while holding the initialize lock, so the
-     * session count will not change between this check and the session
-     * being added to the map.
+     * This method is called while holding the session guard lock, so
+     * the session count will not change between this check and the
+     * session being added to the map.
      *
      * @return {@code true} to accept the new session, {@code false} to reject
      *         with HTTP 409
