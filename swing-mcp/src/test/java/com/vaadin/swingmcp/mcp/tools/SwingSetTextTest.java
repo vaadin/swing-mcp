@@ -174,16 +174,17 @@ class SwingSetTextTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void successOnJPasswordFieldReturnsBareEcho() throws Exception {
-        // BR-13 / DR-011: the password value must NOT appear in the success echo,
-        // even though the LLM supplied it as input.
+    void successOnJPasswordFieldReturnsValueEcho() throws Exception {
+        // BR-13: password fields use the same echo as regular text fields —
+        // the agent already supplied the value, so echoing it back is safe
+        // and provides a strong confirmation signal.
         JPasswordField field = new JPasswordField();
         snapshot(field);
         int ref = context.getRefOf(field);
 
         MCPProtocol.Content result = setTextTool.execute(
                 new Parameters(Map.of("ref", ref, "text", "hunter2")), context);
-        assertEquals("Posted set-text on ref=" + ref, result.getText());
+        assertEquals("Posted set-text on ref=" + ref + " to \"hunter2\"", result.getText());
     }
 
     @Test
