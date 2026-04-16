@@ -19,7 +19,7 @@ Iconifies (minimizes) a Frame (including JFrame) or JInternalFrame — needed be
 | BR-04 | All validation runs on the EDT inside `runInEDT()`. The iconify dispatch is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
 | BR-05 | If `supportsIconify()` returns false, the tool returns an MCP-level error (`isError: true`). The error message is derived by inspecting the component to pick the most specific explanation: **Frame — undecorated:** "Frame is undecorated and cannot be iconified". **Frame — already iconified:** "Frame is already iconified". **JInternalFrame — not iconifiable:** "JInternalFrame is not iconifiable". **JInternalFrame — already iconified:** "JInternalFrame is already iconified". **Fallback:** "<ClassName> does not support iconify. Call swing_snapshot or swing_get_cells to verify the list of actions". |
 | BR-06 | `isEffectivelyEnabled()` is **not** checked. Iconifying is a window-level action; it does not depend on the component's enabled state. |
-| BR-07 | `swing_iconify` is a **mutation tool** — it clears the ref map in a `finally` block after execution, regardless of success or failure (see **architecture.md §3 rule 3**). |
+| BR-07 | `swing_iconify` is a **mutation tool** — it clears the ref map after successful execution (see **architecture.md §3 rule 3**). A pre-dispatch validation error (`MCPErrorResponseException`) does **not** clear the ref map. |
 | BR-08 | **Snapshot action:** `iconify` is listed in the actions of a Frame or JInternalFrame when `supportsIconify()` returns true. |
 | BR-09 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Posted iconify on ref=<N>` (see **DR-010**). |
 

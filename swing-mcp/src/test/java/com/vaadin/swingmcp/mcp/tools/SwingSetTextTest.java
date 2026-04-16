@@ -39,12 +39,9 @@ class SwingSetTextTest extends AbstractHeadlessTest {
     }
 
     private void setText(int ref, String text) throws Exception {
-        try {
-            setTextTool.execute(new Parameters(Map.of("ref", ref, "text", text)), context);
-            SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
-        } finally {
-            context.clearRefMap();
-        }
+        setTextTool.execute(new Parameters(Map.of("ref", ref, "text", text)), context);
+        context.clearRefMap();
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -137,18 +134,19 @@ class SwingSetTextTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void refMapClearedAfterFailedSetTextOnDisabledComponent() throws Exception {
+    void refMapPreservedAfterFailedSetTextOnDisabledComponent() throws Exception {
         JTextField field = new JTextField("text");
         field.setEnabled(false);
         snapshot(field);
         int ref = context.getRefOf(field);
 
-        assertThrows(MCPErrorResponseException.class, () -> setText(ref, "new"));
+        assertThrows(MCPErrorResponseException.class, () ->
+                setTextTool.execute(new Parameters(Map.of("ref", ref, "text", "new")), context));
 
-        // ref map should be cleared — next use of same ref fails with INVALID_PARAMS
-        MCPServerException ex = assertThrows(MCPServerException.class,
-                () -> setText(ref, "another"));
-        assertTrue(ex.getMessage().contains("swing_snapshot"));
+        // Validation error — ref map must still be intact so the AI can retry
+        field.setEnabled(true);
+        setText(ref, "another");
+        assertEquals("another", field.getText());
     }
 
     @Test

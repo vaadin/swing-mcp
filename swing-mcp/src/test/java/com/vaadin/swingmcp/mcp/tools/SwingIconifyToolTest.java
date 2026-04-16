@@ -32,11 +32,8 @@ class SwingIconifyToolTest extends AbstractHeadlessTest {
     }
 
     private void iconify(int ref) throws Exception {
-        try {
-            iconifyTool.execute(new Parameters(Map.of("ref", ref)), context);
-        } finally {
-            context.clearRefMap();
-        }
+        iconifyTool.execute(new Parameters(Map.of("ref", ref)), context);
+        context.clearRefMap();
     }
 
     // ══════════════════════════════════════════════════════════════════════════

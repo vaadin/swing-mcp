@@ -19,7 +19,7 @@ Selects every item in a multi-selection component — saves the AI from enumerat
 | BR-04 | If the target supports selection but is in **single-selection mode** (`SwingUtils.supportsSingleSelection(accessible)` returns `true`), the tool returns an MCP-level error (`isError: true`) with the message *"Component is in single-selection mode. select_all requires multi-selection."* |
 | BR-05 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. |
 | BR-06 | All validation runs on the EDT inside `runInEDT()`. The selection mutation is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously (fire-and-forget). |
-| BR-07 | `swing_select_all` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after invocation (even on failure, via `finally`). |
+| BR-07 | `swing_select_all` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after successful invocation. A pre-dispatch validation error (`MCPErrorResponseException`) does **not** clear the ref map — the UI state hasn't changed, so existing refs remain valid and the AI can retry without re-snapshotting. |
 | BR-08 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Posted select-all on ref=<N>` (see **DR-010**). |
 | BR-09 | **JTable select-all.** When the target is a `JTable` in row-selection mode, the tool **must** use `table.selectAll()` directly. `AccessibleSelection.selectAllAccessibleSelection()` is a complete no-op on JTable — it selects nothing (probe-tested 2026-04-08). `table.selectAll()` works correctly: selects all rows, does not flip `columnSelectionAllowed`, and the accessible selection correctly reports all cells (which aggregate back to rows via UC-014 BR-11). |
 | BR-10 | **Non-JTable select-all.** For `JList` (and any other multi-selectable component), the tool dispatches `as.selectAllAccessibleSelection()` via `SwingUtilities.invokeLater()` (fire-and-forget). |
@@ -115,7 +115,7 @@ Verified empirically on Java 21 OpenJDK in headless mode (`JTableSelectAllProbeT
   - [x] `JTree`: returns an MCP error (suppressed).
   - [x] Disabled `JList` (multi-selection): returns an MCP error explaining the component is disabled.
   - [x] Ref map is cleared after successful call (verified by attempting to use the same ref again).
-  - [x] Ref map is cleared after a failed call on a disabled component.
+  - [x] Ref map is preserved after a failed call on a disabled component (refs remain valid for retry).
   - [x] Round-trip: `swing_select_all` followed by `swing_get_selection` on same `JList` returns all items.
   - [x] Each component from the component matrix is tested (dedicated test method per component).
 

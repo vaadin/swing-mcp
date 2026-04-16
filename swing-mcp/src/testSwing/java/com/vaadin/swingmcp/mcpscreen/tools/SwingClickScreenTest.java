@@ -36,12 +36,9 @@ class SwingClickScreenTest extends AbstractScreenTest {
     }
 
     private void click(int ref) throws Exception {
-        try {
-            executeOnEDT(() -> clickTool.execute(new Parameters(Map.of("ref", ref)), context));
-            executeOnEDT(() -> null); // drain EDT so fire-and-forget action has run
-        } finally {
-            context.clearRefMap();
-        }
+        executeOnEDT(() -> clickTool.execute(new Parameters(Map.of("ref", ref)), context));
+        context.clearRefMap();
+        executeOnEDT(() -> null); // drain EDT so fire-and-forget action has run
     }
 
     // ══════════════════════════════════════════════════════════════════════════

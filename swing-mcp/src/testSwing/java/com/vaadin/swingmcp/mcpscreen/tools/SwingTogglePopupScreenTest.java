@@ -42,13 +42,10 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
     }
 
     private MCPProtocol.Content togglePopup(int ref) throws Exception {
-        try {
-            MCPProtocol.Content result = executeOnEDT(() -> togglePopupTool.execute(new Parameters(Map.of("ref", ref)), context));
-            executeOnEDT(() -> null); // drain EDT so fire-and-forget action has run
-            return result;
-        } finally {
-            context.clearRefMap();
-        }
+        MCPProtocol.Content result = executeOnEDT(() -> togglePopupTool.execute(new Parameters(Map.of("ref", ref)), context));
+        context.clearRefMap();
+        executeOnEDT(() -> null); // drain EDT so fire-and-forget action has run
+        return result;
     }
 
     // ══════════════════════════════════════════════════════════════════════════

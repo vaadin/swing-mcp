@@ -79,8 +79,11 @@ public abstract class AbstractSwingTool {
     /**
      * @return true if this tool mutates the Swing app (e.g. clicks a button).
      * Snapshot and screenshot tools return false.
-     * Mutation tools have their ref map cleared after execution and dispatch
-     * their action via {@code SwingUtilities.invokeLater()} (fire-and-forget).
+     * Mutation tools have their ref map cleared after successful execution
+     * and dispatch their action via {@code SwingUtilities.invokeLater()}
+     * (fire-and-forget). A pre-dispatch validation error (thrown as
+     * {@link MCPErrorResponseException}) does not clear the ref map, so
+     * the AI can retry with a different ref without re-snapshotting.
      */
     public abstract boolean isMutation();
 

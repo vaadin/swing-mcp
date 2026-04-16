@@ -32,11 +32,8 @@ class SwingRestoreToolTest extends AbstractHeadlessTest {
     }
 
     private void restore(int ref) throws Exception {
-        try {
-            restoreTool.execute(new Parameters(Map.of("ref", ref)), context);
-        } finally {
-            context.clearRefMap();
-        }
+        restoreTool.execute(new Parameters(Map.of("ref", ref)), context);
+        context.clearRefMap();
     }
 
     // ══════════════════════════════════════════════════════════════════════════

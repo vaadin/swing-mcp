@@ -47,12 +47,9 @@ class SwingClickToolTest extends AbstractHeadlessTest {
      * for mutation tools).
      */
     private void click(int ref) throws Exception {
-        try {
-            clickTool.execute(new Parameters(Map.of("ref", ref)), context);
-            SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
-        } finally {
-            context.clearRefMap();
-        }
+        clickTool.execute(new Parameters(Map.of("ref", ref)), context);
+        context.clearRefMap();
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -136,6 +133,33 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         MCPServerException ex = assertThrows(MCPServerException.class, () -> click(ref));
         assertTrue(ex.getMessage().contains("swing_snapshot"),
                 "Error should suggest calling swing_snapshot after invalidation");
+    }
+
+    @Test
+    void refsPreservedAfterValidationError() throws Exception {
+        // A validation rejection (e.g. "disabled") must NOT clear the ref map —
+        // the UI state hasn't changed, so existing refs remain valid.
+        JButton disabled = new JButton("No");
+        disabled.setEnabled(false);
+        JButton enabled = new JButton("OK");
+        JPanel panel = new JPanel();
+        panel.add(disabled);
+        panel.add(enabled);
+        snapshot(panel);
+
+        int disabledRef = context.getRefOf(disabled);
+        int enabledRef = context.getRefOf(enabled);
+
+        // Click on disabled → MCPErrorResponseException, no EDT action dispatched
+        assertThrows(MCPErrorResponseException.class,
+                () -> clickTool.execute(new Parameters(Map.of("ref", disabledRef)), context));
+
+        // The ref map must still be intact — the enabled button's ref is still valid
+        AtomicBoolean clicked = new AtomicBoolean(false);
+        enabled.addActionListener(e -> clicked.set(true));
+        click(enabledRef);
+        assertTrue(clicked.get(),
+                "Button should still be clickable via its original ref after a validation error on another ref");
     }
 
     // ══════════════════════════════════════════════════════════════════════════

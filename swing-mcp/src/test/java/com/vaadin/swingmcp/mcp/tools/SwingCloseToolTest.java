@@ -32,11 +32,8 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
     }
 
     private void close(int ref) throws Exception {
-        try {
-            closeTool.execute(new Parameters(Map.of("ref", ref)), context);
-        } finally {
-            context.clearRefMap();
-        }
+        closeTool.execute(new Parameters(Map.of("ref", ref)), context);
+        context.clearRefMap();
     }
 
     // ══════════════════════════════════════════════════════════════════════════

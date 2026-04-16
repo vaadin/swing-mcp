@@ -56,7 +56,7 @@ MCPServer, it must register a wrapper ToolFunction which, upon invocation:
 2. Calls `runInEDT()` with a block that (all on the EDT):
    a. Retrieves a list of considered components.
    b. Calls `AbstractSwingTool.execute()`.
-   c. If `isMutation()` is true, clears the ref map in a `finally` block (even on exception).
+   c. If `isMutation()` is true **and `execute()` returned normally**, clears the ref map. A validation error (thrown as `MCPErrorResponseException`) does not clear the ref map — the UI state hasn't changed, so existing refs remain valid and the AI can retry without re-snapshotting.
 3. Returns the result.
 
 **Mutation tools use fire-and-forget dispatch** (see **Fire-and-Forget Mutation Dispatch** below):
@@ -139,12 +139,15 @@ components. The ref system is shared across all tools and follows these rules:
    may trigger a validator that disables other fields), so stale refs cannot be
    trusted.
 
-3. **Invalidation.** After any interaction tool call, the existing ref map is
-   cleared — even if the tool fails with an exception (use a `finally` block).
-   The component tree may be in a partially modified state after a failure, so
-   stale refs cannot be trusted. Subsequent attempts to use an old ref must
-   return an MCP-level error (`isError: true`) with a recovery message
-   suggesting the AI call `swing_snapshot` to obtain fresh refs.
+3. **Invalidation.** After any **successful** interaction tool call, the
+   existing ref map is cleared. A pre-dispatch validation error
+   (`MCPErrorResponseException`) does **not** clear the ref map — nothing was
+   dispatched to the EDT, so the UI state hasn't changed and existing refs
+   remain valid. This lets the AI retry with a different ref (or after
+   correcting the issue) without paying for a re-snapshot. Subsequent attempts
+   to use an old ref after a **successful** mutation must return an MCP-level
+   error (`isError: true`) with a recovery message suggesting the AI call
+   `swing_snapshot` to obtain fresh refs.
    `swing_get_cells` also replaces the ref map (with a fresh local numbering
    scoped to its output window), even though it is an inspection tool, not an
    interaction tool. Refs from a prior `swing_snapshot` or `swing_get_cells`

@@ -39,13 +39,10 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
     }
 
     private void setSelection(int ref, List<Object> indices) throws Exception {
-        try {
-            setSelectionTool.execute(
-                    new Parameters(Map.of("ref", ref, "indices", indices)), context);
-            SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
-        } finally {
-            context.clearRefMap();
-        }
+        setSelectionTool.execute(
+                new Parameters(Map.of("ref", ref, "indices", indices)), context);
+        context.clearRefMap();
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
     }
 
     private String getSelection(int ref) throws Exception {
@@ -389,17 +386,18 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void refMapClearedAfterFailedSetSelectionOnDisabledComponent() throws Exception {
+    void refMapPreservedAfterFailedSetSelectionOnDisabledComponent() throws Exception {
         JList<String> list = new JList<>(new String[]{"A", "B"});
         list.setEnabled(false);
         snapshot(list);
         int ref = context.getRefOf(list);
         assertThrows(MCPErrorResponseException.class,
-                () -> setSelection(ref, List.of(0.0)));
-        // Ref map should still be cleared — using old ref should fail
-        MCPServerException ex = assertThrows(MCPServerException.class,
-                () -> setSelection(ref, List.of(0.0)));
-        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+                () -> setSelectionTool.execute(
+                        new Parameters(Map.of("ref", ref, "indices", List.of(0.0))), context));
+        // Validation error — ref map must still be intact so the AI can retry
+        list.setEnabled(true);
+        setSelection(ref, List.of(0.0));
+        assertArrayEquals(new int[]{0}, list.getSelectedIndices());
     }
 
     // ══════════════════════════════════════════════════════════════════════════
