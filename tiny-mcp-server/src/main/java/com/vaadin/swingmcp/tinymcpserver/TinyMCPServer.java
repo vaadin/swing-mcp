@@ -1,18 +1,11 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonSyntaxException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executors;
@@ -68,21 +61,6 @@ public class TinyMCPServer {
         MCPProtocol.Content call(Map<String, Object> params) throws Exception;
     }
 
-    private static class RegisteredTool {
-        final MCPProtocol.InputSchema inputSchema;
-        final ToolFunction function;
-        final MCPProtocol.Tool descriptor;
-
-        RegisteredTool(String name, String description, MCPProtocol.InputSchema inputSchema, ToolFunction function) {
-            this.inputSchema = inputSchema;
-            this.function = function;
-            this.descriptor = new MCPProtocol.Tool();
-            this.descriptor.setName(name);
-            this.descriptor.setDescription(description);
-            this.descriptor.setInputSchema(inputSchema);
-        }
-    }
-
     /**
      * The port requested in the constructor. May be {@code 0}, meaning
      * "let the OS pick an ephemeral port at bind time". After {@link #start()},
@@ -92,7 +70,7 @@ public class TinyMCPServer {
     private final String contextPath;
     private final MCPProtocol.Implementation serverInfo;
     private final String instructions;
-    private final Map<String, RegisteredTool> tools = new LinkedHashMap<>();
+    private final MCPToolHandler toolHandler = new MCPToolHandler();
     private volatile boolean started = false;
     private HttpServer httpServer;
     /** Populated by {@link #start()} once the OS has assigned a port. */
@@ -145,28 +123,10 @@ public class TinyMCPServer {
      * @throws IllegalStateException    if a tool with the same name is already registered
      */
     public void addTool(String name, String description, MCPProtocol.InputSchema inputSchema, ToolFunction function) {
-        if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Tool name must not be null or blank");
-        }
-        if (!name.matches("[a-zA-Z_][a-zA-Z0-9_]*")) {
-            throw new IllegalArgumentException("Tool name must start with a letter or underscore and contain only alphanumeric characters and underscores: " + name);
-        }
-        if (description == null || description.isBlank()) {
-            throw new IllegalArgumentException("Tool description must not be null or blank");
-        }
-        if (inputSchema == null) {
-            throw new IllegalArgumentException("InputSchema must not be null");
-        }
-        if (function == null) {
-            throw new IllegalArgumentException("ToolFunction must not be null");
-        }
         if (started) {
             throw new IllegalStateException("Cannot add tools after server has been started");
         }
-        if (tools.containsKey(name)) {
-            throw new IllegalStateException("A tool with name '" + name + "' is already registered");
-        }
-        tools.put(name, new RegisteredTool(name, description, inputSchema, function));
+        toolHandler.addTool(name, description, inputSchema, function);
     }
 
     public void start() throws IOException {
@@ -246,58 +206,10 @@ public class TinyMCPServer {
     }
 
     private void handlePost(JsonRpcExchange rpc) throws IOException {
-        // --- Session ID validation (pre-parse) ---
-        String incomingSessionId = rpc.getHttpExchange().getRequestHeaders().getFirst("Mcp-Session-Id");
-        if (incomingSessionId != null) {
-            synchronized (this) {
-                if (!incomingSessionId.equals(activeSessionId)) {
-                    LOG.warning("Rejecting request: Mcp-Session-Id mismatch (received="
-                            + incomingSessionId + ", active=" + activeSessionId + ")");
-                    rpc.sendError(404,
-                            MCPServerException.SERVER_NOT_INITIALIZED, "Session not found.");
-                    return;
-                }
-            }
-        }
+        MCPProtocol.JsonRpcRequest request = rpc.parsePost();
+        if (request == null) return;
 
-        String body = rpc.readBody();
-        LOG.fine("Received POST: " + body);
-
-        // Parse as a generic JsonElement first so we can distinguish
-        // malformed JSON (-32700) from valid-JSON-but-wrong-shape (-32600).
-        JsonElement jsonElement;
-        try {
-            jsonElement = MCPProtocol.fromJson(body, JsonElement.class);
-        } catch (JsonSyntaxException e) {
-            LOG.log(Level.WARNING, "Malformed JSON in request", e);
-            rpc.sendError(400, MCPServerException.PARSE_ERROR, "Parse error");
-            return;
-        }
-
-        if (jsonElement instanceof JsonArray) {
-            LOG.warning("Batch requests are not supported");
-            rpc.sendError(400,
-                    MCPServerException.INVALID_REQUEST, "Batch requests are not supported");
-            return;
-        }
-
-        MCPProtocol.JsonRpcRequest request;
-        try {
-            request = MCPProtocol.gson().fromJson(jsonElement, MCPProtocol.JsonRpcRequest.class);
-        } catch (JsonSyntaxException e) {
-            LOG.log(Level.WARNING, "Invalid JSON-RPC request", e);
-            rpc.sendError(400, MCPServerException.INVALID_REQUEST, "Invalid Request");
-            return;
-        }
         String rpcMethod = request.getMethod();
-
-        // Notifications have no id — respond with 202 Accepted
-        if (request.getId() == null) {
-            rpc.sendPlain(202, "");
-            return;
-        }
-
-        rpc.setRequestId(request.getId());
 
         // --- Session required check (post-parse) ---
         // initialize and ping are always allowed; everything else requires an active session.
@@ -321,10 +233,10 @@ public class TinyMCPServer {
                 handlePing(rpc);
                 break;
             case "tools/list":
-                handleToolsList(rpc);
+                toolHandler.handleToolsList(rpc);
                 break;
             case "tools/call":
-                handleToolsCall(rpc, request);
+                toolHandler.handleToolsCall(rpc, request);
                 break;
             case "resources/list":
                 handleResourcesList(rpc);
@@ -368,163 +280,6 @@ public class TinyMCPServer {
         rpc.sendResponseRaw("{}");
     }
 
-    private void handleToolsList(JsonRpcExchange rpc) throws IOException {
-        MCPProtocol.ListToolsResult result = new MCPProtocol.ListToolsResult();
-        List<MCPProtocol.Tool> toolList = new ArrayList<>();
-        for (RegisteredTool rt : tools.values()) {
-            toolList.add(rt.descriptor);
-        }
-        result.setTools(toolList);
-        rpc.sendResponse(result);
-    }
-
-    private void handleToolsCall(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) throws IOException {
-        MCPProtocol.CallToolParams params = request.getParamsAs(MCPProtocol.CallToolParams.class);
-        if (params == null || params.getName() == null) {
-            rpc.sendError(-32601, "Method not found");
-            return;
-        }
-
-        String toolName = params.getName();
-        RegisteredTool tool = tools.get(toolName);
-        if (tool == null) {
-            rpc.sendError(-32601, "Method not found: " + toolName);
-            return;
-        }
-
-        Map<String, Object> rawArgs = params.getArguments() != null ? params.getArguments() : Collections.emptyMap();
-        Map<String, Object> callArgs = parseParameters(rpc, toolName, tool.inputSchema, rawArgs);
-        if (callArgs == null) {
-            return; // parseParameters already sent the error response
-        }
-
-        // Invoke the tool function
-        try {
-            MCPProtocol.Content content = tool.function.call(callArgs);
-            MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
-            if (content == null) {
-                result.setContent(Collections.emptyList());
-            } else {
-                result.setContent(Collections.singletonList(content));
-            }
-            rpc.sendResponse(result);
-        } catch (MCPErrorResponseException e) {
-            LOG.fine("Tool '" + toolName + "' returned error response: " + e.getMessage());
-            rpc.sendToolError(e.getMessage());
-        } catch (MCPServerException e) {
-            LOG.log(Level.FINE, "Tool '" + toolName + "' threw MCPServerException (code=" + e.getCode() + ")", e);
-            rpc.sendError(e.getCode(), e.getMessage());
-        } catch (Exception e) {
-            LOG.log(Level.WARNING, "Tool '" + toolName + "' threw an exception", e);
-            rpc.sendToolError(e.toString());
-        }
-    }
-
-    /**
-     * Validates and coerces raw tool arguments against the tool's input schema.
-     * Returns the validated parameter map on success, or {@code null} if validation
-     * failed (in which case the appropriate error response has already been sent).
-     */
-    private Map<String, Object> parseParameters(JsonRpcExchange rpc,
-            String toolName, MCPProtocol.InputSchema schema, Map<String, Object> rawArgs) throws IOException {
-        Map<String, MCPProtocol.PropertySchema> properties =
-                schema.getProperties() != null ? schema.getProperties() : Collections.emptyMap();
-        List<String> required =
-                schema.getRequired() != null ? schema.getRequired() : Collections.emptyList();
-
-        // Reject unknown parameters with isError:true and did-you-mean hints
-        List<String> unknownParams = new ArrayList<>();
-        for (String key : rawArgs.keySet()) {
-            if (!properties.containsKey(key)) {
-                unknownParams.add(key);
-            }
-        }
-        if (!unknownParams.isEmpty()) {
-            StringBuilder msg = new StringBuilder("Unknown parameter");
-            msg.append(unknownParams.size() == 1 ? " " : "s ");
-            for (int i = 0; i < unknownParams.size(); i++) {
-                if (i > 0) msg.append(", ");
-                String unknown = unknownParams.get(i);
-                msg.append("'").append(unknown).append("'");
-                if (!properties.isEmpty()) {
-                    String closest = null;
-                    int bestDist = Integer.MAX_VALUE;
-                    for (String known : properties.keySet()) {
-                        int dist = ServerUtils.levenshteinDistance(unknown, known);
-                        if (dist < bestDist) {
-                            bestDist = dist;
-                            closest = known;
-                        }
-                    }
-                    int threshold = Math.max(unknown.length(), closest.length()) / 2;
-                    if (bestDist <= threshold) {
-                        msg.append(" (did you mean '").append(closest).append("'?)");
-                    }
-                }
-            }
-            msg.append(" for tool '").append(toolName).append("'.");
-            if (!properties.isEmpty()) {
-                msg.append(" Valid parameters: ");
-                int i = 0;
-                for (String name : properties.keySet()) {
-                    if (i++ > 0) msg.append(", ");
-                    msg.append(name);
-                }
-            }
-
-            rpc.sendToolError(msg.toString());
-            return null;
-        }
-
-        // Validate and coerce known parameters
-        Map<String, Object> callArgs = new HashMap<>();
-        for (Map.Entry<String, MCPProtocol.PropertySchema> entry : properties.entrySet()) {
-            String paramName = entry.getKey();
-            String paramType = entry.getValue().getType();
-            Object value = rawArgs.get(paramName);
-            boolean isRequired = required.contains(paramName);
-
-            if (value == null) {
-                if (isRequired) {
-                    rpc.sendError(-32602,
-                            "Missing required parameter '" + paramName + "'");
-                    return null;
-                }
-                // optional and absent: omit from callArgs
-                continue;
-            }
-
-            if ("integer".equals(paramType)) {
-                if (value instanceof Long) {
-                    long l = (Long) value;
-                    if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
-                        rpc.sendError(-32602,
-                                "Parameter '" + paramName + "' value " + l + " is out of 32-bit integer range");
-                        return null;
-                    }
-                    value = (int) l;
-                } else if (value instanceof Double) {
-                    double d = (Double) value;
-                    if (Double.isNaN(d) || Double.isInfinite(d) || d != Math.floor(d)) {
-                        rpc.sendError(-32602,
-                                "Parameter '" + paramName + "' must be a whole number, got " + d);
-                        return null;
-                    }
-                    long l = (long) d;
-                    if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
-                        rpc.sendError(-32602,
-                                "Parameter '" + paramName + "' value " + l + " is out of 32-bit integer range");
-                        return null;
-                    }
-                    value = (int) l;
-                }
-            }
-
-            callArgs.put(paramName, value);
-        }
-        return callArgs;
-    }
-
     private void handleResourcesList(JsonRpcExchange rpc) throws IOException {
         MCPProtocol.ListResourcesResult result = new MCPProtocol.ListResourcesResult();
         result.setResources(Collections.emptyList());
@@ -566,5 +321,4 @@ public class TinyMCPServer {
     protected void onSessionClosed() {
         // no-op by default
     }
-
 }

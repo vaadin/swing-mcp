@@ -2,12 +2,17 @@ package com.vaadin.swingmcp.tinymcpserver;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonSyntaxException;
 import com.sun.net.httpserver.HttpExchange;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Request-scoped wrapper around {@link HttpExchange} that provides
@@ -17,6 +22,7 @@ import java.util.Collections;
  */
 class JsonRpcExchange {
 
+    private static final Logger LOG = Logger.getLogger(JsonRpcExchange.class.getName());
     private static final Gson GSON_WITH_NULLS = new GsonBuilder().serializeNulls().create();
 
     private final HttpExchange exchange;
@@ -29,7 +35,6 @@ class JsonRpcExchange {
     }
 
     HttpExchange getHttpExchange() { return exchange; }
-    void setRequestId(Object requestId) { this.requestId = requestId; }
     void setSessionId(String sessionId) { this.sessionId = sessionId; }
 
     void sendResponse(Object result) throws IOException {
@@ -70,6 +75,65 @@ class JsonRpcExchange {
         try (InputStream is = exchange.getRequestBody()) {
             return new String(is.readAllBytes(), StandardCharsets.UTF_8);
         }
+    }
+
+    /**
+     * Reads the request body, parses it as a JSON-RPC request, and sets
+     * the request ID. Returns the parsed request on success, or {@code null}
+     * if the response has already been sent (parse error, batch request,
+     * or notification).
+     */
+    MCPProtocol.JsonRpcRequest parsePost() throws IOException {
+        // --- Session ID validation (pre-parse) ---
+        String incomingSessionId = getHttpExchange().getRequestHeaders().getFirst("Mcp-Session-Id");
+        if (incomingSessionId != null) {
+            if (!incomingSessionId.equals(sessionId)) {
+                LOG.warning("Rejecting request: Mcp-Session-Id mismatch (received="
+                        + incomingSessionId + ", active=" + sessionId + ")");
+                sendError(404,
+                        MCPServerException.SERVER_NOT_INITIALIZED, "Session not found.");
+                return null;
+            }
+        }
+
+        String body = readBody();
+        LOG.fine("Received POST: " + body);
+
+        // Parse as a generic JsonElement first so we can distinguish
+        // malformed JSON (-32700) from valid-JSON-but-wrong-shape (-32600).
+        JsonElement jsonElement;
+        try {
+            jsonElement = MCPProtocol.fromJson(body, JsonElement.class);
+        } catch (JsonSyntaxException e) {
+            LOG.log(Level.WARNING, "Malformed JSON in request", e);
+            sendError(400, MCPServerException.PARSE_ERROR, "Parse error");
+            return null;
+        }
+
+        if (jsonElement instanceof JsonArray) {
+            LOG.warning("Batch requests are not supported");
+            sendError(400,
+                    MCPServerException.INVALID_REQUEST, "Batch requests are not supported");
+            return null;
+        }
+
+        MCPProtocol.JsonRpcRequest request;
+        try {
+            request = MCPProtocol.gson().fromJson(jsonElement, MCPProtocol.JsonRpcRequest.class);
+        } catch (JsonSyntaxException e) {
+            LOG.log(Level.WARNING, "Invalid JSON-RPC request", e);
+            sendError(400, MCPServerException.INVALID_REQUEST, "Invalid Request");
+            return null;
+        }
+
+        // Notifications have no id — respond with 202 Accepted
+        if (request.getId() == null) {
+            sendPlain(202, "");
+            return null;
+        }
+
+        requestId = request.getId();
+        return request;
     }
 
     void sendPlain(int statusCode, String body) throws IOException {
