@@ -123,7 +123,7 @@ class SwingIconifyScreenTest extends AbstractScreenTest {
         context.putRef(99, (Accessible) frame);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> iconifyTool.execute(new Parameters(Map.of("ref", 99)), context)));
-        assertEquals("Frame is undecorated and cannot be iconified", ex.getMessage());
+        assertEquals("Frame is undecorated and cannot be iconified. Call swing_snapshot to verify the current state", ex.getMessage());
     }
 
     @Test
@@ -163,7 +163,7 @@ class SwingIconifyScreenTest extends AbstractScreenTest {
         // Stale ref should fail
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> iconifyTool.execute(new Parameters(Map.of("ref", ref)), context)));
-        assertEquals("Frame is already iconified", ex.getMessage());
+        assertEquals("Frame is already iconified. Call swing_snapshot to verify the current state", ex.getMessage());
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -241,7 +241,7 @@ class SwingIconifyScreenTest extends AbstractScreenTest {
         context.putRef(99, (Accessible) iframe);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> iconifyTool.execute(new Parameters(Map.of("ref", 99)), context)));
-        assertEquals("JInternalFrame is not iconifiable", ex.getMessage());
+        assertEquals("JInternalFrame is not iconifiable. Call swing_snapshot to verify the current state", ex.getMessage());
     }
 
     @Test

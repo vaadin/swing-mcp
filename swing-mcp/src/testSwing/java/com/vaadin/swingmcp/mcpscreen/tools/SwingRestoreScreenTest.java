@@ -260,7 +260,7 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
         context.putRef(99, (Accessible) frame);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> restoreTool.execute(new Parameters(Map.of("ref", 99)), context)));
-        assertEquals("Frame is not iconified", ex.getMessage());
+        assertEquals("Frame is not iconified. Call swing_snapshot to verify the current state", ex.getMessage());
     }
 
     // ══════════════════════════════════════════════════════════════════════════

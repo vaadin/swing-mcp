@@ -82,7 +82,7 @@ public class SwingRestoreTool extends AbstractSwingTool {
 
     private static String restoreErrorMessage(Accessible accessible) {
         if (accessible instanceof Frame) {
-            return "Frame is not iconified";
+            return "Frame is not iconified. Call swing_snapshot to verify the current state";
         }
         return ComponentClassResolver.resolveClassName(accessible)
                 + " does not support swing_restore. Call swing_snapshot or swing_get_cells to verify the list of actions";
