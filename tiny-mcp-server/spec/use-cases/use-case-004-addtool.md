@@ -30,7 +30,7 @@ The function has the following properties:
 * Tool not found → JSON-RPC error -32601 (Method not found).
 * Parameter validation before invoking the function:
   * JSON numbers are deserialized as `Double` by GSON; for `integer` schema parameters, convert whole-number Doubles to `Integer`, reject fractional Doubles with -32602.
-  * Missing required parameter → JSON-RPC error -32602 (Invalid params), message: `Invalid parameter '<name>'`.
+  * Missing required parameter → JSON-RPC error -32602 (Invalid params), message: `Missing required parameter '<name>'`.
   * Null parameter value treated as missing.
   * Unknown parameters silently ignored (log a warning).
 * Tool invocation is synchronous on the HTTP handler thread.

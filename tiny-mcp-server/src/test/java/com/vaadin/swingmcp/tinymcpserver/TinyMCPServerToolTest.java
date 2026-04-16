@@ -298,6 +298,7 @@ class TinyMCPServerToolTest {
                 ))));
         McpError mcpError = assertInstanceOf(McpError.class, McpError.findRootCause(ex));
         assertEquals(-32602, mcpError.getJsonRpcError().code());
+        assertEquals("Parameter 'int_param' must be a whole number, got 5.5", mcpError.getJsonRpcError().message());
     }
 
     @Test
@@ -307,6 +308,7 @@ class TinyMCPServerToolTest {
                 client.callTool(new McpSchema.CallToolRequest("echo_text", Map.of())));
         McpError mcpError = assertInstanceOf(McpError.class, McpError.findRootCause(ex));
         assertEquals(-32602, mcpError.getJsonRpcError().code());
+        assertEquals("Missing required parameter 'message'", mcpError.getJsonRpcError().message());
     }
 
     @Test
@@ -318,6 +320,7 @@ class TinyMCPServerToolTest {
                 client.callTool(new McpSchema.CallToolRequest("echo_text", args)));
         McpError mcpError = assertInstanceOf(McpError.class, McpError.findRootCause(ex));
         assertEquals(-32602, mcpError.getJsonRpcError().code());
+        assertEquals("Missing required parameter 'message'", mcpError.getJsonRpcError().message());
     }
 
     @Test
@@ -511,6 +514,7 @@ class TinyMCPServerToolTest {
                 client.callTool(new McpSchema.CallToolRequest("echo_array", Map.of())));
         McpError mcpError = assertInstanceOf(McpError.class, McpError.findRootCause(ex));
         assertEquals(-32602, mcpError.getJsonRpcError().code());
+        assertEquals("Missing required parameter 'items'", mcpError.getJsonRpcError().message());
     }
 
     // ===== MCPServerException handling =====
