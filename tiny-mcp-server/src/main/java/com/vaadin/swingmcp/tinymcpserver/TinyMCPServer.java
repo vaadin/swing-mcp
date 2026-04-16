@@ -1,18 +1,13 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonSyntaxException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,7 +26,6 @@ import java.util.logging.Logger;
 public class TinyMCPServer {
 
     private static final Logger LOG = Logger.getLogger(TinyMCPServer.class.getName());
-    private static final Gson GSON_WITH_NULLS = new GsonBuilder().serializeNulls().create();
 
     public static final int DEFAULT_PORT = 18088;
     public static final String DEFAULT_CONTEXT_PATH = "/mcp";
@@ -224,45 +218,49 @@ public class TinyMCPServer {
     }
 
     private void handleRequest(HttpExchange exchange) {
+        JsonRpcExchange rpc;
+        synchronized (this) {
+            rpc = new JsonRpcExchange(exchange, activeSessionId);
+        }
         try {
             String method = exchange.getRequestMethod();
             switch (method) {
                 case "POST":
-                    handlePost(exchange);
+                    handlePost(rpc);
                     break;
                 case "DELETE":
-                    handleDelete(exchange);
+                    handleDelete(rpc);
                     break;
                 default:
-                    sendPlainResponse(exchange, 405, "Method Not Allowed");
+                    rpc.sendPlain(405, "Method Not Allowed");
                     break;
             }
         } catch (Exception e) {
             LOG.log(Level.SEVERE, "Error handling request", e);
             try {
-                sendPlainResponse(exchange, 500, "Internal Server Error");
+                rpc.sendPlain(500, "Internal Server Error");
             } catch (IOException ioe) {
                 LOG.log(Level.SEVERE, "Failed to send error response", ioe);
             }
         }
     }
 
-    private void handlePost(HttpExchange exchange) throws IOException {
+    private void handlePost(JsonRpcExchange rpc) throws IOException {
         // --- Session ID validation (pre-parse) ---
-        String incomingSessionId = exchange.getRequestHeaders().getFirst("Mcp-Session-Id");
+        String incomingSessionId = rpc.getHttpExchange().getRequestHeaders().getFirst("Mcp-Session-Id");
         if (incomingSessionId != null) {
             synchronized (this) {
                 if (!incomingSessionId.equals(activeSessionId)) {
                     LOG.warning("Rejecting request: Mcp-Session-Id mismatch (received="
                             + incomingSessionId + ", active=" + activeSessionId + ")");
-                    sendJsonRpcError(exchange, 404, null,
+                    rpc.sendError(404,
                             MCPServerException.SERVER_NOT_INITIALIZED, "Session not found.");
                     return;
                 }
             }
         }
 
-        String body = readBody(exchange);
+        String body = rpc.readBody();
         LOG.fine("Received POST: " + body);
 
         // Parse as a generic JsonElement first so we can distinguish
@@ -272,13 +270,13 @@ public class TinyMCPServer {
             jsonElement = MCPProtocol.fromJson(body, JsonElement.class);
         } catch (JsonSyntaxException e) {
             LOG.log(Level.WARNING, "Malformed JSON in request", e);
-            sendJsonRpcError(exchange, 400, null, MCPServerException.PARSE_ERROR, "Parse error");
+            rpc.sendError(400, MCPServerException.PARSE_ERROR, "Parse error");
             return;
         }
 
         if (jsonElement instanceof JsonArray) {
             LOG.warning("Batch requests are not supported");
-            sendJsonRpcError(exchange, 400, null,
+            rpc.sendError(400,
                     MCPServerException.INVALID_REQUEST, "Batch requests are not supported");
             return;
         }
@@ -288,16 +286,18 @@ public class TinyMCPServer {
             request = MCPProtocol.gson().fromJson(jsonElement, MCPProtocol.JsonRpcRequest.class);
         } catch (JsonSyntaxException e) {
             LOG.log(Level.WARNING, "Invalid JSON-RPC request", e);
-            sendJsonRpcError(exchange, 400, null, MCPServerException.INVALID_REQUEST, "Invalid Request");
+            rpc.sendError(400, MCPServerException.INVALID_REQUEST, "Invalid Request");
             return;
         }
         String rpcMethod = request.getMethod();
 
         // Notifications have no id — respond with 202 Accepted
         if (request.getId() == null) {
-            sendPlainResponse(exchange, 202, "");
+            rpc.sendPlain(202, "");
             return;
         }
+
+        rpc.setRequestId(request.getId());
 
         // --- Session required check (post-parse) ---
         // initialize and ping are always allowed; everything else requires an active session.
@@ -305,7 +305,7 @@ public class TinyMCPServer {
             synchronized (this) {
                 if (activeSessionId == null) {
                     LOG.warning("Rejecting '" + rpcMethod + "': no active session");
-                    sendJsonRpcError(exchange, 400, request.getId(),
+                    rpc.sendError(400,
                             MCPServerException.SERVER_NOT_INITIALIZED,
                             "Server not initialized. Send 'initialize' first.");
                     return;
@@ -315,38 +315,38 @@ public class TinyMCPServer {
 
         switch (rpcMethod != null ? rpcMethod : "") {
             case "initialize":
-                handleInitialize(exchange, request);
+                handleInitialize(rpc);
                 break;
             case "ping":
-                handlePing(exchange, request);
+                handlePing(rpc);
                 break;
             case "tools/list":
-                handleToolsList(exchange, request);
+                handleToolsList(rpc);
                 break;
             case "tools/call":
-                handleToolsCall(exchange, request);
+                handleToolsCall(rpc, request);
                 break;
             case "resources/list":
-                handleResourcesList(exchange, request);
+                handleResourcesList(rpc);
                 break;
             case "prompts/list":
-                handlePromptsList(exchange, request);
+                handlePromptsList(rpc);
                 break;
             default:
-                sendJsonRpcError(exchange, request.getId(),
-                        -32601, "Method not found: " + rpcMethod);
+                rpc.sendError(-32601, "Method not found: " + rpcMethod);
                 break;
         }
     }
 
-    private void handleInitialize(HttpExchange exchange, MCPProtocol.JsonRpcRequest request) throws IOException {
+    private void handleInitialize(JsonRpcExchange rpc) throws IOException {
         synchronized (this) {
             if (activeSessionId != null) {
                 LOG.warning("Rejecting initialization: another session is already active (id=" + activeSessionId + ")");
-                sendJsonRpcError(exchange, 409, request.getId(), -32002, "Another session is already active");
+                rpc.sendError(409, -32002, "Another session is already active");
                 return;
             }
             activeSessionId = UUID.randomUUID().toString();
+            rpc.setSessionId(activeSessionId);
         }
 
         MCPProtocol.InitializeResult result = new MCPProtocol.InitializeResult();
@@ -361,96 +361,41 @@ public class TinyMCPServer {
         capabilities.setPrompts(new MCPProtocol.PromptsCapability());
         result.setCapabilities(capabilities);
 
-        sendJsonRpcResponse(exchange, request.getId(), result);
+        rpc.sendResponse(result);
     }
 
-    private void handlePing(HttpExchange exchange, MCPProtocol.JsonRpcRequest request) throws IOException {
-        sendJsonRpcResponseRaw(exchange, request.getId(), "{}");
+    private void handlePing(JsonRpcExchange rpc) throws IOException {
+        rpc.sendResponseRaw("{}");
     }
 
-    private void handleToolsList(HttpExchange exchange, MCPProtocol.JsonRpcRequest request) throws IOException {
+    private void handleToolsList(JsonRpcExchange rpc) throws IOException {
         MCPProtocol.ListToolsResult result = new MCPProtocol.ListToolsResult();
         List<MCPProtocol.Tool> toolList = new ArrayList<>();
         for (RegisteredTool rt : tools.values()) {
             toolList.add(rt.descriptor);
         }
         result.setTools(toolList);
-        sendJsonRpcResponse(exchange, request.getId(), result);
+        rpc.sendResponse(result);
     }
 
-    private void handleToolsCall(HttpExchange exchange, MCPProtocol.JsonRpcRequest request) throws IOException {
+    private void handleToolsCall(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) throws IOException {
         MCPProtocol.CallToolParams params = request.getParamsAs(MCPProtocol.CallToolParams.class);
         if (params == null || params.getName() == null) {
-            sendJsonRpcError(exchange, request.getId(), -32601, "Method not found");
+            rpc.sendError(-32601, "Method not found");
             return;
         }
 
         String toolName = params.getName();
         RegisteredTool tool = tools.get(toolName);
         if (tool == null) {
-            sendJsonRpcError(exchange, request.getId(), -32601, "Method not found: " + toolName);
+            rpc.sendError(-32601, "Method not found: " + toolName);
             return;
         }
 
         Map<String, Object> rawArgs = params.getArguments() != null ? params.getArguments() : Collections.emptyMap();
-        MCPProtocol.InputSchema schema = tool.inputSchema;
-        Map<String, MCPProtocol.PropertySchema> properties =
-                schema.getProperties() != null ? schema.getProperties() : Collections.emptyMap();
-        List<String> required =
-                schema.getRequired() != null ? schema.getRequired() : Collections.emptyList();
-
-        // Warn about unknown parameters
-        for (String key : rawArgs.keySet()) {
-            if (!properties.containsKey(key)) {
-                LOG.warning("Unknown parameter '" + key + "' for tool '" + toolName + "', ignoring");
-            }
-        }
-
-        // Validate and coerce parameters
-        Map<String, Object> callArgs = new HashMap<>();
-        for (Map.Entry<String, MCPProtocol.PropertySchema> entry : properties.entrySet()) {
-            String paramName = entry.getKey();
-            String paramType = entry.getValue().getType();
-            Object value = rawArgs.get(paramName);
-            boolean isRequired = required.contains(paramName);
-
-            if (value == null) {
-                if (isRequired) {
-                    sendJsonRpcError(exchange, request.getId(), -32602,
-                            "Missing required parameter '" + paramName + "'");
-                    return;
-                }
-                // optional and absent: omit from callArgs
-                continue;
-            }
-
-            if ("integer".equals(paramType)) {
-                if (value instanceof Long) {
-                    long l = (Long) value;
-                    if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
-                        sendJsonRpcError(exchange, request.getId(), -32602,
-                                "Parameter '" + paramName + "' value " + l + " is out of 32-bit integer range");
-                        return;
-                    }
-                    value = (int) l;
-                } else if (value instanceof Double) {
-                    double d = (Double) value;
-                    if (Double.isNaN(d) || Double.isInfinite(d) || d != Math.floor(d)) {
-                        sendJsonRpcError(exchange, request.getId(), -32602,
-                                "Parameter '" + paramName + "' must be a whole number, got " + d);
-                        return;
-                    }
-                    long l = (long) d;
-                    if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
-                        sendJsonRpcError(exchange, request.getId(), -32602,
-                                "Parameter '" + paramName + "' value " + l + " is out of 32-bit integer range");
-                        return;
-                    }
-                    value = (int) l;
-                }
-            }
-
-            callArgs.put(paramName, value);
+        Map<String, Object> callArgs = parseParameters(rpc, toolName, tool.inputSchema, rawArgs);
+        if (callArgs == null) {
+            return; // parseParameters already sent the error response
         }
 
         // Invoke the tool function
@@ -462,38 +407,137 @@ public class TinyMCPServer {
             } else {
                 result.setContent(Collections.singletonList(content));
             }
-            sendJsonRpcResponse(exchange, request.getId(), result);
+            rpc.sendResponse(result);
         } catch (MCPErrorResponseException e) {
             LOG.fine("Tool '" + toolName + "' returned error response: " + e.getMessage());
-            MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
-            result.setIsError(true);
-            result.setContent(Collections.singletonList(MCPProtocol.Content.text(e.getMessage())));
-            sendJsonRpcResponse(exchange, request.getId(), result);
+            rpc.sendToolError(e.getMessage());
         } catch (MCPServerException e) {
             LOG.log(Level.FINE, "Tool '" + toolName + "' threw MCPServerException (code=" + e.getCode() + ")", e);
-            sendJsonRpcError(exchange, request.getId(), e.getCode(), e.getMessage());
+            rpc.sendError(e.getCode(), e.getMessage());
         } catch (Exception e) {
             LOG.log(Level.WARNING, "Tool '" + toolName + "' threw an exception", e);
-            MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
-            result.setIsError(true);
-            result.setContent(Collections.singletonList(MCPProtocol.Content.text(e.toString())));
-            sendJsonRpcResponse(exchange, request.getId(), result);
+            rpc.sendToolError(e.toString());
         }
     }
 
-    private void handleResourcesList(HttpExchange exchange, MCPProtocol.JsonRpcRequest request) throws IOException {
+    /**
+     * Validates and coerces raw tool arguments against the tool's input schema.
+     * Returns the validated parameter map on success, or {@code null} if validation
+     * failed (in which case the appropriate error response has already been sent).
+     */
+    private Map<String, Object> parseParameters(JsonRpcExchange rpc,
+            String toolName, MCPProtocol.InputSchema schema, Map<String, Object> rawArgs) throws IOException {
+        Map<String, MCPProtocol.PropertySchema> properties =
+                schema.getProperties() != null ? schema.getProperties() : Collections.emptyMap();
+        List<String> required =
+                schema.getRequired() != null ? schema.getRequired() : Collections.emptyList();
+
+        // Reject unknown parameters with isError:true and did-you-mean hints
+        List<String> unknownParams = new ArrayList<>();
+        for (String key : rawArgs.keySet()) {
+            if (!properties.containsKey(key)) {
+                unknownParams.add(key);
+            }
+        }
+        if (!unknownParams.isEmpty()) {
+            StringBuilder msg = new StringBuilder("Unknown parameter");
+            msg.append(unknownParams.size() == 1 ? " " : "s ");
+            for (int i = 0; i < unknownParams.size(); i++) {
+                if (i > 0) msg.append(", ");
+                String unknown = unknownParams.get(i);
+                msg.append("'").append(unknown).append("'");
+                if (!properties.isEmpty()) {
+                    String closest = null;
+                    int bestDist = Integer.MAX_VALUE;
+                    for (String known : properties.keySet()) {
+                        int dist = ServerUtils.levenshteinDistance(unknown, known);
+                        if (dist < bestDist) {
+                            bestDist = dist;
+                            closest = known;
+                        }
+                    }
+                    int threshold = Math.max(unknown.length(), closest.length()) / 2;
+                    if (bestDist <= threshold) {
+                        msg.append(" (did you mean '").append(closest).append("'?)");
+                    }
+                }
+            }
+            msg.append(" for tool '").append(toolName).append("'.");
+            if (!properties.isEmpty()) {
+                msg.append(" Valid parameters: ");
+                int i = 0;
+                for (String name : properties.keySet()) {
+                    if (i++ > 0) msg.append(", ");
+                    msg.append(name);
+                }
+            }
+
+            rpc.sendToolError(msg.toString());
+            return null;
+        }
+
+        // Validate and coerce known parameters
+        Map<String, Object> callArgs = new HashMap<>();
+        for (Map.Entry<String, MCPProtocol.PropertySchema> entry : properties.entrySet()) {
+            String paramName = entry.getKey();
+            String paramType = entry.getValue().getType();
+            Object value = rawArgs.get(paramName);
+            boolean isRequired = required.contains(paramName);
+
+            if (value == null) {
+                if (isRequired) {
+                    rpc.sendError(-32602,
+                            "Missing required parameter '" + paramName + "'");
+                    return null;
+                }
+                // optional and absent: omit from callArgs
+                continue;
+            }
+
+            if ("integer".equals(paramType)) {
+                if (value instanceof Long) {
+                    long l = (Long) value;
+                    if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
+                        rpc.sendError(-32602,
+                                "Parameter '" + paramName + "' value " + l + " is out of 32-bit integer range");
+                        return null;
+                    }
+                    value = (int) l;
+                } else if (value instanceof Double) {
+                    double d = (Double) value;
+                    if (Double.isNaN(d) || Double.isInfinite(d) || d != Math.floor(d)) {
+                        rpc.sendError(-32602,
+                                "Parameter '" + paramName + "' must be a whole number, got " + d);
+                        return null;
+                    }
+                    long l = (long) d;
+                    if (l < Integer.MIN_VALUE || l > Integer.MAX_VALUE) {
+                        rpc.sendError(-32602,
+                                "Parameter '" + paramName + "' value " + l + " is out of 32-bit integer range");
+                        return null;
+                    }
+                    value = (int) l;
+                }
+            }
+
+            callArgs.put(paramName, value);
+        }
+        return callArgs;
+    }
+
+    private void handleResourcesList(JsonRpcExchange rpc) throws IOException {
         MCPProtocol.ListResourcesResult result = new MCPProtocol.ListResourcesResult();
         result.setResources(Collections.emptyList());
-        sendJsonRpcResponse(exchange, request.getId(), result);
+        rpc.sendResponse(result);
     }
 
-    private void handlePromptsList(HttpExchange exchange, MCPProtocol.JsonRpcRequest request) throws IOException {
+    private void handlePromptsList(JsonRpcExchange rpc) throws IOException {
         MCPProtocol.ListPromptsResult result = new MCPProtocol.ListPromptsResult();
         result.setPrompts(Collections.emptyList());
-        sendJsonRpcResponse(exchange, request.getId(), result);
+        rpc.sendResponse(result);
     }
 
-    private void handleDelete(HttpExchange exchange) throws IOException {
+    private void handleDelete(JsonRpcExchange rpc) throws IOException {
         boolean wasActive;
         synchronized (this) {
             wasActive = activeSessionId != null;
@@ -505,7 +549,7 @@ public class TinyMCPServer {
         if (wasActive) {
             onSessionClosed();
         }
-        sendPlainResponse(exchange, 200, "");
+        rpc.sendPlain(200, "");
     }
 
     /**
@@ -523,63 +567,4 @@ public class TinyMCPServer {
         // no-op by default
     }
 
-    // ===== Response helpers =====
-
-    private void sendJsonRpcResponse(HttpExchange exchange, Object id, Object result) throws IOException {
-        MCPProtocol.JsonRpcResponse response = new MCPProtocol.JsonRpcResponse();
-        response.setId(id);
-        response.setResultFrom(result);
-        sendJsonBody(exchange, 200, response.toJson());
-    }
-
-    private void sendJsonRpcResponseRaw(HttpExchange exchange, Object id, String resultJson) throws IOException {
-        String json = "{\"jsonrpc\":\"2.0\",\"id\":" + MCPProtocol.toJson(id) + ",\"result\":" + resultJson + "}";
-        sendJsonBody(exchange, 200, json);
-    }
-
-    private void sendJsonRpcError(HttpExchange exchange, Object id, int code, String message) throws IOException {
-        sendJsonRpcError(exchange, 200, id, code, message);
-    }
-
-    private void sendJsonRpcError(HttpExchange exchange, int httpStatus, Object id, int code, String message) throws IOException {
-        MCPProtocol.ErrorObject errorObj = new MCPProtocol.ErrorObject();
-        errorObj.setCode(code);
-        errorObj.setMessage(message);
-
-        MCPProtocol.JsonRpcError error = new MCPProtocol.JsonRpcError();
-        error.setId(id);
-        error.setError(errorObj);
-        sendJsonBody(exchange, httpStatus, GSON_WITH_NULLS.toJson(error));
-    }
-
-    private void sendJsonBody(HttpExchange exchange, int statusCode, String json) throws IOException {
-        byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
-        exchange.getResponseHeaders().set("Content-Type", "application/json");
-        if (activeSessionId != null) {
-            exchange.getResponseHeaders().set("Mcp-Session-Id", activeSessionId);
-        }
-        exchange.sendResponseHeaders(statusCode, bytes.length);
-        try (OutputStream os = exchange.getResponseBody()) {
-            os.write(bytes);
-        }
-    }
-
-    private void sendPlainResponse(HttpExchange exchange, int statusCode, String body) throws IOException {
-        if (body == null || body.isEmpty()) {
-            exchange.sendResponseHeaders(statusCode, -1);
-        } else {
-            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
-            exchange.sendResponseHeaders(statusCode, bytes.length);
-            try (OutputStream os = exchange.getResponseBody()) {
-                os.write(bytes);
-            }
-        }
-        exchange.close();
-    }
-
-    private String readBody(HttpExchange exchange) throws IOException {
-        try (InputStream is = exchange.getRequestBody()) {
-            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
-        }
-    }
 }
