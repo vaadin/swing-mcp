@@ -12,9 +12,11 @@ jobs:
         include:
           - os: windows-latest
             java: 17
+          - os: macos-latest
+            java: 17
 
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
     - uses: actions/checkout@v6
@@ -35,9 +37,16 @@ jobs:
       run: sudo apt-get install -y xvfb
     - name: Build with Gradle (Linux)
       if: runner.os == 'Linux'
-      run: xvfb-run --auto-servernum ./gradlew clean build --stacktrace --info --no-daemon
-    - name: Build with Gradle (macOS / Windows)
-      if: runner.os != 'Linux'
+      run: xvfb-run --auto-servernum ./gradlew clean build --no-daemon
+    - name: Build with Gradle (Windows)
+      if: runner.os == 'Windows'
       shell: bash
-      run: ./gradlew clean build --stacktrace --info --no-daemon
-
+      run: ./gradlew clean build --no-daemon
+    - name: Build with Gradle (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      env:
+        # Prevent the JVM from registering a Dock icon on macOS, which can delay
+        # AWT initialization on headful CI runners.
+        _JAVA_OPTIONS: -Dapple.awt.UIElement=true
+      run: ./gradlew clean build --no-daemon

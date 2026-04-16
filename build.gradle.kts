@@ -1,4 +1,5 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
     java
@@ -29,7 +30,9 @@ subprojects {
     tasks.withType<Test> {
         useJUnitPlatform()
         testLogging {
-            // to see the exceptions of failed tests in CI console.
+            // Print each failed test by name (not just an aggregate) with full
+            // stack trace, so CI logs name the failure inline.
+            events = setOf(TestLogEvent.FAILED)
             exceptionFormat = TestExceptionFormat.FULL
         }
     }
