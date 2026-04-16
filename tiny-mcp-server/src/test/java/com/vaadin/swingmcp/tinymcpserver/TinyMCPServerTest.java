@@ -1,5 +1,6 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
+import com.google.gson.JsonObject;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
@@ -8,6 +9,10 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Map;
 
@@ -160,5 +165,26 @@ class TinyMCPServerTest {
         s.addTool("my_tool", "desc", new InputSchemaBuilder().build(), params -> null);
         assertThrows(IllegalStateException.class, () ->
                 s.addTool("my_tool", "other desc", new InputSchemaBuilder().build(), params -> null));
+    }
+
+    @Test
+    void malformedJsonReturnsJsonRpcParseError() throws Exception {
+        HttpClient http = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(server.getUrl()))
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json, text/event-stream")
+                .POST(HttpRequest.BodyPublishers.ofString("{not valid json"))
+                .build();
+        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(400, response.statusCode());
+
+        JsonObject body = MCPProtocol.fromJson(response.body(), JsonObject.class);
+        assertEquals("2.0", body.get("jsonrpc").getAsString());
+        assertTrue(body.get("id").isJsonNull());
+        JsonObject error = body.getAsJsonObject("error");
+        assertEquals(-32700, error.get("code").getAsInt());
+        assertEquals("Parse error", error.get("message").getAsString());
     }
 }

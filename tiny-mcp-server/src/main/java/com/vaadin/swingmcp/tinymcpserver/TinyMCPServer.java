@@ -1,5 +1,8 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
@@ -26,6 +29,7 @@ import java.util.logging.Logger;
 public class TinyMCPServer {
 
     private static final Logger LOG = Logger.getLogger(TinyMCPServer.class.getName());
+    private static final Gson GSON_WITH_NULLS = new GsonBuilder().serializeNulls().create();
 
     public static final int DEFAULT_PORT = 18088;
     public static final String DEFAULT_CONTEXT_PATH = "/mcp";
@@ -245,7 +249,14 @@ public class TinyMCPServer {
         String body = readBody(exchange);
         LOG.fine("Received POST: " + body);
 
-        MCPProtocol.JsonRpcRequest request = MCPProtocol.fromJson(body, MCPProtocol.JsonRpcRequest.class);
+        MCPProtocol.JsonRpcRequest request;
+        try {
+            request = MCPProtocol.fromJson(body, MCPProtocol.JsonRpcRequest.class);
+        } catch (JsonSyntaxException e) {
+            LOG.log(Level.WARNING, "Malformed JSON in request", e);
+            sendJsonRpcError(exchange, 400, null, MCPServerException.PARSE_ERROR, "Parse error");
+            return;
+        }
         String rpcMethod = request.getMethod();
 
         // Notifications have no id — respond with 202 Accepted
@@ -459,6 +470,10 @@ public class TinyMCPServer {
     }
 
     private void sendJsonRpcError(HttpExchange exchange, Object id, int code, String message) throws IOException {
+        sendJsonRpcError(exchange, 200, id, code, message);
+    }
+
+    private void sendJsonRpcError(HttpExchange exchange, int httpStatus, Object id, int code, String message) throws IOException {
         MCPProtocol.ErrorObject errorObj = new MCPProtocol.ErrorObject();
         errorObj.setCode(code);
         errorObj.setMessage(message);
@@ -466,7 +481,7 @@ public class TinyMCPServer {
         MCPProtocol.JsonRpcError error = new MCPProtocol.JsonRpcError();
         error.setId(id);
         error.setError(errorObj);
-        sendJsonBody(exchange, 200, error.toJson());
+        sendJsonBody(exchange, httpStatus, GSON_WITH_NULLS.toJson(error));
     }
 
     private void sendJsonBody(HttpExchange exchange, int statusCode, String json) throws IOException {
