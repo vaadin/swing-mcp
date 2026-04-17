@@ -43,8 +43,6 @@ Add convenient factory methods to `MCPProtocol.Content`:
 * `Content.audio(String data, String mimeType)` — `data` is base64-encoded
 * `Content.resource(ResourceContents resource)`
 
-Prerequisite: UC-003 implemented
-
 **Status:** Implemented
 **Date:** 2026-03-26
 

@@ -16,8 +16,11 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Verifies that {@code MCPServer.onSessionClosed()} clears the component
- * ref map when a session is terminated via HTTP DELETE (UC-005).
+ * Verifies that the component ref map is cleared when a session is terminated
+ * via HTTP DELETE. The {@link com.vaadin.swingmcp.mcp.tools.SwingToolContext}
+ * (which owns the ref map) is stored as a per-session attribute on
+ * {@link com.vaadin.swingmcp.tinymcpserver.MCPSession}, so removing the
+ * session from the server's session map drops the ref map with it.
  */
 class SessionCloseTest {
 
@@ -120,9 +123,10 @@ class SessionCloseTest {
         assertNotEquals(session1, session2);
 
         // Try to use a ref without re-snapshotting — should fail because
-        // onSessionClosed cleared the ref map. The stale-ref check in
-        // SwingToolContext throws MCPServerException (INVALID_PARAMS),
-        // which TinyMCPServer renders as a JSON-RPC error.
+        // the previous session's ref map was dropped when its MCPSession
+        // was removed. The stale-ref check in SwingToolContext throws
+        // MCPServerException (INVALID_PARAMS), which TinyMCPServer renders
+        // as a JSON-RPC error.
         HttpResponse<String> staleClickResp = click(1, session2);
         assertEquals(200, staleClickResp.statusCode());
         Map<String, Object> staleBody = parseJson(staleClickResp.body());

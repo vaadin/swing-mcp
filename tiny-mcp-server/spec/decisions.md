@@ -129,3 +129,62 @@ pattern gives the AI a concrete next step instead of a bare error string.
 - **All errors as HTTP status codes.** Rejected — MCP clients expect
   `isError` for tool-level failures; HTTP-only errors would break client
   SDK error handling.
+
+---
+
+## DR-005 — Session lifecycle gate
+
+**Status:** Accepted
+**Applies to:** `TinyMCPServer.handlePost`
+
+**Decision.** Every POST is validated against the server's
+`activeSessionId` before dispatch. The validation splits into two stages
+so the fast path stays cheap while the slow path can still return a
+well-formed JSON-RPC envelope:
+
+1. **Pre-parse:** read the `Mcp-Session-Id` header. If it is present and
+   does not match `activeSessionId` (whether `activeSessionId` is null or
+   non-null), return **HTTP 404** immediately. No body parsing needed —
+   every method is rejected.
+2. **Post-parse:** after the JSON-RPC body is parsed, if the method is
+   neither `initialize` nor `ping` and `activeSessionId` is null, return
+   **HTTP 400** using the parsed request `id` in the JSON-RPC error.
+
+Both rejections use JSON-RPC error code **-32002** (implementation-defined
+server error, -32000..-32099 range), exposed as
+`MCPServerException.SERVER_NOT_INITIALIZED`. Full outcome matrix:
+
+| Incoming `Mcp-Session-Id` | `activeSessionId` | Method | Result |
+|---|---|---|---|
+| absent | null | `initialize` | OK — create session |
+| absent | null | `ping` | OK |
+| absent | null | anything else | HTTP 400 + JSON-RPC error |
+| absent | non-null | `initialize` | HTTP 409 + JSON-RPC error (DR-003) |
+| absent | non-null | `ping` | OK |
+| absent | non-null | anything else | HTTP 400 + JSON-RPC error |
+| matches `activeSessionId` | non-null | any | OK — normal dispatch |
+| doesn't match | non-null | any | HTTP 404 + JSON-RPC error |
+| doesn't match | null | any | HTTP 404 + JSON-RPC error |
+
+**Why.** The MCP spec (2025-03-26 §Lifecycle, §Session Management)
+requires HTTP 404 for stale/wrong session IDs so the client knows to
+re-initialize (*"When a client receives HTTP 404 … it MUST start a new
+session"*), HTTP 400 for missing session IDs on non-init methods
+(*"Servers that require a session ID SHOULD respond to requests without
+an Mcp-Session-Id header (other than initialization) with HTTP 400"*),
+and carves out `ping` as acceptable pre-init. Splitting the check around
+JSON-body parsing keeps wrong-session rejection free of parse cost while
+still producing a proper JSON-RPC error (with the client's request `id`)
+for the not-initialized case, which needs the parsed `method` to
+distinguish `initialize`/`ping` from regular tool calls.
+
+**Alternatives considered.**
+- **Single pre-parse check.** Rejected — the not-initialized case needs
+  the parsed method (to allow `initialize`/`ping`) and the request `id`
+  to populate the JSON-RPC error envelope.
+- **Single post-parse check.** Rejected — wastes body parsing for
+  requests rejected on header alone (wrong session ID).
+- **Use -32600 (invalid request) or -32602 (invalid params).** Rejected —
+  those codes describe malformed input; session-state violations are a
+  server-state condition, which is exactly what the -32000..-32099
+  implementation-defined range is for.

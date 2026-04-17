@@ -68,6 +68,25 @@ public class TinyMCPServer {
     }
 
     /**
+     * Functional interface for prompt handlers. Invoked when a client
+     * requests {@code prompts/get}. Arguments have already been validated
+     * against the registered schema (required / unknown-arg checks), so
+     * implementations can read them directly.
+     */
+    @FunctionalInterface
+    public interface PromptFunction {
+        /**
+         * @param arguments the argument map, always non-null and containing
+         *                  only declared keys; missing optional arguments
+         *                  are simply absent
+         * @return the prompt result; must not be null
+         * @throws MCPServerException to return a JSON-RPC protocol error
+         * @throws Exception          if prompt expansion fails unexpectedly
+         */
+        MCPProtocol.GetPromptResult call(Map<String, String> arguments) throws Exception;
+    }
+
+    /**
      * The port requested in the constructor. May be {@code 0}, meaning
      * "let the OS pick an ephemeral port at bind time". After {@link #start()},
      * the actual bound port is available via {@link #getPort()}.
@@ -77,6 +96,7 @@ public class TinyMCPServer {
     private final MCPProtocol.Implementation serverInfo;
     private final String instructions;
     private final MCPToolHandler toolHandler = new MCPToolHandler();
+    private final MCPPromptHandler promptHandler = new MCPPromptHandler();
     private volatile boolean started = false;
     private HttpServer httpServer;
     /** Populated by {@link #start()} once the OS has assigned a port. */
@@ -136,6 +156,27 @@ public class TinyMCPServer {
             throw new IllegalStateException("Cannot add tools after server has been started");
         }
         toolHandler.addTool(name, description, inputSchema, function);
+    }
+
+    /**
+     * Registers a prompt with this server. Must be called before
+     * {@link #start()}.
+     *
+     * @param name        the prompt name; not null, not blank
+     * @param description human-readable description of the prompt; not null, not blank
+     * @param arguments   the argument builder (pass an empty
+     *                    {@link PromptArgumentsBuilder} for a zero-argument
+     *                    prompt); not null
+     * @param function    the handler to invoke for {@code prompts/get}; not null
+     * @throws IllegalArgumentException if any argument is null/blank
+     * @throws IllegalStateException    if the server has already been started
+     * @throws IllegalStateException    if a prompt with the same name is already registered
+     */
+    public void addPrompt(String name, String description, PromptArgumentsBuilder arguments, PromptFunction function) {
+        if (started) {
+            throw new IllegalStateException("Cannot add prompts after server has been started");
+        }
+        promptHandler.addPrompt(name, description, arguments, function);
     }
 
     public void start() {
@@ -270,7 +311,7 @@ public class TinyMCPServer {
                 return;
             }
             String sessionId = UUID.randomUUID().toString();
-            session = new MCPSession(sessionId, toolHandler);
+            session = new MCPSession(sessionId, toolHandler, promptHandler);
             sessions.put(sessionId, session);
         }
         rpc.setSessionId(session.getId());

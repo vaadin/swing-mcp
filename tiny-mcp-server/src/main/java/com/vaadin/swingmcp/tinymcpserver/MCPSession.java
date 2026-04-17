@@ -27,15 +27,17 @@ public class MCPSession {
 
     private final String id;
     private final MCPToolHandler toolHandler;
+    private final MCPPromptHandler promptHandler;
     private final Map<String, Object> attributes = new HashMap<>();
     /**
      * The session lock, prevents concurrent access to the session.
      */
     private final ReentrantLock sessionLock = new ReentrantLock();
 
-    MCPSession(String id, MCPToolHandler toolHandler) {
+    MCPSession(String id, MCPToolHandler toolHandler, MCPPromptHandler promptHandler) {
         this.id = id;
         this.toolHandler = toolHandler;
+        this.promptHandler = promptHandler;
     }
 
     /**
@@ -72,7 +74,10 @@ public class MCPSession {
                     handleResourcesList(rpc);
                     break;
                 case "prompts/list":
-                    handlePromptsList(rpc);
+                    promptHandler.handlePromptsList(rpc);
+                    break;
+                case "prompts/get":
+                    promptHandler.handlePromptsGet(rpc, request);
                     break;
                 default:
                     rpc.sendError(-32601, "Method not found: " + rpcMethod);
@@ -97,13 +102,6 @@ public class MCPSession {
         checkLocked();
         MCPProtocol.ListResourcesResult result = new MCPProtocol.ListResourcesResult();
         result.setResources(Collections.emptyList());
-        rpc.sendResponse(result);
-    }
-
-    private void handlePromptsList(JsonRpcExchange rpc) {
-        checkLocked();
-        MCPProtocol.ListPromptsResult result = new MCPProtocol.ListPromptsResult();
-        result.setPrompts(Collections.emptyList());
         rpc.sendResponse(result);
     }
 
