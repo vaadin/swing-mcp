@@ -35,12 +35,8 @@ Alternatively we can use `LangChain4j`.
 ## 2. Application Structure
 
 ```
-com.vaadin.swingmcp.tinymcpserver
+com.vaadin.swingmcp.tinymcpserver - the main package, all java files go here
   TinyMCPServer.java            — The tiny HTTP MCP server implementation itself
-  MCPProtocol.java              — All Java POJOs for JSON live here
-  InputSchemaBuilder.java       — Fluent builder for tool input schemas
-  MCPServerException.java       — Exception carrying a JSON-RPC error code
-  MCPErrorResponseException.java — Exception for MCP-level errors (isError: true)
 ```
 
 ### TinyMCPServer
