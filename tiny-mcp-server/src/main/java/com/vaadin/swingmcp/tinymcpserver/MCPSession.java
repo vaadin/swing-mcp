@@ -24,18 +24,36 @@ public class MCPSession {
     private final MCPToolHandler toolHandler;
     private final MCPResourceHandler resourceHandler;
     private final MCPPromptHandler promptHandler;
+    private final TinyMCPServer server;
     private final Map<String, Object> attributes = new HashMap<>();
     /**
      * The session lock, prevents concurrent access to the session.
      */
     private final ReentrantLock sessionLock = new ReentrantLock();
 
+    /**
+     * Monotonic timestamp of the last dispatched request, used by the
+     * server's idle-cleanup tick to decide when to evict this session.
+     * Updated under the session lock in {@link #handlePost}; read without
+     * the lock from the cleanup thread.
+     */
+    private volatile long lastAccessNanos = System.nanoTime();
+
+    /**
+     * Set to {@code true} by {@link #tryClose()} to mark this session as
+     * evicted. Any further dispatch on this session will throw a 404
+     * {@link MCPServerException}. Checked under the session lock to
+     * serialise with in-flight requests.
+     */
+    private volatile boolean closed = false;
+
     MCPSession(String id, MCPToolHandler toolHandler, MCPResourceHandler resourceHandler,
-            MCPPromptHandler promptHandler) {
+            MCPPromptHandler promptHandler, TinyMCPServer server) {
         this.id = id;
         this.toolHandler = toolHandler;
         this.resourceHandler = resourceHandler;
         this.promptHandler = promptHandler;
+        this.server = server;
     }
 
     /**
@@ -55,6 +73,59 @@ public class MCPSession {
      */
     void handlePost(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) {
         runLocked(() -> doHandlePost(rpc, request));
+    }
+
+    /**
+     * Returns the monotonic {@link System#nanoTime()} value recorded at the
+     * start of the most recently dispatched request, or at session creation
+     * if no request has yet been dispatched. Read without the session lock;
+     * callers use this for idle-detection only.
+     */
+    long getLastAccessNanos() {
+        return lastAccessNanos;
+    }
+
+    /**
+     * For use by tests only: forces the recorded last-access timestamp to a
+     * given {@link System#nanoTime()} value, allowing the cleanup tick to be
+     * exercised without waiting real wall-clock time.
+     */
+    void setLastAccessNanos(long nanos) {
+        this.lastAccessNanos = nanos;
+    }
+
+    /**
+     * Attempts to close this session. Acquires the session lock
+     * non-blockingly; if an in-flight request holds it, returns {@code false}
+     * and leaves the session untouched — the caller should retry on the next
+     * cleanup tick. On success, sets the {@code closed} flag so any later
+     * dispatch on this session fails with a 404.
+     */
+    boolean tryClose() {
+        if (!sessionLock.tryLock()) {
+            return false;
+        }
+        try {
+            closed = true;
+        } finally {
+            sessionLock.unlock();
+        }
+        return true;
+    }
+
+    /**
+     * Returns the {@link TinyMCPServer} that owns this session, giving tool
+     * handlers access to the shared scheduled executor (see
+     * {@link TinyMCPServer#getExecutor()}) and other server-level services.
+     *
+     * @throws IllegalStateException if this session was constructed without
+     *                               an owning server (tests only)
+     */
+    public TinyMCPServer getServer() {
+        if (server == null) {
+            throw new IllegalStateException("Session was constructed without an owning server");
+        }
+        return server;
     }
 
     private void doHandlePost(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) {
@@ -183,16 +254,25 @@ public class MCPSession {
     }
 
     /**
-     * For use by tests only: runs {@code block} with the session lock held
-     * and {@link #instance} bound to this session, mirroring what
-     * {@link #handlePost} sets up in production. Lets unit tests exercise
-     * lock-guarded accessors (such as {@link #getAttribute(String)} and
-     * {@link #setAttribute(String, Object)}) without dispatching a real
-     * HTTP request.
+     * Runs {@code block} with the session lock held and {@link #instance}
+     * bound to this session. Used by {@link #handlePost} for request dispatch
+     * and by tests to exercise lock-guarded accessors (such as
+     * {@link #getAttribute(String)} and {@link #setAttribute(String, Object)})
+     * without dispatching a real HTTP request.
+     * <p>
+     * Also refreshes {@link #lastAccessNanos} so the cleanup tick leaves this
+     * session alone, and fails fast with a 404 {@link MCPServerException} if
+     * the session has already been closed by the cleanup tick (or any other
+     * {@link #tryClose()} caller).
      */
     void runLocked(Runnable block) {
         sessionLock.lock();
         try {
+            if (closed) {
+                throw new MCPServerException(404,
+                        MCPServerException.SERVER_NOT_INITIALIZED, "Session not found.");
+            }
+            lastAccessNanos = System.nanoTime();
             instance.set(this);
             try {
                 block.run();

@@ -11,6 +11,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -136,6 +139,21 @@ public class TinyMCPServer {
     private final ConcurrentHashMap<String, MCPSession> sessions = new ConcurrentHashMap<>();
     /** Guards all session-map mutations (put, remove, clear) to prevent races. */
     private final Object sessionGuardLock = new Object();
+
+    /**
+     * Sessions idle for at least this long are evicted by the cleanup tick.
+     * Package-private so tests can substitute a short value via reflection.
+     */
+    static final long IDLE_TIMEOUT_NANOS = TimeUnit.MINUTES.toNanos(30);
+    /** Interval between cleanup ticks. */
+    static final long CLEANUP_TICK_SECONDS = 60;
+
+    /**
+     * Shared scheduled executor. Created in {@link #start()}, shut down in
+     * {@link #stop()}. Runs the session-idle-cleanup tick and is exposed via
+     * {@link #getExecutor()} for tool handlers that need background work.
+     */
+    private ScheduledExecutorService executor;
 
     public TinyMCPServer() {
         this(DEFAULT_PORT, DEFAULT_CONTEXT_PATH);
@@ -276,6 +294,14 @@ public class TinyMCPServer {
             return t;
         }));
         httpServer.createContext(contextPath, this::handleRequest);
+        AtomicInteger threadNum = new AtomicInteger();
+        executor = Executors.newScheduledThreadPool(1, r -> {
+            Thread t = new Thread(r, "tiny-mcp-server-" + threadNum.getAndIncrement());
+            t.setDaemon(true);
+            return t;
+        });
+        executor.scheduleAtFixedRate(this::cleanupIdleSessionsSafe,
+                CLEANUP_TICK_SECONDS, CLEANUP_TICK_SECONDS, TimeUnit.SECONDS);
         // Start from a daemon thread so that HTTP-Dispatcher inherits daemon status,
         // preventing it from keeping the JVM alive after the Swing app closes.
         Thread starter = new Thread(httpServer::start, "mcp-server-starter");
@@ -290,12 +316,35 @@ public class TinyMCPServer {
     }
 
     public void stop() {
+        if (executor != null) {
+            executor.shutdownNow();
+            executor = null;
+        }
         if (httpServer != null) {
             httpServer.stop(0);
             httpServer = null;
             boundPort = -1;
             LOG.info("TinyMCPServer stopped");
         }
+    }
+
+    /**
+     * Returns the server's shared scheduled executor. Threads are daemon
+     * and named {@code tiny-mcp-server-N}. Created by {@link #start()} and
+     * shut down by {@link #stop()}.
+     * <p>
+     * Available to tool handlers for background work (debouncing, deferred
+     * cleanup, periodic polling). Do not submit long-blocking I/O that
+     * could starve session idle-cleanup — for heavy work, create your own
+     * executor.
+     *
+     * @throws IllegalStateException if the server is not started
+     */
+    public ScheduledExecutorService getExecutor() {
+        if (executor == null) {
+            throw new IllegalStateException("Server not started");
+        }
+        return executor;
     }
 
     /**
@@ -407,7 +456,7 @@ public class TinyMCPServer {
                         MCPServerException.SERVER_NOT_INITIALIZED, "Another session is already active");
             }
             String sessionId = UUID.randomUUID().toString();
-            session = new MCPSession(sessionId, toolHandler, resourceHandler, promptHandler);
+            session = new MCPSession(sessionId, toolHandler, resourceHandler, promptHandler, this);
             sessions.put(sessionId, session);
         }
         rpc.setSessionId(session.getId());
@@ -479,9 +528,10 @@ public class TinyMCPServer {
     }
 
     /**
-     * Called when a session has been closed (via HTTP DELETE), <em>after</em>
-     * the session has been removed from the session map. Subclasses can
-     * override this to release session-scoped resources.
+     * Called when a session has been closed (via HTTP DELETE, or evicted by
+     * the idle-cleanup tick), <em>after</em> the session has been removed
+     * from the session map. Subclasses can override this to release
+     * session-scoped resources.
      * <p>
      * The default implementation does nothing.
      * <p>
@@ -491,5 +541,47 @@ public class TinyMCPServer {
      */
     protected void onSessionClosed(MCPSession session) {
         // no-op by default
+    }
+
+    private void cleanupIdleSessionsSafe() {
+        try {
+            cleanupIdleSessions();
+        } catch (Throwable t) {
+            LOG.log(Level.SEVERE, "Session cleanup tick failed", t);
+        }
+    }
+
+    /**
+     * Evicts sessions whose last access is older than {@link #IDLE_TIMEOUT_NANOS}.
+     * For each candidate, attempts {@link MCPSession#tryClose()} — if a
+     * request is in flight the session is skipped and re-evaluated on the
+     * next tick. Removed sessions are reported via {@link #onSessionClosed}.
+     * <p>
+     * Package-private so tests can invoke the tick synchronously without
+     * waiting for the scheduler.
+     */
+    void cleanupIdleSessions() {
+        long now = System.nanoTime();
+        List<MCPSession> closed = new ArrayList<>();
+        for (MCPSession s : sessions.values()) {
+            if (now - s.getLastAccessNanos() < IDLE_TIMEOUT_NANOS) {
+                continue;
+            }
+            if (!s.tryClose()) {
+                continue;
+            }
+            synchronized (sessionGuardLock) {
+                sessions.remove(s.getId(), s);
+            }
+            closed.add(s);
+        }
+        for (MCPSession s : closed) {
+            LOG.info("Session expired (idle): " + s.getId());
+            try {
+                onSessionClosed(s);
+            } catch (RuntimeException e) {
+                LOG.log(Level.WARNING, "onSessionClosed threw for " + s.getId(), e);
+            }
+        }
     }
 }
