@@ -19,9 +19,9 @@ and rejected.
 **Status:** Accepted
 **Applies to:** TinyMCPServer, all use cases
 
-**Decision.** The server supports only HTTP Streamable transport bound to
-`127.0.0.1`. No STDIO transport. No authentication. Default listen address
-is `127.0.0.1:18088/mcp`.
+**Decision.** The server supports only HTTP (POST + DELETE, no SSE) bound
+to `127.0.0.1`. No STDIO transport. No authentication. Default listen
+address is `127.0.0.1:18088/mcp`.
 
 **Why.** This MCP server runs in-process within a Swing app. The Swing app
 itself uses STDIO for its own purposes — STDIO-based MCP communication
@@ -153,9 +153,11 @@ result is a descriptive error the LLM should read and reason about.
 Resources and prompts are one-shot content producers: you either get
 `contents` / `messages` back, or you don't. So when a resource or prompt
 handler fails, the only structured channel back to the client is a
-JSON-RPC protocol error (layer 2), and `MCPResourceHandler` /
-`MCPPromptHandler` wrap any non-`MCPServerException` as
-`MCPServerException(INTERNAL_ERROR)` accordingly.
+JSON-RPC protocol error (layer 2). `MCPResourceHandler` /
+`MCPPromptHandler` wrap non-`MCPServerException` failures from the
+handler as `INTERNAL_ERROR`, and `MCPErrorResponseException` from
+argument parsing as `INVALID_PARAMS` — see the table above for the
+full mapping.
 
 Tools use this layer for application-level failures where the tool was
 found and dispatched but the input was semantically wrong (e.g., invalid
