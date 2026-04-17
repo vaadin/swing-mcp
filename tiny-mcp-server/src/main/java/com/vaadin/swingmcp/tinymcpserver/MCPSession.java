@@ -2,6 +2,9 @@ package com.vaadin.swingmcp.tinymcpserver;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -24,6 +27,7 @@ public class MCPSession {
 
     private final String id;
     private final MCPToolHandler toolHandler;
+    private final Map<String, Object> attributes = new HashMap<>();
 
     MCPSession(String id, MCPToolHandler toolHandler) {
         this.id = id;
@@ -79,5 +83,29 @@ public class MCPSession {
         MCPProtocol.ListPromptsResult result = new MCPProtocol.ListPromptsResult();
         result.setPrompts(Collections.emptyList());
         rpc.sendResponse(result);
+    }
+
+    public Object getAttribute(String name) {
+        Objects.requireNonNull(name);
+        return attributes.get(name);
+    }
+
+    public void setAttribute(String name, Object value) {
+        Objects.requireNonNull(name);
+        attributes.put(name, value);
+    }
+
+    public <T> T getAttribute(Class<T> type) {
+        return type.cast(getAttribute(type.getName()));
+    }
+
+    public <T> void setAttribute(Class<T> type, T value) {
+        setAttribute(type.getName(), value);
+    }
+
+    static final ThreadLocal<MCPSession> instance = new ThreadLocal<>();
+
+    public static MCPSession getCurrent() {
+        return Objects.requireNonNull(instance.get(), "Not running in a MCP session");
     }
 }

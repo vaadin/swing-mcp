@@ -255,7 +255,12 @@ public class TinyMCPServer {
 
         rpc.setSessionId(session.getId());
         synchronized (session) {
-            session.handlePost(rpc, request);
+            MCPSession.instance.set(session);
+            try {
+                session.handlePost(rpc, request);
+            } finally {
+                MCPSession.instance.remove();
+            }
         }
     }
 
