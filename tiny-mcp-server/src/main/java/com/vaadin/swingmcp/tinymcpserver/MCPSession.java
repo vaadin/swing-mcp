@@ -1,6 +1,5 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -27,6 +26,7 @@ public class MCPSession {
 
     private final String id;
     private final MCPToolHandler toolHandler;
+    private final MCPResourceHandler resourceHandler;
     private final MCPPromptHandler promptHandler;
     private final Map<String, Object> attributes = new HashMap<>();
     /**
@@ -34,9 +34,11 @@ public class MCPSession {
      */
     private final ReentrantLock sessionLock = new ReentrantLock();
 
-    MCPSession(String id, MCPToolHandler toolHandler, MCPPromptHandler promptHandler) {
+    MCPSession(String id, MCPToolHandler toolHandler, MCPResourceHandler resourceHandler,
+            MCPPromptHandler promptHandler) {
         this.id = id;
         this.toolHandler = toolHandler;
+        this.resourceHandler = resourceHandler;
         this.promptHandler = promptHandler;
     }
 
@@ -71,7 +73,10 @@ public class MCPSession {
                     toolHandler.handleToolsCall(rpc, request);
                     break;
                 case "resources/list":
-                    handleResourcesList(rpc);
+                    resourceHandler.handleResourcesList(rpc);
+                    break;
+                case "resources/read":
+                    resourceHandler.handleResourcesRead(rpc, request);
                     break;
                 case "prompts/list":
                     promptHandler.handlePromptsList(rpc);
@@ -96,13 +101,6 @@ public class MCPSession {
         if (!sessionLock.isLocked()) {
             throw new IllegalStateException("Invalid state: running outside of MCP session thread");
         }
-    }
-
-    private void handleResourcesList(JsonRpcExchange rpc) {
-        checkLocked();
-        MCPProtocol.ListResourcesResult result = new MCPProtocol.ListResourcesResult();
-        result.setResources(Collections.emptyList());
-        rpc.sendResponse(result);
     }
 
     /**
