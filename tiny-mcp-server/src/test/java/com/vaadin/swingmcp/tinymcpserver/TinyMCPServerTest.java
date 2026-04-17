@@ -106,6 +106,61 @@ class TinyMCPServerTest {
     }
 
     @Test
+    void addResourceAfterStartThrows() throws Exception {
+        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
+        s.start();
+        try {
+            assertThrows(IllegalStateException.class, () ->
+                    s.addResource("file://x", "x", "desc", "text/plain",
+                            uri -> java.util.List.of(
+                                    MCPProtocol.ResourceContents.text(uri, "text/plain", "x"))));
+        } finally {
+            s.stop();
+        }
+    }
+
+    @Test
+    void resourcesListAndRead() throws Exception {
+        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
+        s.addResource("file://greeting", "Greeting", "A friendly greeting", "text/plain",
+                uri -> java.util.List.of(
+                        MCPProtocol.ResourceContents.text(uri, "text/plain", "Hello, world!")));
+        s.start();
+        try {
+            HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport
+                    .builder(s.getUrl())
+                    .openConnectionOnStartup(false)
+                    .build();
+            try (McpSyncClient c = McpClient.sync(transport)
+                    .requestTimeout(Duration.ofSeconds(5))
+                    .initializationTimeout(Duration.ofSeconds(5))
+                    .build()) {
+                c.initialize();
+
+                McpSchema.ListResourcesResult listed = c.listResources();
+                assertEquals(1, listed.resources().size());
+                McpSchema.Resource r = listed.resources().get(0);
+                assertEquals("file://greeting", r.uri());
+                assertEquals("Greeting", r.name());
+                assertEquals("A friendly greeting", r.description());
+                assertEquals("text/plain", r.mimeType());
+
+                McpSchema.ReadResourceResult read = c.readResource(
+                        new McpSchema.ReadResourceRequest("file://greeting"));
+                assertEquals(1, read.contents().size());
+                McpSchema.ResourceContents contents = read.contents().get(0);
+                assertInstanceOf(McpSchema.TextResourceContents.class, contents);
+                McpSchema.TextResourceContents text = (McpSchema.TextResourceContents) contents;
+                assertEquals("file://greeting", text.uri());
+                assertEquals("text/plain", text.mimeType());
+                assertEquals("Hello, world!", text.text());
+            }
+        } finally {
+            s.stop();
+        }
+    }
+
+    @Test
     void malformedJsonReturnsJsonRpcParseError() throws Exception {
         HttpClient http = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()

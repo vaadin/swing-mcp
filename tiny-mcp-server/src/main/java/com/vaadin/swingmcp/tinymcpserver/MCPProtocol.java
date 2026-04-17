@@ -489,6 +489,28 @@ public class MCPProtocol {
         public void setText(String text) { this.text = text; }
         public String getBlob() { return blob; }
         public void setBlob(String blob) { this.blob = blob; }
+
+        /** Creates a text resource contents item. */
+        public static ResourceContents text(String uri, String mimeType, String text) {
+            ResourceContents c = new ResourceContents();
+            c.setUri(uri);
+            c.setMimeType(mimeType);
+            c.setText(text);
+            return c;
+        }
+
+        /**
+         * Creates a binary resource contents item.
+         *
+         * @param blob base64-encoded binary data
+         */
+        public static ResourceContents blob(String uri, String mimeType, String blob) {
+            ResourceContents c = new ResourceContents();
+            c.setUri(uri);
+            c.setMimeType(mimeType);
+            c.setBlob(blob);
+            return c;
+        }
     }
 
     public static class ResourceTemplate extends McpPojo {

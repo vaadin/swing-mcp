@@ -74,6 +74,30 @@ public class TinyMCPServer {
     }
 
     /**
+     * Functional interface for resource handlers. Invoked when a client
+     * requests {@code resources/read} for a registered URI.
+     *
+     * <p>Implementations return the current contents of the resource. The
+     * returned list must not be {@code null}; it typically contains a single
+     * {@link MCPProtocol.ResourceContents} entry, but the MCP spec allows
+     * multiple (e.g. for composite resources).
+     *
+     * <p>Throwing {@link MCPServerException} produces a JSON-RPC error with
+     * the given code; any other exception becomes {@code INTERNAL_ERROR}.
+     */
+    @FunctionalInterface
+    public interface ResourceFunction {
+        /**
+         * @param uri the URI of the resource being read (matches the
+         *            registered URI verbatim)
+         * @return the resource contents; must not be null
+         * @throws MCPServerException to return a JSON-RPC protocol error
+         * @throws Exception          if resource loading fails unexpectedly
+         */
+        java.util.List<MCPProtocol.ResourceContents> call(String uri) throws Exception;
+    }
+
+    /**
      * Functional interface for prompt handlers. Invoked when a client
      * requests {@code prompts/get}. Arguments have already been validated
      * against the registered schema (required / unknown-arg checks), so
@@ -102,6 +126,7 @@ public class TinyMCPServer {
     private final MCPProtocol.Implementation serverInfo;
     private final String instructions;
     private final MCPToolHandler toolHandler = new MCPToolHandler();
+    private final MCPResourceHandler resourceHandler = new MCPResourceHandler();
     private final MCPPromptHandler promptHandler = new MCPPromptHandler();
     private volatile boolean started = false;
     private HttpServer httpServer;
@@ -180,6 +205,38 @@ public class TinyMCPServer {
             throw new IllegalStateException("Cannot add tools after server has been started");
         }
         toolHandler.addTool(name, description, inputSchema, function);
+    }
+
+    /**
+     * Registers a resource with this server. Must be called before
+     * {@link #start()}.
+     *
+     * <p>Registered resources are advertised by {@code resources/list}
+     * (uri, name, description, mimeType) and read via {@code resources/read}.
+     * The URI is the lookup key: clients pass it back verbatim in
+     * {@code resources/read}, and unknown URIs produce JSON-RPC error
+     * {@code -32602}.
+     *
+     * @param uri         the resource URI; not null, not blank; must be
+     *                    unique across registered resources
+     * @param name        human-readable name; not null, not blank
+     * @param description human-readable description; may be null
+     * @param mimeType    the resource MIME type (e.g. {@code "text/plain"});
+     *                    may be null
+     * @param function    the handler to invoke for {@code resources/read};
+     *                    not null
+     * @throws IllegalArgumentException if {@code uri}, {@code name}, or
+     *                                  {@code function} is null/blank
+     * @throws IllegalStateException    if the server has already been started
+     * @throws IllegalStateException    if a resource with the same URI is
+     *                                  already registered
+     */
+    public void addResource(String uri, String name, String description, String mimeType,
+            ResourceFunction function) {
+        if (started) {
+            throw new IllegalStateException("Cannot add resources after server has been started");
+        }
+        resourceHandler.addResource(uri, name, description, mimeType, function);
     }
 
     /**
@@ -335,7 +392,7 @@ public class TinyMCPServer {
                 return;
             }
             String sessionId = UUID.randomUUID().toString();
-            session = new MCPSession(sessionId, toolHandler, promptHandler);
+            session = new MCPSession(sessionId, toolHandler, resourceHandler, promptHandler);
             sessions.put(sessionId, session);
         }
         rpc.setSessionId(session.getId());
