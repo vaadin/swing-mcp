@@ -18,12 +18,13 @@ import java.util.Set;
  */
 class MCPParameterParser {
 
-    private final String toolName;
+    /** Qualified identifier used in error messages, e.g. {@code tool 'echo'} or {@code prompt 'greet'}. */
+    private final String name;
     private final Map<String, MCPProtocol.PropertySchema> properties;
     private final Set<String> required;
 
     MCPParameterParser(String toolName, MCPProtocol.InputSchema schema) {
-        this.toolName = toolName;
+        this.name = "tool '" + toolName + "'";
         this.properties = schema.getProperties() != null
                 ? new LinkedHashMap<>(schema.getProperties())
                 : new LinkedHashMap<>();
@@ -36,8 +37,8 @@ class MCPParameterParser {
      * Builds a parser for an MCP prompt. Every argument is modelled as a
      * {@code string} property — MCP prompts do not support other types.
      */
-    MCPParameterParser(String toolName, List<MCPProtocol.PromptArgument> arguments) {
-        this.toolName = toolName;
+    MCPParameterParser(String promptName, List<MCPProtocol.PromptArgument> arguments) {
+        this.name = "prompt '" + promptName + "'";
         this.properties = new LinkedHashMap<>();
         this.required = new HashSet<>();
         for (MCPProtocol.PromptArgument arg : arguments) {
@@ -89,7 +90,7 @@ class MCPParameterParser {
                     }
                 }
             }
-            msg.append(" for tool '").append(toolName).append("'.");
+            msg.append(" for ").append(name).append(".");
             if (!properties.isEmpty()) {
                 msg.append(" Valid parameters: ");
                 int i = 0;
