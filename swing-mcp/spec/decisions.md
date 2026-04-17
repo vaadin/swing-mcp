@@ -463,6 +463,7 @@ Examples:
 - `Dispatched select-all on ref=7 — call swing_snapshot to verify the outcome`
 - `Dispatched increment on ref=4 — call swing_snapshot to verify the outcome`
 - `Dispatched toggle-expand on ref=4 — call swing_snapshot to verify the outcome`
+- `Dispatched drag on ref=4 to ref=7 — call swing_snapshot to verify the outcome`
 
 **Format conventions.**
 
