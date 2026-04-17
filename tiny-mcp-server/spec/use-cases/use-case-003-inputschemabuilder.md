@@ -39,8 +39,6 @@ a: integer, b: integer?, ref: string, status: string(active|inactive), page: int
 - Range constraints are shown as `type[min,max]` — either bound may be empty if not set
 - Description is omitted
 
-Prerequisite: UC-002 implemented
-
 **Status:** Implemented
 **Date:** 2026-03-26
 
