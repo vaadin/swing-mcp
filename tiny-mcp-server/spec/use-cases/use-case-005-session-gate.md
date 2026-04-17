@@ -26,65 +26,8 @@ References: `tiny-mcp-server` DR-003 (single-session model), DR-004
 
 ### Session validation in `handlePost`
 
-Add an early guard in `TinyMCPServer.handlePost`, **before JSON-RPC parsing**,
-that reads the incoming `Mcp-Session-Id` header and validates it against the
-server's `activeSessionId`.
-
-The guard runs immediately after reading the header — before the request body
-is parsed — so invalid sessions are rejected cheaply.
-
-#### Decision matrix
-
-| Incoming `Mcp-Session-Id` | `activeSessionId` | Method | Result |
-|---|---|---|---|
-| absent | null (no session) | `initialize` | OK — create session |
-| absent | null | `ping` | OK |
-| absent | null | anything else | **HTTP 400** + JSON-RPC error |
-| absent | non-null (session active) | `initialize` | **HTTP 409** + JSON-RPC error — already active |
-| absent | non-null | `ping` | OK |
-| absent | non-null | anything else | **HTTP 400** + JSON-RPC error |
-| matches `activeSessionId` | non-null | any | OK — normal dispatch |
-| doesn't match | non-null | any (including `initialize`, `ping`) | **HTTP 404** + JSON-RPC error |
-| doesn't match | null | any (including `initialize`, `ping`) | **HTTP 404** + JSON-RPC error |
-
-Implementation notes:
-
-- **Session ID mismatch check comes first.** If the client sends *any*
-  `Mcp-Session-Id` value that does not match `activeSessionId` (whether
-  `activeSessionId` is null or non-null), return HTTP 404. This covers
-  stale sessions, typos, and sessions terminated by `DELETE`. Per the MCP
-  spec: *"the server MUST respond to requests containing that session ID
-  with HTTP 404 Not Found"*, and: *"When a client receives HTTP 404 …
-  it MUST start a new session by sending a new InitializeRequest without
-  a session ID attached."*
-
-- **Missing session ID + no active session + not `initialize`/`ping`.**
-  Return HTTP 400. Per the MCP spec: *"Servers that require a session ID
-  SHOULD respond to requests without an Mcp-Session-Id header (other
-  than initialization) with HTTP 400 Bad Request."*
-
-- **`ping` is always allowed**, even before initialization or without a
-  session ID. The MCP spec singles out pings as acceptable pre-init:
-  *"The client SHOULD NOT send requests other than pings before the
-  server has responded to the initialize request."*
-
-- **The check happens before JSON body parsing.** This means we cannot
-  extract the JSON-RPC `id` or `method` from the body to include in the
-  error response. The session ID header alone determines the outcome.
-  Exception: distinguishing `initialize` and `ping` from other methods
-  requires parsing the body. Therefore the actual flow is:
-
-  1. Read `Mcp-Session-Id` header.
-  2. If header is present and does not match `activeSessionId` → HTTP 404
-     immediately (no body parsing needed — *any* method is rejected).
-  3. Parse the JSON-RPC body (existing code).
-  4. If method is `initialize` or `ping` → allow (existing dispatch).
-  5. If `activeSessionId` is null → HTTP 400 + JSON-RPC error (using the
-     parsed `id`).
-
-  This means step 2 is truly pre-parse (cheap rejection for wrong session
-  ID), while step 5 is post-parse (we have the request `id` for a proper
-  JSON-RPC error).
+See **DR-005** for the outcome matrix, the two-stage (pre-parse / post-parse)
+validation split, and the rationale for JSON-RPC error code `-32002`.
 
 ### Error responses
 
