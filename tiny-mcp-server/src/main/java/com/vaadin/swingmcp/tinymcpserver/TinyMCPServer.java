@@ -335,7 +335,7 @@ public class TinyMCPServer {
             LOG.log(Level.WARNING, "Transport I/O failed; abandoning response", e);
         } catch (RuntimeException e) {
             LOG.log(Level.SEVERE, "Unexpected error handling request", e);
-            trySendError(rpc, 200, MCPServerException.INTERNAL_ERROR, "Internal error");
+            trySendError(rpc, 500, MCPServerException.INTERNAL_ERROR, "Internal error");
         }
     }
 

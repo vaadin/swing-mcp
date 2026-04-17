@@ -182,6 +182,42 @@ class TinyMCPServerTest {
     }
 
     @Test
+    void unexpectedRuntimeExceptionReturnsHttp500InternalError() throws Exception {
+        // An unhandled RuntimeException from inside the server (not MCPServerException,
+        // not TransportIOException) must return HTTP 500 with a JSON-RPC INTERNAL_ERROR
+        // body. Using acceptNewSession() as the injection point — it runs under the
+        // try block in handleRequest but isn't normally expected to throw.
+        TinyMCPServer crashingServer = new TinyMCPServer(0, "/mcp") {
+            @Override
+            protected boolean acceptNewSession() {
+                throw new IllegalStateException("boom");
+            }
+        };
+        crashingServer.start();
+        try {
+            String initBody = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\","
+                    + "\"params\":{\"protocolVersion\":\"2024-11-05\","
+                    + "\"capabilities\":{},\"clientInfo\":{\"name\":\"t\",\"version\":\"1\"}}}";
+            HttpClient http = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(crashingServer.getUrl()))
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json, text/event-stream")
+                    .POST(HttpRequest.BodyPublishers.ofString(initBody))
+                    .build();
+            HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+
+            assertEquals(500, response.statusCode());
+            JsonObject body = MCPProtocol.fromJson(response.body(), JsonObject.class);
+            JsonObject error = body.getAsJsonObject("error");
+            assertEquals(MCPServerException.INTERNAL_ERROR, error.get("code").getAsInt());
+            assertEquals("Internal error", error.get("message").getAsString());
+        } finally {
+            crashingServer.stop();
+        }
+    }
+
+    @Test
     void batchRequestReturnsInvalidRequestError() throws Exception {
         // A JSON-RPC batch is a JSON array — valid JSON, but we don't support it.
         // Must return -32600 (Invalid Request), not -32700 (Parse error).
