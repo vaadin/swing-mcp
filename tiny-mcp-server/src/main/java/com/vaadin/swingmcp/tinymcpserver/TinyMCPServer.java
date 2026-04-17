@@ -343,7 +343,7 @@ public class TinyMCPServer {
         try {
             rpc.sendError(httpStatus, code, message);
         } catch (TransportIOException ioe) {
-            LOG.log(Level.FINE, "Could not send error response (transport dead)", ioe);
+            LOG.log(Level.WARNING, "Could not send error response (transport dead)", ioe);
         }
     }
 
@@ -351,7 +351,7 @@ public class TinyMCPServer {
         try {
             rpc.sendPlain(status, message);
         } catch (TransportIOException ioe) {
-            LOG.log(Level.FINE, "Could not send plain response (transport dead)", ioe);
+            LOG.log(Level.WARNING, "Could not send plain response (transport dead)", ioe);
         }
     }
 
