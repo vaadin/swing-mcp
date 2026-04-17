@@ -48,6 +48,21 @@ class TinyMCPServerSessionTest {
                     Object v = MCPSession.getCurrent().getAttribute((String) params.get("key"));
                     return MCPProtocol.Content.text(v == null ? "<null>" : v.toString());
                 });
+        server.addPrompt("greet", "Greet someone",
+                new InputSchemaBuilder()
+                        .requiredString("name", "Who to greet")
+                        .optionalString("style", "Greeting style")
+                        .build(),
+                args -> {
+                    MCPProtocol.GetPromptResult r = new MCPProtocol.GetPromptResult();
+                    String style = args.getOrDefault("style", "friendly");
+                    r.setDescription(style + " greeting");
+                    MCPProtocol.PromptMessage msg = new MCPProtocol.PromptMessage();
+                    msg.setRole("user");
+                    msg.setContent(MCPProtocol.Content.text("Hello, " + args.get("name") + "!"));
+                    r.setMessages(java.util.List.of(msg));
+                    return r;
+                });
         server.start();
         http = HttpClient.newHttpClient();
         serverUri = URI.create(server.getUrl());
@@ -324,6 +339,69 @@ class TinyMCPServerSessionTest {
                 sessionA);
         assertEquals(200, getA.statusCode());
         assertEquals("red", firstTextContent(getA));
+    }
+
+    // ===== Prompts =====
+
+    @Test
+    void promptsListReturnsRegisteredPrompts() throws Exception {
+        String sessionId = initialize();
+        HttpResponse<String> resp = post(jsonRpc("prompts/list", 2), sessionId);
+        assertEquals(200, resp.statusCode());
+        JsonObject body = MCPProtocol.fromJson(resp.body(), JsonObject.class);
+        JsonArray prompts = body.getAsJsonObject("result").getAsJsonArray("prompts");
+        assertEquals(1, prompts.size());
+        assertEquals("greet", prompts.get(0).getAsJsonObject().get("name").getAsString());
+    }
+
+    @Test
+    void promptsGetReturnsExpandedResult() throws Exception {
+        String sessionId = initialize();
+        String body = "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"prompts/get\","
+                + "\"params\":{\"name\":\"greet\",\"arguments\":{\"name\":\"Alice\",\"style\":\"formal\"}}}";
+        HttpResponse<String> resp = post(body, sessionId);
+        assertEquals(200, resp.statusCode());
+        JsonObject result = MCPProtocol.fromJson(resp.body(), JsonObject.class).getAsJsonObject("result");
+        assertEquals("formal greeting", result.get("description").getAsString());
+        JsonArray messages = result.getAsJsonArray("messages");
+        assertEquals(1, messages.size());
+        assertEquals("Hello, Alice!",
+                messages.get(0).getAsJsonObject().getAsJsonObject("content").get("text").getAsString());
+    }
+
+    @Test
+    void promptsGetUsesDefaultForOmittedOptionalArg() throws Exception {
+        String sessionId = initialize();
+        String body = "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"prompts/get\","
+                + "\"params\":{\"name\":\"greet\",\"arguments\":{\"name\":\"Bob\"}}}";
+        HttpResponse<String> resp = post(body, sessionId);
+        assertEquals(200, resp.statusCode());
+        JsonObject result = MCPProtocol.fromJson(resp.body(), JsonObject.class).getAsJsonObject("result");
+        assertEquals("friendly greeting", result.get("description").getAsString());
+    }
+
+    @Test
+    void promptsGetUnknownPromptReturnsInvalidParams() throws Exception {
+        String sessionId = initialize();
+        String body = "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"prompts/get\","
+                + "\"params\":{\"name\":\"nope\",\"arguments\":{}}}";
+        HttpResponse<String> resp = post(body, sessionId);
+        assertEquals(200, resp.statusCode());
+        JsonObject err = MCPProtocol.fromJson(resp.body(), JsonObject.class).getAsJsonObject("error");
+        assertNotNull(err);
+        assertEquals(-32602, err.get("code").getAsInt());
+    }
+
+    @Test
+    void promptsGetMissingRequiredArgReturnsInvalidParams() throws Exception {
+        String sessionId = initialize();
+        String body = "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"prompts/get\","
+                + "\"params\":{\"name\":\"greet\",\"arguments\":{}}}";
+        HttpResponse<String> resp = post(body, sessionId);
+        assertEquals(200, resp.statusCode());
+        JsonObject err = MCPProtocol.fromJson(resp.body(), JsonObject.class).getAsJsonObject("error");
+        assertNotNull(err);
+        assertEquals(-32602, err.get("code").getAsInt());
     }
 
     // ===== acceptNewSession hook =====
