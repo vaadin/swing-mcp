@@ -43,34 +43,31 @@ class SwingDragToolTest extends AbstractHeadlessTest {
 
     /**
      * Drags source_ref to target_ref. Drains the EDT so fire-and-forget action completes.
+     * Clears the ref map afterwards only on successful dispatch, mirroring
+     * {@code MCPServer.registerTool} behaviour for mutation tools.
      */
     private MCPProtocol.Content dragToRef(int sourceRef, int targetRef) throws Exception {
-        try {
-            MCPProtocol.Content result = dragTool.execute(
-                    new Parameters(Map.of("source_ref", sourceRef, "target_ref", targetRef)),
-                    context);
-            SwingUtilities.invokeAndWait(() -> {}); // drain EDT
-            return result;
-        } finally {
-            context.clearRefMap();
-        }
+        MCPProtocol.Content result = dragTool.execute(
+                new Parameters(Map.of("source_ref", sourceRef, "target_ref", targetRef)),
+                context);
+        context.clearRefMap();
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT
+        return result;
     }
 
     /**
      * Drags source_ref to target_ref with component-relative target offsets. Drains the EDT.
+     * Clears the ref map afterwards only on successful dispatch.
      */
     private MCPProtocol.Content dragToRefWithOffset(int sourceRef, int targetRef,
                                                      int targetX, int targetY) throws Exception {
-        try {
-            MCPProtocol.Content result = dragTool.execute(
-                    new Parameters(Map.of("source_ref", sourceRef, "target_ref", targetRef,
-                            "target_x", targetX, "target_y", targetY)),
-                    context);
-            SwingUtilities.invokeAndWait(() -> {}); // drain EDT
-            return result;
-        } finally {
-            context.clearRefMap();
-        }
+        MCPProtocol.Content result = dragTool.execute(
+                new Parameters(Map.of("source_ref", sourceRef, "target_ref", targetRef,
+                        "target_x", targetX, "target_y", targetY)),
+                context);
+        context.clearRefMap();
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT
+        return result;
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -96,7 +93,9 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         int targetRef = context.getRefOf(target);
 
         MCPProtocol.Content result = dragToRef(sourceRef, targetRef);
-        assertNull(result, "Successful drag should return null");
+        assertEquals("Dispatched drag on ref=" + sourceRef + " to ref=" + targetRef
+                        + " — call swing_snapshot to verify the outcome",
+                result.getText());
         assertTrue(source.wasDragged(), "Source should have received a valid drag sequence");
     }
 
@@ -124,7 +123,9 @@ class SwingDragToolTest extends AbstractHeadlessTest {
 
         // Drag to offset (20, 10) within target (not center)
         MCPProtocol.Content result = dragToRefWithOffset(sourceRef, targetRef, 20, 10);
-        assertNull(result, "Successful drag should return null");
+        assertEquals("Dispatched drag on ref=" + sourceRef + " to ref=" + targetRef
+                        + " — call swing_snapshot to verify the outcome",
+                result.getText());
         assertTrue(source.wasDragged(), "Source should have received a valid drag sequence");
 
         // Verify the release event coordinates
@@ -198,7 +199,9 @@ class SwingDragToolTest extends AbstractHeadlessTest {
                 context);
         SwingUtilities.invokeAndWait(() -> {}); // drain EDT
 
-        assertNull(result);
+        assertEquals("Dispatched drag on ref=" + sourceRef + " to ref=" + targetRef
+                        + " — call swing_snapshot to verify the outcome",
+                result.getText());
         assertTrue(source.wasDragged(), "Drag with custom offset should succeed");
 
         // Verify press event is at the custom offset, not the center
@@ -643,7 +646,7 @@ class SwingDragToolTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void dragReturnsNull() throws Exception {
+    void dragReturnsEcho() throws Exception {
         DragRecordingPanel source = new DragRecordingPanel();
         DragRecordingPanel target = new DragRecordingPanel();
 
@@ -655,16 +658,86 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         root.add(target);
 
         snapshot(root);
+        int sourceRef = context.getRefOf(source);
+        int targetRef = context.getRefOf(target);
         MCPProtocol.Content result = dragTool.execute(
-                new Parameters(Map.of("source_ref", context.getRefOf(source),
-                        "target_ref", context.getRefOf(target))),
+                new Parameters(Map.of("source_ref", sourceRef,
+                        "target_ref", targetRef)),
                 context);
-        assertNull(result, "Drag should return null (fire-and-forget)");
+        assertEquals("Dispatched drag on ref=" + sourceRef + " to ref=" + targetRef
+                        + " — call swing_snapshot to verify the outcome",
+                result.getText());
     }
 
     @Test
     void isMutationReturnsTrue() {
         assertTrue(dragTool.isMutation(), "Drag is a mutation tool");
+    }
+
+    @Test
+    void refsInvalidatedAfterDrag() throws Exception {
+        DragRecordingPanel source = new DragRecordingPanel();
+        DragRecordingPanel target = new DragRecordingPanel();
+        JPanel root = new JPanel(null);
+        root.setSize(300, 100);
+        source.setBounds(0, 0, 100, 50);
+        target.setBounds(200, 0, 100, 50);
+        root.add(source);
+        root.add(target);
+
+        snapshot(root);
+        int sourceRef = context.getRefOf(source);
+        int targetRef = context.getRefOf(target);
+        dragToRef(sourceRef, targetRef);
+
+        // Refs must be cleared after a successful mutation (BR-09)
+        MCPServerException ex = assertThrows(MCPServerException.class,
+                () -> dragTool.execute(
+                        new Parameters(Map.of("source_ref", sourceRef, "target_ref", targetRef)),
+                        context));
+        assertTrue(ex.getMessage().contains("swing_snapshot"),
+                "Error should suggest swing_snapshot after invalidation, got: " + ex.getMessage());
+    }
+
+    @Test
+    void refsPreservedAfterValidationError() throws Exception {
+        // A validation rejection (e.g. "disabled source") must NOT clear the ref map —
+        // the UI state hasn't changed, so existing refs remain valid (BR-09).
+        DragRecordingPanel disabled = new DragRecordingPanel();
+        disabled.setEnabled(false);
+        DragRecordingPanel enabled = new DragRecordingPanel();
+        DragRecordingPanel target = new DragRecordingPanel();
+
+        JPanel root = new JPanel(null);
+        root.setSize(400, 100);
+        disabled.setBounds(0, 0, 100, 50);
+        enabled.setBounds(110, 0, 100, 50);
+        target.setBounds(220, 0, 100, 50);
+        root.add(disabled);
+        root.add(enabled);
+        root.add(target);
+
+        snapshot(root);
+        int disabledRef = context.getRefOf(disabled);
+        int enabledRef = context.getRefOf(enabled);
+        int targetRef = context.getRefOf(target);
+
+        // Drag from disabled source → MCPErrorResponseException, no EDT action dispatched
+        assertThrows(MCPErrorResponseException.class,
+                () -> dragTool.execute(
+                        new Parameters(Map.of("source_ref", disabledRef, "target_ref", targetRef)),
+                        context));
+
+        // The ref map must still be intact — the enabled source's ref is still valid
+        MCPProtocol.Content result = dragTool.execute(
+                new Parameters(Map.of("source_ref", enabledRef, "target_ref", targetRef)),
+                context);
+        SwingUtilities.invokeAndWait(() -> {}); // drain EDT
+        assertEquals("Dispatched drag on ref=" + enabledRef + " to ref=" + targetRef
+                        + " — call swing_snapshot to verify the outcome",
+                result.getText());
+        assertTrue(enabled.wasDragged(),
+                "Source should still be draggable via its original ref after a validation error on another ref");
     }
 
     // ══════════════════════════════════════════════════════════════════════════
