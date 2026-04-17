@@ -15,6 +15,9 @@ import java.util.stream.Collectors;
  *     .requiredInteger("ref", "The element reference number")
  *     .build();
  * }</pre>
+ *
+ * <p>Parameter insertion order is preserved in the built schema and in
+ * {@link #toString()}; this ordering is contractual.
  */
 public class InputSchemaBuilder {
 
@@ -94,6 +97,7 @@ public class InputSchemaBuilder {
         return this;
     }
 
+    /** Applies to the most recently added parameter. */
     public InputSchemaBuilder withEnum(String... values) {
         if (lastAdded == null) {
             throw new IllegalStateException("No parameter has been added yet");
@@ -109,6 +113,7 @@ public class InputSchemaBuilder {
         return this;
     }
 
+    /** Applies to the most recently added parameter. */
     public InputSchemaBuilder withMinimum(Number min) {
         if (lastAdded == null) {
             throw new IllegalStateException("No parameter has been added yet");
@@ -121,6 +126,7 @@ public class InputSchemaBuilder {
         return this;
     }
 
+    /** Applies to the most recently added parameter. */
     public InputSchemaBuilder withMaximum(Number max) {
         if (lastAdded == null) {
             throw new IllegalStateException("No parameter has been added yet");
@@ -140,6 +146,12 @@ public class InputSchemaBuilder {
         return schema;
     }
 
+    /**
+     * Returns a compact, human-readable representation of the schema:
+     * {@code name: type} for required, {@code name: type?} for optional,
+     * with {@code (a|b|...)} for enum values and {@code [min,max]} for
+     * numeric bounds (either side may be empty). Descriptions are omitted.
+     */
     @Override
     public String toString() {
         return properties.entrySet().stream()
