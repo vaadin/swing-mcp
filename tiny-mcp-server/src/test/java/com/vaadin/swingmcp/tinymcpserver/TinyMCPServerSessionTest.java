@@ -272,9 +272,8 @@ class TinyMCPServerSessionTest {
 
     @Test
     void getCurrentThrowsOnTestThreadOutsideDispatch() {
-        // The HTTP dispatcher binds/unbinds MCPSession.instance around handlePost.
-        // On the test thread (which never ran a dispatch) no session is bound.
-        MCPSession.instance.remove();
+        // handlePost binds/unbinds the ThreadLocal on the HTTP dispatch thread.
+        // The test thread never ran a dispatch, so no session is bound here.
         assertThrows(NullPointerException.class, MCPSession::getCurrent);
     }
 

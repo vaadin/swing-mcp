@@ -206,4 +206,26 @@ public class MCPSession {
     public static MCPSession getCurrent() {
         return Objects.requireNonNull(instance.get(), "Not running in a MCP session");
     }
+
+    /**
+     * For use by tests only: runs {@code block} with the session lock held
+     * and {@link #instance} bound to this session, mirroring what
+     * {@link #handlePost} sets up in production. Lets unit tests exercise
+     * lock-guarded accessors (such as {@link #getAttribute(String)} and
+     * {@link #setAttribute(String, Object)}) without dispatching a real
+     * HTTP request.
+     */
+    void runLocked(Runnable block) {
+        sessionLock.lock();
+        try {
+            instance.set(this);
+            try {
+                block.run();
+            } finally {
+                instance.remove();
+            }
+        } finally {
+            sessionLock.unlock();
+        }
+    }
 }
