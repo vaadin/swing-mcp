@@ -254,14 +254,7 @@ public class TinyMCPServer {
         }
 
         rpc.setSessionId(session.getId());
-        synchronized (session) {
-            MCPSession.instance.set(session);
-            try {
-                session.handlePost(rpc, request);
-            } finally {
-                MCPSession.instance.remove();
-            }
-        }
+        session.handlePost(rpc, request);
     }
 
     private void handleInitialize(JsonRpcExchange rpc) throws IOException {

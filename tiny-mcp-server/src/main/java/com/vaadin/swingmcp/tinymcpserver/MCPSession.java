@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -28,6 +29,10 @@ public class MCPSession {
     private final String id;
     private final MCPToolHandler toolHandler;
     private final Map<String, Object> attributes = new HashMap<>();
+    /**
+     * The session lock, prevents concurrent access to the session.
+     */
+    private final ReentrantLock sessionLock = new ReentrantLock();
 
     MCPSession(String id, MCPToolHandler toolHandler) {
         this.id = id;
@@ -43,13 +48,25 @@ public class MCPSession {
         return id;
     }
 
+    void handlePost(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) throws IOException {
+        sessionLock.lock();
+        try {
+            instance.set(this);
+            doHandlePost(rpc,  request);
+        } finally {
+            instance.remove();
+            sessionLock.unlock();
+        }
+    }
+
     /**
      * Dispatches a parsed JSON-RPC request to the appropriate handler.
      * Called for all session-scoped methods (everything except
      * {@code initialize} and {@code ping}, which are handled by
      * {@link TinyMCPServer}).
      */
-    void handlePost(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) throws IOException {
+    private void doHandlePost(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) throws IOException {
+        checkLocked();
         String rpcMethod = request.getMethod();
         try {
             switch (rpcMethod != null ? rpcMethod : "") {
@@ -78,13 +95,21 @@ public class MCPSession {
         }
     }
 
+    private void checkLocked() {
+        if (!sessionLock.isLocked()) {
+            throw new IllegalStateException("Invalid state: running outside of MCP session thread");
+        }
+    }
+
     private void handleResourcesList(JsonRpcExchange rpc) throws IOException {
+        checkLocked();
         MCPProtocol.ListResourcesResult result = new MCPProtocol.ListResourcesResult();
         result.setResources(Collections.emptyList());
         rpc.sendResponse(result);
     }
 
     private void handlePromptsList(JsonRpcExchange rpc) throws IOException {
+        checkLocked();
         MCPProtocol.ListPromptsResult result = new MCPProtocol.ListPromptsResult();
         result.setPrompts(Collections.emptyList());
         rpc.sendResponse(result);
@@ -103,6 +128,7 @@ public class MCPSession {
      * @throws NullPointerException if {@code name} is {@code null}
      */
     public Object getAttribute(String name) {
+        checkLocked();
         Objects.requireNonNull(name);
         return attributes.get(name);
     }
@@ -117,6 +143,7 @@ public class MCPSession {
      * @throws NullPointerException if {@code name} is {@code null}
      */
     public void setAttribute(String name, Object value) {
+        checkLocked();
         Objects.requireNonNull(name);
         attributes.put(name, value);
     }
@@ -134,6 +161,7 @@ public class MCPSession {
      *                            {@link #setAttribute(String, Object)} overload)
      */
     public <T> T getAttribute(Class<T> type) {
+        checkLocked();
         return type.cast(getAttribute(type.getName()));
     }
 
@@ -148,6 +176,7 @@ public class MCPSession {
      * @param <T>   the attribute type
      */
     public <T> void setAttribute(Class<T> type, T value) {
+        checkLocked();
         setAttribute(type.getName(), value);
     }
 
@@ -156,7 +185,7 @@ public class MCPSession {
      * Set by {@link TinyMCPServer} around {@link #handlePost} and cleared
      * immediately after; visible only on the HTTP dispatch thread.
      */
-    static final ThreadLocal<MCPSession> instance = new ThreadLocal<>();
+    private static final ThreadLocal<MCPSession> instance = new ThreadLocal<>();
 
     /**
      * Returns the session whose request is being dispatched on the current
@@ -166,7 +195,7 @@ public class MCPSession {
      * <p>
      * Only bound on the HTTP dispatch thread for the duration of
      * {@link #handlePost}. If a tool marshals its work onto another thread
-     * (e.g. the Swing EDT), resolve the session <em>before</em> crossing the
+     * (e.g. the Swing EDT), resolve the session attribute <em>before</em> crossing the
      * thread boundary and capture it into the other thread's closure.
      *
      * @return the current session, never {@code null}
