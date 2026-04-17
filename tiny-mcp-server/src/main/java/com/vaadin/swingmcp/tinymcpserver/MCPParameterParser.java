@@ -1,23 +1,54 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Validates and coerces raw tool arguments against a tool's input schema.
- * Instances are immutable and created once per registered tool.
+ * Instances are immutable and created once per registered tool/prompt.
+ * <p>
+ * Internally stores the property map (name → {@link MCPProtocol.PropertySchema})
+ * and the required-name set, derived either from a full tool
+ * {@link MCPProtocol.InputSchema} or from a list of prompt
+ * {@link MCPProtocol.PromptArgument}s.
  */
 class MCPParameterParser {
 
     private final String toolName;
-    private final MCPProtocol.InputSchema schema;
+    private final Map<String, MCPProtocol.PropertySchema> properties;
+    private final Set<String> required;
 
     MCPParameterParser(String toolName, MCPProtocol.InputSchema schema) {
         this.toolName = toolName;
-        this.schema = schema;
+        this.properties = schema.getProperties() != null
+                ? new LinkedHashMap<>(schema.getProperties())
+                : new LinkedHashMap<>();
+        this.required = schema.getRequired() != null
+                ? new HashSet<>(schema.getRequired())
+                : new HashSet<>();
+    }
+
+    /**
+     * Builds a parser for an MCP prompt. Every argument is modelled as a
+     * {@code string} property — MCP prompts do not support other types.
+     */
+    MCPParameterParser(String toolName, List<MCPProtocol.PromptArgument> arguments) {
+        this.toolName = toolName;
+        this.properties = new LinkedHashMap<>();
+        this.required = new HashSet<>();
+        for (MCPProtocol.PromptArgument arg : arguments) {
+            MCPProtocol.PropertySchema prop = new MCPProtocol.PropertySchema();
+            prop.setType("string");
+            prop.setDescription(arg.getDescription());
+            this.properties.put(arg.getName(), prop);
+            if (Boolean.TRUE.equals(arg.getRequired())) {
+                this.required.add(arg.getName());
+            }
+        }
     }
 
     /**
@@ -28,11 +59,6 @@ class MCPParameterParser {
      *                                   parameters or type coercion failures
      */
     Map<String, Object> parse(Map<String, Object> rawArgs) {
-        Map<String, MCPProtocol.PropertySchema> properties =
-                schema.getProperties() != null ? schema.getProperties() : Collections.emptyMap();
-        List<String> required =
-                schema.getRequired() != null ? schema.getRequired() : Collections.emptyList();
-
         // Reject unknown parameters with isError:true and did-you-mean hints
         List<String> unknownParams = new ArrayList<>();
         for (String key : rawArgs.keySet()) {
@@ -77,7 +103,7 @@ class MCPParameterParser {
         }
 
         // Validate and coerce known parameters
-        Map<String, Object> callArgs = new HashMap<>();
+        Map<String, Object> callArgs = new LinkedHashMap<>();
         for (Map.Entry<String, MCPProtocol.PropertySchema> entry : properties.entrySet()) {
             String paramName = entry.getKey();
             String paramType = entry.getValue().getType();

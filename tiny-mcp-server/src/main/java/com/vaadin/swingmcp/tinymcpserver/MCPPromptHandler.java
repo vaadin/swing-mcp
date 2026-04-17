@@ -12,12 +12,10 @@ import java.util.logging.Logger;
  * {@code prompts/get} JSON-RPC methods. Parallel to {@link MCPToolHandler}.
  * <p>
  * Prompt arguments are always strings per the MCP spec, so registration
- * takes a typed {@link MCPProtocol.PromptArgument} list — typically built
- * with {@link PromptArgumentsBuilder}. Argument validation
+ * takes a {@link PromptArgumentsBuilder}. Argument validation
  * (missing-required, unknown args with did-you-mean hints) is delegated
- * to {@link MCPParameterParser}, the same parser used for tool calls;
- * the argument list is adapted into an internal string-only
- * {@link MCPProtocol.InputSchema} to feed it.
+ * to {@link MCPParameterParser}, the same parser used for tool calls —
+ * it has a dedicated constructor for prompt-argument lists.
  */
 class MCPPromptHandler {
 
@@ -30,7 +28,7 @@ class MCPPromptHandler {
 
         RegisteredPrompt(String name, String description, List<MCPProtocol.PromptArgument> arguments,
                 TinyMCPServer.PromptFunction function) {
-            this.parser = new MCPParameterParser(name, toInputSchema(arguments));
+            this.parser = new MCPParameterParser(name, arguments);
             this.function = function;
             this.descriptor = new MCPProtocol.Prompt();
             this.descriptor.setName(name);
@@ -138,29 +136,5 @@ class MCPPromptHandler {
                     "Prompt '" + promptName + "' returned null");
         }
         rpc.sendResponse(result);
-    }
-
-    /**
-     * Adapts a typed prompt-argument list into a string-only
-     * {@link MCPProtocol.InputSchema} so that {@link MCPParameterParser}
-     * can enforce required / unknown-arg validation with the same logic
-     * it uses for tools.
-     */
-    private static MCPProtocol.InputSchema toInputSchema(List<MCPProtocol.PromptArgument> arguments) {
-        LinkedHashMap<String, MCPProtocol.PropertySchema> properties = new LinkedHashMap<>();
-        List<String> required = new ArrayList<>();
-        for (MCPProtocol.PromptArgument arg : arguments) {
-            MCPProtocol.PropertySchema prop = new MCPProtocol.PropertySchema();
-            prop.setType("string");
-            prop.setDescription(arg.getDescription());
-            properties.put(arg.getName(), prop);
-            if (Boolean.TRUE.equals(arg.getRequired())) {
-                required.add(arg.getName());
-            }
-        }
-        MCPProtocol.InputSchema schema = new MCPProtocol.InputSchema();
-        schema.setProperties(properties);
-        schema.setRequired(required);
-        return schema;
     }
 }
