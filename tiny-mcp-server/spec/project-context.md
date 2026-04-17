@@ -8,7 +8,7 @@ The MCP server is minimalistic:
 
 - No support for SSE streams for server-to-client push messages
 - No support for auth of any kind
-- No support for resources nor prompts, only tools
+- Supports tools, resources, and prompts
 
 ### Transport: HTTP only
 
@@ -32,40 +32,38 @@ There is no port discovery mechanism. Usually there is exactly one Swing app
 running per machine (the one being migrated to Vaadin). Multiple Swing apps
 on the same machine is a corner case handled by changing the port.
 
-### Single-session model
+### Session model
 
-Since this MCP server runs in-process within a Swing app, there is exactly
-one Swing app instance. Multiple concurrent AI agents controlling the same
-Swing app would cause random concurrency issues, making testing useless.
-Therefore, the server supports at most a single session:
+`TinyMCPServer` itself is multi-session: it keeps a map of active
+sessions and routes incoming requests to the one named by the
+`Mcp-Session-Id` header. The subclass used by swing-mcp overrides
+`acceptNewSession()` to enforce a single-session policy, because
+multiple concurrent AI agents controlling the same Swing app would
+cause random concurrency issues (interleaved clicks, snapshot races)
+and make automated testing useless. When that subclass rejects a
+second `initialize`, the client receives HTTP 409 and JSON-RPC error
+`-32002` (`"Another session is already active"`); there is no queuing
+or retry.
 
-- A session is allowed to be opened only if there is no other session ongoing.
-- Only after a session is terminated, a new session is allowed to be started.
-- If a second session is attempted via a MCP initialization request,
-  that request is denied with HTTP 409 Conflict and a JSON-RPC error response (`-32002`, `"Another session is already active"`).
-- The blocked client simply fails — no queuing or retry mechanism.
+If an AI agent crashes or disconnects without sending a DELETE, the
+session remains open indefinitely. For the single-session subclass,
+that means the Swing app must be restarted to clear a stuck session —
+acceptable for the migration scenario (<1% of cases); revisit with a
+timeout or manual release if it becomes frequent.
 
-### Stuck sessions
-
-If an AI agent crashes or disconnects without properly closing the session,
-the session remains locked indefinitely. The server logs a warning when
-another AI agent attempts to connect while the session is locked. To clear
-a stuck session, the Swing app must be restarted. This is acceptable for
-the migration scenario where stuck sessions are rare (<1% of cases). If
-this becomes problematic, we will revisit (e.g., timeout or manual release).
+See DR-003 and DR-005 for the full session lifecycle and the
+per-method routing matrix.
 
 ### Error handling model
 
-Two layers of error reporting:
+Errors surface in one of three layers — transport failure (socket
+dead), JSON-RPC protocol error (parse / invalid request / method not
+found / invalid params / session state), and tool-layer `isError: true`
+with a recovery hint. All exception-to-response translation happens in
+a single seam in `TinyMCPServer.handleRequest`.
 
-- **Transport-level errors (HTTP 4xx/5xx):** For programming errors,
-  `RuntimeException`, or when the server cannot process the request at all
-  (e.g., accessibility tree unreadable).
-- **MCP-level errors (`isError: true`):** For application-level errors
-  where the tool ran but the input was bad (e.g., invalid component ref).
-  Following Playwright MCP's pattern, include a helpful recovery message
-  (e.g., "Ref not found, likely because element was removed. Use swing_snapshot
-  to see what elements are currently available.").
+See DR-004 for the full mapping of exception types, JSON-RPC codes,
+and HTTP statuses.
 
 ## 1. Vision
 
@@ -98,4 +96,3 @@ the intended user.
 
 - [Architecture](architecture.md) — technology stack and application structure
 - [Decisions](decisions.md) — cross-cutting design decisions (what/why/alternatives)
-- [Verification](verification.md) — visual verification checklists
