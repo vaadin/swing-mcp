@@ -49,9 +49,9 @@ class TinyMCPServerSessionTest {
                     return MCPProtocol.Content.text(v == null ? "<null>" : v.toString());
                 });
         server.addPrompt("greet", "Greet someone",
-                new InputSchemaBuilder()
-                        .requiredString("name", "Who to greet")
-                        .optionalString("style", "Greeting style")
+                new PromptArgumentsBuilder()
+                        .required("name", "Who to greet")
+                        .optional("style", "Greeting style")
                         .build(),
                 args -> {
                     MCPProtocol.GetPromptResult r = new MCPProtocol.GetPromptResult();

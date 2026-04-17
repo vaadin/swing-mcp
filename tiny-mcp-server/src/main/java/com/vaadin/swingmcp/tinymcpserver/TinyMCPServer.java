@@ -162,21 +162,19 @@ public class TinyMCPServer {
      * Registers a prompt with this server. Must be called before
      * {@link #start()}.
      * <p>
-     * MCP prompts accept string arguments only, so {@code arguments} must
-     * declare its properties as {@code string} (use
-     * {@link InputSchemaBuilder#requiredString} / {@code optionalString}).
-     * Any other property type is rejected at registration time.
+     * MCP prompts always pass string arguments, so the argument list is
+     * typed directly (use {@link PromptArgumentsBuilder}).
      *
      * @param name        the prompt name; not null, not blank
      * @param description human-readable description of the prompt; not null, not blank
-     * @param arguments   the argument schema; not null; use {@link InputSchemaBuilder}
+     * @param arguments   the argument list; not null (pass an empty list
+     *                    for no arguments); use {@link PromptArgumentsBuilder}
      * @param function    the handler to invoke for {@code prompts/get}; not null
-     * @throws IllegalArgumentException if any argument is null/blank or the
-     *                                  schema declares a non-string property
+     * @throws IllegalArgumentException if any argument is null/blank
      * @throws IllegalStateException    if the server has already been started
      * @throws IllegalStateException    if a prompt with the same name is already registered
      */
-    public void addPrompt(String name, String description, MCPProtocol.InputSchema arguments, PromptFunction function) {
+    public void addPrompt(String name, String description, List<MCPProtocol.PromptArgument> arguments, PromptFunction function) {
         if (started) {
             throw new IllegalStateException("Cannot add prompts after server has been started");
         }

@@ -1,7 +1,6 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,11 +11,13 @@ import java.util.logging.Logger;
  * Owns the prompt registry and handles {@code prompts/list} and
  * {@code prompts/get} JSON-RPC methods. Parallel to {@link MCPToolHandler}.
  * <p>
- * Prompt arguments are always strings per the MCP spec; registration
- * rejects schemas that declare anything other than {@code string}
- * properties. Argument validation (missing-required, unknown args with
- * did-you-mean hints) is delegated to {@link MCPParameterParser}, which
- * is also used for tool calls.
+ * Prompt arguments are always strings per the MCP spec, so registration
+ * takes a typed {@link MCPProtocol.PromptArgument} list — typically built
+ * with {@link PromptArgumentsBuilder}. Argument validation
+ * (missing-required, unknown args with did-you-mean hints) is delegated
+ * to {@link MCPParameterParser}, the same parser used for tool calls;
+ * the argument list is adapted into an internal string-only
+ * {@link MCPProtocol.InputSchema} to feed it.
  */
 class MCPPromptHandler {
 
@@ -27,14 +28,14 @@ class MCPPromptHandler {
         final TinyMCPServer.PromptFunction function;
         final MCPProtocol.Prompt descriptor;
 
-        RegisteredPrompt(String name, String description, MCPProtocol.InputSchema arguments,
+        RegisteredPrompt(String name, String description, List<MCPProtocol.PromptArgument> arguments,
                 TinyMCPServer.PromptFunction function) {
-            this.parser = new MCPParameterParser(name, arguments);
+            this.parser = new MCPParameterParser(name, toInputSchema(arguments));
             this.function = function;
             this.descriptor = new MCPProtocol.Prompt();
             this.descriptor.setName(name);
             this.descriptor.setDescription(description);
-            this.descriptor.setArguments(toPromptArguments(arguments));
+            this.descriptor.setArguments(new ArrayList<>(arguments));
         }
     }
 
@@ -47,17 +48,18 @@ class MCPPromptHandler {
      *                    {@code [a-zA-Z_][a-zA-Z0-9_]*}
      * @param description human-readable description of the prompt; not null,
      *                    not blank
-     * @param arguments   the argument schema — every property must declare
-     *                    type {@code string}; may declare zero arguments
+     * @param arguments   the argument list — typically built with
+     *                    {@link PromptArgumentsBuilder}; may be empty
      * @param function    the handler to invoke when the prompt is fetched;
      *                    not null
      * @throws IllegalArgumentException if any argument is null/blank, the
-     *                                  name shape is wrong, or the schema
-     *                                  declares a non-string property
+     *                                  name shape is wrong, or the argument
+     *                                  list contains null entries, blank
+     *                                  names, or duplicate names
      * @throws IllegalStateException    if a prompt with the same name is
      *                                  already registered
      */
-    void addPrompt(String name, String description, MCPProtocol.InputSchema arguments,
+    void addPrompt(String name, String description, List<MCPProtocol.PromptArgument> arguments,
             TinyMCPServer.PromptFunction function) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Prompt name must not be null or blank");
@@ -69,18 +71,22 @@ class MCPPromptHandler {
             throw new IllegalArgumentException("Prompt description must not be null or blank");
         }
         if (arguments == null) {
-            throw new IllegalArgumentException("Prompt arguments schema must not be null");
+            throw new IllegalArgumentException("Prompt arguments must not be null (pass an empty list for no arguments)");
         }
         if (function == null) {
             throw new IllegalArgumentException("PromptFunction must not be null");
         }
-        Map<String, MCPProtocol.PropertySchema> properties =
-                arguments.getProperties() != null ? arguments.getProperties() : Collections.emptyMap();
-        for (Map.Entry<String, MCPProtocol.PropertySchema> entry : properties.entrySet()) {
-            String type = entry.getValue().getType();
-            if (!"string".equals(type)) {
-                throw new IllegalArgumentException("Prompt argument '" + entry.getKey()
-                        + "' must be of type 'string' (MCP prompts only accept string arguments), got: " + type);
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (MCPProtocol.PromptArgument arg : arguments) {
+            if (arg == null) {
+                throw new IllegalArgumentException("Prompt arguments list must not contain null entries");
+            }
+            String argName = arg.getName();
+            if (argName == null || argName.isBlank()) {
+                throw new IllegalArgumentException("Prompt argument name must not be null or blank");
+            }
+            if (!seen.add(argName)) {
+                throw new IllegalArgumentException("Duplicate prompt argument name: " + argName);
             }
         }
         if (prompts.containsKey(name)) {
@@ -149,19 +155,27 @@ class MCPPromptHandler {
         rpc.sendResponse(result);
     }
 
-    private static List<MCPProtocol.PromptArgument> toPromptArguments(MCPProtocol.InputSchema schema) {
-        Map<String, MCPProtocol.PropertySchema> properties =
-                schema.getProperties() != null ? schema.getProperties() : Collections.emptyMap();
-        List<String> required =
-                schema.getRequired() != null ? schema.getRequired() : Collections.emptyList();
-        List<MCPProtocol.PromptArgument> args = new ArrayList<>();
-        for (Map.Entry<String, MCPProtocol.PropertySchema> entry : properties.entrySet()) {
-            MCPProtocol.PromptArgument arg = new MCPProtocol.PromptArgument();
-            arg.setName(entry.getKey());
-            arg.setDescription(entry.getValue().getDescription());
-            arg.setRequired(required.contains(entry.getKey()));
-            args.add(arg);
+    /**
+     * Adapts a typed prompt-argument list into a string-only
+     * {@link MCPProtocol.InputSchema} so that {@link MCPParameterParser}
+     * can enforce required / unknown-arg validation with the same logic
+     * it uses for tools.
+     */
+    private static MCPProtocol.InputSchema toInputSchema(List<MCPProtocol.PromptArgument> arguments) {
+        LinkedHashMap<String, MCPProtocol.PropertySchema> properties = new LinkedHashMap<>();
+        List<String> required = new ArrayList<>();
+        for (MCPProtocol.PromptArgument arg : arguments) {
+            MCPProtocol.PropertySchema prop = new MCPProtocol.PropertySchema();
+            prop.setType("string");
+            prop.setDescription(arg.getDescription());
+            properties.put(arg.getName(), prop);
+            if (Boolean.TRUE.equals(arg.getRequired())) {
+                required.add(arg.getName());
+            }
         }
-        return args;
+        MCPProtocol.InputSchema schema = new MCPProtocol.InputSchema();
+        schema.setProperties(properties);
+        schema.setRequired(required);
+        return schema;
     }
 }
