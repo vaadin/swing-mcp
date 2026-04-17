@@ -30,7 +30,7 @@ class SwingToggleExpandScreenTest extends AbstractScreenTest {
     void setUp() {
         snapshotTool = new SwingSnapshotTool();
         toggleExpandTool = new SwingToggleExpandTool();
-        context = new SwingToolContext();
+        context = new SwingToolContext(Runnable::run);
     }
 
     private void snapshot(Object... roots) throws Exception {

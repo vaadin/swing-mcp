@@ -30,7 +30,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
     void setUp() {
         snapshotTool = new SwingSnapshotTool();
         closeTool = new SwingCloseTool();
-        context = new SwingToolContext();
+        context = new SwingToolContext(Runnable::run);
     }
 
     @AfterEach

@@ -31,13 +31,12 @@ class SwingDragScreenTest extends AbstractScreenTest {
     void setUp() {
         snapshotTool = new SwingSnapshotTool();
         dragTool = new SwingDragTool();
-        context = new SwingToolContext();
         executor = Executors.newSingleThreadExecutor(r -> {
             Thread t = new Thread(r, "swing-drag-test");
             t.setDaemon(true);
             return t;
         });
-        context.setExecutor(executor);
+        context = new SwingToolContext(executor);
     }
 
     @AfterEach

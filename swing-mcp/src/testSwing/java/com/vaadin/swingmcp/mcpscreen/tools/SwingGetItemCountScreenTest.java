@@ -33,7 +33,7 @@ class SwingGetItemCountScreenTest extends AbstractScreenTest {
         snapshotTool = new SwingSnapshotTool();
         tool = new SwingGetItemCountTool();
         setTextTool = new SwingSetTextTool();
-        context = new SwingToolContext();
+        context = new SwingToolContext(Runnable::run);
     }
 
     private void snapshot(Component... roots) throws Exception {
