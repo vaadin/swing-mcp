@@ -47,23 +47,16 @@ public class MCPSession {
         return id;
     }
 
-    void handlePost(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) {
-        sessionLock.lock();
-        try {
-            instance.set(this);
-            doHandlePost(rpc,  request);
-        } finally {
-            instance.remove();
-            sessionLock.unlock();
-        }
-    }
-
     /**
      * Dispatches a parsed JSON-RPC request to the appropriate handler.
      * Called for all session-scoped methods (everything except
      * {@code initialize} and {@code ping}, which are handled by
      * {@link TinyMCPServer}).
      */
+    void handlePost(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) {
+        runLocked(() -> doHandlePost(rpc, request));
+    }
+
     private void doHandlePost(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) {
         checkLocked();
         String rpcMethod = request.getMethod();
