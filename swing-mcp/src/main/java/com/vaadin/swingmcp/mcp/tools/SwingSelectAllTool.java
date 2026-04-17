@@ -19,7 +19,7 @@ import javax.swing.SwingUtilities;
  * {@link JTable#selectAll()} directly because the accessibility API's
  * {@code selectAllAccessibleSelection()} is a no-op on JTable.</p>
  *
- * @see <a href="use-case-019-swing-select-all.md">UC-019</a>
+ * @see <a href="tool-019-swing-select-all.md">T-019</a>
  */
 public class SwingSelectAllTool extends AbstractSwingTool {
 

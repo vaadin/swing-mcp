@@ -22,7 +22,7 @@ import java.util.Set;
  * at most one index is allowed. For JTable, indices are row indices — the tool
  * translates to cell indices internally. An empty array clears the selection.</p>
  *
- * @see <a href="use-case-015-swing-set-selection.md">UC-015</a>
+ * @see <a href="tool-015-swing-set-selection.md">T-015</a>
  */
 public class SwingSetSelectionTool extends AbstractSwingTool {
 

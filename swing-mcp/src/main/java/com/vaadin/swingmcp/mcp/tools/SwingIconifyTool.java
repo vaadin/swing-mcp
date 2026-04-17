@@ -21,7 +21,7 @@ import java.beans.PropertyVetoException;
  * calls {@code setIcon(true)}. The client observes the result via
  * {@code swing_snapshot}.</p>
  *
- * @see <a href="use-case-022-swing-iconify.md">UC-022</a>
+ * @see <a href="tool-022-swing-iconify.md">T-022</a>
  */
 public class SwingIconifyTool extends AbstractSwingTool {
 

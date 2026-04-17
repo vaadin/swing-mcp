@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Headless tests for {@code swing_toggle_popup} — error cases only.
  * The happy-path (actually opening/closing the popup) requires a display
- * and lives in {@code SwingTogglePopupScreenTest} (see UC-007 BR-10).
+ * and lives in {@code SwingTogglePopupScreenTest} (see T-007 BR-10).
  */
 class SwingTogglePopupTest extends AbstractHeadlessTest {
 

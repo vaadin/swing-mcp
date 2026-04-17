@@ -1,4 +1,4 @@
-# UC-003: swing_screenshot
+# T-003: swing_screenshot
 
 **Status:** Implemented
 **Date:** 2026-03-26

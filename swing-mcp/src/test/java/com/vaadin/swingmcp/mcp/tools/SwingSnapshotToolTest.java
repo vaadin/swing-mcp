@@ -270,7 +270,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot(root);
 
-        // UC-002 step 6b / UC-020 BR-03: JTable does NOT advertise
+        // T-002 step 6b / T-020 BR-03: JTable does NOT advertise
         // get_cell_count / get_cells — use swing_get_items instead.
         assertEquals(
                 "- JPanel (panel)\n"
@@ -286,7 +286,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void largeJListAdvertisesGetCellsAndGetCellCount() throws Exception {
-        // UC-002 step 6b: truncated JList advertises get_cell_count + get_cells.
+        // T-002 step 6b: truncated JList advertises get_cell_count + get_cells.
         String[] items = new String[20];
         for (int i = 0; i < 20; i++) items[i] = "Item-" + i;
         JList<String> list = new JList<>(items);
@@ -302,7 +302,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void largeJTreeAdvertisesGetCellsAndGetCellCount() throws Exception {
-        // UC-002 step 6b: truncated JTree advertises get_cell_count + get_cells.
+        // T-002 step 6b: truncated JTree advertises get_cell_count + get_cells.
         javax.swing.tree.DefaultMutableTreeNode root =
                 new javax.swing.tree.DefaultMutableTreeNode("Root");
         for (int i = 0; i < 20; i++) {
@@ -807,7 +807,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     @Test
     void br12_emptyJTextField_rendersEmptyStringPreview() throws Exception {
         // Empty JTextField yields text="" — distinct from "no preview" (which
-        // would be the case if supportsGetText were false). Matches UC-005
+        // would be the case if supportsGetText were false). Matches T-005
         // BR-08's "field exists and is empty" semantics.
         JPanel panel = new JPanel();
         panel.add(new JTextField());
@@ -1345,7 +1345,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         panel.add(splitPane);
 
         // BR-12: unrealized JSplitPane reports -1 from getCurrentAccessibleValue;
-        // value preview mirrors that fidelity (UC-012 Component Matrix note).
+        // value preview mirrors that fidelity (T-012 Component Matrix note).
         assertEquals(
                 "- JPanel (panel)\n"
                 + "  - JSplitPane (split_pane) [ref=1, horizontal] value=-1 actions: get_value, set_value\n"
@@ -1557,7 +1557,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot(panel);
         // JTree nodes use AccessibleRole.LABEL (OpenJDK implementation).
-        // The tree itself has no selection (TREE suppressed in UC-014) and is
+        // The tree itself has no selection (TREE suppressed in T-014) and is
         // not truncated, so it has no actions and no ref.
         // The root "Root" is expanded and has toggle_expand + selection actions.
         // Leaf nodes "A" and "B" are kept because they have accessible names,
@@ -2021,7 +2021,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void br10_tooltipLongerThan120Chars_isTruncatedWithEllipsis() throws Exception {
-        // 150 'x's → 120 'x's + U+2026; capped description triggers get_description (UC-024)
+        // 150 'x's → 120 'x's + U+2026; capped description triggers get_description (T-024)
         String longTooltip = "x".repeat(150);
         JButton button = new JButton("OK");
         button.setToolTipText(longTooltip);
@@ -2036,7 +2036,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     void br10_descriptionLongerThan120Chars_isTruncatedWithEllipsis_symmetricCap()
             throws Exception {
         // Symmetric cap: real accessibleDescription is also truncated.
-        // Capped description triggers get_description (UC-024).
+        // Capped description triggers get_description (T-024).
         String longDesc = "y".repeat(150);
         JButton button = new JButton("OK");
         button.getAccessibleContext().setAccessibleDescription(longDesc);
@@ -2113,7 +2113,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     @Test
     void br10_perCellPerRowPerNodePerItemTooltips_notSurfacedInSnapshot()
             throws Exception {
-        // Regression guard (UC-002 BR-10): per-cell / per-row / per-node /
+        // Regression guard (T-002 BR-10): per-cell / per-row / per-node /
         // per-item tooltips on JTable, JList, JTree, JTableHeader are
         // delivered via the MouseEvent-aware overload
         // getToolTipText(MouseEvent). The snapshot walker has no

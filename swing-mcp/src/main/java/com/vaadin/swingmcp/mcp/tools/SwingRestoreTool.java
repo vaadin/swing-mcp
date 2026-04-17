@@ -21,7 +21,7 @@ import java.beans.PropertyVetoException;
  * for JDesktopIcon, resolves to the underlying JInternalFrame and calls
  * {@code setIcon(false)}. The client observes the result via {@code swing_snapshot}.</p>
  *
- * @see <a href="use-case-023-swing-restore.md">UC-023</a>
+ * @see <a href="tool-023-swing-restore.md">T-023</a>
  */
 public class SwingRestoreTool extends AbstractSwingTool {
 

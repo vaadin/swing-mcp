@@ -13,7 +13,7 @@ import javax.accessibility.Accessible;
  * <p>This is a thin wrapper around {@link SwingUtils#getItemCount}
  * that lets the AI client learn the item count without fetching any items.</p>
  *
- * @see <a href="use-case-018-swing-get-item-count.md">UC-018</a>
+ * @see <a href="tool-018-swing-get-item-count.md">T-018</a>
  */
 public class SwingGetItemCountTool extends AbstractSwingTool {
 

@@ -1,4 +1,4 @@
-# UC-022: swing_iconify
+# T-022: swing_iconify
 
 **Status:** Implemented
 **Date:** 2026-04-14

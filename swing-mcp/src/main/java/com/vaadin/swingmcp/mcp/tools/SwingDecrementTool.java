@@ -15,7 +15,7 @@ import javax.swing.SwingUtilities;
  * <p>Looks up the component by ref, verifies it supports the decrement action
  * and is effectively enabled, then invokes the matching {@link AccessibleAction}.</p>
  *
- * @see <a href="use-case-009-swing-decrement.md">UC-009</a>
+ * @see <a href="tool-009-swing-decrement.md">T-009</a>
  */
 public class SwingDecrementTool extends AbstractSwingTool {
 

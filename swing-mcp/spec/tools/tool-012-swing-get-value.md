@@ -1,4 +1,4 @@
-# UC-012: swing_get_value
+# T-012: swing_get_value
 
 **Status:** Implemented (amended 2026-04-15 — motivation updated for DR-013 inline preview)
 **Date:** 2026-04-02

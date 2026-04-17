@@ -15,7 +15,7 @@ import javax.swing.SwingUtilities;
  * and is effectively enabled, then invokes the click via the {@link Runnable}
  * returned by {@link SwingUtils#supportsClick(Accessible)}.</p>
  *
- * @see <a href="use-case-004-swing-click.md">UC-004</a>
+ * @see <a href="tool-004-swing-click.md">T-004</a>
  */
 public class SwingClickTool extends AbstractSwingTool {
 

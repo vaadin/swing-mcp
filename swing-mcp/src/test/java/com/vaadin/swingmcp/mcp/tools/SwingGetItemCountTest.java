@@ -76,7 +76,7 @@ class SwingGetItemCountTest extends AbstractHeadlessTest {
     // The two former positive tests (3-tabs, empty) are replaced by a single
     // regression guard below + componentMatrix_JTabbedPane. The tab count is
     // now derivable from the snapshot, which renders every tab inline per
-    // UC-002 SC-2.
+    // T-002 SC-2.
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -128,7 +128,7 @@ class SwingGetItemCountTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JTable — all selection modes succeed (UC-018 BR-03)
+    // JTable — all selection modes succeed (T-018 BR-03)
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test

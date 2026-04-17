@@ -1,4 +1,4 @@
-# UC-011: swing_close
+# T-011: swing_close
 
 **Status:** Implemented
 **Date:** 2026-04-01

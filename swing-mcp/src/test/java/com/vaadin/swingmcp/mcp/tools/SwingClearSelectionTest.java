@@ -75,7 +75,7 @@ class SwingClearSelectionTest extends AbstractHeadlessTest {
 
     @Test
     void successEchoUsesClearSelectionActionName() throws Exception {
-        // UC-016: the wrapper composes the echo from this tool's MCP-exposed name
+        // T-016: the wrapper composes the echo from this tool's MCP-exposed name
         // (clear-selection), not from the delegated SwingSetSelectionTool (set-selection).
         JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma"});
         list.setSelectedIndex(1);

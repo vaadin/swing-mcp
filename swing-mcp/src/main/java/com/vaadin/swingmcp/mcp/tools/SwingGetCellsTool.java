@@ -18,7 +18,7 @@ import java.util.List;
  * rooted at the requested children. <b>Replaces the ref map</b> — the parent
  * component gets ref=1 and child refs start from 2.</p>
  *
- * @see <a href="use-case-020-swing-get-cells.md">UC-020</a>
+ * @see <a href="tool-020-swing-get-cells.md">T-020</a>
  */
 public class SwingGetCellsTool extends AbstractSwingTool {
 

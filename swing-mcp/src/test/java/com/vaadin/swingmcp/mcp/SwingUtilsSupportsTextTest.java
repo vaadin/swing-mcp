@@ -472,7 +472,7 @@ class SwingUtilsSupportsTextTest {
 
     @Test
     void readText_emptyField_returnsEmptyString() {
-        // UC-005 BR-08 semantics: empty content is "" (the field exists and is
+        // T-005 BR-08 semantics: empty content is "" (the field exists and is
         // empty), never null.
         assertEquals("", SwingUtils.readText(new JTextField(), 1000));
     }

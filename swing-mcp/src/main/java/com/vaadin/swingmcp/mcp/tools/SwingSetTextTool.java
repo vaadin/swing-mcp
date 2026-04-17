@@ -18,7 +18,7 @@ import javax.swing.SwingUtilities;
  * enabled, and is editable, then delegates to
  * {@link AccessibleEditableText#setTextContents(String)}.</p>
  *
- * @see <a href="use-case-006-swing-set-text.md">UC-006</a>
+ * @see <a href="tool-006-swing-set-text.md">T-006</a>
  */
 public class SwingSetTextTool extends AbstractSwingTool {
 

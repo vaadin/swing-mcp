@@ -143,7 +143,7 @@ children (e.g. JList items, JTree nodes) use `(role)` only.
 - `JTable` shows `columns: [...]` when inside a `JScrollPane`. Children render as pipe-separated row lines (`row 0: val | val`), not individual cell labels.
 - `get_cell_count`/`get_cells` only appear on truncated `JList`/`JTree` (not `JTable`). `JTree` selection is suppressed — selection tools work only on `JList` and `JTable`.
 - Snapshot examples show typical states; actual output depends on the component's runtime configuration.
-- See [UC-002 spec](swing-mcp/spec/use-cases/use-case-002-swing-snapshot.md) for full pruning rules and snapshot format details.
+- See [T-002 spec](swing-mcp/spec/tools/tool-002-swing-snapshot.md) for full pruning rules and snapshot format details.
 
 ## Build
 

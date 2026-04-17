@@ -43,17 +43,17 @@ In every subproject there is a folder called `spec`. In it, there are files:
 |------|---------|--------------|
 | `project-context.md` | Vision, problem, users, scope, risks | First — before anything else |
 | `architecture.md` | Technology stack and application structure | After project context is filled in |
-| `decisions.md` | Cross-cutting design decisions (what/why/alternatives considered) that span multiple use cases | When a spec references `DR-NNN`, or when revisiting a cross-cutting choice |
-| `use-cases/use-case-NNN-*.md` | One file per feature; see the workflow below for how to start a new one | Per feature |
+| `decisions.md` | Cross-cutting design decisions (what/why/alternatives considered) that span multiple tools | When a spec references `DR-NNN`, or when revisiting a cross-cutting choice |
+| `tools/tool-NNN-*.md` | One file per tool; see the workflow below for how to start a new one | Per tool |
 | `verification.md` | Verification checklists | During and after implementation |
 
 ## Workflow
 
 1. **Define context** — Read `project-context.md` for problem, vision, scope, and constraints.
 2. **Outline architecture** — Read `architecture.md` for tech stack and application structure.
-3. **Specify features** — Copy the closest existing use case as a starting point (e.g. `use-case-004-swing-click.md` for a simple mutation tool, `use-case-014-swing-get-selection.md` for a reader tool, `use-case-016-swing-clear-selection.md` for a thin wrapper). Each spec opens with a one-sentence motivation under Status/Date — preserve any non-obvious design rationale (e.g. "needed because the snapshot omits X"), drop ceremony. If the tool exposes an MCP description string, include it verbatim as a `**Tool description:**` paragraph.
-4. **Implement** — Build each use case, referencing its spec for acceptance criteria.
-5. **Verify** — Follow `verification.md` checklists for each implemented use case.
+3. **Specify tools** — Copy the closest existing tool spec as a starting point (e.g. `tool-004-swing-click.md` for a simple mutation tool, `tool-014-swing-get-selection.md` for a reader tool, `tool-016-swing-clear-selection.md` for a thin wrapper). Each spec opens with a one-sentence motivation under Status/Date — preserve any non-obvious design rationale (e.g. "needed because the snapshot omits X"), drop ceremony. If the tool exposes an MCP description string, include it verbatim as a `**Tool description:**` paragraph.
+4. **Implement** — Build each tool, referencing its spec for acceptance criteria.
+5. **Verify** — Follow `verification.md` checklists for each implemented tool.
 6. **Write Tests** — Write UI tests covering acceptance criteria and business rules. Tests must pass before marking as Implemented.
 
 

@@ -26,7 +26,7 @@ import java.util.Map;
  * {@code JTabbedPane} is not a supported target (dropped per P-001); tabs are
  * rendered inline in the snapshot.</p>
  *
- * @see <a href="use-case-017-swing-get-items.md">UC-017</a>
+ * @see <a href="tool-017-swing-get-items.md">T-017</a>
  */
 public class SwingGetItemsTool extends AbstractSwingTool {
 

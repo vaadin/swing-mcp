@@ -95,7 +95,7 @@ public final class SwingUtils {
     // MENU_BAR / MENU: selection is internal keyboard navigation.
     // TREE: tree-level AccessibleSelection is non-functional
     //   (getAccessibleSelectionCount() always returns 0); selection lives on
-    //   tree nodes, not the tree itself. See UC-014 design notes.
+    //   tree nodes, not the tree itself. See T-014 design notes.
     static final Set<AccessibleRole> SUPPRESSED_SELECTION_ROLES = Set.of(
             AccessibleRole.MENU_BAR,
             AccessibleRole.MENU,
@@ -325,7 +325,7 @@ public final class SwingUtils {
      * {@code rowSelectionAllowed == true} and
      * {@code columnSelectionAllowed == false}.
      *
-     * @see <a href="use-case-014-swing-get-selection.md">UC-014 BR-10</a>
+     * @see <a href="tool-014-swing-get-selection.md">T-014 BR-10</a>
      */
     public static boolean supportsSelection(Accessible a) {
         AccessibleContext ac = a.getAccessibleContext();
@@ -351,7 +351,7 @@ public final class SwingUtils {
      *   <li><b>{@code JTable} is accepted in any selection mode</b> (row /
      *       column / cell / no-selection). Rationale: row enumeration is a
      *       read-only observation that does not require a working selection
-     *       model, and after UC-020's JTable ban on {@code swing_get_cells}
+     *       model, and after T-020's JTable ban on {@code swing_get_cells}
      *       these two tools are the only paged content-access path for
      *       JTables in non-row-selection modes. The write-path selection
      *       tools ({@code swing_set_selection}, {@code swing_clear_selection},
@@ -361,12 +361,12 @@ public final class SwingUtils {
      *   <li><b>{@code JTabbedPane} is rejected</b> (dropped per P-001 Wave A).
      *       Tabs are UI structure, not data, and are already rendered in the
      *       snapshot with their 0-based index and {@code [selected]} /
-     *       {@code [disabled]} state (UC-002 SC-2). The AI passes the inline
+     *       {@code [disabled]} state (T-002 SC-2). The AI passes the inline
      *       index straight to {@code swing_set_selection}.</li>
      * </ul>
      *
-     * @see <a href="use-case-017-swing-get-items.md">UC-017 BR-03</a>
-     * @see <a href="use-case-018-swing-get-item-count.md">UC-018 BR-03</a>
+     * @see <a href="tool-017-swing-get-items.md">T-017 BR-03</a>
+     * @see <a href="tool-018-swing-get-item-count.md">T-018 BR-03</a>
      */
     public static boolean supportsGetItems(Accessible a) {
         if (a instanceof JTabbedPane) {
@@ -438,7 +438,7 @@ public final class SwingUtils {
      * {@code JSlider} and {@code JSpinner} use the static field without any
      * UIManager indirection, so no locale-specific fallback is needed.
      *
-     * @see <a href="use-case-008-swing-increment.md">UC-008 BR-03</a>
+     * @see <a href="tool-008-swing-increment.md">T-008 BR-03</a>
      */
     public static int supportsIncrement(Accessible a) {
         return supportsAction(a, AccessibleAction.INCREMENT);
@@ -452,7 +452,7 @@ public final class SwingUtils {
      * {@code JSlider} and {@code JSpinner} use the static field without any
      * UIManager indirection, so no locale-specific fallback is needed.
      *
-     * @see <a href="use-case-009-swing-decrement.md">UC-009 BR-03</a>
+     * @see <a href="tool-009-swing-decrement.md">T-009 BR-03</a>
      */
     public static int supportsDecrement(Accessible a) {
         return supportsAction(a, AccessibleAction.DECREMENT);
@@ -466,7 +466,7 @@ public final class SwingUtils {
      * The standard {@code JTree} implementation uses the static field without any
      * UIManager indirection, so no locale-specific fallback is needed.
      *
-     * @see <a href="use-case-010-swing-toggle-expand.md">UC-010 BR-03</a>
+     * @see <a href="tool-010-swing-toggle-expand.md">T-010 BR-03</a>
      */
     public static int supportsToggleExpand(Accessible a) {
         return supportsAction(a, AccessibleAction.TOGGLE_EXPAND);
@@ -534,7 +534,7 @@ public final class SwingUtils {
      * decorated, and not already iconified; and for {@link JInternalFrame}s that are showing,
      * iconifiable, and not already iconified.
      *
-     * @see <a href="use-case-022-swing-iconify.md">UC-022</a>
+     * @see <a href="tool-022-swing-iconify.md">T-022</a>
      */
     public static boolean supportsIconify(Accessible a) {
         if (a instanceof Frame) {
@@ -584,7 +584,7 @@ public final class SwingUtils {
      * and for showing {@link JInternalFrame.JDesktopIcon}s (the visible representation of an
      * iconified JInternalFrame — a component, not a window, so not covered by {@code isIconified}).
      *
-     * @see <a href="use-case-023-swing-restore.md">UC-023</a>
+     * @see <a href="tool-023-swing-restore.md">T-023</a>
      */
     public static boolean supportsRestore(Accessible a) {
         if (a instanceof JInternalFrame.JDesktopIcon) {
@@ -610,7 +610,7 @@ public final class SwingUtils {
      *       available).</li>
      * </ol>
      *
-     * @see <a href="use-case-002-swing-snapshot.md">UC-002 SC-5</a>
+     * @see <a href="tool-002-swing-snapshot.md">T-002 SC-5</a>
      */
     public static String getEffectiveAccessibleName(Accessible a) {
         if (a instanceof JInternalFrame.JDesktopIcon) {
@@ -800,7 +800,7 @@ public final class SwingUtils {
 
     /**
      * Resolves the description of a component using the same logic as the
-     * snapshot description slot (UC-002 BR-10): tries
+     * snapshot description slot (T-002 BR-10): tries
      * {@code accessibleDescription} first (with HTML cleanup), then falls
      * back to tooltip text. The result is sanitised via
      * {@link #sanitizeForQuotedSlot} but <strong>not</strong> capped at 120
@@ -1020,7 +1020,7 @@ public final class SwingUtils {
      * Serializes a {@link Number} for AI-readable output: returns a {@code long}
      * when the value is a whole number, otherwise a {@code double}.
      *
-     * @see <a href="use-case-012-swing-get-value.md">UC-012 BR-10</a>
+     * @see <a href="tool-012-swing-get-value.md">T-012 BR-10</a>
      */
     /**
      * Returns {@code true} if the accessible is a large data component
@@ -1050,10 +1050,10 @@ public final class SwingUtils {
      * with no {@code AccessibleAction}, so {@code get_cells} can never return
      * an actionable ref for a JTable. The canonical row-access tools for
      * JTable are {@code swing_get_items} /
-     * {@code swing_get_item_count} (UC-017 BR-09).</p>
+     * {@code swing_get_item_count} (T-017 BR-09).</p>
      *
-     * @see <a href="use-case-020-swing-get-cells.md">UC-020 BR-03</a>
-     * @see <a href="use-case-021-swing-get-cell-count.md">UC-021 BR-03</a>
+     * @see <a href="tool-020-swing-get-cells.md">T-020 BR-03</a>
+     * @see <a href="tool-021-swing-get-cell-count.md">T-021 BR-03</a>
      */
     public static boolean isGetCellsSupported(Accessible a) {
         AccessibleContext ac = a.getAccessibleContext();
@@ -1361,7 +1361,7 @@ public final class SwingUtils {
      * <p>Returns {@code ""} if the accessible exposes no {@link AccessibleText},
      * its content is empty, or the JDK returns {@code null} for any character
      * — matching what the user sees for an empty
-     * {@link javax.swing.JTextField}. Per UC-002 BR-12 / DR-013, used both by
+     * {@link javax.swing.JTextField}. Per T-002 BR-12 / DR-013, used both by
      * the snapshot inline preview and by {@code swing_get_text} so the two
      * paths share a single read.
      *
@@ -1396,7 +1396,7 @@ public final class SwingUtils {
 
         // Fallback: character-by-character (rare — a read-only AccessibleText
         // that does not implement AccessibleEditableText). Kept as defensive
-        // code per UC-005 Algorithm step 8.
+        // code per T-005 Algorithm step 8.
         StringBuilder sb = new StringBuilder(readLen);
         for (int i = 0; i < readLen; i++) {
             String ch = at.getAtIndex(AccessibleText.CHARACTER, i);
@@ -1415,7 +1415,7 @@ public final class SwingUtils {
      * the raw {@link Number} from the JDK — apply {@link #serializeNumber} to
      * convert to an int/long/double for output formatting.
      *
-     * <p>Per UC-002 BR-12 / DR-013, used both by the snapshot inline preview
+     * <p>Per T-002 BR-12 / DR-013, used both by the snapshot inline preview
      * and by {@code swing_get_value} so the two paths share a single read.
      *
      * @throws IllegalStateException if the accessible does not expose a

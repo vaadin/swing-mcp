@@ -1,4 +1,4 @@
-# UC-008: swing_increment
+# T-008: swing_increment
 
 **Status:** Implemented
 **Date:** 2026-03-31

@@ -112,7 +112,7 @@ Consider only visible windows:
 - For snapshots: all considered windows appear in the tree. When a considered
   window is a modal dialog with a visible owner chain, the snapshot emits a
   `[modal stack ...]` header above it so the AI can reason about what state
-  will be returned to when the modal is dismissed — see UC-002 BR-14 / DR-016.
+  will be returned to when the modal is dismissed — see T-002 BR-14 / DR-016.
 - For screenshots: all considered windows are arranged vertically in a single
   PNG with no overlapping.
 

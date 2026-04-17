@@ -1,9 +1,9 @@
-# UC-023: swing_restore
+# T-023: swing_restore
 
 **Status:** Implemented
 **Date:** 2026-04-14
 
-Restores (de-iconifies) an iconified Frame (including JFrame) or JDesktopIcon (iconified JInternalFrame) — the dual of `swing_iconify` (UC-022). This is a secondary action: the AI client is only rarely expected to call this tool (very rarely for Frame/JFrame, rarely for JInternalFrame), but it should exist for symmetry with `swing_iconify`. Only iconified windows can be restored; a maximized-but-not-iconified window is not a valid target.
+Restores (de-iconifies) an iconified Frame (including JFrame) or JDesktopIcon (iconified JInternalFrame) — the dual of `swing_iconify` (T-022). This is a secondary action: the AI client is only rarely expected to call this tool (very rarely for Frame/JFrame, rarely for JInternalFrame), but it should exist for symmetry with `swing_iconify`. Only iconified windows can be restored; a maximized-but-not-iconified window is not a valid target.
 
 **Tool description:** "Restore (de-iconify) an iconified Frame (including JFrame) or JDesktopIcon (iconified JInternalFrame) by ref. Frame is restored from the OS taskbar; JDesktopIcon is replaced by its JInternalFrame on the JDesktopPane. The resulting window state depends on the pre-iconification state and the platform window manager — the window may be restored to normal or maximized. Requires a ref obtained from swing_snapshot or swing_get_cells."
 

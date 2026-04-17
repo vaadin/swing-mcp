@@ -387,7 +387,7 @@ The `swing_snapshot` tool also uses `isEffectivelyEnabled()` in two ways:
 2. **`!` prefix on mutation actions** — mutation actions (`click`, `toggle_popup`,
    `increment`, `decrement`, `toggle_expand`, `set_text`, `set_value`, `close`) are
    prefixed with `!` when the component is not effectively enabled. Read-only actions
-   and selection group labels are never prefixed. See **UC-002 BR-08** for the full rule.
+   and selection group labels are never prefixed. See **T-002 BR-08** for the full rule.
 
 ### Detecting Close Support
 
@@ -444,7 +444,7 @@ Implemented in `SwingUtils.supportsClose(Accessible)`:
 Beyond `AccessibleAction`, the accessibility API exposes further interaction capabilities via
 dedicated interfaces on `AccessibleContext`. Each interface returning non-null signals that the
 corresponding actions are available. The snapshot surfaces a capped inline preview (`text="..."` /
-`value=N`) per UC-002 BR-12 (DR-013); the `swing_get_text` / `swing_get_value` tools return the
+`value=N`) per T-002 BR-12 (DR-013); the `swing_get_text` / `swing_get_value` tools return the
 full untruncated value when the AI needs content beyond the preview window.
 
 ### Capability → Action Mapping
@@ -566,7 +566,7 @@ This imperative operates at two levels:
 
 1. **Snapshot level (component type and state).** Mutation actions (`set_text`, `set_value`, `set_selection`, etc.) are listed for components that *generally* allow their value to be changed by a user — e.g. a text field, a slider. Components that are structurally read-only regardless of state (e.g. `JProgressBar`) never receive the corresponding mutation action in the snapshot. The current enabled/disabled state of the component does **not** affect which actions appear in the snapshot. **Exception: `set_text` and the editable state.** Text components that expose `AccessibleEditableText` but lack the `EDITABLE` state (e.g. `JTextField` with `setEditable(false)`) do **not** list `set_text` in the snapshot — they list only `get_text` and are annotated with `read_only`. This prevents the AI from wasting a tool call on a component that will refuse the mutation, saving context window space.
 
-2. **Tool execution level (runtime state).** When a mutation tool is called, it must check whether the target component is currently enabled. If the component is disabled, the tool must return an MCP-level error (`isError: true`) with an informative message explaining that the component is disabled and therefore the user cannot change its value. The `swing_set_text` tool additionally checks the `EDITABLE` state at runtime as defense-in-depth (see use-case-006 BR-07), since state may change between snapshot and tool call.
+2. **Tool execution level (runtime state).** When a mutation tool is called, it must check whether the target component is currently enabled. If the component is disabled, the tool must return an MCP-level error (`isError: true`) with an informative message explaining that the component is disabled and therefore the user cannot change its value. The `swing_set_text` tool additionally checks the `EDITABLE` state at runtime as defense-in-depth (see tool-006 BR-07), since state may change between snapshot and tool call.
 
 Authoritative mapping between spec action names, their detection mechanism, and the corresponding MCP tool.
 Other specs reference this table instead of duplicating detection logic.
@@ -639,7 +639,7 @@ This replaces the former TODO-1 and TODO-2. The individual selection actions no 
 
 ### JTable Snapshot Rendering
 
-JTable receives special rendering in the snapshot (UC-002 SC-6/SC-7) to present data in a row-oriented, human- and AI-readable format instead of a flat list of cell labels.
+JTable receives special rendering in the snapshot (T-002 SC-6/SC-7) to present data in a row-oriented, human- and AI-readable format instead of a flat list of cell labels.
 
 **`SwingUtils` methods for JTable rendering:**
 
@@ -670,15 +670,15 @@ This avoids action list noise for small lists where all children are already vis
 
 **`TABLE` is excluded** — rationale is **DR-004**. At runtime, JTable is unconditionally rejected by `swing_get_cells` / `swing_get_cell_count` with an error that redirects the AI to `swing_get_items` / `swing_get_item_count`.
 
-**`get_items` / `get_item_count`** operate in the **selection item index space** — the same 0-based index that `addAccessibleSelection(i)` expects. They are not listed as snapshot actions; their availability is documented in the tool descriptions and they are callable on `JList`, `JComboBox`, and any `JTable`. For JTable specifically, these are the **canonical row-access tools** (UC-017 BR-09) and replace what `get_cells` would otherwise have offered. Their eligibility gate is `SwingUtils.supportsGetItems`, which accepts `JList` / `JComboBox` / `JTable` only. Two deliberate deviations from `supportsSelection`: (a) **JTable is accepted in any selection mode** (row / column / cell / no-selection) — row enumeration is read-only and does not require a working selection model; the write-path selection tools (`swing_set_selection`, `swing_clear_selection`, `swing_select_all`) keep the strict `supportsSelection` gate. (b) **JTabbedPane is rejected** — see caveat below. Discoverability caveat for JTable: a non-row-selection JTable does not carry the `single-selection` / `multi-selection` group label in the snapshot, so the AI relies on the tool description to learn that these two tools still work on it.
+**`get_items` / `get_item_count`** operate in the **selection item index space** — the same 0-based index that `addAccessibleSelection(i)` expects. They are not listed as snapshot actions; their availability is documented in the tool descriptions and they are callable on `JList`, `JComboBox`, and any `JTable`. For JTable specifically, these are the **canonical row-access tools** (T-017 BR-09) and replace what `get_cells` would otherwise have offered. Their eligibility gate is `SwingUtils.supportsGetItems`, which accepts `JList` / `JComboBox` / `JTable` only. Two deliberate deviations from `supportsSelection`: (a) **JTable is accepted in any selection mode** (row / column / cell / no-selection) — row enumeration is read-only and does not require a working selection model; the write-path selection tools (`swing_set_selection`, `swing_clear_selection`, `swing_select_all`) keep the strict `supportsSelection` gate. (b) **JTabbedPane is rejected** — see caveat below. Discoverability caveat for JTable: a non-row-selection JTable does not carry the `single-selection` / `multi-selection` group label in the snapshot, so the AI relies on the tool description to learn that these two tools still work on it.
 
 <a name="jtabbedpane-caveat"></a>**JTabbedPane caveat — the polymorphic-selection asymmetry.** `JTabbedPane` surfaces as `single-selection` in the snapshot because `swing_get_selection` and `swing_set_selection` work on it. But the rest of the `single-selection` tool family is **not** wired up to it, and that is deliberate:
 
-1. **`swing_get_items` / `swing_get_item_count` are not advertised for JTabbedPane** (dropped per P-001). Tabs are UI structure, not data — they are already rendered inline in the snapshot as `- (page_tab) N "title"` with their 0-based index, `[selected]`, and `[disabled]` state (UC-002 SC-2). The AI reads them directly from the snapshot and passes the inline index straight to `swing_set_selection` as `[N]`. Paging would be pure overhead (tabs are bounded by UI layout, essentially never >20), and a dedicated tool would duplicate information the snapshot already carries.
+1. **`swing_get_items` / `swing_get_item_count` are not advertised for JTabbedPane** (dropped per P-001). Tabs are UI structure, not data — they are already rendered inline in the snapshot as `- (page_tab) N "title"` with their 0-based index, `[selected]`, and `[disabled]` state (T-002 SC-2). The AI reads them directly from the snapshot and passes the inline index straight to `swing_set_selection` as `[N]`. Paging would be pure overhead (tabs are bounded by UI layout, essentially never >20), and a dedicated tool would duplicate information the snapshot already carries.
 
-2. **`swing_clear_selection` on a non-empty JTabbedPane always errors** with *"This component does not allow the selection to be empty"* — pre-existing behaviour (see UC-015 BR-07), because `clearAccessibleSelection()` is a no-op on a non-empty JTabbedPane (probe-tested 2026-04-07). An empty JTabbedPane (0 tabs) trivially succeeds. This is an orthogonal policy question, not something Wave A of P-001 set out to fix, but it is part of the same polymorphic-selection asymmetry: JTabbedPane carries `single-selection` yet not every single-selection tool applies to it.
+2. **`swing_clear_selection` on a non-empty JTabbedPane always errors** with *"This component does not allow the selection to be empty"* — pre-existing behaviour (see T-015 BR-07), because `clearAccessibleSelection()` is a no-op on a non-empty JTabbedPane (probe-tested 2026-04-07). An empty JTabbedPane (0 tabs) trivially succeeds. This is an orthogonal policy question, not something Wave A of P-001 set out to fix, but it is part of the same polymorphic-selection asymmetry: JTabbedPane carries `single-selection` yet not every single-selection tool applies to it.
 
-3. **Snapshot now predicts UC-015 BR-14's disabled-tab refusal.** Post-commit c5feda3, a tab disabled via `JTabbedPane.setEnabledAt` renders with `[disabled]` on its `page_tab` line (via the Quirk 1 carveout in `isEffectivelyEnabled` — see § 4 above). UC-015 BR-14 refuses `swing_set_selection` to a disabled tab index. Before c5feda3 the snapshot was silently missing the `[disabled]` marker on tabs, so the BR-14 refusal was un-predictable from the snapshot alone and the AI had to remember the policy out-of-band. The two now agree: if the snapshot shows `[disabled]` on a `page_tab`, `set_selection` will refuse that index; if it doesn't, `set_selection` will accept.
+3. **Snapshot now predicts T-015 BR-14's disabled-tab refusal.** Post-commit c5feda3, a tab disabled via `JTabbedPane.setEnabledAt` renders with `[disabled]` on its `page_tab` line (via the Quirk 1 carveout in `isEffectivelyEnabled` — see § 4 above). T-015 BR-14 refuses `swing_set_selection` to a disabled tab index. Before c5feda3 the snapshot was silently missing the `[disabled]` marker on tabs, so the BR-14 refusal was un-predictable from the snapshot alone and the AI had to remember the policy out-of-band. The two now agree: if the snapshot shows `[disabled]` on a `page_tab`, `set_selection` will refuse that index; if it doesn't, `set_selection` will accept.
 
 ### Editable JComboBox
 
@@ -716,7 +716,7 @@ add guidance to the MCP server instructions.
 
 ### TODOs
 
-**TODO-3: JTree content discovery.** JTree is suppressed from `supportsSelection()` (tree-level `AccessibleSelection` is non-functional — see UC-014 design notes). This means JTree only gets `get_cells`/`get_cell_count` for content discovery when truncated. However, JTree's collapsed nodes hide their children from the accessible tree entirely — `get_cells` only reveals the top-level nodes, not deeply nested ones. A future UC should investigate a JTree-specific content discovery mechanism that walks expanded/collapsed state.
+**TODO-3: JTree content discovery.** JTree is suppressed from `supportsSelection()` (tree-level `AccessibleSelection` is non-functional — see T-014 design notes). This means JTree only gets `get_cells`/`get_cell_count` for content discovery when truncated. However, JTree's collapsed nodes hide their children from the accessible tree entirely — `get_cells` only reveals the top-level nodes, not deeply nested ones. A future UC should investigate a JTree-specific content discovery mechanism that walks expanded/collapsed state.
 
 **TODO-4: Cell search tool.** `swing_get_cells` requires the AI to page through children to find a specific row or cell (e.g. "the row containing 'Alice'"). Repeated `get_cells` calls for linear search wastes tokens. A dedicated `swing_search_cells` tool that accepts a search query and returns matching children (with refs) would be more efficient. Should specify: search semantics (substring match on accessible name?), result format (same as `get_cells`?), and whether it also replaces the ref map.
 

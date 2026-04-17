@@ -1,9 +1,9 @@
-# UC-014: swing_get_selection
+# T-014: swing_get_selection
 
 **Status:** Implemented
 **Date:** 2026-04-07
 
-Returns the current selection (indices + names) of lists, combo boxes, tables, and tabbed panes. Needed because the snapshot omits selection state (UC-002 BR-03).
+Returns the current selection (indices + names) of lists, combo boxes, tables, and tabbed panes. Needed because the snapshot omits selection state (T-002 BR-03).
 
 **Tool description:** "Read the current selection of a UI component by ref. Returns JSON with selectedCount and selected items (0-based index + name). For JTable, index is the row index (not cell index) and name is a pipe-separated summary of cell values. Requires a ref obtained from swing_snapshot or swing_get_cells."
 

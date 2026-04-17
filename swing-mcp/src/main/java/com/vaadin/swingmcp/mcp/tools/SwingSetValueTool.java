@@ -18,7 +18,7 @@ import java.math.BigDecimal;
  * enabled, validates the value is within range, preserves the model's numeric type, then
  * delegates to {@link AccessibleValue#setCurrentAccessibleValue(Number)} via fire-and-forget.</p>
  *
- * @see <a href="use-case-013-swing-set-value.md">UC-013</a>
+ * @see <a href="tool-013-swing-set-value.md">T-013</a>
  */
 public class SwingSetValueTool extends AbstractSwingTool {
 
@@ -97,7 +97,7 @@ public class SwingSetValueTool extends AbstractSwingTool {
      * Converts the incoming value to the same Java numeric type as the current value.
      * This prevents type contamination in models like {@code SpinnerNumberModel}.
      *
-     * @see <a href="use-case-013-swing-set-value.md">UC-013 BR-08, BR-11</a>
+     * @see <a href="tool-013-swing-set-value.md">T-013 BR-08, BR-11</a>
      */
     static Number convertToType(Number value, Number current) {
         if (current == null) {
