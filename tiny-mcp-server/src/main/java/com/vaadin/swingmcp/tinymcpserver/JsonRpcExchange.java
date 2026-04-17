@@ -81,8 +81,10 @@ class JsonRpcExchange {
     /**
      * Reads the request body, parses it as a JSON-RPC request, and sets
      * the request ID. Returns the parsed request on success, or {@code null}
-     * if the response has already been sent (parse error, batch request,
-     * or notification).
+     * for notifications (in which case a 202 Accepted has already been sent).
+     * Throws {@link MCPServerException} with an appropriate HTTP status for
+     * parse/shape errors — caught and rendered by
+     * {@link TinyMCPServer#handleRequest}.
      * <p>
      * Session ID validation is handled by {@link TinyMCPServer} before
      * this method is called.
@@ -98,15 +100,13 @@ class JsonRpcExchange {
             jsonElement = MCPProtocol.fromJson(body, JsonElement.class);
         } catch (JsonSyntaxException e) {
             LOG.log(Level.WARNING, "Malformed JSON in request", e);
-            sendError(400, MCPServerException.PARSE_ERROR, "Parse error");
-            return null;
+            throw new MCPServerException(400, MCPServerException.PARSE_ERROR, "Parse error", e);
         }
 
         if (jsonElement instanceof JsonArray) {
             LOG.warning("Batch requests are not supported");
-            sendError(400,
+            throw new MCPServerException(400,
                     MCPServerException.INVALID_REQUEST, "Batch requests are not supported");
-            return null;
         }
 
         MCPProtocol.JsonRpcRequest request;
@@ -114,8 +114,7 @@ class JsonRpcExchange {
             request = MCPProtocol.gson().fromJson(jsonElement, MCPProtocol.JsonRpcRequest.class);
         } catch (JsonSyntaxException e) {
             LOG.log(Level.WARNING, "Invalid JSON-RPC request", e);
-            sendError(400, MCPServerException.INVALID_REQUEST, "Invalid Request");
-            return null;
+            throw new MCPServerException(400, MCPServerException.INVALID_REQUEST, "Invalid Request", e);
         }
 
         // Notifications have no id — respond with 202 Accepted

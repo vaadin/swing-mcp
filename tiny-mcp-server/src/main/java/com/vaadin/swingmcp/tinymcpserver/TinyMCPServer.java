@@ -329,19 +329,19 @@ public class TinyMCPServer {
             }
         } catch (MCPServerException e) {
             LOG.log(Level.FINE, "Request produced MCP error (code=" + e.getCode() + ")", e);
-            trySendError(rpc, e.getCode(), e.getMessage());
+            trySendError(rpc, e.getHttpStatus(), e.getCode(), e.getMessage());
         } catch (TransportIOException e) {
             // Transport is dead — no point trying to write another response.
             LOG.log(Level.WARNING, "Transport I/O failed; abandoning response", e);
         } catch (RuntimeException e) {
             LOG.log(Level.SEVERE, "Unexpected error handling request", e);
-            trySendError(rpc, MCPServerException.INTERNAL_ERROR, "Internal error");
+            trySendError(rpc, 200, MCPServerException.INTERNAL_ERROR, "Internal error");
         }
     }
 
-    private static void trySendError(JsonRpcExchange rpc, int code, String message) {
+    private static void trySendError(JsonRpcExchange rpc, int httpStatus, int code, String message) {
         try {
-            rpc.sendError(code, message);
+            rpc.sendError(httpStatus, code, message);
         } catch (TransportIOException ioe) {
             LOG.log(Level.FINE, "Could not send error response (transport dead)", ioe);
         }
@@ -361,13 +361,12 @@ public class TinyMCPServer {
                 .getFirst("Mcp-Session-Id");
         if (incomingSessionId != null && !sessions.containsKey(incomingSessionId)) {
             LOG.warning("Rejecting request: unknown Mcp-Session-Id " + incomingSessionId);
-            rpc.sendError(404,
+            throw new MCPServerException(404,
                     MCPServerException.SERVER_NOT_INITIALIZED, "Session not found.");
-            return;
         }
 
         MCPProtocol.JsonRpcRequest request = rpc.parsePost();
-        if (request == null) return;
+        if (request == null) return; // notification — 202 already sent
 
         String rpcMethod = request.getMethod();
 
@@ -384,17 +383,15 @@ public class TinyMCPServer {
         // Session-scoped methods — require Mcp-Session-Id header
         if (incomingSessionId == null) {
             LOG.warning("Rejecting '" + rpcMethod + "': no Mcp-Session-Id header");
-            rpc.sendError(400,
+            throw new MCPServerException(400,
                     MCPServerException.SERVER_NOT_INITIALIZED,
                     "Server not initialized. Send 'initialize' first.");
-            return;
         }
         MCPSession session = sessions.get(incomingSessionId);
         if (session == null) {
             // Race: session removed between header check and lookup
-            rpc.sendError(404,
+            throw new MCPServerException(404,
                     MCPServerException.SERVER_NOT_INITIALIZED, "Session not found.");
-            return;
         }
 
         rpc.setSessionId(session.getId());
@@ -406,8 +403,8 @@ public class TinyMCPServer {
         synchronized (sessionGuardLock) {
             if (!acceptNewSession()) {
                 LOG.warning("Rejecting initialization: acceptNewSession() returned false");
-                rpc.sendError(409, -32002, "Another session is already active");
-                return;
+                throw new MCPServerException(409,
+                        MCPServerException.SERVER_NOT_INITIALIZED, "Another session is already active");
             }
             String sessionId = UUID.randomUUID().toString();
             session = new MCPSession(sessionId, toolHandler, resourceHandler, promptHandler);

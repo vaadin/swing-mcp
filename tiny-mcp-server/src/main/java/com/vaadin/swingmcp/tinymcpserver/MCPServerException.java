@@ -27,16 +27,36 @@ public class MCPServerException extends RuntimeException {
     /** Server has not been initialized (implementation-defined server error). */
     public static final int SERVER_NOT_INITIALIZED = -32002;
 
+    private final int httpStatus;
     private final int code;
 
     public MCPServerException(int code, String message) {
-        super(message);
-        this.code = code;
+        this(200, code, message, null);
     }
 
     public MCPServerException(int code, String message, Throwable cause) {
+        this(200, code, message, cause);
+    }
+
+    public MCPServerException(int httpStatus, int code, String message) {
+        this(httpStatus, code, message, null);
+    }
+
+    public MCPServerException(int httpStatus, int code, String message, Throwable cause) {
         super(message, cause);
+        this.httpStatus = httpStatus;
         this.code = code;
+    }
+
+    /**
+     * HTTP status code to use when sending this error as a JSON-RPC
+     * response. Defaults to {@code 200} — JSON-RPC errors normally ride on
+     * a 200 HTTP response, with the error signalled in the body. Transport
+     * / protocol-level failures (session not found, malformed request)
+     * override this with a 4xx status.
+     */
+    public int getHttpStatus() {
+        return httpStatus;
     }
 
     public int getCode() {
