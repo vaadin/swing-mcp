@@ -65,33 +65,49 @@ requires a servlet container — both are large dependency subtrees.
 
 ---
 
-## DR-003 — Single-session model, no queuing
+## DR-003 — Single-session policy as an opt-in subclass hook
 
 **Status:** Accepted
-**Applies to:** TinyMCPServer session handling
+**Applies to:** TinyMCPServer session handling, swing-mcp swing-mcp `MCPServer`
 
-**Decision.** The server supports at most one active MCP session at a time.
-A second initialization request while a session is active is denied with
-HTTP 409 Conflict. The blocked client simply fails — no queuing, no retry.
+**Decision.** `TinyMCPServer` itself is multi-session capable: it keeps a
+`ConcurrentHashMap<String, MCPSession>` and routes requests by the
+`Mcp-Session-Id` header. Before creating a new session, `handleInitialize`
+calls the protected hook `acceptNewSession()` (default: always returns
+`true`) under the `sessionGuardLock`. Subclasses that want a single-
+session policy override the hook to cap at one active session; when it
+returns `false`, `initialize` fails with HTTP 409 and JSON-RPC code
+`-32002` (`"Another session is already active"`). The blocked client
+simply fails — no queuing, no retry.
 
-If an AI agent crashes without closing the session, the session remains
-locked indefinitely; the Swing app must be restarted to clear it. The
-server logs a warning when a connection attempt is blocked by a stuck
-session.
+swing-mcp's `swing-mcp `MCPServer`` applies this override because multiple
+concurrent AI agents controlling the same Swing app would cause random
+concurrency issues (interleaved clicks, snapshot races) on the
+single-threaded EDT. Pure `TinyMCPServer` instances (e.g. its own unit
+tests) happily run multiple sessions in parallel.
 
-**Why.** Multiple concurrent AI agents controlling the same Swing app would
-cause random concurrency issues (interleaved clicks, snapshot races),
-making automated testing useless. Stuck sessions are rare (<1% of cases)
-in the migration scenario; a timeout or manual release can be added if
-this becomes problematic.
+If an AI agent crashes without sending a DELETE, the session stays in
+the map indefinitely. For the single-session subclass, that means the
+Swing app must be restarted to clear a stuck session. Rare (<1% of
+cases) in the migration scenario; a timeout or manual release can be
+added if this becomes problematic.
+
+**Why this split.** `TinyMCPServer` aims to be a reusable minimal MCP
+server, and multi-session is the MCP spec default. Baking
+single-session into the base class would either leak Swing-specific
+concurrency assumptions into tiny-mcp-server or force every reuser to
+work around them. A protected hook on `TinyMCPServer` keeps the base
+class general while letting swing-mcp express its own constraint in
+one line.
 
 **Alternatives considered.**
-- **Multi-session / concurrent agents.** Rejected — Swing is
-  single-threaded (EDT); concurrent tool calls from multiple agents would
-  interleave unpredictably.
-- **Session queuing (block until current session ends).** Rejected — adds
-  complexity for a scenario that doesn't arise in normal use. The blocked
-  agent would hang indefinitely if the first session is stuck.
+- **Bake single-session into `TinyMCPServer`.** Rejected — forces
+  Swing-specific concurrency semantics onto a general-purpose server;
+  tiny-mcp-server's own multi-session tests would have to work around
+  it.
+- **Session queuing (block until current session ends).** Rejected —
+  adds complexity for a scenario that doesn't arise in normal use. The
+  blocked agent would hang indefinitely if the first session is stuck.
 - **Idle timeout to auto-release stuck sessions.** Deferred — acceptable
   tradeoff for now. Revisit if stuck sessions become frequent.
 
