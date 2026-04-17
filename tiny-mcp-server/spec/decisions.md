@@ -97,38 +97,110 @@ this becomes problematic.
 
 ---
 
-## DR-004 — Two-layer error handling model
+## DR-004 — Three-layer error handling model
 
 **Status:** Accepted
-**Applies to:** TinyMCPServer, all tool implementations
+**Applies to:** TinyMCPServer, MCPSession, all tool / resource / prompt implementations
 
-**Decision.** Errors are reported at two layers:
+**Decision.** Errors surface in one of three layers, chosen by what kind of
+failure it is and which handler caught it. All exception-to-response
+translation happens in a single seam — `TinyMCPServer.handleRequest` —
+which catches `MCPServerException`, `TransportIOException`, and
+`RuntimeException` and renders each appropriately.
 
-1. **Transport-level (HTTP 4xx/5xx):** For programming errors,
-   `RuntimeException`, or when the server cannot process the request at all
-   (e.g., malformed JSON-RPC, unknown method).
-2. **MCP-level (`isError: true`):** For application-level errors where the
-   tool was found and dispatched but the input was bad (e.g., invalid
-   component ref, disabled component). These include a helpful recovery
-   message following the Playwright MCP pattern (e.g., "Ref not found,
-   likely because element was removed. Use swing_snapshot to see what
-   elements are currently available.").
+### Layer 1 — Transport failure (`TransportIOException`)
 
-JSON-RPC error codes used: `-32601` (tool not found), `-32602` (invalid
-params).
+Raised by `JsonRpcExchange` when a socket write (`sendResponse`,
+`sendError`, `sendPlain`) throws `IOException`. The TCP connection is
+dead; there is nothing left to write. `handleRequest` logs at WARNING and
+abandons — no response is attempted.
 
-**Why.** Separating the layers lets the AI client distinguish "something is
-fundamentally broken" (HTTP error — retry won't help) from "my input was
-wrong" (MCP error — adjust and retry). The Playwright MCP recovery-message
-pattern gives the AI a concrete next step instead of a bare error string.
+### Layer 2 — Protocol error (`MCPServerException` → JSON-RPC error body)
+
+Any `MCPServerException` thrown anywhere in the request path is rendered
+as a JSON-RPC error envelope. The exception carries both a JSON-RPC
+numeric **code** and an HTTP **status** (default `200`, overridden at the
+throw site for transport- or session-level failures). Callers throw,
+never inline-write: the single catch in `handleRequest` translates.
+
+Typical codes and their HTTP status:
+
+| Code (constant) | Value | HTTP | Thrown by |
+|---|---|---|---|
+| `PARSE_ERROR` | -32700 | 400 | `JsonRpcExchange.parsePost` — malformed JSON |
+| `INVALID_REQUEST` | -32600 | 400 | `JsonRpcExchange.parsePost` — wrong JSON-RPC shape / batch |
+| `METHOD_NOT_FOUND` | -32601 | 200 | `MCPSession` dispatch, handler lookups |
+| `INVALID_PARAMS` | -32602 | 200 | tool/resource/prompt input validation |
+| `INTERNAL_ERROR` | -32603 | 200 | resource/prompt handler wrapped a generic `Exception` |
+| `SERVER_NOT_INITIALIZED` | -32002 | 400 / 404 / 409 | session lifecycle (DR-005), second-session rejection (DR-003) |
+| `INTERNAL_ERROR` | -32603 | **500** | catch-all for unexpected `RuntimeException` leaked from server internals (see below) |
+
+### Layer 3 — Tool application error (`isError: true` content, HTTP 200)
+
+When a tool callback throws a non-`MCPServerException` (typically
+`MCPErrorResponseException` for clean messages or any other `Exception`
+for unexpected tool failures), `MCPToolHandler` catches it and produces a
+successful JSON-RPC response whose `CallToolResult.isError` is `true` and
+whose text content is either the clean message (for
+`MCPErrorResponseException`) or `Throwable.toString()` (class + message).
+
+This layer exists for tools only. Resource and prompt handlers catch
+generic exceptions and rewrap them as `MCPServerException(INTERNAL_ERROR)`
+— they do not have an `isError` content slot.
+
+Tools use this layer for application-level failures where the tool was
+found and dispatched but the input was semantically wrong (e.g., invalid
+component ref, disabled component). Following Playwright MCP's pattern,
+the message should include a concrete recovery hint (e.g., *"Ref not
+found, likely because the element was removed. Use swing_snapshot to see
+what elements are currently available."*).
+
+### Catch-all for unexpected `RuntimeException`
+
+Any `RuntimeException` that is **not** `MCPServerException` or
+`TransportIOException` and reaches `handleRequest` is a server bug — a
+code path threw something unplanned. It is logged at SEVERE and rendered
+as **HTTP 500** with JSON-RPC code `INTERNAL_ERROR` and the message
+`"Internal error"`. HTTP 500 (not 200) so operators and monitoring
+tooling see a genuine server-side failure rather than a protocol-level
+error.
+
+Note that handler-layer exceptions from tools, resources, and prompts
+never reach this catch-all — each handler wraps them first (layer 2 or 3
+as appropriate).
+
+**Why.** The three layers map cleanly to three different client reactions:
+
+- **Transport failure** — client has already disconnected; nothing to tell
+  it.
+- **Protocol error** — client SDK can parse the JSON-RPC envelope and
+  surface a structured error to the caller.
+- **Tool application error** — the tool ran to completion, just with a
+  negative result; the AI agent can show the recovery hint to the user
+  and try a different input.
+
+Centralizing the translation in `handleRequest` means every caller speaks
+one idiom (`throw`), and there is exactly one place to audit for how an
+exception becomes bytes on the wire.
 
 **Alternatives considered.**
-- **All errors as MCP-level `isError: true`.** Rejected — conflates
-  infrastructure failures with input validation, making it harder for the
-  client to decide whether to retry.
-- **All errors as HTTP status codes.** Rejected — MCP clients expect
-  `isError` for tool-level failures; HTTP-only errors would break client
-  SDK error handling.
+- **All errors as tool-layer `isError: true`.** Rejected — conflates
+  infrastructure failures (malformed JSON, dead session) with input
+  validation; the client SDK can't distinguish "retry won't help" from
+  "fix your input and retry."
+- **All errors as HTTP status codes, no JSON-RPC error body.** Rejected —
+  MCP clients parse the JSON-RPC envelope for error details; HTTP-only
+  errors would break client SDK error handling. JSON-RPC errors
+  intentionally ride HTTP 200 in the normal case.
+- **Inline `rpc.sendError(...)` at each error site instead of throwing.**
+  Rejected — splits the error-to-response mapping across every handler,
+  requires each caller to remember the HTTP status for its error class,
+  and a transport failure at the error-send site escapes to a second
+  catch that repeats the attempt. One seam, one rule.
+- **Separate exception types per layer.** Considered. `MCPServerException`
+  already covers all protocol errors with a code field; splitting it
+  further would force handler code to pick between types without adding
+  useful discrimination downstream.
 
 ---
 
