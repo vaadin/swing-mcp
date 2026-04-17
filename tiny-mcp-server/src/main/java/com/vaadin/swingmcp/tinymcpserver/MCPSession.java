@@ -4,8 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Represents a single MCP session and handles protocol dispatch for all
@@ -21,8 +19,6 @@ import java.util.logging.Logger;
  * {@link #handlePost}.
  */
 public class MCPSession {
-
-    private static final Logger LOG = Logger.getLogger(MCPSession.class.getName());
 
     private final String id;
     private final MCPToolHandler toolHandler;
@@ -64,36 +60,27 @@ public class MCPSession {
     private void doHandlePost(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) {
         checkLocked();
         String rpcMethod = request.getMethod();
-        try {
-            switch (rpcMethod != null ? rpcMethod : "") {
-                case "tools/list":
-                    toolHandler.handleToolsList(rpc);
-                    break;
-                case "tools/call":
-                    toolHandler.handleToolsCall(rpc, request);
-                    break;
-                case "resources/list":
-                    resourceHandler.handleResourcesList(rpc);
-                    break;
-                case "resources/read":
-                    resourceHandler.handleResourcesRead(rpc, request);
-                    break;
-                case "prompts/list":
-                    promptHandler.handlePromptsList(rpc);
-                    break;
-                case "prompts/get":
-                    promptHandler.handlePromptsGet(rpc, request);
-                    break;
-                default:
-                    rpc.sendError(-32601, "Method not found: " + rpcMethod);
-                    break;
-            }
-        } catch (MCPServerException e) {
-            LOG.log(Level.FINE, "Method '" + rpcMethod + "' threw MCPServerException (code=" + e.getCode() + ")", e);
-            rpc.sendError(e.getCode(), e.getMessage());
-        } catch (RuntimeException e) {
-            LOG.log(Level.WARNING, "Method '" + rpcMethod + "' threw an exception", e);
-            rpc.sendError(MCPServerException.INTERNAL_ERROR, "Internal error: " + e);
+        switch (rpcMethod != null ? rpcMethod : "") {
+            case "tools/list":
+                toolHandler.handleToolsList(rpc);
+                break;
+            case "tools/call":
+                toolHandler.handleToolsCall(rpc, request);
+                break;
+            case "resources/list":
+                resourceHandler.handleResourcesList(rpc);
+                break;
+            case "resources/read":
+                resourceHandler.handleResourcesRead(rpc, request);
+                break;
+            case "prompts/list":
+                promptHandler.handlePromptsList(rpc);
+                break;
+            case "prompts/get":
+                promptHandler.handlePromptsGet(rpc, request);
+                break;
+            default:
+                throw new MCPServerException(-32601, "Method not found: " + rpcMethod);
         }
     }
 

@@ -182,6 +182,149 @@ class TinyMCPServerTest {
     }
 
     @Test
+    void unexpectedRuntimeExceptionReturnsHttp500InternalError() throws Exception {
+        // An unhandled RuntimeException from inside the server (not MCPServerException,
+        // not TransportIOException) must return HTTP 500 with a JSON-RPC INTERNAL_ERROR
+        // body. Using acceptNewSession() as the injection point — it runs under the
+        // try block in handleRequest but isn't normally expected to throw.
+        TinyMCPServer crashingServer = new TinyMCPServer(0, "/mcp") {
+            @Override
+            protected boolean acceptNewSession() {
+                throw new IllegalStateException("boom");
+            }
+        };
+        crashingServer.start();
+        try {
+            String initBody = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\","
+                    + "\"params\":{\"protocolVersion\":\"2024-11-05\","
+                    + "\"capabilities\":{},\"clientInfo\":{\"name\":\"t\",\"version\":\"1\"}}}";
+            HttpClient http = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(crashingServer.getUrl()))
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json, text/event-stream")
+                    .POST(HttpRequest.BodyPublishers.ofString(initBody))
+                    .build();
+            HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+
+            assertEquals(500, response.statusCode());
+            JsonObject body = MCPProtocol.fromJson(response.body(), JsonObject.class);
+            JsonObject error = body.getAsJsonObject("error");
+            assertEquals(MCPServerException.INTERNAL_ERROR, error.get("code").getAsInt());
+            assertEquals("Internal error", error.get("message").getAsString());
+        } finally {
+            crashingServer.stop();
+        }
+    }
+
+    @Test
+    void toolRuntimeExceptionReturnsHttp200WithIsError() throws Exception {
+        // A tool throwing a plain RuntimeException must NOT surface as HTTP 500
+        // — the tool handler wraps it as an isError=true CallToolResult.
+        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
+        s.addTool("boom", "Throws",
+                new InputSchemaBuilder().build(),
+                params -> { throw new RuntimeException("kaboom"); });
+        s.start();
+        try {
+            HttpClient http = HttpClient.newHttpClient();
+            String sessionId = initializeAndGetSessionId(http, s.getUrl());
+            String body = "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\","
+                    + "\"params\":{\"name\":\"boom\",\"arguments\":{}}}";
+            HttpResponse<String> response = postWithSession(http, s.getUrl(), sessionId, body);
+
+            assertEquals(200, response.statusCode());
+            JsonObject result = MCPProtocol.fromJson(response.body(), JsonObject.class)
+                    .getAsJsonObject("result");
+            assertTrue(result.get("isError").getAsBoolean());
+            String text = result.getAsJsonArray("content").get(0)
+                    .getAsJsonObject().get("text").getAsString();
+            assertEquals("java.lang.RuntimeException: kaboom", text);
+        } finally {
+            s.stop();
+        }
+    }
+
+    @Test
+    void resourceRuntimeExceptionReturnsHttp200WithJsonRpcInternalError() throws Exception {
+        // A resource throwing RuntimeException is wrapped as MCPServerException(INTERNAL_ERROR)
+        // by the resource handler, then rendered as a JSON-RPC error at HTTP 200 (default).
+        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
+        s.addResource("file://boom", "boom", "throws", "text/plain",
+                uri -> { throw new RuntimeException("kaboom"); });
+        s.start();
+        try {
+            HttpClient http = HttpClient.newHttpClient();
+            String sessionId = initializeAndGetSessionId(http, s.getUrl());
+            String body = "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"resources/read\","
+                    + "\"params\":{\"uri\":\"file://boom\"}}";
+            HttpResponse<String> response = postWithSession(http, s.getUrl(), sessionId, body);
+
+            assertEquals(200, response.statusCode());
+            JsonObject error = MCPProtocol.fromJson(response.body(), JsonObject.class)
+                    .getAsJsonObject("error");
+            assertEquals(MCPServerException.INTERNAL_ERROR, error.get("code").getAsInt());
+            assertTrue(error.get("message").getAsString().contains("kaboom"),
+                    error.get("message").getAsString());
+        } finally {
+            s.stop();
+        }
+    }
+
+    @Test
+    void promptRuntimeExceptionReturnsHttp200WithJsonRpcInternalError() throws Exception {
+        // Mirrors the resource case — prompts also get INTERNAL_ERROR at HTTP 200.
+        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
+        s.addPrompt("boom", "throws", new PromptArgumentsBuilder(),
+                args -> { throw new RuntimeException("kaboom"); });
+        s.start();
+        try {
+            HttpClient http = HttpClient.newHttpClient();
+            String sessionId = initializeAndGetSessionId(http, s.getUrl());
+            String body = "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"prompts/get\","
+                    + "\"params\":{\"name\":\"boom\"}}";
+            HttpResponse<String> response = postWithSession(http, s.getUrl(), sessionId, body);
+
+            assertEquals(200, response.statusCode());
+            JsonObject error = MCPProtocol.fromJson(response.body(), JsonObject.class)
+                    .getAsJsonObject("error");
+            assertEquals(MCPServerException.INTERNAL_ERROR, error.get("code").getAsInt());
+            assertTrue(error.get("message").getAsString().contains("kaboom"),
+                    error.get("message").getAsString());
+        } finally {
+            s.stop();
+        }
+    }
+
+    private static String initializeAndGetSessionId(HttpClient http, String url) throws Exception {
+        String initBody = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\","
+                + "\"params\":{\"protocolVersion\":\"2024-11-05\","
+                + "\"capabilities\":{},\"clientInfo\":{\"name\":\"t\",\"version\":\"1\"}}}";
+        HttpResponse<String> response = http.send(
+                HttpRequest.newBuilder(URI.create(url))
+                        .header("Content-Type", "application/json")
+                        .header("Accept", "application/json, text/event-stream")
+                        .POST(HttpRequest.BodyPublishers.ofString(initBody))
+                        .build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, response.statusCode(), "initialize must succeed");
+        return response.headers().firstValue("Mcp-Session-Id")
+                .orElseThrow(() -> new AssertionError("initialize response missing Mcp-Session-Id"));
+    }
+
+    private static HttpResponse<String> postWithSession(HttpClient http, String url,
+                                                         String sessionId, String jsonBody) throws Exception {
+        return http.send(
+                HttpRequest.newBuilder(URI.create(url))
+                        .header("Content-Type", "application/json")
+                        .header("Accept", "application/json, text/event-stream")
+                        .header("Mcp-Session-Id", sessionId)
+                        .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                        .build(),
+                HttpResponse.BodyHandlers.ofString());
+    }
+
+    @Test
     void batchRequestReturnsInvalidRequestError() throws Exception {
         // A JSON-RPC batch is a JSON array — valid JSON, but we don't support it.
         // Must return -32600 (Invalid Request), not -32700 (Parse error).
