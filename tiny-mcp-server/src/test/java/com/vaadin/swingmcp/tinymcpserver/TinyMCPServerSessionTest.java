@@ -15,7 +15,7 @@ import java.net.http.HttpResponse;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for MCP session lifecycle gate (UC-005).
+ * Tests for MCP session lifecycle gate (see DR-005 in {@code spec/decisions.md}).
  * Uses raw HTTP requests for precise control over the {@code Mcp-Session-Id} header.
  */
 class TinyMCPServerSessionTest {

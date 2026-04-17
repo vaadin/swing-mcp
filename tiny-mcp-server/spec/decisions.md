@@ -135,7 +135,7 @@ pattern gives the AI a concrete next step instead of a bare error string.
 ## DR-005 — Session lifecycle gate
 
 **Status:** Accepted
-**Applies to:** `TinyMCPServer.handlePost`, UC-005
+**Applies to:** `TinyMCPServer.handlePost`
 
 **Decision.** Every POST is validated against the server's
 `activeSessionId` before dispatch. The validation splits into two stages
