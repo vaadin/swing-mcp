@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
 /**
  * Contextual information passed to {@link AbstractSwingTool#execute} on every
@@ -34,6 +35,15 @@ public class SwingToolContext {
      * A pre-dispatch validation error does not clear the map.
      */
     private final Map<Integer, Accessible> componentRefs = new HashMap<>();
+    /**
+     * Executor for background work spawned by tools (e.g. Robot-based drag in
+     * {@link SwingDragTool}, which cannot run on the EDT). Captured from
+     * {@link com.vaadin.swingmcp.tinymcpserver.TinyMCPServer#getExecutor()} by
+     * {@code MCPServer} when the context is created for a session. In tests
+     * where background dispatch is exercised, the test must install an executor
+     * via {@link #setExecutor(Executor)}.
+     */
+    private Executor executor;
 
     public void setConsideredComponents(List<Component> consideredComponents) {
         this.consideredComponents = consideredComponents == null
@@ -51,6 +61,29 @@ public class SwingToolContext {
 
     public void clearRefMap() {
         componentRefs.clear();
+    }
+
+    /**
+     * Installs the executor that tools should use for background work.
+     * See {@link #executor}.
+     */
+    public void setExecutor(Executor executor) {
+        this.executor = executor;
+    }
+
+    /**
+     * Returns the executor installed via {@link #setExecutor(Executor)}.
+     *
+     * @throws IllegalStateException if no executor has been installed
+     */
+    public Executor getExecutor() {
+        if (executor == null) {
+            throw new IllegalStateException(
+                    "No executor installed on SwingToolContext. "
+                            + "Production sets this from TinyMCPServer.getExecutor(); "
+                            + "tests that exercise background dispatch must call setExecutor().");
+        }
+        return executor;
     }
 
     public void putRef(int ref, Accessible accessible) {

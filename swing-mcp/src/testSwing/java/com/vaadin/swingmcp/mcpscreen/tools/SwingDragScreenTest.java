@@ -7,6 +7,7 @@ import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +15,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -22,12 +25,24 @@ class SwingDragScreenTest extends AbstractScreenTest {
     private SwingSnapshotTool snapshotTool;
     private SwingDragTool dragTool;
     private SwingToolContext context;
+    private ExecutorService executor;
 
     @BeforeEach
     void setUp() {
         snapshotTool = new SwingSnapshotTool();
         dragTool = new SwingDragTool();
         context = new SwingToolContext();
+        executor = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "swing-drag-test");
+            t.setDaemon(true);
+            return t;
+        });
+        context.setExecutor(executor);
+    }
+
+    @AfterEach
+    void tearDown() {
+        executor.shutdownNow();
     }
 
     private void snapshot(Component... roots) throws Exception {
