@@ -32,25 +32,31 @@ public class TinyMCPServer {
 
     /**
      * A tool handler function that receives parsed parameters and returns content.
+     * Invoked synchronously on the HTTP handler thread that is serving the
+     * {@code tools/call} request.
      *
      * <p>The parameter map is always non-null, even when no parameters are defined or passed.
      * Values are typed according to their schema: {@code String} for string parameters,
      * {@code Integer} for integer parameters, {@code Double} for number parameters,
      * {@code Boolean} for boolean parameters, {@code List<Object>} for array parameters,
      * and {@code Map<String, Object>} for object parameters. Elements and values inside
-     * arrays and objects follow the same Java type mapping recursively.
-     * Optional parameters absent from the call are not included in the map.
+     * arrays and objects follow the same Java type mapping recursively. The function
+     * never receives raw GSON {@code JsonElement} instances. Optional parameters
+     * absent from the call are not included in the map.
      *
-     * <p>The MCP specification defines {@code CallToolResult.content} as a required
-     * JSON array with no minimum size. Returning {@code null} produces an empty
-     * content array ({@code []}); returning a non-null {@link MCPProtocol.Content}
-     * produces a single-element array.
+     * <p>Verified against the MCP specification (2025-03-26 schema):
+     * {@code CallToolResult.content} is a required JSON array with no {@code minItems}
+     * constraint, so an empty array is valid. Returning {@code null} produces an empty
+     * content array ({@code "content": []}) — useful for mutation tools that have
+     * nothing to report. Returning a non-null {@link MCPProtocol.Content} produces a
+     * single-element array.
      *
      * <p>Throwing {@link MCPErrorResponseException} produces {@code isError=true} with
      * the exception's message as the text content (no Java class name prefix).
      * Throwing any other exception also produces {@code isError=true} but uses
-     * {@link Throwable#toString()} as the text content.
-     * Throwing {@link MCPServerException} sends a JSON-RPC protocol error instead.
+     * {@link Throwable#toString()} (class name + message, no stacktrace) as the text
+     * content. Throwing {@link MCPServerException} sends a JSON-RPC protocol error
+     * instead.
      */
     @FunctionalInterface
     public interface ToolFunction {
@@ -143,11 +149,29 @@ public class TinyMCPServer {
     /**
      * Registers a tool with this server. Must be called before {@link #start()}.
      *
-     * @param name        the tool name; not null, not blank
+     * <p>Registered tools are advertised by {@code tools/list} (name, description,
+     * and {@code inputSchema} passed as-is) and invoked via {@code tools/call}.
+     *
+     * <p>{@code tools/call} dispatch rules:
+     * <ul>
+     *   <li>Unknown tool name → JSON-RPC error {@code -32601} (Method not found).</li>
+     *   <li>Missing required parameter → JSON-RPC error {@code -32602} with message
+     *       {@code Missing required parameter '<name>'}. A {@code null} argument value
+     *       is treated as missing.</li>
+     *   <li>JSON numbers are deserialized by GSON as {@code Double}; for parameters
+     *       declared as {@code integer}, whole-number doubles are coerced to
+     *       {@code Integer}, and fractional doubles are rejected with {@code -32602}.</li>
+     *   <li>Unknown parameters are silently ignored (a warning is logged).</li>
+     *   <li>The tool function is invoked synchronously on the HTTP handler thread.</li>
+     * </ul>
+     *
+     * @param name        the tool name; not null, not blank; must match
+     *                    {@code [a-zA-Z_][a-zA-Z0-9_]*}
      * @param description human-readable description of the tool; not null, not blank
      * @param inputSchema the parameter schema; not null; consider using {@link InputSchemaBuilder}
      * @param function    the handler to invoke when the tool is called; not null
-     * @throws IllegalArgumentException if any argument is null or blank
+     * @throws IllegalArgumentException if any argument is null, blank, or (for
+     *                                  {@code name}) does not match the required pattern
      * @throws IllegalStateException    if the server has already been started
      * @throws IllegalStateException    if a tool with the same name is already registered
      */
