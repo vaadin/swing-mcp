@@ -73,15 +73,6 @@ public class MCPServer {
             protected boolean acceptNewSession() {
                 return getSessionCount() == 0;
             }
-            @Override
-            protected void onSessionClosed(MCPSession session) {
-                toolLock.lock();
-                try {
-                    context.clearRefMap();
-                } finally {
-                    toolLock.unlock();
-                }
-            }
         };
         registerTools();
     }
@@ -121,13 +112,15 @@ public class MCPServer {
         registerTool(new com.vaadin.swingmcp.mcp.tools.SwingDragTool());
     }
 
-    private final SwingToolContext context = new SwingToolContext();
-
     /**
      * Registers a Swing tool with the underlying MCP server. The tool is
      * wrapped so that every invocation:
      * <ol>
      *   <li>Acquires the MCPServer-level lock, serialising all tool calls</li>
+     *   <li>Resolves the per-session {@link SwingToolContext} from the current
+     *       {@link MCPSession} (lazily creating one on first use); this must
+     *       happen on the dispatch thread where {@link MCPSession#getCurrent()}
+     *       is bound, before marshalling onto the EDT</li>
      *   <li>Marshals onto the EDT via {@link #runInEDT(Callable)}</li>
      *   <li>Retrieves the current considered components</li>
      *   <li>Delegates to {@link AbstractSwingTool#execute}</li>
@@ -137,6 +130,7 @@ public class MCPServer {
      */
     protected void registerTool(AbstractSwingTool tool) {
         server.addTool(tool.getName(), tool.getDescription(), tool.getInputSchema(), params -> {
+            SwingToolContext context = currentSessionContext();
             toolLock.lock();
             try {
                 return runInEDT(() -> {
@@ -151,6 +145,23 @@ public class MCPServer {
                 toolLock.unlock();
             }
         });
+    }
+
+    /**
+     * Returns the {@link SwingToolContext} attached to the currently-dispatching
+     * {@link MCPSession}, creating and attaching a fresh one on first access.
+     * <p>
+     * Must be called on the HTTP dispatch thread (where the session
+     * {@code ThreadLocal} is bound), not on the EDT.
+     */
+    private static SwingToolContext currentSessionContext() {
+        MCPSession session = MCPSession.getCurrent();
+        SwingToolContext context = session.getAttribute(SwingToolContext.class);
+        if (context == null) {
+            context = new SwingToolContext();
+            session.setAttribute(SwingToolContext.class, context);
+        }
+        return context;
     }
 
     /**
