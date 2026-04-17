@@ -144,9 +144,18 @@ successful JSON-RPC response whose `CallToolResult.isError` is `true` and
 whose text content is either the clean message (for
 `MCPErrorResponseException`) or `Throwable.toString()` (class + message).
 
-This layer exists for tools only. Resource and prompt handlers catch
-generic exceptions and rewrap them as `MCPServerException(INTERNAL_ERROR)`
-— they do not have an `isError` content slot.
+**This layer exists for tools only — enforced by the MCP spec, not by
+us.** Per the MCP spec (2025-03-26), `isError` is a field on
+`CallToolResult` and only on `CallToolResult`; `ReadResourceResult` and
+`GetPromptResult` have no equivalent slot. The rationale is that a tool
+can meaningfully "partially fail" — it ran, produced a result, and that
+result is a descriptive error the LLM should read and reason about.
+Resources and prompts are one-shot content producers: you either get
+`contents` / `messages` back, or you don't. So when a resource or prompt
+handler fails, the only structured channel back to the client is a
+JSON-RPC protocol error (layer 2), and `MCPResourceHandler` /
+`MCPPromptHandler` wrap any non-`MCPServerException` as
+`MCPServerException(INTERNAL_ERROR)` accordingly.
 
 Tools use this layer for application-level failures where the tool was
 found and dispatched but the input was semantically wrong (e.g., invalid
