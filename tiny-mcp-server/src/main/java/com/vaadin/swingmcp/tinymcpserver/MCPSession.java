@@ -34,6 +34,11 @@ public class MCPSession {
         this.toolHandler = toolHandler;
     }
 
+    /**
+     * Returns this session's opaque identifier, assigned by the server at
+     * session creation and surfaced to clients via the {@code Mcp-Session-Id}
+     * HTTP header.
+     */
     public String getId() {
         return id;
     }
@@ -85,26 +90,90 @@ public class MCPSession {
         rpc.sendResponse(result);
     }
 
+    /**
+     * Returns the value of the named session attribute, or {@code null} if
+     * no attribute with that name is set (or if the stored value is itself
+     * {@code null}).
+     * <p>
+     * Attributes let handlers and tool callbacks stash session-scoped state
+     * (such as user-specific caches or ref maps) that lives for the lifetime
+     * of the session and is discarded when the session is closed.
+     *
+     * @param name attribute name; must not be {@code null}
+     * @throws NullPointerException if {@code name} is {@code null}
+     */
     public Object getAttribute(String name) {
         Objects.requireNonNull(name);
         return attributes.get(name);
     }
 
+    /**
+     * Stores a session attribute under the given name, replacing any previous
+     * value. Passing a {@code null} value clears the existing mapping as far
+     * as {@link #getAttribute(String)} is concerned (it will return {@code null}).
+     *
+     * @param name  attribute name; must not be {@code null}
+     * @param value attribute value; may be {@code null}
+     * @throws NullPointerException if {@code name} is {@code null}
+     */
     public void setAttribute(String name, Object value) {
         Objects.requireNonNull(name);
         attributes.put(name, value);
     }
 
+    /**
+     * Type-safe variant of {@link #getAttribute(String)} that keys the
+     * attribute by the fully-qualified name of {@code type}. Returns
+     * {@code null} if no value is stored under that key.
+     *
+     * @param type the class whose name is used as the attribute key
+     * @param <T>  the expected attribute type
+     * @throws ClassCastException if a value is stored under this key but is
+     *                            not an instance of {@code type} (can occur
+     *                            if the same key was previously set via the
+     *                            {@link #setAttribute(String, Object)} overload)
+     */
     public <T> T getAttribute(Class<T> type) {
         return type.cast(getAttribute(type.getName()));
     }
 
+    /**
+     * Type-safe variant of {@link #setAttribute(String, Object)} that keys
+     * the attribute by the fully-qualified name of {@code type}. Intended
+     * for the common case where a handler stores a single instance of a
+     * given type on the session.
+     *
+     * @param type  the class whose name is used as the attribute key
+     * @param value attribute value; may be {@code null}
+     * @param <T>   the attribute type
+     */
     public <T> void setAttribute(Class<T> type, T value) {
         setAttribute(type.getName(), value);
     }
 
+    /**
+     * Thread-local binding to the session currently dispatching a request.
+     * Set by {@link TinyMCPServer} around {@link #handlePost} and cleared
+     * immediately after; visible only on the HTTP dispatch thread.
+     */
     static final ThreadLocal<MCPSession> instance = new ThreadLocal<>();
 
+    /**
+     * Returns the session whose request is being dispatched on the current
+     * thread. Intended for tool callbacks and other handler code that needs
+     * to reach its session without having it passed explicitly — for example,
+     * to read or write session attributes.
+     * <p>
+     * Only bound on the HTTP dispatch thread for the duration of
+     * {@link #handlePost}. If a tool marshals its work onto another thread
+     * (e.g. the Swing EDT), resolve the session <em>before</em> crossing the
+     * thread boundary and capture it into the other thread's closure.
+     *
+     * @return the current session, never {@code null}
+     * @throws NullPointerException if no session is bound to the current
+     *                              thread (i.e. this method was called outside
+     *                              of a session-dispatched request)
+     */
     public static MCPSession getCurrent() {
         return Objects.requireNonNull(instance.get(), "Not running in a MCP session");
     }
