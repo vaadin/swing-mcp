@@ -138,10 +138,14 @@ public class TinyMCPServer {
         toolHandler.addTool(name, description, inputSchema, function);
     }
 
-    public void start() throws IOException {
+    public void start() {
         started = true;
-        httpServer = HttpServer.create(
-                new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port), 0);
+        try {
+            httpServer = HttpServer.create(
+                    new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port), 0);
+        } catch (IOException e) {
+            throw new RuntimeIOException("Failed to bind HTTP server on port " + port, e);
+        }
         // If port was 0, the OS assigned an ephemeral port; capture the actual port.
         boundPort = httpServer.getAddress().getPort();
         httpServer.setExecutor(Executors.newCachedThreadPool(r -> {
@@ -205,13 +209,13 @@ public class TinyMCPServer {
             LOG.log(Level.SEVERE, "Error handling request", e);
             try {
                 rpc.sendPlain(500, "Internal Server Error");
-            } catch (IOException ioe) {
+            } catch (RuntimeIOException ioe) {
                 LOG.log(Level.SEVERE, "Failed to send error response", ioe);
             }
         }
     }
 
-    private void handlePost(JsonRpcExchange rpc) throws IOException {
+    private void handlePost(JsonRpcExchange rpc) {
         // Session ID header validation: if present, must match a known session
         String incomingSessionId = rpc.getHttpExchange().getRequestHeaders()
                 .getFirst("Mcp-Session-Id");
@@ -257,7 +261,7 @@ public class TinyMCPServer {
         session.handlePost(rpc, request);
     }
 
-    private void handleInitialize(JsonRpcExchange rpc) throws IOException {
+    private void handleInitialize(JsonRpcExchange rpc) {
         MCPSession session;
         synchronized (sessionGuardLock) {
             if (!acceptNewSession()) {
@@ -286,11 +290,11 @@ public class TinyMCPServer {
         rpc.sendResponse(result);
     }
 
-    private void handlePing(JsonRpcExchange rpc) throws IOException {
+    private void handlePing(JsonRpcExchange rpc) {
         rpc.sendResponseRaw("{}");
     }
 
-    private void handleDelete(JsonRpcExchange rpc) throws IOException {
+    private void handleDelete(JsonRpcExchange rpc) {
         String incomingSessionId = rpc.getHttpExchange().getRequestHeaders()
                 .getFirst("Mcp-Session-Id");
         List<MCPSession> closed;

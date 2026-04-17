@@ -1,6 +1,5 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -69,7 +68,7 @@ class MCPToolHandler {
         tools.put(name, new RegisteredTool(name, description, inputSchema, function));
     }
 
-    void handleToolsList(JsonRpcExchange rpc) throws IOException {
+    void handleToolsList(JsonRpcExchange rpc) {
         MCPProtocol.ListToolsResult result = new MCPProtocol.ListToolsResult();
         List<MCPProtocol.Tool> toolList = new ArrayList<>();
         for (RegisteredTool rt : tools.values()) {
@@ -79,7 +78,7 @@ class MCPToolHandler {
         rpc.sendResponse(result);
     }
 
-    void handleToolsCall(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) throws IOException {
+    void handleToolsCall(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) {
         MCPProtocol.CallToolParams params = request.getParamsAs(MCPProtocol.CallToolParams.class);
         if (params == null || params.getName() == null) {
             throw new MCPServerException(MCPServerException.METHOD_NOT_FOUND, "Method not found");

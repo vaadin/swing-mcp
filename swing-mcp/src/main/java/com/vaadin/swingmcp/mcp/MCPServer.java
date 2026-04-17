@@ -11,7 +11,6 @@ import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.Window;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -167,7 +166,7 @@ public class MCPServer {
     /**
      * Starts the MCP server.
      */
-    public void start() throws IOException {
+    public void start() {
         server.start();
         LOG.info("Swing MCPServer started");
     }
@@ -193,7 +192,7 @@ public class MCPServer {
      * automatically when the application terminates. This is the recommended
      * method for Swing applications.
      */
-    public void startAndAutoStop() throws IOException {
+    public void startAndAutoStop() {
         start();
         shutdownHook = new Thread(() -> {
             server.stop();

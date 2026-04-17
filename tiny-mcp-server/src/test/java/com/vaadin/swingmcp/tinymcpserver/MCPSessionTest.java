@@ -5,8 +5,6 @@ import com.google.gson.JsonObject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -28,7 +26,7 @@ class MCPSessionTest {
 
     // ===== Helpers =====
 
-    private FakeHttpExchange dispatch(String jsonRpcBody) throws IOException {
+    private FakeHttpExchange dispatch(String jsonRpcBody) {
         FakeHttpExchange exchange = new FakeHttpExchange(jsonRpcBody);
         JsonRpcExchange rpc = new JsonRpcExchange(exchange);
         MCPProtocol.JsonRpcRequest request = rpc.parsePost();
@@ -37,7 +35,7 @@ class MCPSessionTest {
         return exchange;
     }
 
-    private FakeHttpExchange dispatch(String method, int id) throws IOException {
+    private FakeHttpExchange dispatch(String method, int id) {
         return dispatch("{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"method\":\"" + method + "\"}");
     }
 

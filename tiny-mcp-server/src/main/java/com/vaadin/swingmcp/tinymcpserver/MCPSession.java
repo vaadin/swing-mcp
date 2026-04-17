@@ -1,6 +1,5 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -48,7 +47,7 @@ public class MCPSession {
         return id;
     }
 
-    void handlePost(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) throws IOException {
+    void handlePost(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) {
         sessionLock.lock();
         try {
             instance.set(this);
@@ -65,7 +64,7 @@ public class MCPSession {
      * {@code initialize} and {@code ping}, which are handled by
      * {@link TinyMCPServer}).
      */
-    private void doHandlePost(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) throws IOException {
+    private void doHandlePost(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) {
         checkLocked();
         String rpcMethod = request.getMethod();
         try {
@@ -101,14 +100,14 @@ public class MCPSession {
         }
     }
 
-    private void handleResourcesList(JsonRpcExchange rpc) throws IOException {
+    private void handleResourcesList(JsonRpcExchange rpc) {
         checkLocked();
         MCPProtocol.ListResourcesResult result = new MCPProtocol.ListResourcesResult();
         result.setResources(Collections.emptyList());
         rpc.sendResponse(result);
     }
 
-    private void handlePromptsList(JsonRpcExchange rpc) throws IOException {
+    private void handlePromptsList(JsonRpcExchange rpc) {
         checkLocked();
         MCPProtocol.ListPromptsResult result = new MCPProtocol.ListPromptsResult();
         result.setPrompts(Collections.emptyList());
