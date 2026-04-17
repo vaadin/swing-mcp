@@ -46,13 +46,12 @@ second `initialize`, the client receives HTTP 409 and JSON-RPC error
 or retry.
 
 If an AI agent crashes or disconnects without sending a DELETE, the
-session remains open indefinitely. For the single-session subclass,
-that means the Swing app must be restarted to clear a stuck session —
-acceptable for the migration scenario (<1% of cases); revisit with a
-timeout or manual release if it becomes frequent.
+session is evicted by the idle-cleanup tick after 30 minutes of no
+activity, freeing the single-session slot without restarting the
+Swing app.
 
-See DR-003 and DR-005 for the full session lifecycle and the
-per-method routing matrix.
+See DR-003, DR-005, and DR-006 for the full session lifecycle, the
+per-method routing matrix, and the idle-eviction policy.
 
 ### Error handling model
 

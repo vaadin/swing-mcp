@@ -41,11 +41,19 @@ the natural seams in the protocol:
 - **`TinyMCPServer`** — HTTP lifecycle, the session map, routing of
   `initialize` / `ping` / `DELETE`, and the single exception-to-response
   seam (`handleRequest`). Registration APIs (`addTool`, `addResource`,
-  `addPrompt`) also live here.
+  `addPrompt`) also live here. Also owns the shared
+  `ScheduledExecutorService` (daemon threads named `tiny-mcp-server-N`)
+  created in `start()` and shut down in `stop()`; it runs the
+  once-per-minute idle-session cleanup tick and is exposed to tool
+  handlers via `getExecutor()` for short background work (see DR-006).
 - **`MCPSession`** — one per active session; dispatches session-scoped
   methods (`tools/*`, `resources/*`, `prompts/*`) under a per-session
   `ReentrantLock`. Owns session attributes and exposes `getCurrent()` as
-  a thread-local for handler code.
+  a thread-local for handler code. Every request flows through
+  `runLocked`, which refreshes the session's last-access timestamp and
+  fails fast with HTTP 404 if the session has already been evicted by
+  the cleanup tick; `getServer()` gives tool code access to the owning
+  `TinyMCPServer` (and thus its shared executor).
 - **`MCPToolHandler` / `MCPResourceHandler` / `MCPPromptHandler`** — the
   three feature handlers. Each owns its registry and implements the
   corresponding `*/list` and `*/call|read|get` methods.
@@ -73,8 +81,10 @@ returns the actual bound port.
 By default the server accepts multiple concurrent sessions. Subclasses
 can enforce a single-session policy (as swing-mcp does) by overriding
 `acceptNewSession()` — returning `false` causes `initialize` to be
-rejected with HTTP 409 and JSON-RPC code `-32002`. See DR-003 / DR-005
-for the full session lifecycle.
+rejected with HTTP 409 and JSON-RPC code `-32002`. Sessions idle for
+30 minutes are evicted by a background cleanup tick, which invokes the
+same `onSessionClosed` hook as an explicit DELETE. See DR-003 / DR-005
+/ DR-006 for the full session lifecycle and idle-eviction policy.
 
 #### Tool registration API
 

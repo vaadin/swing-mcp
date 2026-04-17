@@ -86,11 +86,10 @@ concurrency issues (interleaved clicks, snapshot races) on the
 single-threaded EDT. Pure `TinyMCPServer` instances (e.g. its own unit
 tests) happily run multiple sessions in parallel.
 
-If an AI agent crashes without sending a DELETE, the session stays in
-the map indefinitely. For the single-session subclass, that means the
-Swing app must be restarted to clear a stuck session. Rare (<1% of
-cases) in the migration scenario; a timeout or manual release can be
-added if this becomes problematic.
+If an AI agent crashes without sending a DELETE, the session is
+evicted by the idle-cleanup tick (DR-006) after 30 minutes of no
+activity. For the single-session subclass, that frees the slot
+automatically without restarting the Swing app.
 
 **Why this split.** `TinyMCPServer` aims to be a reusable minimal MCP
 server, and multi-session is the MCP spec default. Baking
@@ -108,8 +107,10 @@ one line.
 - **Session queuing (block until current session ends).** Rejected —
   adds complexity for a scenario that doesn't arise in normal use. The
   blocked agent would hang indefinitely if the first session is stuck.
-- **Idle timeout to auto-release stuck sessions.** Deferred — acceptable
-  tradeoff for now. Revisit if stuck sessions become frequent.
+- **Idle timeout to auto-release stuck sessions.** Accepted — see
+  DR-006. Sessions idle for 30 minutes are evicted by a background
+  cleanup tick, so a crashed client no longer blocks the single-session
+  slot until the Swing app is restarted.
 
 ---
 
@@ -289,3 +290,89 @@ distinguish `initialize`/`ping` from regular tool calls.
   those codes describe malformed input; session-state violations are a
   server-state condition, which is exactly what the -32000..-32099
   implementation-defined range is for.
+
+---
+
+## DR-006 — Idle session eviction via a shared scheduled executor
+
+**Status:** Accepted
+**Applies to:** `TinyMCPServer`, `MCPSession`
+**Supersedes the "Idle timeout" deferral in:** DR-003
+
+**Decision.** `TinyMCPServer` owns a single `ScheduledExecutorService`
+(one daemon thread, named `tiny-mcp-server-N`) created in `start()` and
+shut down in `stop()`. Once per minute it runs a cleanup tick that
+evicts every session whose last access is older than 30 minutes. The
+same executor is exposed via `getExecutor()` for tool handlers that need
+background work (debouncing, deferred cleanup, short periodic polling)
+— reachable from tool code via `MCPSession.getCurrent().getServer()`.
+Heavy or long-blocking work must use its own executor so the cleanup
+tick cannot be starved.
+
+The cleanup tick and request dispatch synchronise through a single
+chokepoint in `MCPSession.runLocked`:
+
+1. `runLocked` acquires the session lock, checks a `closed` flag and
+   throws an HTTP 404 `MCPServerException` if the session was already
+   evicted, then refreshes `lastAccessNanos = System.nanoTime()` before
+   running the request block. Every dispatched POST flows through
+   `runLocked`, so the timestamp is authoritative.
+2. The cleanup tick iterates the session map, skips sessions whose
+   `lastAccessNanos` is within the idle window, and for the rest calls
+   `tryClose()`. `tryClose()` uses `ReentrantLock.tryLock()` — if a
+   request is in flight, it returns `false` and the session is
+   re-evaluated on the next tick, so cleanup never blocks on a live
+   request. On success it sets `closed = true` under the lock, so any
+   request that acquires the lock afterwards fails fast with 404.
+   Removed sessions are reported through `onSessionClosed`, the same
+   hook invoked by explicit DELETE.
+
+Constants `IDLE_TIMEOUT_NANOS` (30 minutes) and `CLEANUP_TICK_SECONDS`
+(60) are package-private so tests can substitute short values via
+reflection and drive the tick synchronously through the
+package-private `cleanupIdleSessions()` entry point.
+
+**Why.**
+
+- **Stuck single-session slot.** DR-003 left the single-session
+  subclass wedged if an AI client crashed without sending DELETE; the
+  only remedy was restarting the Swing app. 30 minutes matches a
+  realistic "agent walked away" window without fighting legitimate
+  long pauses during a migration session.
+- **One executor, many uses.** Tool handlers already wanted a place to
+  park background work; running a second executor purely for cleanup
+  would double the daemon-thread count and still leave tools with
+  nowhere to schedule. Sharing the executor keeps the dependency
+  surface minimal (a single `ScheduledExecutorService` field, no new
+  runtime libraries per DR-002) and gives tools a predictable,
+  already-managed lifecycle tied to `start()` / `stop()`.
+- **`runLocked` as the chokepoint.** Refreshing the timestamp at every
+  lock acquisition — rather than in `handlePost`'s entry path — means
+  test-only callers that run through `runLocked` also count as
+  activity, and there is a single place where "this session is alive"
+  is recorded. Pairing it with the `closed`-flag check keeps the
+  post-eviction 404 consistent with DR-005's "wrong session → 404"
+  rule without duplicating map lookups.
+- **`tryLock` over `lock`.** A blocking `lock()` in the cleanup thread
+  would stall the whole cleanup pass behind any slow request, and
+  could in the worst case deadlock with a tool that schedules work on
+  the same executor and waits for it. `tryLock()` + retry-next-tick
+  keeps cleanup bounded and lock-free from the request path's
+  perspective.
+
+**Alternatives considered.**
+- **No idle eviction (DR-003 status quo).** Rejected — a crashed
+  single-session client requires a full Swing app restart.
+- **Separate executor purely for cleanup.** Rejected — doubles the
+  background thread count without giving tools anywhere to schedule
+  work; the scheduled-executor API is the natural place to host both.
+- **Track last-access in `handlePost` only.** Rejected — test
+  scenarios and future callers that drive `runLocked` directly would
+  silently age out; the chokepoint-based approach keeps the invariant
+  in one place.
+- **Blocking `lock()` in `tryClose`.** Rejected — would let a single
+  slow handler freeze the cleanup pass and open a deadlock window if
+  the handler were waiting on the shared executor.
+- **Evict from the HTTP thread on each request.** Rejected — sprays
+  cleanup cost across every request and does nothing for a server
+  that has simply gone idle, which is the exact case we care about.
