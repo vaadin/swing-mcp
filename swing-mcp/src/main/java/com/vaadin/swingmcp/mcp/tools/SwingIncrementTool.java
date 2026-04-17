@@ -15,7 +15,7 @@ import javax.swing.SwingUtilities;
  * <p>Looks up the component by ref, verifies it supports the increment action
  * and is effectively enabled, then invokes the matching {@link AccessibleAction}.</p>
  *
- * @see <a href="use-case-008-swing-increment.md">UC-008</a>
+ * @see <a href="tool-008-swing-increment.md">T-008</a>
  */
 public class SwingIncrementTool extends AbstractSwingTool {
 

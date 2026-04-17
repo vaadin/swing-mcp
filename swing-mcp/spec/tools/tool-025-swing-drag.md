@@ -1,4 +1,4 @@
-# UC-025: swing_drag
+# T-025: swing_drag
 
 **Status:** Implemented
 **Date:** 2026-04-14

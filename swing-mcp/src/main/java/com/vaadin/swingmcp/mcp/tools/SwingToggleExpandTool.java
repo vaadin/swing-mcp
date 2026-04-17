@@ -15,7 +15,7 @@ import javax.swing.SwingUtilities;
  * <p>Looks up the node by ref, verifies it is enabled and supports the toggle-expand
  * action, then invokes the matching {@link AccessibleAction}.</p>
  *
- * @see <a href="use-case-010-swing-toggle-expand.md">UC-010</a>
+ * @see <a href="tool-010-swing-toggle-expand.md">T-010</a>
  */
 public class SwingToggleExpandTool extends AbstractSwingTool {
 

@@ -1,4 +1,4 @@
-# UC-007: swing_toggle_popup
+# T-007: swing_toggle_popup
 
 **Status:** Implemented
 **Date:** 2026-03-31

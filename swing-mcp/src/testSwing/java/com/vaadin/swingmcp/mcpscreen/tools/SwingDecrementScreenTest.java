@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Screen-mode tests for {@code swing_decrement} — JFrame/JDialog coverage.
- * Happy-path tests live here per the component matrix in UC-009 BR-10.
+ * Happy-path tests live here per the component matrix in T-009 BR-10.
  */
 class SwingDecrementScreenTest extends AbstractScreenTest {
 

@@ -21,7 +21,7 @@ import java.awt.event.WindowEvent;
  * icons, calls {@code doDefaultCloseAction()}. The client observes the
  * result via {@code swing_snapshot}.</p>
  *
- * @see <a href="use-case-011-swing-close.md">UC-011</a>
+ * @see <a href="tool-011-swing-close.md">T-011</a>
  */
 public class SwingCloseTool extends AbstractSwingTool {
 

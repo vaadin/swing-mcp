@@ -16,7 +16,7 @@ import java.util.Map;
  * <p>Looks up the component by ref, verifies it supports the {@code get_value} action,
  * then reads the value via the accessibility API ({@link AccessibleValue}).</p>
  *
- * @see <a href="use-case-012-swing-get-value.md">UC-012</a>
+ * @see <a href="tool-012-swing-get-value.md">T-012</a>
  */
 public class SwingGetValueTool extends AbstractSwingTool {
 

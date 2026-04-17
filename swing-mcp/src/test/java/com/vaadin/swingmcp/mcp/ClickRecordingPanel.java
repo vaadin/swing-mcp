@@ -15,7 +15,7 @@ import java.util.List;
  * Tests assert via {@link #wasClicked()} — returns {@code true} only if the
  * full sequence was received correctly.
  *
- * @see <a href="use-case-004-swing-click.md">UC-004 — ClickRecordingPanel</a>
+ * @see <a href="tool-004-swing-click.md">T-004 — ClickRecordingPanel</a>
  */
 public class ClickRecordingPanel extends JPanel {
 

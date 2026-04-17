@@ -10,7 +10,7 @@ import java.util.Set;
 
 /**
  * Resolves the component-identity slot for a snapshot line per
- * <b>UC-002 BR-11</b>. The slot takes one of three forms:
+ * <b>T-002 BR-11</b>. The slot takes one of three forms:
  *
  * <ul>
  *   <li><b>Case A (standard Swing component):</b>
@@ -28,9 +28,9 @@ import java.util.Set;
  * <p>Parenthesised role is unconditional — even when the role is a
  * tautological lowercasing of the class ({@code JButton (push_button)}) —
  * so that a non-standard overridden role becomes a clean attention signal
- * for the AI (see UC-002 BR-11 rationale).</p>
+ * for the AI (see T-002 BR-11 rationale).</p>
  *
- * <p>See UC-002 § Implementation Notes — Component Identity Resolution
+ * <p>See T-002 § Implementation Notes — Component Identity Resolution
  * for the full algorithm and the audit test that guards against JDK drift.</p>
  */
 public final class ComponentClassResolver {
@@ -47,7 +47,7 @@ public final class ComponentClassResolver {
      * JDK-internal nested class.
      *
      * <p>This is the concrete-side identity used by BR-14's modal-stack header
-     * (UC-002 BR-14 / DR-016), where only the concrete simple class name is
+     * (T-002 BR-14 / DR-016), where only the concrete simple class name is
      * shown (without the {@code -> JClass (role)} qualifying-ancestor
      * decoration). For the full identity slot including the qualifying
      * ancestor, see {@link #resolveIdentitySlot}.</p>
@@ -236,7 +236,7 @@ public final class ComponentClassResolver {
     }
 
     /**
-     * Qualifying-ancestor predicate per UC-002 BR-11:
+     * Qualifying-ancestor predicate per T-002 BR-11:
      * <ul>
      *   <li>public;</li>
      *   <li>top-level (no enclosing class — excludes nested, inner, local,

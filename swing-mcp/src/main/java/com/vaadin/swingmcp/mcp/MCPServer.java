@@ -172,7 +172,9 @@ public class MCPServer {
     }
 
     /**
-     * Stops the MCP server.
+     * Stops the MCP server. Primarily intended for tests; production Swing
+     * applications should use {@link #startAndAutoStop()} and let the JVM
+     * terminate the server on shutdown.
      */
     public void stop() {
         server.stop();

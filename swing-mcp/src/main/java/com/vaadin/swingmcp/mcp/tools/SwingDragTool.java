@@ -28,7 +28,7 @@ import java.util.logging.Logger;
  *       back to synthetic {@link Component#dispatchEvent} calls.</li>
  * </ul>
  *
- * @see <a href="use-case-025-swing-drag.md">UC-025</a>
+ * @see <a href="tool-025-swing-drag.md">T-025</a>
  */
 public class SwingDragTool extends AbstractSwingTool {
 

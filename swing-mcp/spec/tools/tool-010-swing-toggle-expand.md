@@ -1,4 +1,4 @@
-# UC-010: swing_toggle_expand
+# T-010: swing_toggle_expand
 
 **Status:** Implemented
 **Date:** 2026-04-01

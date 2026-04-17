@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  * JDesktopIcon is a JComponent (not a Window), so it can be instantiated
  * headlessly. The three-step fallback is testable without a display.
  *
- * @see <a href="use-case-002-swing-snapshot.md">UC-002 SC-5</a>
+ * @see <a href="tool-002-swing-snapshot.md">T-002 SC-5</a>
  */
 class SwingUtilsGetEffectiveAccessibleNameTest {
 

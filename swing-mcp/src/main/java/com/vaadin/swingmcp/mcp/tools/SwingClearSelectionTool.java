@@ -10,7 +10,7 @@ import java.util.Map;
  * MCP tool {@code swing_clear_selection}: clears the selection of a UI component by ref.
  *
  * <p>Delegates to {@link SwingSetSelectionTool} with an empty {@code indices} array.
- * See UC-016 / UC-015 for full specification.</p>
+ * See T-016 / T-015 for full specification.</p>
  */
 public class SwingClearSelectionTool extends AbstractSwingTool {
 

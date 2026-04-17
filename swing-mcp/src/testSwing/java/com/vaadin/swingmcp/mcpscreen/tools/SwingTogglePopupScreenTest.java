@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Screen-mode tests for {@code swing_toggle_popup}.
  * Happy-path tests live here because {@code doAccessibleAction} on {@code JComboBox}
- * throws {@code HeadlessException} in headless mode (see UC-007 BR-10).
+ * throws {@code HeadlessException} in headless mode (see T-007 BR-10).
  */
 class SwingTogglePopupScreenTest extends AbstractScreenTest {
 

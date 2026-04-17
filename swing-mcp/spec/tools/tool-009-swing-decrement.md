@@ -1,4 +1,4 @@
-# UC-009: swing_decrement
+# T-009: swing_decrement
 
 **Status:** Implemented
 **Date:** 2026-03-31

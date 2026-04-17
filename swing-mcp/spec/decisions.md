@@ -3,10 +3,10 @@
 Cross-cutting design decisions for `swing-mcp`. Each record captures **what** was
 chosen, **why**, and the **alternatives** that were considered and rejected.
 
-> **When to read this file:** when a use case or implementation note references
-> `DR-NNN`, or when you're revisiting a choice that spans multiple use cases.
-> If a decision is local to one use case, it lives in a sibling
-> `use-case-NNN-decisions.md` file instead.
+> **When to read this file:** when a tool spec or implementation note references
+> `DR-NNN`, or when you're revisiting a choice that spans multiple tools.
+> If a decision is local to one tool, it lives in a sibling
+> `tool-NNN-decisions.md` file instead.
 >
 > **When to update:** whenever a cross-cutting choice is made, revised, or
 > rejected. Keep entries short — the full narrative belongs in the session that
@@ -18,7 +18,7 @@ chosen, **why**, and the **alternatives** that were considered and rejected.
 ## DR-001 — Snapshot uses role parenthetical; everywhere else uses class names
 
 **Status:** Accepted
-**Applies to:** UC-002, tool descriptions, error messages
+**Applies to:** T-002, tool descriptions, error messages
 **Decision.** In the snapshot, every node line begins with `JClass (role)` (or
 `Concrete -> JClass (role)`, or `(role)` for non-`Component` accessibles). The
 role parenthetical is emitted **unconditionally**, even when it looks
@@ -89,7 +89,7 @@ is widespread — we cannot rely on clients to respect JSON schema types.
 ## DR-003 — MCP mirrors Swing semantics, including the weird ones
 
 **Status:** Accepted
-**Applies to:** all mutation tools, `SwingUtils.isEffectivelyEnabled`, UC-002
+**Applies to:** all mutation tools, `SwingUtils.isEffectivelyEnabled`, T-002
 snapshot states
 
 **Decision.** Swing-MCP is a faithful proxy for the AI client. If a Swing app
@@ -131,7 +131,7 @@ one.
 ## DR-004 — JTable does not advertise `get_cells` / `get_cell_count`
 
 **Status:** Accepted
-**Applies to:** UC-002 BR-06 step 6b, UC-020, UC-021
+**Applies to:** T-002 BR-06 step 6b, T-020, T-021
 
 **Decision.** `swing_get_cells` and `swing_get_cell_count` are advertised only
 for `JList` and `JTree`. JTable is excluded from BR-06 step 6b. Row-level
@@ -144,8 +144,8 @@ access to JTable is via `swing_get_items` (always implicit from the
   ref on a JTable. Interactive cell *editors* only appear in the accessibility
   tree while a cell is being actively edited, so `get_cells` cannot reach them
   as a supported discovery workflow either.
-- Index-space mismatch. The snapshot speaks in rows (UC-002 SC-6:
-  `- row N: Val1 | Val2 | Val3`) and selection tools (UC-014, UC-017 BR-09)
+- Index-space mismatch. The snapshot speaks in rows (T-002 SC-6:
+  `- row N: Val1 | Val2 | Val3`) and selection tools (T-014, T-017 BR-09)
   use the same row-based index space. `get_cells` uses a flat row-major
   cell-index space (`row*cols + col`). If both were advertised, the AI would
   see `... and 45 more rows` in the snapshot and then receive
@@ -169,7 +169,7 @@ row-dumping tools — do not resurrect cell-indexed access.
 ## DR-005 — `swing_close` dispatches WM events then verifies out-of-band
 
 **Status:** Superseded by DR-006 on 2026-04-15
-**Applies to:** UC-011
+**Applies to:** T-011
 **Decided:** 2026-04-01
 **Superseded:** 2026-04-15
 
@@ -180,14 +180,14 @@ to the client. Replaced when DR-006 made fire-and-forget the **universal**
 dispatch model for mutations: `swing_close` now posts `WINDOW_CLOSING` (or
 `doDefaultCloseAction()` for JInternalFrame) via `SwingUtilities.invokeLater()`
 and returns `null` immediately, with no synchronous outcome check. The client
-verifies outcome by calling `swing_snapshot` (UC-011 BR-03/BR-04). The
+verifies outcome by calling `swing_snapshot` (T-011 BR-03/BR-04). The
 HIDE_ON_CLOSE and DO_NOTHING_ON_CLOSE branches collapse into the same
 fire-and-forget path; the snapshot is the source of truth.
 
-**Carryovers still in force** (now documented directly in UC-011, not here):
-- Undecorated windows are refused via `supportsClose() == false` (UC-011 BR-05).
+**Carryovers still in force** (now documented directly in T-011, not here):
+- Undecorated windows are refused via `supportsClose() == false` (T-011 BR-05).
 - `EXIT_ON_CLOSE` frames are refused via `supportsClose() == false`
-  (UC-011 BR-09); stale-ref path is covered by a screen test only because
+  (T-011 BR-09); stale-ref path is covered by a screen test only because
   `EXIT_ON_CLOSE` frames are `Window` instances and can't be instantiated
   headless.
 
@@ -285,7 +285,7 @@ wrapper-level lock closes that HTTP-thread gap.
 ## DR-008 — JDesktopPane and JDesktopIcon snapshot strategy
 
 **Status:** Accepted
-**Applies to:** UC-002 (snapshot), UC-011 (close), future minimize/restore UCs
+**Applies to:** T-002 (snapshot), T-011 (close), future minimize/restore UCs
 **Decided:** 2026-04-14
 
 **Decision bundle:**
@@ -386,7 +386,7 @@ evolving years ago — no risk of refactoring or removal.
 ## DR-009 — Synthetic `ICONIFIED` state for JFrame
 
 **Status:** Accepted
-**Applies to:** UC-002 (snapshot states), UC-023 (swing_restore)
+**Applies to:** T-002 (snapshot states), T-023 (swing_restore)
 **Decided:** 2026-04-14
 
 **Decision.** `ICONIFIED` becomes a **synthetic state** in the snapshot,
@@ -406,7 +406,7 @@ snapshot. The `[iconified]` annotation tells the AI the window is
 minimized to the OS taskbar.
 
 `frame.setExtendedState(frame.getExtendedState() & ~Frame.ICONIFIED)`
-restores a minimized JFrame programmatically (UC-023). This clears only
+restores a minimized JFrame programmatically (T-023). This clears only
 the `ICONIFIED` bit and preserves other extended-state bits (e.g.
 `MAXIMIZED_BOTH`), so an iconified-maximized frame is restored to
 maximized rather than normal. `setState(Frame.NORMAL)` is not used
@@ -587,7 +587,7 @@ descriptions.
 ## DR-011 — Password fields are not readable
 
 **Status:** Accepted
-**Applies to:** UC-002 (snapshot action list), UC-005 (`swing_get_text`)
+**Applies to:** T-002 (snapshot action list), T-005 (`swing_get_text`)
 **Decided:** 2026-04-15
 
 **Decision.** Any accessible whose role is `AccessibleRole.PASSWORD_TEXT`
@@ -595,7 +595,7 @@ descriptions.
 component that adopts the same role) is treated as non-readable by the
 MCP layer:
 
-1. The snapshot's action-list builder (UC-002 BR-06 step 4) **never emits
+1. The snapshot's action-list builder (T-002 BR-06 step 4) **never emits
    `get_text`** for a password-role accessible. The `set_text` branch is
    unaffected — password fields still advertise `set_text` (editable) or
    `!set_text` (non-editable, per BR-08).
@@ -606,7 +606,7 @@ MCP layer:
    generic `<ClassName> does not support swing_get_text` (per DR-001) so the AI
    can learn the rule rather than assume the capability is simply absent.
 
-**Why.** UC-006 BR-12 already declares the asymmetric posture: the AI may
+**Why.** T-006 BR-12 already declares the asymmetric posture: the AI may
 *write* a known credential into a password field (necessary for
 AI-driven login-form filling) but may not *read back* the real value
 (would turn the MCP into a credential exfiltration channel). The default
@@ -654,7 +654,7 @@ class-name lookup needed.
   for a password field, luring the AI into a call that returns
   `••••••`, which it then has to interpret. Cheaper short-term but
   leaves two active footguns (misleading value, leaked length).
-- **Drop `set_text` on password fields as well.** Rejected — UC-006
+- **Drop `set_text` on password fields as well.** Rejected — T-006
   BR-12 explicitly protects the write path for login-form filling.
   Dropping it would kill a primary use case in exchange for symmetry
   that provides no security benefit (writing a known value is not
@@ -674,7 +674,7 @@ class-name lookup needed.
 ## DR-012 — `JMenu` does not expose `click`
 
 **Status:** Accepted
-**Applies to:** UC-002 (snapshot action list), UC-004 (`swing_click`),
+**Applies to:** T-002 (snapshot action list), T-004 (`swing_click`),
 `SwingUtils.supportsClick`
 **Decided:** 2026-04-15
 
@@ -692,7 +692,7 @@ interactive target:
 3. When the menu's popup is open (any origin — the user tabbed in, a
    keyboard accelerator fired, the app opened it programmatically), the
    resulting `JPopupMenu` node is pruned from the snapshot whenever its
-   `getInvoker()` is a `JMenu`. See UC-002 BR-06 prune rule HE-5.
+   `getInvoker()` is a `JMenu`. See T-002 BR-06 prune rule HE-5.
    Context popups (right-click menus whose invoker is a `JButton`,
    `JTable`, etc.) are unaffected and render normally.
 
@@ -755,10 +755,10 @@ pattern shows up in real apps.
 ## DR-013 — Snapshot includes inline text/value previews
 
 **Status:** Accepted
-**Applies to:** UC-002 (BR-03 line format), UC-005 (`swing_get_text`),
-UC-012 (`swing_get_value`)
+**Applies to:** T-002 (BR-03 line format), T-005 (`swing_get_text`),
+T-012 (`swing_get_value`)
 **Decided:** 2026-04-15
-**Supersedes:** the "field values are not shown" clause of UC-002 BR-03
+**Supersedes:** the "field values are not shown" clause of T-002 BR-03
 as originally written (pre-amendment). BR-03's own "Revisit if the AI
 needs field values in future" was the designed escalation point; this
 DR takes it.
@@ -926,7 +926,7 @@ the framework reports both, we report both.
 ## DR-014 — Quoted-slot rendering: name uncapped, description capped, always sanitized
 
 **Status:** Accepted
-**Applies to:** UC-002 (BR-03 line format, BR-10 description, BR-12 inline
+**Applies to:** T-002 (BR-03 line format, BR-10 description, BR-12 inline
 preview), `SnapshotNode.calculateSelfLine`, `SnapshotNode.computeInlinePreview`,
 `SwingUtils.sanitizeForQuotedSlot`
 **Decided:** 2026-04-15
@@ -1006,12 +1006,12 @@ invariant. The escape for `"` follows the same logic — the slot is
 quoted in the line format, so embedded quotes must not terminate the
 string visually.
 
-**Long-description retrieval — implemented (UC-024).** When a
+**Long-description retrieval — implemented (T-024).** When a
 description exceeds 120 chars and is capped with `…`, the node
 advertises `get_description` in the snapshot action list and
 receives a ref (even if `get_description` is its sole action).
 `swing_get_description` returns the sanitized but uncapped string
-(up to 1000 chars). See UC-024 for full specification.
+(up to 1000 chars). See T-024 for full specification.
 
 **Interaction with other rules.** The sanitizer runs *before* the
 DR-010 15-char truncation convention and *before* the 120-char
@@ -1067,8 +1067,8 @@ non-HTML description containing `\n` or `"` passes through
 ## DR-015 — `AccessibleRole.LABEL` never advertises `get_text`
 
 **Status:** Accepted
-**Applies to:** UC-002 (BR-06 action-list algorithm, BR-12 inline
-preview gate), UC-005 (`swing_get_text`), `SwingUtils.supportsGetText`
+**Applies to:** T-002 (BR-06 action-list algorithm, BR-12 inline
+preview gate), T-005 (`swing_get_text`), `SwingUtils.supportsGetText`
 **Decided:** 2026-04-15
 
 **Decision.** Any accessible whose role is `AccessibleRole.LABEL` is
@@ -1199,7 +1199,7 @@ other components" (LABEL role), not "labels are editable text"
 ## DR-016 — Modal-stack annotation on snapshot roots
 
 **Status:** Accepted
-**Applies to:** UC-002 (BR-03 line format, Main Flow, BR-14),
+**Applies to:** T-002 (BR-03 line format, Main Flow, BR-14),
 `SnapshotNode` / `SwingSnapshotTool` render path, `SwingUtils`
 **Decided:** 2026-04-15
 
@@ -1351,8 +1351,8 @@ surface.
 ## DR-017 — Tools consider only user-interactable windows
 
 **Status:** Accepted
-**Applies to:** `MCPServer.getConsideredComponents()`, UC-002
-(snapshot), UC-003 (screenshot), all future read and mutation tools
+**Applies to:** `MCPServer.getConsideredComponents()`, T-002
+(snapshot), T-003 (screenshot), all future read and mutation tools
 that operate against
 `SwingToolContext.getConsideredComponents()`
 **Decided:** 2026-04-15 (formalising a pre-existing decision
@@ -1448,7 +1448,7 @@ content pane contains a `JPopupMenu` with an invoker that is a
 invoker is something else) are kept — the popup window is their
 only representation.
 
-This is consistent with HE-5 (UC-002), which prunes the `JPopupMenu`
+This is consistent with HE-5 (T-002), which prunes the `JPopupMenu`
 node inside a `JMenu`'s accessibility tree for the same duplication
 reason. The heavyweight-window filter catches the case at the
 root-selection layer; HE-5 catches it at the pruning layer.
@@ -1569,7 +1569,7 @@ pure fire-and-forget design explored here.
 ## DR-019 — Snapshot suppresses children of iconified Frames
 
 **Status:** Implemented
-**Applies to:** UC-002 (swing_snapshot), SC-8
+**Applies to:** T-002 (swing_snapshot), SC-8
 **Decided:** 2026-04-16
 
 **Motivation.** UX feedback from an AI-client session: when a

@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for {@link ComponentClassResolver} — the implementation of
- * UC-002 BR-11 (component identity slot).
+ * T-002 BR-11 (component identity slot).
  */
 class ComponentClassResolverTest {
 

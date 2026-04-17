@@ -704,13 +704,13 @@ class SnapshotNode {
         final StringBuilder sb = new StringBuilder();
         AccessibleContext ctx = accessible.getAccessibleContext();
         AccessibleRole role = ctx != null ? ctx.getAccessibleRole() : null;
-        // UC-002 BR-11: component identity slot is "JClass (role)",
+        // T-002 BR-11: component identity slot is "JClass (role)",
         // "Concrete -> JClass (role)", or "(role)" for non-Component accessibles.
         sb.append(ComponentClassResolver.resolveIdentitySlot(accessible));
 
-        // UC-002 SC-2: emit the 0-based tab index inline for JTabbedPane pages,
+        // T-002 SC-2: emit the 0-based tab index inline for JTabbedPane pages,
         // so an AI client can pass it straight to swing_set_selection as [N]
-        // without a separate enumeration call (UC-015). Mirrors the JTable
+        // without a separate enumeration call (T-015). Mirrors the JTable
         // row rendering pattern (- row N: …).
         if (role == AccessibleRole.PAGE_TAB && ctx != null) {
             int tabIndex = ctx.getAccessibleIndexInParent();
@@ -721,7 +721,7 @@ class SnapshotNode {
 
         // Name (omit if blank) — uses getEffectiveAccessibleName for
         // JInternalFrame (accessible name → title) and JDesktopIcon
-        // (icon name → frame name → frame title). See UC-002 SC-5.
+        // (icon name → frame name → frame title). See T-002 SC-5.
         // Sanitised per BR-13 / DR-014: whitespace collapsed, embedded
         // quotes escaped. Uncapped — name is identity (DR-014 §2).
         String name = SwingUtils.sanitizeForQuotedSlot(
@@ -958,7 +958,7 @@ class SnapshotNode {
         // Step 6b: content discovery for truncated large data components.
         // JTable is excluded — its cells are stamp-painted plain text labels
         // with no actionable children; use swing_get_items instead
-        // (UC-002 step 6b, UC-020 BR-03).
+        // (T-002 step 6b, T-020 BR-03).
         if (truncated && SwingUtils.isGetCellsSupported(accessible)) {
             actions.add("get_cell_count");
             actions.add("get_cells");
@@ -979,7 +979,7 @@ class SnapshotNode {
             actions.add("restore");
         }
 
-        // Step 10 (UC-024): description retrieval when description is capped.
+        // Step 10 (T-024): description retrieval when description is capped.
         // The resolved description exceeds MAX_DESCRIPTION_LENGTH → the snapshot
         // will cap it with '…', so advertise get_description so the AI can
         // retrieve the full text. This can be the sole action on a node

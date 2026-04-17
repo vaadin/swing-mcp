@@ -1,4 +1,4 @@
-# UC-004: swing_click
+# T-004: swing_click
 
 **Status:** Implemented
 **Date:** 2026-03-31

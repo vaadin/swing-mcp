@@ -13,7 +13,7 @@ import javax.accessibility.Accessible;
  * {@code AccessibleContext.getAccessibleChildrenCount()} that lets the AI client
  * learn the cell count without fetching any cells.</p>
  *
- * @see <a href="use-case-021-swing-get-cell-count.md">UC-021</a>
+ * @see <a href="tool-021-swing-get-cell-count.md">T-021</a>
  */
 public class SwingGetCellCountTool extends AbstractSwingTool {
 

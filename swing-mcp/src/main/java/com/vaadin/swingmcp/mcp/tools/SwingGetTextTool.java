@@ -14,7 +14,7 @@ import javax.accessibility.AccessibleContext;
  * <p>Looks up the component by ref, verifies it supports the {@code get_text} action,
  * then reads the text via the accessibility API.</p>
  *
- * @see <a href="use-case-005-swing-get-text.md">UC-005</a>
+ * @see <a href="tool-005-swing-get-text.md">T-005</a>
  */
 public class SwingGetTextTool extends AbstractSwingTool {
 

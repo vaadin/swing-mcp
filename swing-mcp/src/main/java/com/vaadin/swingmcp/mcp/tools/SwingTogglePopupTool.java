@@ -15,7 +15,7 @@ import javax.swing.SwingUtilities;
  * <p>Looks up the component by ref, verifies it supports the toggle-popup action
  * and is effectively enabled, then invokes the matching {@link AccessibleAction}.</p>
  *
- * @see <a href="use-case-007-swing-toggle-popup.md">UC-007</a>
+ * @see <a href="tool-007-swing-toggle-popup.md">T-007</a>
  */
 public class SwingTogglePopupTool extends AbstractSwingTool {
 

@@ -24,7 +24,7 @@ import java.util.Set;
  * (0-based index + name). For JTable, index is the row index and name is a
  * pipe-separated summary of cell values.</p>
  *
- * @see <a href="use-case-014-swing-get-selection.md">UC-014</a>
+ * @see <a href="tool-014-swing-get-selection.md">T-014</a>
  */
 public class SwingGetSelectionTool extends AbstractSwingTool {
 

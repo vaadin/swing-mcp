@@ -1,4 +1,4 @@
-# UC-024: swing_get_description
+# T-024: swing_get_description
 
 **Status:** Draft
 **Date:** 2026-04-16
@@ -15,7 +15,7 @@ Returns the full, uncapped description of a component. The snapshot caps descrip
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | The description is resolved using the **same logic** as the snapshot description slot (UC-002 BR-10): (a) `AccessibleContext.getAccessibleDescription()` if non-blank after HTML cleanup, else (b) tooltip via `SwingUtils.getTooltipAsText()` if non-blank. **HTML cleanup** applies to both sources via `SwingUtils.htmlToPlainText()`. The result then passes through `SwingUtils.sanitizeForQuotedSlot()` (whitespace collapse, `"` escaping, leading/trailing trim). The 120-character cap is **not** applied. |
+| BR-03 | The description is resolved using the **same logic** as the snapshot description slot (T-002 BR-10): (a) `AccessibleContext.getAccessibleDescription()` if non-blank after HTML cleanup, else (b) tooltip via `SwingUtils.getTooltipAsText()` if non-blank. **HTML cleanup** applies to both sources via `SwingUtils.htmlToPlainText()`. The result then passes through `SwingUtils.sanitizeForQuotedSlot()` (whitespace collapse, `"` escaping, leading/trailing trim). The 120-character cap is **not** applied. |
 | BR-04 | The tool always succeeds if the ref is valid. If the component has no description (both sources resolve to null/blank after cleanup), the tool returns `MCPProtocol.Content.text("")` — an explicit empty-string text result. There is no `supportsGetDescription()` gate — every component conceptually has a description (possibly empty). |
 | BR-05 | All Swing component access happens on the EDT via `runInEDT()`. |
 | BR-06 | `swing_get_description` is a read-only tool: `isMutation()` returns `false` and the ref map is **not** cleared after invocation. |
@@ -42,14 +42,14 @@ Execution order:
 
 - **No `supportsGetDescription()` gate.** Unlike `swing_get_text` (which requires `AccessibleText` and excludes LABEL/PASSWORD roles), every component in Swing has a description slot — it is simply often empty. Gating on "has a description" would require pre-reading the description to check, for no benefit. The tool returns the description if present, or empty string if not. The AI can already see from the snapshot whether a description exists (the `"description"` slot is visible).
 - **Relationship to snapshot `get_description` action.** The snapshot's BR-06 action algorithm is extended (see **Snapshot changes** below) to advertise `get_description` only when the description was capped (truncated at 120 chars). However, the tool itself accepts any valid ref — calling it on a non-capped or description-less component simply returns the short/empty description. This mirrors `swing_get_text` which succeeds on any text-supporting component regardless of whether the inline preview was truncated.
-- **Action is read-only.** `get_description` is never prefixed with `!` (BR-08 of UC-002) — it is always available, like `get_text` and `get_value`.
+- **Action is read-only.** `get_description` is never prefixed with `!` (BR-08 of T-002) — it is always available, like `get_text` and `get_value`.
 - **Ref assignment on description-only nodes.** Before this UC, nodes without any action from the BR-06 algorithm received no ref. This UC adds `get_description` as a new action that can be the sole reason a node gets a ref. This is expected to be infrequent (most components have descriptions well under 120 chars) and provides the AI access to semantically important long text that would otherwise be inaccessible.
 
 ---
 
 ## Snapshot changes
 
-The following changes to UC-002 are required:
+The following changes to T-002 are required:
 
 ### Action Label Algorithm (BR-06) — new step 8
 

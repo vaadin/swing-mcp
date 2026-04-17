@@ -16,7 +16,7 @@ import javax.accessibility.Accessible;
  * first, tooltip fallback second, HTML cleanup and sanitisation applied —
  * but without the 120-character cap.</p>
  *
- * @see <a href="use-case-024-swing-get-description.md">UC-024</a>
+ * @see <a href="tool-024-swing-get-description.md">T-024</a>
  */
 public class SwingGetDescriptionTool extends AbstractSwingTool {
 
