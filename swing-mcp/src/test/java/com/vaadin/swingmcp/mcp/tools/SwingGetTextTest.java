@@ -26,7 +26,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
     void setUp() {
         snapshotTool = new SwingSnapshotTool();
         getTextTool = new SwingGetTextTool();
-        context = new SwingToolContext();
+        context = new SwingToolContext(Runnable::run);
     }
 
     private void snapshot(Component... roots) throws Exception {

@@ -26,7 +26,7 @@ class SwingSetValueTest extends AbstractHeadlessTest {
     void setUp() {
         snapshotTool = new SwingSnapshotTool();
         setValueTool = new SwingSetValueTool();
-        context = new SwingToolContext();
+        context = new SwingToolContext(Runnable::run);
     }
 
     private void snapshot(Component... roots) throws Exception {

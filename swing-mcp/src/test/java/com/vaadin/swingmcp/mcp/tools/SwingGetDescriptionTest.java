@@ -23,7 +23,7 @@ class SwingGetDescriptionTest extends AbstractHeadlessTest {
     void setUp() {
         snapshotTool = new SwingSnapshotTool();
         getDescTool = new SwingGetDescriptionTool();
-        context = new SwingToolContext();
+        context = new SwingToolContext(Runnable::run);
     }
 
     private String snapshot(Component... roots) throws Exception {

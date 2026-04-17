@@ -27,7 +27,7 @@ class SwingSetTextScreenTest extends AbstractScreenTest {
     void setUp() {
         snapshotTool = new SwingSnapshotTool();
         setTextTool = new SwingSetTextTool();
-        context = new SwingToolContext();
+        context = new SwingToolContext(Runnable::run);
     }
 
     private void snapshot(Component... roots) throws Exception {

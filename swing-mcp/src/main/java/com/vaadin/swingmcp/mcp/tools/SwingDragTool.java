@@ -164,7 +164,7 @@ public class SwingDragTool extends AbstractSwingTool {
         boolean useRobot = !GraphicsEnvironment.isHeadless() && source.component.isShowing();
 
         if (useRobot) {
-            dispatchViaRobot(source, target, waypoints);
+            dispatchViaRobot(source, target, waypoints, context);
         } else {
             dispatchViaSynthetic(source, target, waypoints);
         }
@@ -206,7 +206,8 @@ public class SwingDragTool extends AbstractSwingTool {
      */
     private void dispatchViaRobot(SwingUtils.ComponentAndPoint source,
                                   SwingUtils.ComponentAndPoint target,
-                                  List<SwingUtils.ComponentAndPoint> waypoints) {
+                                  List<SwingUtils.ComponentAndPoint> waypoints,
+                                  SwingToolContext context) {
         Point sourceOnScreen = source.component.getLocationOnScreen();
         int pressScreenX = sourceOnScreen.x + source.x;
         int pressScreenY = sourceOnScreen.y + source.y;
@@ -226,15 +227,13 @@ public class SwingDragTool extends AbstractSwingTool {
 
         Runnable robotDrag = SwingUtils.createRobotDragAction(
                 pressScreenX, pressScreenY, dropScreenX, dropScreenY, screenWaypoints);
-        Thread t = new Thread(() -> {
+        context.getExecutor().execute(() -> {
             try {
                 robotDrag.run();
             } catch (Exception e) {
                 LOG.warning("Robot drag failed: " + e.getMessage());
             }
-        }, "swing-drag-robot");
-        t.setDaemon(true);
-        t.start();
+        });
     }
 
     /**

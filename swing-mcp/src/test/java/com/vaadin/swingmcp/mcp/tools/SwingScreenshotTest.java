@@ -26,7 +26,7 @@ class SwingScreenshotTest extends AbstractHeadlessTest {
     @BeforeEach
     void setUp() {
         tool = new SwingScreenshotTool();
-        context = new SwingToolContext();
+        context = new SwingToolContext(Runnable::run);
     }
 
     private MCPProtocol.Content screenshot(Component... roots) throws Exception {

@@ -29,7 +29,7 @@ class SwingGetCellCountScreenTest extends AbstractScreenTest {
     void setUp() {
         snapshotTool = new SwingSnapshotTool();
         tool = new SwingGetCellCountTool();
-        context = new SwingToolContext();
+        context = new SwingToolContext(Runnable::run);
     }
 
     private void snapshot(Component... roots) throws Exception {

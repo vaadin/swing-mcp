@@ -30,7 +30,7 @@ class SwingGetItemsTest extends AbstractHeadlessTest {
         snapshotTool = new SwingSnapshotTool();
         tool = new SwingGetItemsTool();
         getSelectionTool = new SwingGetSelectionTool();
-        context = new SwingToolContext();
+        context = new SwingToolContext(Runnable::run);
     }
 
     private void snapshot(Component... roots) throws Exception {

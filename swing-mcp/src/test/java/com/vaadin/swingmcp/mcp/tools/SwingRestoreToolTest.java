@@ -23,7 +23,7 @@ class SwingRestoreToolTest extends AbstractHeadlessTest {
     void setUp() {
         snapshotTool = new SwingSnapshotTool();
         restoreTool = new SwingRestoreTool();
-        context = new SwingToolContext();
+        context = new SwingToolContext(Runnable::run);
     }
 
     private void snapshot(Component... roots) throws Exception {

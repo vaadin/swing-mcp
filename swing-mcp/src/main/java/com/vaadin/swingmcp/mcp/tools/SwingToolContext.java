@@ -8,6 +8,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.Executor;
 
 /**
  * Contextual information passed to {@link AbstractSwingTool#execute} on every
@@ -34,6 +36,19 @@ public class SwingToolContext {
      * A pre-dispatch validation error does not clear the map.
      */
     private final Map<Integer, Accessible> componentRefs = new HashMap<>();
+    /**
+     * Executor for background work spawned by tools (e.g. Robot-based drag in
+     * {@link SwingDragTool}, which cannot run on the EDT). Supplied at
+     * construction; production passes
+     * {@link com.vaadin.swingmcp.tinymcpserver.TinyMCPServer#getExecutor()}.
+     * Tests that do not exercise background dispatch may pass
+     * {@code Runnable::run}.
+     */
+    private final Executor executor;
+
+    public SwingToolContext(Executor executor) {
+        this.executor = Objects.requireNonNull(executor, "executor");
+    }
 
     public void setConsideredComponents(List<Component> consideredComponents) {
         this.consideredComponents = consideredComponents == null
@@ -51,6 +66,13 @@ public class SwingToolContext {
 
     public void clearRefMap() {
         componentRefs.clear();
+    }
+
+    /**
+     * Returns the executor supplied at construction. See {@link #executor}.
+     */
+    public Executor getExecutor() {
+        return executor;
     }
 
     public void putRef(int ref, Accessible accessible) {

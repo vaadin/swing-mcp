@@ -33,7 +33,7 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         tool = new SwingGetCellsTool();
         clickTool = new SwingClickTool();
         getItemsTool = new SwingGetItemsTool();
-        context = new SwingToolContext();
+        context = new SwingToolContext(Runnable::run);
     }
 
     private String snapshot(Component... roots) throws Exception {

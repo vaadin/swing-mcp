@@ -35,7 +35,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
     void setUp() {
         snapshotTool = new SwingSnapshotTool();
         toggleExpandTool = new SwingToggleExpandTool();
-        context = new SwingToolContext();
+        context = new SwingToolContext(Runnable::run);
     }
 
     private void snapshot(Component... roots) throws Exception {

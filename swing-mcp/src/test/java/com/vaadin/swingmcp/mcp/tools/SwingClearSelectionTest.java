@@ -23,7 +23,7 @@ class SwingClearSelectionTest extends AbstractHeadlessTest {
     void setUp() {
         snapshotTool = new SwingSnapshotTool();
         clearSelectionTool = new SwingClearSelectionTool();
-        context = new SwingToolContext();
+        context = new SwingToolContext(Runnable::run);
     }
 
     private void snapshot(java.awt.Component... roots) throws Exception {

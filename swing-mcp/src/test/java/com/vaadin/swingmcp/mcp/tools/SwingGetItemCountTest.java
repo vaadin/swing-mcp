@@ -30,7 +30,7 @@ class SwingGetItemCountTest extends AbstractHeadlessTest {
         snapshotTool = new SwingSnapshotTool();
         tool = new SwingGetItemCountTool();
         itemsTool = new SwingGetItemsTool();
-        context = new SwingToolContext();
+        context = new SwingToolContext(Runnable::run);
     }
 
     private void snapshot(Component... roots) throws Exception {

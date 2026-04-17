@@ -28,7 +28,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     @BeforeEach
     void setUp() {
         tool = new SwingSnapshotTool();
-        context = new SwingToolContext();
+        context = new SwingToolContext(Runnable::run);
     }
 
     /**

@@ -33,7 +33,7 @@ class SwingIconifyScreenTest extends AbstractScreenTest {
     void setUp() {
         snapshotTool = new SwingSnapshotTool();
         iconifyTool = new SwingIconifyTool();
-        context = new SwingToolContext();
+        context = new SwingToolContext(Runnable::run);
     }
 
     @AfterEach
