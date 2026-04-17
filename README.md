@@ -172,7 +172,7 @@ Add `swing-mcp` as a dependency and start the `MCPServer` from your code:
 
 ```java
 public class Application {
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         new MCPServer().startAndAutoStop();
         SwingUtilities.invokeLater(() -> runApp());
     }

@@ -13,6 +13,15 @@ import java.util.Map;
  * Contextual information passed to {@link AbstractSwingTool#execute} on every
  * invocation. Collects the data that the server resolves <em>before</em> the
  * tool runs (considered components, and in the future potentially more).
+ * <p>
+ * <b>Thread safety:</b> this class is not thread-safe. All mutation and
+ * inspection must be serialised by the caller. In production
+ * ({@code MCPServer.registerTool}) every access happens on the Swing event
+ * dispatch thread (inside {@code runInEDT}), which satisfies this
+ * requirement. Tests may access the context off the EDT provided they use
+ * a synchronous hand-off such as {@link javax.swing.SwingUtilities#invokeAndWait}
+ * to establish happens-before between the test thread and the EDT; no
+ * concurrent access from multiple threads is ever permitted.
  */
 public class SwingToolContext {
 

@@ -1,5 +1,6 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -29,6 +30,24 @@ class TinyMCPServerSessionTest {
         server.addTool("echo", "Echo tool",
                 new InputSchemaBuilder().requiredString("msg", "message").build(),
                 params -> MCPProtocol.Content.text((String) params.get("msg")));
+        server.addTool("whoami", "Returns MCPSession.getCurrent().getId()",
+                new InputSchemaBuilder().build(),
+                params -> MCPProtocol.Content.text(MCPSession.getCurrent().getId()));
+        server.addTool("set_attr", "Store an attribute on the current session",
+                new InputSchemaBuilder()
+                        .requiredString("key", "key")
+                        .requiredString("value", "value")
+                        .build(),
+                params -> {
+                    MCPSession.getCurrent().setAttribute((String) params.get("key"), params.get("value"));
+                    return MCPProtocol.Content.text("ok");
+                });
+        server.addTool("get_attr", "Read an attribute from the current session",
+                new InputSchemaBuilder().requiredString("key", "key").build(),
+                params -> {
+                    Object v = MCPSession.getCurrent().getAttribute((String) params.get("key"));
+                    return MCPProtocol.Content.text(v == null ? "<null>" : v.toString());
+                });
         server.start();
         http = HttpClient.newHttpClient();
         serverUri = URI.create(server.getUrl());
@@ -224,6 +243,87 @@ class TinyMCPServerSessionTest {
         // Session B still works
         HttpResponse<String> respB2 = post(jsonRpc("tools/list", 13), sessionB);
         assertEquals(200, respB2.statusCode());
+    }
+
+    // ===== MCPSession.getCurrent() inside tool callback =====
+
+    private static String jsonRpcToolsCall(int id, String tool, String argsJson) {
+        return "{\"jsonrpc\":\"2.0\",\"id\":" + id
+                + ",\"method\":\"tools/call\",\"params\":{\"name\":\"" + tool
+                + "\",\"arguments\":" + argsJson + "}}";
+    }
+
+    private static String firstTextContent(HttpResponse<String> resp) {
+        JsonObject body = MCPProtocol.fromJson(resp.body(), JsonObject.class);
+        JsonObject result = body.getAsJsonObject("result");
+        assertNotNull(result, "expected a result, got: " + resp.body());
+        JsonArray content = result.getAsJsonArray("content");
+        assertEquals(1, content.size());
+        return content.get(0).getAsJsonObject().get("text").getAsString();
+    }
+
+    @Test
+    void getCurrentInsideToolCallReturnsInvokingSession() throws Exception {
+        String sessionId = initialize();
+        HttpResponse<String> resp = post(jsonRpcToolsCall(2, "whoami", "{}"), sessionId);
+        assertEquals(200, resp.statusCode());
+        assertEquals(sessionId, firstTextContent(resp));
+    }
+
+    @Test
+    void getCurrentThrowsOnTestThreadOutsideDispatch() {
+        // handlePost binds/unbinds the ThreadLocal on the HTTP dispatch thread.
+        // The test thread never ran a dispatch, so no session is bound here.
+        assertThrows(NullPointerException.class, MCPSession::getCurrent);
+    }
+
+    @Test
+    void threadLocalIsClearedAfterDispatch() throws Exception {
+        String sessionId = initialize();
+        HttpResponse<String> resp = post(jsonRpcToolsCall(2, "whoami", "{}"), sessionId);
+        assertEquals(200, resp.statusCode());
+        // After the dispatch returns, the test thread still sees no binding.
+        assertThrows(NullPointerException.class, MCPSession::getCurrent);
+    }
+
+    @Test
+    void attributesPersistAcrossToolCallsInSameSession() throws Exception {
+        String sessionId = initialize();
+
+        HttpResponse<String> setResp = post(
+                jsonRpcToolsCall(2, "set_attr", "{\"key\":\"color\",\"value\":\"blue\"}"),
+                sessionId);
+        assertEquals(200, setResp.statusCode());
+        assertEquals("ok", firstTextContent(setResp));
+
+        HttpResponse<String> getResp = post(
+                jsonRpcToolsCall(3, "get_attr", "{\"key\":\"color\"}"),
+                sessionId);
+        assertEquals(200, getResp.statusCode());
+        assertEquals("blue", firstTextContent(getResp));
+    }
+
+    @Test
+    void attributesAreIsolatedAcrossSessions() throws Exception {
+        String sessionA = initialize();
+        String sessionB = initialize();
+
+        HttpResponse<String> setA = post(
+                jsonRpcToolsCall(2, "set_attr", "{\"key\":\"color\",\"value\":\"red\"}"),
+                sessionA);
+        assertEquals(200, setA.statusCode());
+
+        HttpResponse<String> getB = post(
+                jsonRpcToolsCall(3, "get_attr", "{\"key\":\"color\"}"),
+                sessionB);
+        assertEquals(200, getB.statusCode());
+        assertEquals("<null>", firstTextContent(getB));
+
+        HttpResponse<String> getA = post(
+                jsonRpcToolsCall(4, "get_attr", "{\"key\":\"color\"}"),
+                sessionA);
+        assertEquals(200, getA.statusCode());
+        assertEquals("red", firstTextContent(getA));
     }
 
     // ===== acceptNewSession hook =====

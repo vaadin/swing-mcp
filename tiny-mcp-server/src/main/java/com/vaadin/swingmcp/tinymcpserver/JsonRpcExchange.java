@@ -36,23 +36,23 @@ class JsonRpcExchange {
     HttpExchange getHttpExchange() { return exchange; }
     void setSessionId(String sessionId) { this.sessionId = sessionId; }
 
-    void sendResponse(Object result) throws IOException {
+    void sendResponse(Object result) {
         MCPProtocol.JsonRpcResponse response = new MCPProtocol.JsonRpcResponse();
         response.setId(requestId);
         response.setResultFrom(result);
         sendJsonBody(200, response.toJson());
     }
 
-    void sendResponseRaw(String resultJson) throws IOException {
+    void sendResponseRaw(String resultJson) {
         String json = "{\"jsonrpc\":\"2.0\",\"id\":" + MCPProtocol.toJson(requestId) + ",\"result\":" + resultJson + "}";
         sendJsonBody(200, json);
     }
 
-    void sendError(int code, String message) throws IOException {
+    void sendError(int code, String message) {
         sendError(200, code, message);
     }
 
-    void sendError(int httpStatus, int code, String message) throws IOException {
+    void sendError(int httpStatus, int code, String message) {
         MCPProtocol.ErrorObject errorObj = new MCPProtocol.ErrorObject();
         errorObj.setCode(code);
         errorObj.setMessage(message);
@@ -63,16 +63,18 @@ class JsonRpcExchange {
         sendJsonBody(httpStatus, GSON_WITH_NULLS.toJson(error));
     }
 
-    void sendToolError(String message) throws IOException {
+    void sendToolError(String message) {
         MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
         result.setIsError(true);
         result.setContent(Collections.singletonList(MCPProtocol.Content.text(message)));
         sendResponse(result);
     }
 
-    String readBody() throws IOException {
+    String readBody() {
         try (InputStream is = exchange.getRequestBody()) {
             return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new RuntimeIOException(e);
         }
     }
 
@@ -85,7 +87,7 @@ class JsonRpcExchange {
      * Session ID validation is handled by {@link TinyMCPServer} before
      * this method is called.
      */
-    MCPProtocol.JsonRpcRequest parsePost() throws IOException {
+    MCPProtocol.JsonRpcRequest parsePost() {
         String body = readBody();
         LOG.fine("Received POST: " + body);
 
@@ -126,28 +128,36 @@ class JsonRpcExchange {
         return request;
     }
 
-    void sendPlain(int statusCode, String body) throws IOException {
-        if (body == null || body.isEmpty()) {
-            exchange.sendResponseHeaders(statusCode, -1);
-        } else {
-            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
-            exchange.sendResponseHeaders(statusCode, bytes.length);
-            try (OutputStream os = exchange.getResponseBody()) {
-                os.write(bytes);
+    void sendPlain(int statusCode, String body) {
+        try {
+            if (body == null || body.isEmpty()) {
+                exchange.sendResponseHeaders(statusCode, -1);
+            } else {
+                byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+                exchange.sendResponseHeaders(statusCode, bytes.length);
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(bytes);
+                }
             }
+            exchange.close();
+        } catch (IOException e) {
+            throw new RuntimeIOException(e);
         }
-        exchange.close();
     }
 
-    private void sendJsonBody(int statusCode, String json) throws IOException {
+    private void sendJsonBody(int statusCode, String json) {
         byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().set("Content-Type", "application/json");
         if (sessionId != null) {
             exchange.getResponseHeaders().set("Mcp-Session-Id", sessionId);
         }
-        exchange.sendResponseHeaders(statusCode, bytes.length);
-        try (OutputStream os = exchange.getResponseBody()) {
-            os.write(bytes);
+        try {
+            exchange.sendResponseHeaders(statusCode, bytes.length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(bytes);
+            }
+        } catch (IOException e) {
+            throw new RuntimeIOException(e);
         }
     }
 }
