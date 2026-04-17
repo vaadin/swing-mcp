@@ -161,20 +161,18 @@ public class TinyMCPServer {
     /**
      * Registers a prompt with this server. Must be called before
      * {@link #start()}.
-     * <p>
-     * MCP prompts always pass string arguments, so the argument list is
-     * typed directly (use {@link PromptArgumentsBuilder}).
      *
      * @param name        the prompt name; not null, not blank
      * @param description human-readable description of the prompt; not null, not blank
-     * @param arguments   the argument list; not null (pass an empty list
-     *                    for no arguments); use {@link PromptArgumentsBuilder}
+     * @param arguments   the argument builder (pass an empty
+     *                    {@link PromptArgumentsBuilder} for a zero-argument
+     *                    prompt); not null
      * @param function    the handler to invoke for {@code prompts/get}; not null
      * @throws IllegalArgumentException if any argument is null/blank
      * @throws IllegalStateException    if the server has already been started
      * @throws IllegalStateException    if a prompt with the same name is already registered
      */
-    public void addPrompt(String name, String description, List<MCPProtocol.PromptArgument> arguments, PromptFunction function) {
+    public void addPrompt(String name, String description, PromptArgumentsBuilder arguments, PromptFunction function) {
         if (started) {
             throw new IllegalStateException("Cannot add prompts after server has been started");
         }

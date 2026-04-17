@@ -18,8 +18,8 @@ class MCPPromptHandlerTest {
 
     // ===== Registration validation =====
 
-    private static List<MCPProtocol.PromptArgument> emptyArgs() {
-        return new PromptArgumentsBuilder().build();
+    private static PromptArgumentsBuilder emptyArgs() {
+        return new PromptArgumentsBuilder();
     }
 
     private static TinyMCPServer.PromptFunction constPrompt() {
@@ -70,7 +70,7 @@ class MCPPromptHandlerTest {
     }
 
     @Test
-    void addPromptRejectsNullArgumentList() {
+    void addPromptRejectsNullBuilder() {
         MCPPromptHandler handler = new MCPPromptHandler();
         assertThrows(IllegalArgumentException.class, () ->
                 handler.addPrompt("my_prompt", "desc", null, constPrompt()));
@@ -81,37 +81,6 @@ class MCPPromptHandlerTest {
         MCPPromptHandler handler = new MCPPromptHandler();
         assertThrows(IllegalArgumentException.class, () ->
                 handler.addPrompt("my_prompt", "desc", emptyArgs(), null));
-    }
-
-    @Test
-    void addPromptRejectsArgumentListWithNullEntry() {
-        MCPPromptHandler handler = new MCPPromptHandler();
-        List<MCPProtocol.PromptArgument> args = new java.util.ArrayList<>();
-        args.add(null);
-        assertThrows(IllegalArgumentException.class, () ->
-                handler.addPrompt("my_prompt", "desc", args, constPrompt()));
-    }
-
-    @Test
-    void addPromptRejectsArgumentWithBlankName() {
-        MCPPromptHandler handler = new MCPPromptHandler();
-        MCPProtocol.PromptArgument arg = new MCPProtocol.PromptArgument();
-        arg.setName("  ");
-        arg.setDescription("desc");
-        arg.setRequired(true);
-        assertThrows(IllegalArgumentException.class, () ->
-                handler.addPrompt("my_prompt", "desc", List.of(arg), constPrompt()));
-    }
-
-    @Test
-    void addPromptRejectsDuplicateArgumentNames() {
-        MCPPromptHandler handler = new MCPPromptHandler();
-        MCPProtocol.PromptArgument a1 = new MCPProtocol.PromptArgument();
-        a1.setName("x"); a1.setDescription("first"); a1.setRequired(true);
-        MCPProtocol.PromptArgument a2 = new MCPProtocol.PromptArgument();
-        a2.setName("x"); a2.setDescription("second"); a2.setRequired(false);
-        assertThrows(IllegalArgumentException.class, () ->
-                handler.addPrompt("my_prompt", "desc", List.of(a1, a2), constPrompt()));
     }
 
     @Test
@@ -143,10 +112,9 @@ class MCPPromptHandlerTest {
     @Test
     void handlePromptsListReturnsRegisteredDescriptors() {
         MCPPromptHandler handler = new MCPPromptHandler();
-        List<MCPProtocol.PromptArgument> argSpec = new PromptArgumentsBuilder()
+        PromptArgumentsBuilder argSpec = new PromptArgumentsBuilder()
                 .required("name", "Who to greet")
-                .optional("greeting", "How to greet")
-                .build();
+                .optional("greeting", "How to greet");
         handler.addPrompt("greet", "Greet someone", argSpec, constPrompt());
 
         JsonObject body = dispatch(handler::handlePromptsList);
@@ -207,9 +175,8 @@ class MCPPromptHandlerTest {
     @Test
     void handlePromptsGetReturnsFunctionResult() {
         MCPPromptHandler handler = new MCPPromptHandler();
-        List<MCPProtocol.PromptArgument> argSpec = new PromptArgumentsBuilder()
-                .required("name", "Who")
-                .build();
+        PromptArgumentsBuilder argSpec = new PromptArgumentsBuilder()
+                .required("name", "Who");
         handler.addPrompt("greet", "Greet", argSpec, args -> {
             MCPProtocol.GetPromptResult r = new MCPProtocol.GetPromptResult();
             r.setDescription("Hi " + args.get("name"));
@@ -233,10 +200,9 @@ class MCPPromptHandlerTest {
     @Test
     void handlePromptsGetPassesArgsToFunction() {
         MCPPromptHandler handler = new MCPPromptHandler();
-        List<MCPProtocol.PromptArgument> argSpec = new PromptArgumentsBuilder()
+        PromptArgumentsBuilder argSpec = new PromptArgumentsBuilder()
                 .required("a", "A")
-                .optional("b", "B")
-                .build();
+                .optional("b", "B");
         java.util.concurrent.atomic.AtomicReference<Map<String, String>> seen = new java.util.concurrent.atomic.AtomicReference<>();
         handler.addPrompt("cap", "capture", argSpec, args -> {
             seen.set(args);
@@ -252,10 +218,9 @@ class MCPPromptHandlerTest {
     @Test
     void handlePromptsGetOmitsOptionalArgs() {
         MCPPromptHandler handler = new MCPPromptHandler();
-        List<MCPProtocol.PromptArgument> argSpec = new PromptArgumentsBuilder()
+        PromptArgumentsBuilder argSpec = new PromptArgumentsBuilder()
                 .required("a", "A")
-                .optional("b", "B")
-                .build();
+                .optional("b", "B");
         java.util.concurrent.atomic.AtomicReference<Map<String, String>> seen = new java.util.concurrent.atomic.AtomicReference<>();
         handler.addPrompt("cap", "capture", argSpec, args -> {
             seen.set(args);
@@ -280,9 +245,8 @@ class MCPPromptHandlerTest {
     @Test
     void handlePromptsGetMissingRequiredArgThrows() {
         MCPPromptHandler handler = new MCPPromptHandler();
-        List<MCPProtocol.PromptArgument> argSpec = new PromptArgumentsBuilder()
-                .required("name", "Who")
-                .build();
+        PromptArgumentsBuilder argSpec = new PromptArgumentsBuilder()
+                .required("name", "Who");
         handler.addPrompt("greet", "Greet", argSpec, constPrompt());
         MCPServerException ex = assertThrows(MCPServerException.class, () ->
                 doGet(handler, buildGetRequest("greet", Map.of())));
@@ -292,9 +256,8 @@ class MCPPromptHandlerTest {
     @Test
     void handlePromptsGetUnknownArgBecomesInvalidParams() {
         MCPPromptHandler handler = new MCPPromptHandler();
-        List<MCPProtocol.PromptArgument> argSpec = new PromptArgumentsBuilder()
-                .required("name", "Who")
-                .build();
+        PromptArgumentsBuilder argSpec = new PromptArgumentsBuilder()
+                .required("name", "Who");
         handler.addPrompt("greet", "Greet", argSpec, constPrompt());
         MCPServerException ex = assertThrows(MCPServerException.class, () ->
                 doGet(handler, buildGetRequest("greet", Map.of("name", "X", "stray", "Y"))));

@@ -51,8 +51,7 @@ class TinyMCPServerSessionTest {
         server.addPrompt("greet", "Greet someone",
                 new PromptArgumentsBuilder()
                         .required("name", "Who to greet")
-                        .optional("style", "Greeting style")
-                        .build(),
+                        .optional("style", "Greeting style"),
                 args -> {
                     MCPProtocol.GetPromptResult r = new MCPProtocol.GetPromptResult();
                     String style = args.getOrDefault("style", "friendly");

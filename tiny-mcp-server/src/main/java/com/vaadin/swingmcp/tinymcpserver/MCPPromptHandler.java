@@ -48,18 +48,16 @@ class MCPPromptHandler {
      *                    {@code [a-zA-Z_][a-zA-Z0-9_]*}
      * @param description human-readable description of the prompt; not null,
      *                    not blank
-     * @param arguments   the argument list — typically built with
-     *                    {@link PromptArgumentsBuilder}; may be empty
+     * @param arguments   the argument builder; not null (use an empty
+     *                    builder for a zero-argument prompt)
      * @param function    the handler to invoke when the prompt is fetched;
      *                    not null
-     * @throws IllegalArgumentException if any argument is null/blank, the
-     *                                  name shape is wrong, or the argument
-     *                                  list contains null entries, blank
-     *                                  names, or duplicate names
+     * @throws IllegalArgumentException if any argument is null/blank or the
+     *                                  name shape is wrong
      * @throws IllegalStateException    if a prompt with the same name is
      *                                  already registered
      */
-    void addPrompt(String name, String description, List<MCPProtocol.PromptArgument> arguments,
+    void addPrompt(String name, String description, PromptArgumentsBuilder arguments,
             TinyMCPServer.PromptFunction function) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Prompt name must not be null or blank");
@@ -71,28 +69,15 @@ class MCPPromptHandler {
             throw new IllegalArgumentException("Prompt description must not be null or blank");
         }
         if (arguments == null) {
-            throw new IllegalArgumentException("Prompt arguments must not be null (pass an empty list for no arguments)");
+            throw new IllegalArgumentException("PromptArgumentsBuilder must not be null (pass an empty builder for a zero-argument prompt)");
         }
         if (function == null) {
             throw new IllegalArgumentException("PromptFunction must not be null");
         }
-        java.util.Set<String> seen = new java.util.HashSet<>();
-        for (MCPProtocol.PromptArgument arg : arguments) {
-            if (arg == null) {
-                throw new IllegalArgumentException("Prompt arguments list must not contain null entries");
-            }
-            String argName = arg.getName();
-            if (argName == null || argName.isBlank()) {
-                throw new IllegalArgumentException("Prompt argument name must not be null or blank");
-            }
-            if (!seen.add(argName)) {
-                throw new IllegalArgumentException("Duplicate prompt argument name: " + argName);
-            }
-        }
         if (prompts.containsKey(name)) {
             throw new IllegalStateException("A prompt with name '" + name + "' is already registered");
         }
-        prompts.put(name, new RegisteredPrompt(name, description, arguments, function));
+        prompts.put(name, new RegisteredPrompt(name, description, arguments.build(), function));
     }
 
     void handlePromptsList(JsonRpcExchange rpc) {
