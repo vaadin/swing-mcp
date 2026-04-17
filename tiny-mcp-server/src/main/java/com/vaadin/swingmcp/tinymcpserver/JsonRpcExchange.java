@@ -74,7 +74,7 @@ class JsonRpcExchange {
         try (InputStream is = exchange.getRequestBody()) {
             return new String(is.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
-            throw new RuntimeIOException(e);
+            throw new TransportIOException(e);
         }
     }
 
@@ -141,7 +141,7 @@ class JsonRpcExchange {
             }
             exchange.close();
         } catch (IOException e) {
-            throw new RuntimeIOException(e);
+            throw new TransportIOException(e);
         }
     }
 
@@ -157,7 +157,7 @@ class JsonRpcExchange {
                 os.write(bytes);
             }
         } catch (IOException e) {
-            throw new RuntimeIOException(e);
+            throw new TransportIOException(e);
         }
     }
 }

@@ -266,7 +266,7 @@ public class TinyMCPServer {
             httpServer = HttpServer.create(
                     new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port), 0);
         } catch (IOException e) {
-            throw new RuntimeIOException("Failed to bind HTTP server on port " + port, e);
+            throw new TransportIOException("Failed to bind HTTP server on port " + port, e);
         }
         // If port was 0, the OS assigned an ephemeral port; capture the actual port.
         boundPort = httpServer.getAddress().getPort();
@@ -324,16 +324,34 @@ public class TinyMCPServer {
                     handleDelete(rpc);
                     break;
                 default:
-                    rpc.sendPlain(405, "Method Not Allowed");
+                    trySendPlain(rpc, 405, "Method Not Allowed");
                     break;
             }
-        } catch (Exception e) {
-            LOG.log(Level.SEVERE, "Error handling request", e);
-            try {
-                rpc.sendPlain(500, "Internal Server Error");
-            } catch (RuntimeIOException ioe) {
-                LOG.log(Level.SEVERE, "Failed to send error response", ioe);
-            }
+        } catch (MCPServerException e) {
+            LOG.log(Level.FINE, "Request produced MCP error (code=" + e.getCode() + ")", e);
+            trySendError(rpc, e.getCode(), e.getMessage());
+        } catch (TransportIOException e) {
+            // Transport is dead — no point trying to write another response.
+            LOG.log(Level.WARNING, "Transport I/O failed; abandoning response", e);
+        } catch (RuntimeException e) {
+            LOG.log(Level.SEVERE, "Unexpected error handling request", e);
+            trySendError(rpc, MCPServerException.INTERNAL_ERROR, "Internal error");
+        }
+    }
+
+    private static void trySendError(JsonRpcExchange rpc, int code, String message) {
+        try {
+            rpc.sendError(code, message);
+        } catch (TransportIOException ioe) {
+            LOG.log(Level.FINE, "Could not send error response (transport dead)", ioe);
+        }
+    }
+
+    private static void trySendPlain(JsonRpcExchange rpc, int status, String message) {
+        try {
+            rpc.sendPlain(status, message);
+        } catch (TransportIOException ioe) {
+            LOG.log(Level.FINE, "Could not send plain response (transport dead)", ioe);
         }
     }
 

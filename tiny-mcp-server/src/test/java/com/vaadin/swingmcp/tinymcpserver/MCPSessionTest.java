@@ -64,13 +64,11 @@ class MCPSessionTest {
     }
 
     @Test
-    void unknownMethodReturnsMethodNotFound() throws Exception {
-        FakeHttpExchange exchange = dispatch("nonexistent/method", 1);
-        assertEquals(200, exchange.getResponseCode());
-        JsonObject error = parseResponse(exchange).getAsJsonObject("error");
-        assertNotNull(error);
-        assertEquals(-32601, error.get("code").getAsInt());
-        assertTrue(error.get("message").getAsString().contains("nonexistent/method"));
+    void unknownMethodThrowsMethodNotFound() {
+        MCPServerException ex = assertThrows(MCPServerException.class,
+                () -> dispatch("nonexistent/method", 1));
+        assertEquals(-32601, ex.getCode());
+        assertTrue(ex.getMessage().contains("nonexistent/method"));
     }
 
     @Test
