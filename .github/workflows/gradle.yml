@@ -37,11 +37,11 @@ jobs:
       run: sudo apt-get install -y xvfb
     - name: Build with Gradle (Linux)
       if: runner.os == 'Linux'
-      run: xvfb-run --auto-servernum ./gradlew clean build --no-daemon
+      run: xvfb-run --auto-servernum ./gradlew clean build --no-daemon --no-watch-fs
     - name: Build with Gradle (Windows)
       if: runner.os == 'Windows'
       shell: bash
-      run: ./gradlew clean build --no-daemon
+      run: ./gradlew clean build --no-daemon --no-watch-fs
     - name: Build with Gradle (macOS)
       if: runner.os == 'macOS'
       shell: bash
@@ -49,4 +49,4 @@ jobs:
         # Prevent the JVM from registering a Dock icon on macOS, which can delay
         # AWT initialization on headful CI runners.
         _JAVA_OPTIONS: -Dapple.awt.UIElement=true
-      run: ./gradlew clean build --no-daemon
+      run: ./gradlew clean build --no-daemon --no-watch-fs
