@@ -34,6 +34,7 @@ subprojects {
             // stack trace, so CI logs name the failure inline.
             events = setOf(TestLogEvent.FAILED)
             exceptionFormat = TestExceptionFormat.FULL
+            showCauses = true
         }
     }
 
