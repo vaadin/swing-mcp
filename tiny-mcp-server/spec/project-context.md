@@ -10,27 +10,44 @@ The MCP server is minimalistic:
 - No support for auth of any kind
 - Supports tools, resources, and prompts
 
-### Transport: HTTP only
+### Transports: HTTP and stdio
 
-The MCP server doesn't support STDIO communication, it only supports HTTP.
-**Rationale:** Since this MCP server runs in-process within a Swing app,
-the Swing app itself uses STDIO for its own purposes. STDIO-based MCP
-communication would be polluted by the Swing app's own output. HTTP is
-the cleaner approach.
+The MCP server supports two transports, picked once per instance:
 
-The server binds to `127.0.0.1` only (localhost). No authentication is needed —
-the developer owning the machine is responsible for local security. This is
-sufficient for the Vaadin migration scenario; if the project expands to other
-use cases, security can be revisited.
+- **HTTP** — the in-process embedding case (e.g. inside a Swing app).
+  Binds to `127.0.0.1` only (localhost). Default address: port `18088`,
+  context path `/mcp`. No authentication — the developer owning the
+  machine is responsible for local security. This is sufficient for the
+  Vaadin migration scenario; if the project expands to other use cases,
+  security can be revisited.
+- **Stdio** — newline-delimited JSON-RPC over `System.in` /
+  `System.out`. The standalone-process case: an MCP client (e.g. Claude
+  Code) spawns a JVM running `runStdio()`, and there is no other code
+  in the JVM writing to stdout. Single-session by definition.
 
-Default listen address:
-
-- port: `18088`
-- context path: `/mcp`
+The two transports cover two distinct lifecycles. In-process embedding
+(HTTP) cannot use stdio because the host application owns stdout;
+standalone proxies (stdio) prefer stdio because there is no port to
+coordinate. See DR-007 for the full rationale.
 
 There is no port discovery mechanism. Usually there is exactly one Swing app
 running per machine (the one being migrated to Vaadin). Multiple Swing apps
 on the same machine is a corner case handled by changing the port.
+
+### Embedded MCP client
+
+The tiny-mcp-server subproject also ships a minimal HTTP MCP client in
+a sibling package, `com.vaadin.swingmcp.tinymcpclient`, with just enough
+surface to run a forwarding proxy: `initialize`, `listTools`,
+`callTool`, `close`. The `MCPClient` interface is the public type;
+`TinyMCPClient` is the no-retry concrete implementation that throws
+`MCPSessionLostException` on HTTP 404 — by default the caller is told
+clearly when the session is gone, because re-initializing would silently
+discard session-bound state (e.g. swing-mcp's component refs).
+Stateless callers can opt into transparent recovery via the
+`MCPClient.autoRetry()` default method, which wraps the client in an
+`AutoRetryMCPClient` decorator. Resources and prompts are not in the
+initial client surface — add when a use case asks. See DR-008.
 
 ### Session model
 
