@@ -51,16 +51,17 @@ initial client surface — add when a use case asks. See DR-008.
 
 ### Session model
 
-`TinyMCPServer` itself is multi-session: it keeps a map of active
+`MCPHandler` itself is multi-session: it keeps a map of active
 sessions and routes incoming requests to the one named by the
-`Mcp-Session-Id` header. The subclass used by swing-mcp overrides
-`acceptNewSession()` to enforce a single-session policy, because
-multiple concurrent AI agents controlling the same Swing app would
-cause random concurrency issues (interleaved clicks, snapshot races)
-and make automated testing useless. When that subclass rejects a
-second `initialize`, the client receives HTTP 409 and JSON-RPC error
-`-32002` (`"Another session is already active"`); there is no queuing
-or retry.
+`Mcp-Session-Id` header (in HTTP mode; stdio is single-session by
+definition). swing-mcp's `SwingMCPHandler` constructs its handler
+with the `IntPredicate count -> count == 0` to enforce a
+single-session policy, because multiple concurrent AI agents
+controlling the same Swing app would cause random concurrency issues
+(interleaved clicks, snapshot races) and make automated testing
+useless. When that predicate rejects a second `initialize`, the
+client receives HTTP 409 and JSON-RPC error `-32002` (`"Another
+session is already active"`); there is no queuing or retry.
 
 If an AI agent crashes or disconnects without sending a DELETE, the
 session is evicted by the idle-cleanup tick after 30 minutes of no
@@ -76,7 +77,7 @@ Errors surface in one of three layers — transport failure (socket
 dead), JSON-RPC protocol error (parse / invalid request / method not
 found / invalid params / session state), and tool-layer `isError: true`
 with a recovery hint. All exception-to-response translation happens in
-a single seam in `TinyMCPServer.handleRequest`.
+a single seam in `HttpMCPServer.handleRequest`.
 
 See DR-004 for the full mapping of exception types, JSON-RPC codes,
 and HTTP statuses.

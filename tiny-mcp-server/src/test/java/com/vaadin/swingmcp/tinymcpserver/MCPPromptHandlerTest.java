@@ -22,7 +22,7 @@ class MCPPromptHandlerTest {
         return new PromptArgumentsBuilder();
     }
 
-    private static TinyMCPServer.PromptFunction constPrompt() {
+    private static PromptFunction constPrompt() {
         return request -> {
             MCPProtocol.GetPromptResult r = new MCPProtocol.GetPromptResult();
             r.setMessages(Collections.emptyList());

@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class MCPResourceHandlerTest {
 
-    private static TinyMCPServer.ResourceFunction constResource() {
+    private static ResourceFunction constResource() {
         return request -> List.of(MCPProtocol.ResourceContents.text(request.uri(), "text/plain", "hello"));
     }
 

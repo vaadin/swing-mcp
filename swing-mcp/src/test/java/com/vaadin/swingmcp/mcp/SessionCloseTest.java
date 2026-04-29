@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class SessionCloseTest {
 
-    private static FakeMCPServer server;
+    private static FakeSwingMCPHandler server;
     private static HttpClient http;
     private static URI serverUri;
 
@@ -35,7 +35,7 @@ class SessionCloseTest {
 
     @BeforeAll
     static void startServer() throws Exception {
-        server = new FakeMCPServer(0, "/mcp", false);
+        server = new FakeSwingMCPHandler(0, "/mcp", false);
         server.setConsideredComponents(List.of(new JButton("Test")));
         server.start();
         http = HttpClient.newHttpClient();
@@ -125,7 +125,7 @@ class SessionCloseTest {
         // Try to use a ref without re-snapshotting — should fail because
         // the previous session's ref map was dropped when its MCPSession
         // was removed. The stale-ref check in SwingToolContext throws
-        // MCPServerException (INVALID_PARAMS), which TinyMCPServer renders
+        // MCPServerException (INVALID_PARAMS), which HttpMCPServer renders
         // as a JSON-RPC error.
         HttpResponse<String> staleClickResp = click(1, session2);
         assertEquals(200, staleClickResp.statusCode());

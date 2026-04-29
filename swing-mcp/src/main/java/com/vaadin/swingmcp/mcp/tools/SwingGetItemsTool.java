@@ -80,7 +80,7 @@ public class SwingGetItemsTool extends AbstractSwingTool {
         // selection mode); other components must satisfy supportsSelection.
         requireGetItemsSupported(accessible, "swing_get_items");
 
-        // BR-04: all access on EDT (guaranteed by MCPServer.registerTool)
+        // BR-04: all access on EDT (guaranteed by SwingMCPHandler.registerTool)
         AccessibleContext ac = accessible.getAccessibleContext();
 
         // Step 4: determine totalCount and enumerate items

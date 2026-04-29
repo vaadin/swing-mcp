@@ -5,7 +5,7 @@ headless mode. The screenshot capturing functionality probably requires Xvfb,
 and will be tested elsewhere.
 
 In headless mode, tests can't instantiate Window. Therefore,
-the window Selection functionality must be overridable in MCPServer,
+the window Selection functionality must be overridable in SwingMCPHandler,
 and must be overriden by tests (which provide a list of JPanels instead).
 
 There are two test source sets:
@@ -15,13 +15,13 @@ There are two test source sets:
 - Pure JUnit 6 tests living in `src/test/java/`, mirroring the main package structure.
 - Also uses MCP client library to call MCP tasks.
 - Sets `java.awt.headless` to `true` for fast, display-free execution.
-- The `MCPServerTest` test class:
-    - Starts the MCPServer before all tests, stops it afterwards.
+- The `SwingMCPHandlerTest` test class:
+    - Starts the SwingMCPHandler before all tests, stops it afterwards.
     - A test client is initialized before all tests as well; use the official MCP client with the HTTP Transport and Jackson3.
     - No tools are tested here: each tool has its own separate test class.
 - For every tool test class:
     - Remember we are headless.
-    - `MCPServer.runInEDT(block)` uses `invokeLater` + `CountDownLatch` and would hang waiting for the EDT in headless mode. Tests override `runInEDT` in `FakeMCPServer` to run the block directly on the calling thread instead.
+    - `SwingMCPHandler.runInEDT(block)` uses `invokeLater` + `CountDownLatch` and would hang waiting for the EDT in headless mode. Tests override `runInEDT` in `FakeSwingMCPHandler` to run the block directly on the calling thread instead.
 
 ### `src/testSwing` — Screen-mode tests (`testSwing` task)
 
@@ -103,7 +103,7 @@ require a display and must live in the `testSwing` source set
 
 ## Always Test
 
-* Always smoke test the tool with an actual MCP client: start MCPServer, call the tool with the most simple
+* Always smoke test the tool with an actual MCP client: start SwingMCPHandler, call the tool with the most simple
   case, then stop the server.
 * Prefer assert against the full contents of the string (even if the string is long);
   avoid `.contains()`, `.startWith()` since those make tests less readable.

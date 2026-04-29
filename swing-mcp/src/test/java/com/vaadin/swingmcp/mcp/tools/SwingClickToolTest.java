@@ -43,7 +43,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
 
     /**
      * Clicks the given ref. Assumes snapshot was already called to populate refs.
-     * Clears the ref map afterwards (mirroring MCPServer.registerTool behaviour
+     * Clears the ref map afterwards (mirroring SwingMCPHandler.registerTool behaviour
      * for mutation tools).
      */
     private void click(int ref) throws Exception {

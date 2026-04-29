@@ -53,7 +53,7 @@ public class SwingGetValueTool extends AbstractSwingTool {
                             + " does not support swing_get_value. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
-        // BR-04: all access happens on EDT (guaranteed by MCPServer.registerTool)
+        // BR-04: all access happens on EDT (guaranteed by SwingMCPHandler.registerTool)
         // Step 4: read current value via the shared helper (BR-12 / DR-013
         // shared-read with snapshot inline preview). supportsGetValue already
         // verified getCurrentAccessibleValue() is non-null so readValue

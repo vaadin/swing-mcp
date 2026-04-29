@@ -21,7 +21,7 @@ import java.util.logging.Logger;
  * Request-scoped wrapper around {@link HttpExchange} that provides
  * JSON-RPC response helpers. Created once per incoming request; holds
  * the mutable request ID (set after parsing) and the session ID
- * (set by {@link TinyMCPServer} after routing to a session).
+ * (set by {@link HttpMCPServer} after routing to a session).
  */
 class JsonRpcExchange {
 
@@ -99,9 +99,9 @@ class JsonRpcExchange {
      * for notifications (in which case a 202 Accepted has already been sent).
      * Throws {@link MCPServerException} with an appropriate HTTP status for
      * parse/shape errors — caught and rendered by
-     * {@link TinyMCPServer#handleRequest}.
+     * {@link HttpMCPServer#handleRequest}.
      * <p>
-     * Session ID validation is handled by {@link TinyMCPServer} before
+     * Session ID validation is handled by {@link HttpMCPServer} before
      * this method is called.
      */
     MCPProtocol.JsonRpcRequest parsePost() {

@@ -5,12 +5,12 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class MCPServerTest extends AbstractHeadlessTest {
+class SwingMCPHandlerTest extends AbstractHeadlessTest {
 
     @Test
     void smokeTestStartAndStop() throws Exception {
         // Port 0 → OS-assigned ephemeral port, so parallel test runs don't collide.
-        MCPServer s = new MCPServer(0, "/mcp");
+        SwingMCPHandler s = new SwingMCPHandler(0, "/mcp");
         s.start();
         s.stop();
     }

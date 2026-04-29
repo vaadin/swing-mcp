@@ -37,12 +37,15 @@ class StdioMCPServerTest {
     /** Set if the worker thread aborts unexpectedly. */
     private final AtomicReference<Throwable> workerError = new AtomicReference<>();
 
+    private MCPHandler handler;
+
     @BeforeEach
     void setUp() throws IOException {
         MCPProtocol.Implementation info = new MCPProtocol.Implementation();
         info.setName("Test Stdio Server");
         info.setVersion("1.0");
-        server = new StdioMCPServer(info, "be polite");
+        handler = new MCPHandler(info, "be polite");
+        server = new StdioMCPServer(handler);
     }
 
     @AfterEach
@@ -132,7 +135,7 @@ class StdioMCPServerTest {
 
     @Test
     void toolsCallExecutesRegisteredTool() throws Exception {
-        server.addTool("echo", "Echoes its argument",
+        handler.addTool("echo", "Echoes its argument",
                 new InputSchemaBuilder().requiredString("text", "the text").build(),
                 request -> MCPProtocol.Content.text((String) request.arguments().get("text")));
         BufferedWriter w = startWorker();
@@ -150,7 +153,7 @@ class StdioMCPServerTest {
 
     @Test
     void toolsListReportsRegisteredTools() throws Exception {
-        server.addTool("noop", "Does nothing",
+        handler.addTool("noop", "Does nothing",
                 new InputSchemaBuilder().build(),
                 request -> null);
         BufferedWriter w = startWorker();

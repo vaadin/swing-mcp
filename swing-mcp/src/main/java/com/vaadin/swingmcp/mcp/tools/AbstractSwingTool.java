@@ -14,9 +14,9 @@ import java.util.Iterator;
  * (or the test-equivalent) and receives a context containing the considered
  * components.
  * <p>
- * Registration is handled by {@code MCPServer.registerTool(AbstractSwingTool)}
- * which wraps this in a {@code TinyMCPServer.ToolFunction} that marshals onto
- * the EDT and resolves the context before calling
+ * Registration is handled by {@code SwingMCPHandler.registerTool(AbstractSwingTool)}
+ * which wraps this in a {@code ToolFunction} that marshals onto the EDT and
+ * resolves the context before calling
  * {@link #execute(Parameters, SwingToolContext)}.
  */
 public abstract class AbstractSwingTool {

@@ -17,7 +17,7 @@ and rejected.
 ## DR-001 — HTTP transport, localhost binding, no auth
 
 **Status:** Accepted (stdio scope amended by DR-007)
-**Applies to:** TinyMCPServer, all use cases
+**Applies to:** HttpMCPServer, all use cases
 
 **Decision.** The HTTP transport supports POST + DELETE (no SSE) bound to
 `127.0.0.1`. No authentication. Default listen address is
@@ -43,7 +43,7 @@ is unchanged.
 ## DR-002 — GSON only, no official MCP SDK at runtime
 
 **Status:** Accepted
-**Applies to:** all use cases, MCPProtocol, TinyMCPServer
+**Applies to:** all use cases, MCPProtocol, HttpMCPServer
 
 **Decision.** The server uses only Google GSON for JSON serialization and
 parsing. The official `io.modelcontextprotocol/java-sdk` is used for
@@ -67,42 +67,48 @@ requires a servlet container — both are large dependency subtrees.
 
 ---
 
-## DR-003 — Single-session policy as an opt-in subclass hook
+## DR-003 — Single-session policy as a constructor-injected predicate
 
-**Status:** Accepted
-**Applies to:** TinyMCPServer session handling, swing-mcp swing-mcp `MCPServer`
+**Status:** Accepted (mechanism revised by DR-011)
+**Applies to:** MCPHandler session handling, swing-mcp `SwingMCPHandler`
 
-**Decision.** `TinyMCPServer` itself is multi-session capable: it keeps a
+**Decision.** `MCPHandler` itself is multi-session capable: it keeps a
 `ConcurrentHashMap<String, MCPSession>` and routes requests by the
-`Mcp-Session-Id` header. Before creating a new session, `handleInitialize`
-calls the protected hook `acceptNewSession()` (default: always returns
-`true`) under the `sessionGuardLock`. Subclasses that want a single-
-session policy override the hook to cap at one active session; when it
-returns `false`, `initialize` fails with HTTP 409 and JSON-RPC code
-`-32002` (`"Another session is already active"`). The blocked client
-simply fails — no queuing, no retry.
+`Mcp-Session-Id` header. Before creating a new session,
+`dispatchInitialize` calls the constructor-injected `IntPredicate
+acceptNewSession` (default: always-accept) under the `sessionGuardLock`.
+Callers that want a single-session policy supply
+`count -> count == 0` to cap at one active session; when it returns
+`false`, `initialize` fails with HTTP 409 and JSON-RPC code `-32002`
+(`"Another session is already active"`). The blocked client simply
+fails — no queuing, no retry.
 
-swing-mcp's `swing-mcp `MCPServer`` applies this override because multiple
+swing-mcp's `SwingMCPHandler` applies this predicate because multiple
 concurrent AI agents controlling the same Swing app would cause random
 concurrency issues (interleaved clicks, snapshot races) on the
-single-threaded EDT. Pure `TinyMCPServer` instances (e.g. its own unit
+single-threaded EDT. Pure `MCPHandler` instances (e.g. its own unit
 tests) happily run multiple sessions in parallel.
 
 If an AI agent crashes without sending a DELETE, the session is
 evicted by the idle-cleanup tick (DR-006) after 30 minutes of no
-activity. For the single-session subclass, that frees the slot
+activity. For the single-session caller, that frees the slot
 automatically without restarting the Swing app.
 
-**Why this split.** `TinyMCPServer` aims to be a reusable minimal MCP
-server, and multi-session is the MCP spec default. Baking
+**Why this split.** `MCPHandler` aims to be a reusable minimal MCP
+core, and multi-session is the MCP spec default. Baking
 single-session into the base class would either leak Swing-specific
 concurrency assumptions into tiny-mcp-server or force every reuser to
-work around them. A protected hook on `TinyMCPServer` keeps the base
-class general while letting swing-mcp express its own constraint in
-one line.
+work around them. A pluggable predicate keeps the base class general
+while letting `SwingMCPHandler` express its own constraint in one line.
+
+**History.** Originally implemented as a `protected boolean
+acceptNewSession()` subclass hook on `TinyMCPServer`. DR-011 replaced
+the subclass hook with a constructor-injected `IntPredicate` on
+`MCPHandler`, so callers compose the policy in rather than extending
+the transport class.
 
 **Alternatives considered.**
-- **Bake single-session into `TinyMCPServer`.** Rejected — forces
+- **Bake single-session into `MCPHandler`.** Rejected — forces
   Swing-specific concurrency semantics onto a general-purpose server;
   tiny-mcp-server's own multi-session tests would have to work around
   it.
@@ -119,11 +125,11 @@ one line.
 ## DR-004 — Three-layer error handling model
 
 **Status:** Accepted
-**Applies to:** TinyMCPServer, MCPSession, all tool / resource / prompt implementations
+**Applies to:** HttpMCPServer, MCPSession, all tool / resource / prompt implementations
 
 **Decision.** Errors surface in one of three layers, chosen by what kind of
 failure it is and which handler caught it. All exception-to-response
-translation happens in a single seam — `TinyMCPServer.handleRequest` —
+translation happens in a single seam — `HttpMCPServer.handleRequest` —
 which catches `MCPServerException`, `TransportIOException`, and
 `RuntimeException` and renders each appropriately.
 
@@ -237,7 +243,7 @@ exception becomes bytes on the wire.
 ## DR-005 — Session lifecycle gate
 
 **Status:** Accepted
-**Applies to:** `TinyMCPServer.handlePost`
+**Applies to:** `HttpMCPServer.handlePost`
 
 **Decision.** Every POST is validated against the session map
 (`sessions`, keyed by session id) before dispatch. The validation
@@ -254,7 +260,7 @@ path can still return a well-formed JSON-RPC envelope:
 Both rejections use JSON-RPC error code **-32002** (implementation-defined
 server error, -32000..-32099 range), exposed as
 `MCPServerException.SERVER_NOT_INITIALIZED`. Server-level methods
-(`initialize`, `ping`) are handled by `TinyMCPServer` directly; every
+(`initialize`, `ping`) are handled by `HttpMCPServer` directly; every
 other method is routed to `MCPSession.handlePost` for the matched
 session. `initialize` ignores the incoming `Mcp-Session-Id` header
 entirely — it always tries to create a new session, subject to
@@ -298,18 +304,18 @@ distinguish `initialize`/`ping` from regular tool calls.
 ## DR-006 — Idle session eviction via a shared scheduled executor
 
 **Status:** Accepted (executor ownership moved to `MCPHandler` by DR-010)
-**Applies to:** `MCPHandler`, `TinyMCPServer`, `MCPSession`
+**Applies to:** `MCPHandler`, `HttpMCPServer`, `MCPSession`
 **Supersedes the "Idle timeout" deferral in:** DR-003
 
 **Decision.** `MCPHandler` owns a single `ScheduledExecutorService`
 (one daemon thread, named `tiny-mcp-server-N`) created in its
-`start()` and shut down in `stop()`. `TinyMCPServer.start()` /
-`stop()` delegate the lifecycle calls. Once per minute the executor
-runs a cleanup tick that evicts every session whose last access is
-older than 30 minutes. The same executor is exposed via
-`MCPHandler.getExecutor()` (also surfaced by `TinyMCPServer.getExecutor()`)
-for tool handlers that need background work (debouncing, deferred
-cleanup, short periodic polling) — reachable from tool code via
+`start()` and shut down in `stop()`. `HttpMCPServer.start()` /
+`stop()` (and `StdioMCPServer.runStdio()` start/finish) delegate the
+lifecycle calls. Once per minute the executor runs a cleanup tick
+that evicts every session whose last access is older than 30 minutes.
+The executor is exposed via `MCPHandler.getExecutor()` for tool
+handlers that need background work (debouncing, deferred cleanup,
+short periodic polling) — reachable from tool code via
 `MCPSession.getCurrent().getHandler().getExecutor()`. Heavy or
 long-blocking work must use its own executor so the cleanup tick
 cannot be starved.
@@ -387,10 +393,10 @@ package-private `cleanupIdleSessions()` entry point.
 ## DR-007 — Stdio transport as a second transport mode
 
 **Status:** Accepted
-**Applies to:** TinyMCPServer
+**Applies to:** HttpMCPServer
 **Amends:** DR-001 (the "no STDIO" half)
 
-**Decision.** `TinyMCPServer` gains a second transport mode: stdio
+**Decision.** `HttpMCPServer` gains a second transport mode: stdio
 (newline-delimited JSON-RPC over `System.in` / `System.out`). HTTP and
 stdio are mutually exclusive on a given instance — a server is started
 in one mode and stays there for its lifetime. API shape:
@@ -601,8 +607,8 @@ verbatim.
 
 The proxy needs a forwarding client. Building it inside
 tiny-mcp-server keeps the dependency tree single-rooted and lets us
-write a self-contained loopback test (stdio `TinyMCPServer` wrapping
-HTTP `TinyMCPServer` through `TinyMCPClient`) that validates the
+write a self-contained loopback test (stdio `HttpMCPServer` wrapping
+HTTP `HttpMCPServer` through `TinyMCPClient`) that validates the
 entire transport-and-routing pipeline without involving Swing or any
 external SDK.
 
@@ -706,7 +712,7 @@ is the obvious next addition) breaks every callback signature again.
 Records pay the conversion cost once.
 
 **Migration impact.** In-tree, the only consumer is swing-mcp's
-`MCPServer.registerTool(AbstractSwingTool)` adapter, which already
+`SwingMCPHandler.registerTool(AbstractSwingTool)` adapter, which already
 adapts at one seam. The change is a small refactor there. There are no
 external consumers (per the project-context: "internal dependency of
 swing-mcp and not meant to be used elsewhere").
@@ -730,12 +736,15 @@ swing-mcp and not meant to be used elsewhere").
 
 ## DR-010 — Transport-vs-protocol seam: extract `MCPHandler`
 
-**Status:** Accepted
-**Applies to:** `TinyMCPServer`, `MCPHandler`, `MCPSession`,
+**Status:** Accepted (final shape set by DR-011)
+**Applies to:** `HttpMCPServer`, `MCPHandler`, `MCPSession`,
 `MCPToolHandler`, `MCPResourceHandler`, `MCPPromptHandler`
 **Enables:** DR-007 (stdio transport)
+**Refined by:** DR-011 (`MCPHandler` becomes the public configuration
+API; transport classes drop their delegating registration methods and
+subclass hooks; `TinyMCPServer` renamed to `HttpMCPServer`).
 
-**Decision.** Split `TinyMCPServer` along the HTTP-vs-protocol seam. A
+**Decision.** Split `HttpMCPServer` along the HTTP-vs-protocol seam. A
 new `MCPHandler` class owns everything transport-agnostic:
 
 - the tool / resource / prompt registries,
@@ -745,20 +754,19 @@ new `MCPHandler` class owns everything transport-agnostic:
 - the JSON-RPC dispatch for `initialize` / `ping` and routing to
   `MCPSession`.
 
-`TinyMCPServer` keeps only HTTP-specific concerns: the JDK `HttpServer`
+`HttpMCPServer` keeps only HTTP-specific concerns: the JDK `HttpServer`
 and its executor, request routing (POST / DELETE / 405),
 `Mcp-Session-Id` header validation, and JSON-RPC response framing via
-`JsonRpcExchange`. `TinyMCPServer.handleRequest` remains the single
+`JsonRpcExchange`. `HttpMCPServer.handleRequest` remains the single
 HTTP-side seam where `MCPServerException` / `TransportIOException` /
 unexpected `RuntimeException` are translated into HTTP responses
-(DR-004). All public APIs on `TinyMCPServer` (`addTool`, `addResource`,
-`addPrompt`, `start`, `stop`, `getExecutor`, `getPort`, `getUrl`,
-`getContextPath`) and the protected hooks (`acceptNewSession`,
-`onSessionClosed`, `getSessionCount`) are unchanged in shape; they
-forward to `MCPHandler`. The hooks are wired into `MCPHandler` at
-construction time as method-reference callbacks
-(`count -> acceptNewSession()`, `this::onSessionClosed`), so subclass
-semantics are identical.
+(DR-004). After DR-011, configuration moved entirely onto `MCPHandler`
+— `HttpMCPServer` keeps only `start` / `stop` / `getPort` / `getUrl` /
+`getContextPath` / `getHandler`; the `addTool` / `addResource` /
+`addPrompt` delegates and the `acceptNewSession` / `onSessionClosed`
+protected hooks are gone, replaced by direct registration on the
+caller-supplied `MCPHandler` and constructor-injected callbacks on
+that handler.
 
 **Error rendering moves above transport.** Handler methods on
 `MCPToolHandler` / `MCPResourceHandler` / `MCPPromptHandler` and on
@@ -769,12 +777,12 @@ core reusable from a future stdio transport that ignores the HTTP-
 status hint on `MCPServerException` and renders every error as a
 JSON-RPC envelope.
 
-**`MCPSession`'s back-pointer** is retyped from `TinyMCPServer` to
+**`MCPSession`'s back-pointer** is retyped from `HttpMCPServer` to
 `MCPHandler`, and the accessor renamed `getServer` → `getHandler`.
 Tool code that previously reached for the executor via
 `MCPSession.getCurrent().getServer().getExecutor()` now uses
 `getHandler().getExecutor()` (only in-tree consumer:
-`swing-mcp.MCPServer`).
+`SwingMCPHandler`).
 
 **Why.** Two reasons.
 
@@ -786,29 +794,106 @@ Tool code that previously reached for the executor via
   added without touching `MCPHandler` — it just constructs one,
   drives messages into `dispatchInitialize` / `dispatchPing` /
   `MCPSession.handlePost`, and writes the returned POJOs.
-- **Smaller `TinyMCPServer`.** The class previously bundled HTTP
+- **Smaller `HttpMCPServer`.** The class previously bundled HTTP
   framing with protocol logic, registries, and lifecycle in one ~440
-  LOC file. After the split, `TinyMCPServer` is the HTTP-specific
+  LOC file. After the split, `HttpMCPServer` is the HTTP-specific
   half; `MCPHandler` is the protocol-specific half. Each is testable
   in isolation.
 
 **Alternatives considered.**
-- **Keep everything in `TinyMCPServer` and add a `runStdio` method
+- **Keep everything in `HttpMCPServer` and add a `runStdio` method
   alongside `start()`.** Rejected — would force every stdio code path
   to thread around HTTP-specific machinery (header lookups,
   `JsonRpcExchange`) it does not need, and would couple stdio's
   single-session simplicity to the HTTP multi-session map invariants.
-- **Make `MCPHandler` the public class and have `TinyMCPServer`
+- **Make `MCPHandler` the public class and have `HttpMCPServer`
   extend it.** Rejected — composition over inheritance. A future
   stdio transport composes the same way; it does not extend
-  `TinyMCPServer`.
+  `HttpMCPServer`.
 - **Pass `MCPSession.handlePost` a writer callback so the session
   could write responses itself.** Rejected — leaks transport framing
   into the session, where it doesn't belong, and forces every
   transport to expose an identical writer abstraction. Returning
   POJOs is simpler.
 - **Move `acceptNewSession` / `onSessionClosed` onto `MCPHandler`
-  directly (drop the callbacks).** Rejected for now — would force
-  swing-mcp's single-session subclass to extend `MCPHandler` rather
-  than `TinyMCPServer`, breaking the existing `extends TinyMCPServer`
-  pattern. The callbacks let the public API stay where it is.
+  directly (drop the protected hooks).** Originally rejected because
+  it would force swing-mcp's single-session subclass to extend
+  `MCPHandler` instead of the transport, breaking the existing
+  `extends TinyMCPServer` pattern. **Subsequently accepted by
+  DR-011**: swing-mcp's `MCPServer` was renamed to `SwingMCPHandler`
+  and converted from inheritance to composition, removing the
+  inheritance constraint that motivated the original rejection.
+
+---
+
+## DR-011 — `MCPHandler` becomes the public configuration API; transports compose
+
+**Status:** Accepted
+**Applies to:** `MCPHandler`, `HttpMCPServer` (renamed from
+`TinyMCPServer`), `StdioMCPServer`, `SwingMCPHandler` (renamed from
+swing-mcp `MCPServer`), `ToolFunction`, `ResourceFunction`,
+`PromptFunction`
+**Refines:** DR-003 (single-session policy), DR-010 (transport-vs-
+protocol seam)
+
+**Decision.** Finish the split DR-010 started: make `MCPHandler` the
+public configuration surface, and reduce the transports to thin shells
+that take a configured handler. Concretely:
+
+- `MCPHandler` exposes `addTool` / `addResource` / `addPrompt` and
+  takes the `acceptNewSession` (`IntPredicate`) and `onSessionClosed`
+  (`Consumer<MCPSession>`) callbacks via its constructor (any can be
+  `null` for default behaviour — always-accept and no-op).
+- `HttpMCPServer` (renamed from `TinyMCPServer`) takes
+  `(port, contextPath, MCPHandler)` and drops:
+  - the `addTool` / `addResource` / `addPrompt` delegate methods,
+  - the protected hooks `acceptNewSession()` and `onSessionClosed()`,
+  - the convenience `getExecutor()` (callers reach via
+    `getHandler().getExecutor()`).
+- `StdioMCPServer` parallels: takes `(MCPHandler)` and drops the same
+  delegate methods.
+- `ToolFunction` / `ResourceFunction` / `PromptFunction` are promoted
+  from nested types on `TinyMCPServer` to top-level interfaces in
+  `com.vaadin.swingmcp.tinymcpserver`. Neither transport "owns" them.
+- Transport lifecycle still drives the handler's lifecycle:
+  `server.start()` calls `handler.start()`, `server.stop()` calls
+  `handler.stop()`. A handler is paired with a single transport for
+  one lifecycle cycle (no reuse).
+- swing-mcp's `MCPServer` class is renamed to `SwingMCPHandler` and
+  switches from `extends TinyMCPServer` to composition: it constructs
+  an `MCPHandler` (with `count -> count == 0`) and an `HttpMCPServer`
+  wrapping it, and exposes the same public surface as before
+  (`start()` / `stop()` / `startAndAutoStop()` / `getUrl()` etc.).
+
+**Why.** DR-010 left an asymmetry: tool registration and the
+session-policy hooks lived on the transport, while the registries and
+session map already lived on `MCPHandler`. That meant `StdioMCPServer`
+duplicated forwarding methods, and any caller who wanted a custom
+single-session policy had to subclass the HTTP transport — a poor fit
+for stdio, where the transport has no useful surface to override.
+After DR-011, configuration is a single object (`MCPHandler`) and
+transports are interchangeable shells.
+
+This is also what made the `acceptNewSession`/`onSessionClosed`
+constructor parameters originally rejected in DR-010 acceptable: with
+swing-mcp now composing rather than extending, "force the single-
+session caller to extend `MCPHandler`" no longer applies — they
+inject a predicate.
+
+**Alternatives considered.**
+- **Keep `addTool` / `addResource` / `addPrompt` as convenience
+  delegates on the transports.** Rejected — duplicate API surface for
+  no benefit; the handler's accessor (`server.getHandler().addTool(…)`)
+  is one extra method call and makes the configuration object
+  explicit.
+- **Keep the protected hook pattern on `HttpMCPServer` for backward
+  compatibility.** Rejected — there are no external subclasses to
+  preserve; the only in-tree subclass was swing-mcp's `MCPServer`,
+  which is being renamed and converted to composition anyway. The
+  predicate form is also strictly more flexible (any caller, not just
+  subclasses, can configure the policy).
+- **Make handler lifecycle caller-driven (`handler.start()` /
+  `handler.stop()` outside the transport).** Rejected — adds a
+  required call to every callsite for no gain. Transport-driven
+  lifecycle matches today's behaviour and pairs naturally with the
+  "one handler, one transport" rule.

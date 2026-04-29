@@ -1,8 +1,9 @@
 package com.vaadin.swingmcp.mcp;
 
+import com.vaadin.swingmcp.tinymcpserver.HttpMCPServer;
+import com.vaadin.swingmcp.tinymcpserver.MCPHandler;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPSession;
-import com.vaadin.swingmcp.tinymcpserver.TinyMCPServer;
 import javax.swing.SwingUtilities;
 import com.vaadin.swingmcp.mcp.tools.AbstractSwingTool;
 import com.vaadin.swingmcp.mcp.tools.Parameters;
@@ -23,17 +24,18 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Logger;
 
 /**
- * MCP server providing Swing-specific tools for UI inspection and interaction.
+ * MCP handler providing Swing-specific tools for UI inspection and interaction.
  * <p>
- * Wraps a {@link TinyMCPServer} and registers Swing-related MCP tools.
- * Binds to {@code 127.0.0.1} only.
+ * Composes an {@link MCPHandler} (configured with the single-session predicate
+ * {@code count == 0} and Swing-specific server info and instructions) with an
+ * {@link HttpMCPServer} that exposes it over HTTP, bound to {@code 127.0.0.1}.
  * <p>
  * Intended lifecycle: create, start (or {@link #startAndAutoStop()}), then let
  * the JVM terminate. No need to support repeated start/stop cycles.
  */
-public class MCPServer {
+public class SwingMCPHandler {
 
-    private static final Logger LOG = Logger.getLogger(MCPServer.class.getName());
+    private static final Logger LOG = Logger.getLogger(SwingMCPHandler.class.getName());
 
     private static final String SERVER_NAME = "Swing MCP";
     private static final String SERVER_VERSION = "0.0.1";
@@ -58,26 +60,25 @@ public class MCPServer {
             "- Do not call mutation tools in parallel — each successful mutation clears the ref map, so the second call will fail with a stale-ref error. Issue tool calls sequentially.\n" +
             "- `swing_close` on a window with unsaved changes may trigger a confirmation dialog — snapshot afterward to detect it.";
 
-    private final TinyMCPServer server;
+    private final MCPHandler handler;
+    private final HttpMCPServer server;
     private volatile Thread shutdownHook;
     /** Serialises all tool calls end-to-end (EDT phase + PostVerification polling). */
     private final Lock toolLock = new ReentrantLock();
 
-    public MCPServer(int port, String contextPath) {
+    public SwingMCPHandler(int port, String contextPath) {
         MCPProtocol.Implementation serverInfo = new MCPProtocol.Implementation();
         serverInfo.setName(SERVER_NAME);
         serverInfo.setVersion(SERVER_VERSION);
-        this.server = new TinyMCPServer(port, contextPath, serverInfo, INSTRUCTIONS) {
-            @Override
-            protected boolean acceptNewSession() {
-                return getSessionCount() == 0;
-            }
-        };
+        // Single-session policy: reject any initialize that would create a
+        // second concurrent session.
+        this.handler = new MCPHandler(serverInfo, INSTRUCTIONS, count -> count == 0, null);
+        this.server = new HttpMCPServer(port, contextPath, handler);
         registerTools();
     }
 
-    public MCPServer() {
-        this(TinyMCPServer.DEFAULT_PORT, TinyMCPServer.DEFAULT_CONTEXT_PATH);
+    public SwingMCPHandler() {
+        this(HttpMCPServer.DEFAULT_PORT, HttpMCPServer.DEFAULT_CONTEXT_PATH);
     }
 
     public String getUrl() {
@@ -112,10 +113,10 @@ public class MCPServer {
     }
 
     /**
-     * Registers a Swing tool with the underlying MCP server. The tool is
+     * Registers a Swing tool with the underlying MCP handler. The tool is
      * wrapped so that every invocation:
      * <ol>
-     *   <li>Acquires the MCPServer-level lock, serialising all tool calls</li>
+     *   <li>Acquires the SwingMCPHandler-level lock, serialising all tool calls</li>
      *   <li>Resolves the per-session {@link SwingToolContext} from the current
      *       {@link MCPSession} (lazily creating one on first use); this must
      *       happen on the dispatch thread where {@link MCPSession#getCurrent()}
@@ -128,7 +129,7 @@ public class MCPServer {
      * @param tool the Swing tool to register
      */
     protected void registerTool(AbstractSwingTool tool) {
-        server.addTool(tool.getName(), tool.getDescription(), tool.getInputSchema(), request -> {
+        handler.addTool(tool.getName(), tool.getDescription(), tool.getInputSchema(), request -> {
             SwingToolContext context = currentSessionContext();
             toolLock.lock();
             try {
@@ -168,7 +169,7 @@ public class MCPServer {
      */
     public void start() {
         server.start();
-        LOG.info("Swing MCPServer started");
+        LOG.info("SwingMCPHandler started");
     }
 
     /**
@@ -186,7 +187,7 @@ public class MCPServer {
             }
             shutdownHook = null;
         }
-        LOG.info("Swing MCPServer stopped");
+        LOG.info("SwingMCPHandler stopped");
     }
 
     /**
@@ -198,8 +199,8 @@ public class MCPServer {
         start();
         shutdownHook = new Thread(() -> {
             server.stop();
-            LOG.info("Swing MCPServer stopped via shutdown hook");
-        }, "SwingMCPServer-shutdown");
+            LOG.info("SwingMCPHandler stopped via shutdown hook");
+        }, "SwingMCPHandler-shutdown");
         Runtime.getRuntime().addShutdownHook(shutdownHook);
     }
 

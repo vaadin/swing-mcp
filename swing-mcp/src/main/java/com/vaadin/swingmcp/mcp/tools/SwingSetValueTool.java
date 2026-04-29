@@ -63,7 +63,7 @@ public class SwingSetValueTool extends AbstractSwingTool {
                     "Component is disabled and cannot be modified");
         }
 
-        // BR-04: all access on EDT (guaranteed by MCPServer.registerTool)
+        // BR-04: all access on EDT (guaranteed by SwingMCPHandler.registerTool)
         AccessibleContext ac = accessible.getAccessibleContext();
         AccessibleValue av = ac.getAccessibleValue();
 

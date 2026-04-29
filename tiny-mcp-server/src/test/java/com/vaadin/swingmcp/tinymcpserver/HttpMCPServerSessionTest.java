@@ -18,22 +18,22 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for MCP session lifecycle gate (see DR-005 in {@code spec/decisions.md}).
  * Uses raw HTTP requests for precise control over the {@code Mcp-Session-Id} header.
  */
-class TinyMCPServerSessionTest {
+class HttpMCPServerSessionTest {
 
-    private static TinyMCPServer server;
+    private static HttpMCPServer server;
     private static HttpClient http;
     private static URI serverUri;
 
     @BeforeAll
     static void startServer() throws Exception {
-        server = new TinyMCPServer(0, "/mcp");
-        server.addTool("echo", "Echo tool",
+        MCPHandler handler = new MCPHandler();
+        handler.addTool("echo", "Echo tool",
                 new InputSchemaBuilder().requiredString("msg", "message").build(),
                 request -> MCPProtocol.Content.text((String) request.arguments().get("msg")));
-        server.addTool("whoami", "Returns MCPSession.getCurrent().getId()",
+        handler.addTool("whoami", "Returns MCPSession.getCurrent().getId()",
                 new InputSchemaBuilder().build(),
                 request -> MCPProtocol.Content.text(MCPSession.getCurrent().getId()));
-        server.addTool("set_attr", "Store an attribute on the current session",
+        handler.addTool("set_attr", "Store an attribute on the current session",
                 new InputSchemaBuilder()
                         .requiredString("key", "key")
                         .requiredString("value", "value")
@@ -44,14 +44,14 @@ class TinyMCPServerSessionTest {
                             request.arguments().get("value"));
                     return MCPProtocol.Content.text("ok");
                 });
-        server.addTool("get_attr", "Read an attribute from the current session",
+        handler.addTool("get_attr", "Read an attribute from the current session",
                 new InputSchemaBuilder().requiredString("key", "key").build(),
                 request -> {
                     Object v = MCPSession.getCurrent().getAttribute(
                             (String) request.arguments().get("key"));
                     return MCPProtocol.Content.text(v == null ? "<null>" : v.toString());
                 });
-        server.addPrompt("greet", "Greet someone",
+        handler.addPrompt("greet", "Greet someone",
                 new PromptArgumentsBuilder()
                         .required("name", "Who to greet")
                         .optional("style", "Greeting style"),
@@ -65,6 +65,7 @@ class TinyMCPServerSessionTest {
                     r.setMessages(java.util.List.of(msg));
                     return r;
                 });
+        server = new HttpMCPServer(0, "/mcp", handler);
         server.start();
         http = HttpClient.newHttpClient();
         serverUri = URI.create(server.getUrl());
@@ -406,19 +407,15 @@ class TinyMCPServerSessionTest {
         assertEquals(-32602, err.get("code").getAsInt());
     }
 
-    // ===== acceptNewSession hook =====
+    // ===== acceptNewSession predicate =====
 
     @Test
-    void acceptNewSessionHookCanRejectSecondSession() throws Exception {
-        TinyMCPServer singleSessionServer = new TinyMCPServer(0, "/mcp") {
-            @Override
-            protected boolean acceptNewSession() {
-                return getSessionCount() == 0;
-            }
-        };
-        singleSessionServer.addTool("echo", "Echo tool",
+    void acceptNewSessionPredicateCanRejectSecondSession() throws Exception {
+        MCPHandler singleSessionHandler = new MCPHandler(null, null, count -> count == 0, null);
+        singleSessionHandler.addTool("echo", "Echo tool",
                 new InputSchemaBuilder().requiredString("msg", "message").build(),
                 request -> MCPProtocol.Content.text((String) request.arguments().get("msg")));
+        HttpMCPServer singleSessionServer = new HttpMCPServer(0, "/mcp", singleSessionHandler);
         singleSessionServer.start();
         try {
             URI uri = URI.create(singleSessionServer.getUrl());

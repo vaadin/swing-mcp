@@ -16,16 +16,15 @@ import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * MCP server transport speaking newline-delimited JSON-RPC over an
  * {@link InputStream}/{@link OutputStream} pair (typically
- * {@code System.in}/{@code System.out}). Sibling of {@link TinyMCPServer}:
- * both drive the same {@link MCPHandler}, but only one transport is active
- * per instance.
+ * {@code System.in}/{@code System.out}). Sibling of {@link HttpMCPServer}:
+ * both drive an {@link MCPHandler}, but only one transport is active per
+ * handler instance.
  * <p>
  * Use case: a standalone process that an MCP client (e.g. Claude Code)
  * spawns as a subprocess. There is no port to coordinate, no other code in
@@ -34,8 +33,8 @@ import java.util.logging.Logger;
  * <p>
  * Lifecycle:
  * <ol>
- *   <li>{@code new StdioMCPServer()}, optionally with server info</li>
- *   <li>{@code addTool} / {@code addResource} / {@code addPrompt}</li>
+ *   <li>Build and configure an {@link MCPHandler} (tools/resources/prompts)</li>
+ *   <li>{@code new StdioMCPServer(handler)}</li>
  *   <li>{@code runStdio(System.in, System.out)} — blocks until EOF on input</li>
  * </ol>
  * No repeated runs.
@@ -71,44 +70,31 @@ public class StdioMCPServer {
      */
     private BufferedWriter writer;
 
+    /** Convenience: builds a fresh empty handler. */
     public StdioMCPServer() {
-        this(new MCPProtocol.Implementation(), null);
+        this(new MCPHandler());
     }
 
-    public StdioMCPServer(MCPProtocol.Implementation serverInfo) {
-        this(serverInfo, null);
+    /**
+     * @param handler the configured {@link MCPHandler}; not null. Tools and
+     *                other registrations should be added before
+     *                {@link #runStdio} is called. Stdio is single-session by
+     *                definition (one process = one session), so the
+     *                handler's {@code acceptNewSession} predicate is typically
+     *                left at default (always-accept).
+     */
+    public StdioMCPServer(MCPHandler handler) {
+        if (handler == null) {
+            throw new IllegalArgumentException("Parameter handler: must not be null");
+        }
+        this.handler = handler;
     }
 
-    public StdioMCPServer(MCPProtocol.Implementation serverInfo, String instructions) {
-        // Stdio is single-session by definition (one process = one session),
-        // so always-accept is fine. If a client reinitializes, we explicitly
-        // evict the old session before dispatching the new initialize so the
-        // handler's session map does not accumulate orphans.
-        // No external session-scoped state to release on close.
-        this.handler = new MCPHandler(serverInfo, instructions, count -> true, s -> { });
-    }
-
-    /** See {@link TinyMCPServer#addTool}. */
-    public void addTool(String name, String description, MCPProtocol.InputSchema inputSchema,
-            TinyMCPServer.ToolFunction function) {
-        handler.addTool(name, description, inputSchema, function);
-    }
-
-    /** See {@link TinyMCPServer#addResource}. */
-    public void addResource(String uri, String name, String description, String mimeType,
-            TinyMCPServer.ResourceFunction function) {
-        handler.addResource(uri, name, description, mimeType, function);
-    }
-
-    /** See {@link TinyMCPServer#addPrompt}. */
-    public void addPrompt(String name, String description, PromptArgumentsBuilder arguments,
-            TinyMCPServer.PromptFunction function) {
-        handler.addPrompt(name, description, arguments, function);
-    }
-
-    /** See {@link TinyMCPServer#getExecutor}. Available only while {@link #runStdio} is running. */
-    public ScheduledExecutorService getExecutor() {
-        return handler.getExecutor();
+    /**
+     * Returns the {@link MCPHandler} this server delegates protocol dispatch to.
+     */
+    public MCPHandler getHandler() {
+        return handler;
     }
 
     /**

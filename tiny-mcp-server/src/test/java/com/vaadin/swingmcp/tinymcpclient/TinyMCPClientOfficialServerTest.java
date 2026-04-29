@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>The point is to verify our client speaks valid MCP wire format to a
  * third-party server — a check our internal {@code TinyMCPClient} ↔
- * {@code TinyMCPServer} pairing cannot make, since both sides share the
+ * {@code HttpMCPServer} pairing cannot make, since both sides share the
  * same {@code MCPProtocol} POJOs and would happily agree on the same
  * wrong field name.
  */

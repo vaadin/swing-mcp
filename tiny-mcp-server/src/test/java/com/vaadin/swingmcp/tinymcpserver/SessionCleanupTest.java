@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Exercises idle-session cleanup and the shared scheduled executor.
  * <p>
- * Cleanup is tested by invoking {@link TinyMCPServer#cleanupIdleSessions()}
+ * Cleanup is tested by invoking {@link HttpMCPServer#cleanupIdleSessions()}
  * directly after backdating sessions via
  * {@link MCPSession#setLastAccessNanos(long)} — no real time is waited.
  */
@@ -31,25 +31,38 @@ class SessionCleanupTest {
         return System.nanoTime() - TimeUnit.HOURS.toNanos(1);
     }
 
-    private static RecordingServer newServer() {
-        return new RecordingServer();
-    }
-
-    private static class RecordingServer extends TinyMCPServer {
+    /**
+     * Bundles a recording {@code onSessionClosed} consumer with the
+     * {@link HttpMCPServer} that drives it. Replaces the old
+     * {@code TinyMCPServer} subclass that overrode {@code onSessionClosed()};
+     * the consumer is now passed to {@link MCPHandler} directly.
+     */
+    private static class RecordingServer {
         final List<String> closedSessionIds = new ArrayList<>();
         RuntimeException closeThrow;
+        final MCPHandler handler;
+        final HttpMCPServer server;
 
         RecordingServer() {
-            super(0, "/mcp");
+            this.handler = new MCPHandler(null, null, null, session -> {
+                closedSessionIds.add(session.getId());
+                if (closeThrow != null) {
+                    throw closeThrow;
+                }
+            });
+            this.server = new HttpMCPServer(0, "/mcp", handler);
         }
 
-        @Override
-        protected void onSessionClosed(MCPSession session) {
-            closedSessionIds.add(session.getId());
-            if (closeThrow != null) {
-                throw closeThrow;
-            }
-        }
+        void start() { server.start(); }
+        void stop() { server.stop(); }
+        String getUrl() { return server.getUrl(); }
+        int getSessionCount() { return handler.getSessionCount(); }
+        void cleanupIdleSessions() { server.cleanupIdleSessions(); }
+        ScheduledExecutorService getExecutor() { return handler.getExecutor(); }
+    }
+
+    private static RecordingServer newServer() {
+        return new RecordingServer();
     }
 
     /**
@@ -57,7 +70,7 @@ class SessionCleanupTest {
      * server-side {@link MCPSession} so tests can manipulate its state
      * (e.g. backdate {@code lastAccessNanos}).
      */
-    private static MCPSession initAndGetSession(TinyMCPServer server) throws Exception {
+    private static MCPSession initAndGetSession(RecordingServer server) throws Exception {
         HttpClient http = HttpClient.newHttpClient();
         HttpRequest req = HttpRequest.newBuilder(URI.create(server.getUrl()))
                 .header("Content-Type", "application/json")
@@ -71,12 +84,8 @@ class SessionCleanupTest {
         return findSessionById(server, sessionId);
     }
 
-    /**
-     * Retrieves the {@link MCPSession} with the given id from a server.
-     * Uses the package-private {@code getHandler().getSession(id)} accessor.
-     */
-    private static MCPSession findSessionById(TinyMCPServer server, String id) {
-        MCPSession s = server.getHandler().getSession(id);
+    private static MCPSession findSessionById(RecordingServer server, String id) {
+        MCPSession s = server.handler.getSession(id);
         assertNotNull(s, "no session with id " + id);
         return s;
     }
@@ -202,11 +211,9 @@ class SessionCleanupTest {
         server.start();
         try {
             // Two sessions, both stale — a throw on the first must not
-            // prevent the second from being removed and reported.
+            // prevent the second from being removed and reported. The default
+            // MCPHandler accepts unlimited sessions.
             MCPSession s1 = initAndGetSession(server);
-            // Second initialize requires releasing the first — most servers
-            // accept multiple, but if acceptNewSession() is overridden
-            // this could fail. TinyMCPServer default allows unlimited.
             HttpClient http = HttpClient.newHttpClient();
             HttpRequest req = HttpRequest.newBuilder(URI.create(server.getUrl()))
                     .header("Content-Type", "application/json")
@@ -238,11 +245,11 @@ class SessionCleanupTest {
 
     @Test
     void executorThreadsAreDaemonAndNamed() throws Exception {
-        TinyMCPServer server = new TinyMCPServer(0, "/mcp");
+        HttpMCPServer server = new HttpMCPServer(0, "/mcp");
         server.start();
         try {
             AtomicReference<Thread> captured = new AtomicReference<>();
-            server.getExecutor().submit(() -> captured.set(Thread.currentThread()))
+            server.getHandler().getExecutor().submit(() -> captured.set(Thread.currentThread()))
                     .get(2, TimeUnit.SECONDS);
 
             Thread t = captured.get();
@@ -257,15 +264,15 @@ class SessionCleanupTest {
 
     @Test
     void getExecutorThrowsBeforeStart() {
-        TinyMCPServer server = new TinyMCPServer(0, "/mcp");
-        assertThrows(IllegalStateException.class, server::getExecutor);
+        HttpMCPServer server = new HttpMCPServer(0, "/mcp");
+        assertThrows(IllegalStateException.class, () -> server.getHandler().getExecutor());
     }
 
     @Test
     void stopShutsDownExecutor() throws Exception {
-        TinyMCPServer server = new TinyMCPServer(0, "/mcp");
+        HttpMCPServer server = new HttpMCPServer(0, "/mcp");
         server.start();
-        ScheduledExecutorService ref = server.getExecutor();
+        ScheduledExecutorService ref = server.getHandler().getExecutor();
         server.stop();
 
         assertTrue(ref.isShutdown(), "executor must be shut down after stop()");
@@ -279,7 +286,7 @@ class SessionCleanupTest {
         server.start();
         try {
             MCPSession session = initAndGetSession(server);
-            assertSame(server.getHandler(), session.getHandler(),
+            assertSame(server.handler, session.getHandler(),
                     "getHandler() must return the MCPHandler that created the session");
             assertSame(server.getExecutor(), session.getHandler().getExecutor(),
                     "executor must be shared via the session back-pointer");

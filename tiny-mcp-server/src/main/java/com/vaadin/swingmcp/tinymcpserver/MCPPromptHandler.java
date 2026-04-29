@@ -28,11 +28,11 @@ class MCPPromptHandler {
 
     private static class RegisteredPrompt {
         final MCPParameterParser parser;
-        final TinyMCPServer.PromptFunction function;
+        final PromptFunction function;
         final MCPProtocol.Prompt descriptor;
 
         RegisteredPrompt(String name, String description, List<MCPProtocol.PromptArgument> arguments,
-                TinyMCPServer.PromptFunction function) {
+                PromptFunction function) {
             this.parser = new MCPParameterParser(name, arguments);
             this.function = function;
             this.descriptor = new MCPProtocol.Prompt();
@@ -61,7 +61,7 @@ class MCPPromptHandler {
      *                                  already registered
      */
     void addPrompt(String name, String description, PromptArgumentsBuilder arguments,
-            TinyMCPServer.PromptFunction function) {
+            PromptFunction function) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Prompt name must not be null or blank");
         }

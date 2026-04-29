@@ -14,7 +14,7 @@ import java.util.logging.Logger;
  * <p>
  * Resources are keyed by their URI. Registration captures a static descriptor
  * (name, description, mimeType) exposed via {@code resources/list}; the
- * {@link TinyMCPServer.ResourceFunction} is invoked for {@code resources/read}
+ * {@link ResourceFunction} is invoked for {@code resources/read}
  * and returns the current contents.
  * <p>
  * The {@code handle*} methods are transport-agnostic: they consume parsed
@@ -26,11 +26,11 @@ class MCPResourceHandler {
     private static final Logger LOG = Logger.getLogger(MCPResourceHandler.class.getName());
 
     private static class RegisteredResource {
-        final TinyMCPServer.ResourceFunction function;
+        final ResourceFunction function;
         final MCPProtocol.Resource descriptor;
 
         RegisteredResource(String uri, String name, String description, String mimeType,
-                TinyMCPServer.ResourceFunction function) {
+                ResourceFunction function) {
             this.function = function;
             this.descriptor = new MCPProtocol.Resource();
             this.descriptor.setUri(uri);
@@ -58,7 +58,7 @@ class MCPResourceHandler {
      *                                  already registered
      */
     void addResource(String uri, String name, String description, String mimeType,
-            TinyMCPServer.ResourceFunction function) {
+            ResourceFunction function) {
         if (uri == null || uri.isBlank()) {
             throw new IllegalArgumentException("Resource URI must not be null or blank");
         }

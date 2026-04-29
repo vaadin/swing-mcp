@@ -22,11 +22,19 @@ import java.util.logging.Logger;
  * Knows nothing about HTTP or stdio framing — both transports drive the
  * same handler instance.
  * <p>
- * Per-DR-007, stdio is single-session by definition; HTTP is multi-session
+ * Configure the handler (call {@code addTool}/{@code addResource}/{@code addPrompt}
+ * and supply the {@code acceptNewSession} / {@code onSessionClosed} callbacks via
+ * the constructor) <em>before</em> handing it to a transport such as
+ * {@link HttpMCPServer} or {@link StdioMCPServer}. The transport calls
+ * {@link #start()} on {@code start()} and {@link #stop()} on {@code stop()};
+ * a single handler instance is paired with a single transport for one
+ * lifecycle cycle.
+ * <p>
+ * Per DR-007, stdio is single-session by definition; HTTP is multi-session
  * with sessions keyed by {@code Mcp-Session-Id} (DR-005). The handler
  * itself is multi-session capable; the {@code acceptNewSession} predicate
- * lets a transport (or a wrapping subclass like swing-mcp's
- * {@code MCPServer}) clamp the session count.
+ * lets a caller (e.g. swing-mcp's {@code SwingMCPHandler}) clamp the
+ * session count.
  */
 public class MCPHandler {
 
@@ -76,18 +84,32 @@ public class MCPHandler {
      */
     private ScheduledExecutorService executor;
 
+    /** Convenience constructor: empty server info, no instructions, accept all sessions. */
+    public MCPHandler() {
+        this(new MCPProtocol.Implementation(), null, null, null);
+    }
+
+    /** Convenience constructor: accept all sessions, no session-close callback. */
+    public MCPHandler(MCPProtocol.Implementation serverInfo, String instructions) {
+        this(serverInfo, instructions, null, null);
+    }
+
     /**
-     * @param serverInfo       advertised in {@code initialize.serverInfo}; never null
+     * @param serverInfo       advertised in {@code initialize.serverInfo};
+     *                         {@code null} means "use a default empty
+     *                         {@link MCPProtocol.Implementation}"
      * @param instructions     advertised in {@code initialize.instructions}; may be null
      * @param acceptNewSession called under the session guard lock with the
      *                         current session count; return {@code true} to
      *                         accept the new session, {@code false} to reject
-     *                         (the dispatch raises a 409 / SERVER_NOT_INITIALIZED)
+     *                         (the dispatch raises a 409 / SERVER_NOT_INITIALIZED).
+     *                         {@code null} means always accept.
      * @param onSessionClosed  called outside any handler lock after a session
      *                         has been removed from the map (via DELETE,
-     *                         explicit removal, or idle eviction)
+     *                         explicit removal, or idle eviction).
+     *                         {@code null} means do nothing.
      */
-    MCPHandler(MCPProtocol.Implementation serverInfo, String instructions,
+    public MCPHandler(MCPProtocol.Implementation serverInfo, String instructions,
             IntPredicate acceptNewSession, Consumer<MCPSession> onSessionClosed) {
         this.serverInfo = serverInfo != null ? serverInfo : new MCPProtocol.Implementation();
         this.instructions = instructions;
@@ -97,24 +119,92 @@ public class MCPHandler {
 
     // ===== Registries =====
 
-    void addTool(String name, String description, MCPProtocol.InputSchema inputSchema,
-            TinyMCPServer.ToolFunction function) {
+    /**
+     * Registers a tool with this handler. Must be called before the
+     * handler has been started by a transport.
+     *
+     * <p>Registered tools are advertised by {@code tools/list} (name, description,
+     * and {@code inputSchema} passed as-is) and invoked via {@code tools/call}.
+     *
+     * <p>{@code tools/call} dispatch rules:
+     * <ul>
+     *   <li>Unknown tool name → JSON-RPC error {@code -32601} (Method not found).</li>
+     *   <li>Missing required parameter → JSON-RPC error {@code -32602} with message
+     *       {@code Missing required parameter '<name>'}. A {@code null} argument value
+     *       is treated as missing.</li>
+     *   <li>JSON numbers are deserialized by GSON as {@code Double}; for parameters
+     *       declared as {@code integer}, whole-number doubles are coerced to
+     *       {@code Integer}, and fractional doubles are rejected with {@code -32602}.</li>
+     *   <li>Unknown parameters are silently ignored (a warning is logged).</li>
+     *   <li>The tool function is invoked synchronously on the dispatch thread.</li>
+     * </ul>
+     *
+     * @param name        the tool name; not null, not blank; must match
+     *                    {@code [a-zA-Z_][a-zA-Z0-9_]*}
+     * @param description human-readable description of the tool; not null, not blank
+     * @param inputSchema the parameter schema; not null; consider using {@link InputSchemaBuilder}
+     * @param function    the handler to invoke when the tool is called; not null
+     * @throws IllegalArgumentException if any argument is null, blank, or (for
+     *                                  {@code name}) does not match the required pattern
+     * @throws IllegalStateException    if the handler has already been started
+     * @throws IllegalStateException    if a tool with the same name is already registered
+     */
+    public void addTool(String name, String description, MCPProtocol.InputSchema inputSchema,
+            ToolFunction function) {
         if (started) {
             throw new IllegalStateException("Cannot add tools after server has been started");
         }
         toolHandler.addTool(name, description, inputSchema, function);
     }
 
-    void addResource(String uri, String name, String description, String mimeType,
-            TinyMCPServer.ResourceFunction function) {
+    /**
+     * Registers a resource with this handler. Must be called before the
+     * handler has been started by a transport.
+     *
+     * <p>Registered resources are advertised by {@code resources/list}
+     * (uri, name, description, mimeType) and read via {@code resources/read}.
+     * The URI is the lookup key: clients pass it back verbatim in
+     * {@code resources/read}, and unknown URIs produce JSON-RPC error
+     * {@code -32602}.
+     *
+     * @param uri         the resource URI; not null, not blank; must be
+     *                    unique across registered resources
+     * @param name        human-readable name; not null, not blank
+     * @param description human-readable description; may be null
+     * @param mimeType    the resource MIME type (e.g. {@code "text/plain"});
+     *                    may be null
+     * @param function    the handler to invoke for {@code resources/read};
+     *                    not null
+     * @throws IllegalArgumentException if {@code uri}, {@code name}, or
+     *                                  {@code function} is null/blank
+     * @throws IllegalStateException    if the handler has already been started
+     * @throws IllegalStateException    if a resource with the same URI is
+     *                                  already registered
+     */
+    public void addResource(String uri, String name, String description, String mimeType,
+            ResourceFunction function) {
         if (started) {
             throw new IllegalStateException("Cannot add resources after server has been started");
         }
         resourceHandler.addResource(uri, name, description, mimeType, function);
     }
 
-    void addPrompt(String name, String description, PromptArgumentsBuilder arguments,
-            TinyMCPServer.PromptFunction function) {
+    /**
+     * Registers a prompt with this handler. Must be called before the
+     * handler has been started by a transport.
+     *
+     * @param name        the prompt name; not null, not blank
+     * @param description human-readable description of the prompt; not null, not blank
+     * @param arguments   the argument builder (pass an empty
+     *                    {@link PromptArgumentsBuilder} for a zero-argument
+     *                    prompt); not null
+     * @param function    the handler to invoke for {@code prompts/get}; not null
+     * @throws IllegalArgumentException if any argument is null/blank
+     * @throws IllegalStateException    if the handler has already been started
+     * @throws IllegalStateException    if a prompt with the same name is already registered
+     */
+    public void addPrompt(String name, String description, PromptArgumentsBuilder arguments,
+            PromptFunction function) {
         if (started) {
             throw new IllegalStateException("Cannot add prompts after server has been started");
         }
@@ -125,6 +215,7 @@ public class MCPHandler {
 
     /**
      * Creates the shared executor and schedules the idle-cleanup tick.
+     * Called by the transport on {@code start()}; not intended for callers.
      * Idempotent only against itself; calling twice will overwrite the
      * executor reference (callers must {@link #stop()} first).
      */
@@ -140,6 +231,9 @@ public class MCPHandler {
                 CLEANUP_TICK_SECONDS, CLEANUP_TICK_SECONDS, TimeUnit.SECONDS);
     }
 
+    /**
+     * Shuts down the executor. Called by the transport on {@code stop()}.
+     */
     void stop() {
         if (executor != null) {
             executor.shutdownNow();
@@ -150,6 +244,11 @@ public class MCPHandler {
     /**
      * Returns the shared scheduled executor. Threads are daemon and named
      * {@code tiny-mcp-server-N}.
+     * <p>
+     * Available to tool handlers for background work (debouncing, deferred
+     * cleanup, periodic polling). Do not submit long-blocking I/O that
+     * could starve session idle-cleanup — for heavy work, create your own
+     * executor.
      *
      * @throws IllegalStateException if the handler is not started
      */
@@ -162,7 +261,10 @@ public class MCPHandler {
 
     // ===== Session management =====
 
-    int getSessionCount() {
+    /**
+     * Returns the number of active sessions.
+     */
+    public int getSessionCount() {
         return sessions.size();
     }
 
@@ -179,7 +281,7 @@ public class MCPHandler {
 
     /**
      * Removes the session with the given id. Returns the removed session
-     * (or {@code null}) without invoking {@link #onSessionClosed} — the
+     * (or {@code null}) without invoking {@code onSessionClosed} — the
      * caller is responsible for calling it after any external state has
      * been cleaned up.
      */
@@ -191,7 +293,7 @@ public class MCPHandler {
 
     /**
      * Removes all sessions. Returns the snapshot of removed sessions; the
-     * caller invokes {@link #onSessionClosed} on each.
+     * caller invokes {@code onSessionClosed} on each.
      */
     List<MCPSession> removeAllSessions() {
         synchronized (sessionGuardLock) {

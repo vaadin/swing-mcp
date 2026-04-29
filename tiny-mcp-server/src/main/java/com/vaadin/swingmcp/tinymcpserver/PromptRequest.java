@@ -5,7 +5,7 @@ import com.google.gson.JsonObject;
 import java.util.Map;
 
 /**
- * Bundle of inputs delivered to a {@link TinyMCPServer.PromptFunction}
+ * Bundle of inputs delivered to a {@link PromptFunction}
  * invocation. Mirrors {@link ToolRequest} for prompts; arguments are always
  * strings per the MCP spec.
  *

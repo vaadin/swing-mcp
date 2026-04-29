@@ -62,7 +62,7 @@ public class SwingGetSelectionTool extends AbstractSwingTool {
         // BR-03: check selection support with JTable-specific error message
         requireSelectable(accessible, "swing_get_selection");
 
-        // BR-04: all access on EDT (guaranteed by MCPServer.registerTool)
+        // BR-04: all access on EDT (guaranteed by SwingMCPHandler.registerTool)
         AccessibleContext ac = accessible.getAccessibleContext();
         AccessibleSelection as = ac.getAccessibleSelection();
 

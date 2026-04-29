@@ -17,9 +17,9 @@ import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class TinyMCPServerTest {
+class HttpMCPServerTest {
 
-    private static TinyMCPServer server;
+    private static HttpMCPServer server;
     private static McpSyncClient client;
 
     @BeforeAll
@@ -28,7 +28,7 @@ class TinyMCPServerTest {
         serverInfo.setName("Test Server");
         serverInfo.setVersion("1.0");
         // Port 0 → OS-assigned ephemeral port, so parallel test runs don't collide.
-        server = new TinyMCPServer(0, "/mcp", serverInfo);
+        server = new HttpMCPServer(0, "/mcp", new MCPHandler(serverInfo, null));
         server.start();
 
         HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport
@@ -95,11 +95,11 @@ class TinyMCPServerTest {
 
     @Test
     void addToolAfterStartThrows() throws Exception {
-        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
+        HttpMCPServer s = new HttpMCPServer(0, "/mcp");
         s.start();
         try {
             assertThrows(IllegalStateException.class, () ->
-                    s.addTool("my_tool", "desc", new InputSchemaBuilder().build(), request -> null));
+                    s.getHandler().addTool("my_tool", "desc", new InputSchemaBuilder().build(), request -> null));
         } finally {
             s.stop();
         }
@@ -107,11 +107,11 @@ class TinyMCPServerTest {
 
     @Test
     void addResourceAfterStartThrows() throws Exception {
-        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
+        HttpMCPServer s = new HttpMCPServer(0, "/mcp");
         s.start();
         try {
             assertThrows(IllegalStateException.class, () ->
-                    s.addResource("file://x", "x", "desc", "text/plain",
+                    s.getHandler().addResource("file://x", "x", "desc", "text/plain",
                             request -> java.util.List.of(
                                     MCPProtocol.ResourceContents.text(request.uri(), "text/plain", "x"))));
         } finally {
@@ -121,8 +121,8 @@ class TinyMCPServerTest {
 
     @Test
     void resourcesListAndRead() throws Exception {
-        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
-        s.addResource("file://greeting", "Greeting", "A friendly greeting", "text/plain",
+        HttpMCPServer s = new HttpMCPServer(0, "/mcp");
+        s.getHandler().addResource("file://greeting", "Greeting", "A friendly greeting", "text/plain",
                 request -> java.util.List.of(
                         MCPProtocol.ResourceContents.text(request.uri(), "text/plain", "Hello, world!")));
         s.start();
@@ -185,14 +185,11 @@ class TinyMCPServerTest {
     void unexpectedRuntimeExceptionReturnsHttp500InternalError() throws Exception {
         // An unhandled RuntimeException from inside the server (not MCPServerException,
         // not TransportIOException) must return HTTP 500 with a JSON-RPC INTERNAL_ERROR
-        // body. Using acceptNewSession() as the injection point — it runs under the
-        // try block in handleRequest but isn't normally expected to throw.
-        TinyMCPServer crashingServer = new TinyMCPServer(0, "/mcp") {
-            @Override
-            protected boolean acceptNewSession() {
-                throw new IllegalStateException("boom");
-            }
-        };
+        // body. Using the acceptNewSession predicate as the injection point — it runs
+        // under the try block in handleRequest but isn't normally expected to throw.
+        MCPHandler crashingHandler = new MCPHandler(null, null,
+                count -> { throw new IllegalStateException("boom"); }, null);
+        HttpMCPServer crashingServer = new HttpMCPServer(0, "/mcp", crashingHandler);
         crashingServer.start();
         try {
             String initBody = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\","
@@ -221,8 +218,8 @@ class TinyMCPServerTest {
     void toolRuntimeExceptionReturnsHttp200WithIsError() throws Exception {
         // A tool throwing a plain RuntimeException must NOT surface as HTTP 500
         // — the tool handler wraps it as an isError=true CallToolResult.
-        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
-        s.addTool("boom", "Throws",
+        HttpMCPServer s = new HttpMCPServer(0, "/mcp");
+        s.getHandler().addTool("boom", "Throws",
                 new InputSchemaBuilder().build(),
                 request -> { throw new RuntimeException("kaboom"); });
         s.start();
@@ -249,8 +246,8 @@ class TinyMCPServerTest {
     void resourceRuntimeExceptionReturnsHttp200WithJsonRpcInternalError() throws Exception {
         // A resource throwing RuntimeException is wrapped as MCPServerException(INTERNAL_ERROR)
         // by the resource handler, then rendered as a JSON-RPC error at HTTP 200 (default).
-        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
-        s.addResource("file://boom", "boom", "throws", "text/plain",
+        HttpMCPServer s = new HttpMCPServer(0, "/mcp");
+        s.getHandler().addResource("file://boom", "boom", "throws", "text/plain",
                 request -> { throw new RuntimeException("kaboom"); });
         s.start();
         try {
@@ -274,8 +271,8 @@ class TinyMCPServerTest {
     @Test
     void promptRuntimeExceptionReturnsHttp200WithJsonRpcInternalError() throws Exception {
         // Mirrors the resource case — prompts also get INTERNAL_ERROR at HTTP 200.
-        TinyMCPServer s = new TinyMCPServer(0, "/mcp");
-        s.addPrompt("boom", "throws", new PromptArgumentsBuilder(),
+        HttpMCPServer s = new HttpMCPServer(0, "/mcp");
+        s.getHandler().addPrompt("boom", "throws", new PromptArgumentsBuilder(),
                 request -> { throw new RuntimeException("kaboom"); });
         s.start();
         try {

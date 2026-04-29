@@ -5,7 +5,7 @@ import com.google.gson.JsonPrimitive;
 import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
-import com.vaadin.swingmcp.tinymcpserver.TinyMCPServer;
+import com.vaadin.swingmcp.tinymcpserver.HttpMCPServer;
 import com.vaadin.swingmcp.tinymcpserver.ToolRequest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * End-to-end tests for {@link TinyMCPClient} against a local
- * {@link TinyMCPServer}. The point of these tests (vs the official-server
+ * {@link HttpMCPServer}. The point of these tests (vs the official-server
  * test) is to exercise the full parameter-passing matrix and the request
  * record fields ({@code _meta}, transport headers) — things the official
  * SDK test is too coarse to cover.
@@ -41,15 +41,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TinyMCPClientTest {
 
-    private static TinyMCPServer server;
+    private static HttpMCPServer server;
     /** Set by the {@code capture} tool on every invocation. */
     private static final AtomicReference<ToolRequest> lastRequest = new AtomicReference<>();
 
     @BeforeAll
     static void startServer() {
-        server = new TinyMCPServer(0, "/mcp");
+        server = new HttpMCPServer(0, "/mcp");
 
-        server.addTool("capture",
+        server.getHandler().addTool("capture",
                 "Captures the incoming ToolRequest for inspection",
                 new InputSchemaBuilder()
                         .optionalString("s", "string")
@@ -64,7 +64,7 @@ class TinyMCPClientTest {
                     return MCPProtocol.Content.text("ok");
                 });
 
-        server.addTool("echo",
+        server.getHandler().addTool("echo",
                 "Echoes its required 'text' string",
                 new InputSchemaBuilder().requiredString("text", "the text").build(),
                 request -> MCPProtocol.Content.text((String) request.arguments().get("text")));

@@ -5,7 +5,7 @@ import com.google.gson.JsonObject;
 import java.util.Map;
 
 /**
- * Bundle of inputs delivered to a {@link TinyMCPServer.ToolFunction}
+ * Bundle of inputs delivered to a {@link ToolFunction}
  * invocation. Carries the tool name (so a single forwarding lambda
  * registered against many upstream tools can tell which one was invoked),
  * the parsed arguments, transport-layer headers, and the JSON-RPC

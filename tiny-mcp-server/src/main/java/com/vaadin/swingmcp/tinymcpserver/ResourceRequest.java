@@ -5,7 +5,7 @@ import com.google.gson.JsonObject;
 import java.util.Map;
 
 /**
- * Bundle of inputs delivered to a {@link TinyMCPServer.ResourceFunction}
+ * Bundle of inputs delivered to a {@link ResourceFunction}
  * invocation. The {@code uri} is the identity slot for resources (the
  * analogue of {@code name} on {@link ToolRequest} / {@link PromptRequest}).
  *

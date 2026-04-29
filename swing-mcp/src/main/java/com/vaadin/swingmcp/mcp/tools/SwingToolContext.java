@@ -18,7 +18,7 @@ import java.util.concurrent.Executor;
  * <p>
  * <b>Thread safety:</b> this class is not thread-safe. All mutation and
  * inspection must be serialised by the caller. In production
- * ({@code MCPServer.registerTool}) every access happens on the Swing event
+ * ({@code SwingMCPHandler.registerTool}) every access happens on the Swing event
  * dispatch thread (inside {@code runInEDT}), which satisfies this
  * requirement. Tests may access the context off the EDT provided they use
  * a synchronous hand-off such as {@link javax.swing.SwingUtilities#invokeAndWait}
@@ -40,7 +40,7 @@ public class SwingToolContext {
      * Executor for background work spawned by tools (e.g. Robot-based drag in
      * {@link SwingDragTool}, which cannot run on the EDT). Supplied at
      * construction; production passes
-     * {@link com.vaadin.swingmcp.tinymcpserver.TinyMCPServer#getExecutor()}.
+     * {@link com.vaadin.swingmcp.tinymcpserver.MCPHandler#getExecutor()}.
      * Tests that do not exercise background dispatch may pass
      * {@code Runnable::run}.
      */

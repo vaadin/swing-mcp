@@ -10,10 +10,12 @@ import java.util.function.Supplier;
  * Represents a single MCP session and handles protocol dispatch for all
  * session-scoped requests (everything after {@code initialize}).
  * <p>
- * {@link TinyMCPServer} owns the session map and routes incoming requests
- * to the appropriate session. Server-level concerns (HTTP lifecycle,
- * session creation/destruction, {@code initialize}, {@code ping}) stay
- * on TinyMCPServer; protocol handling lives here.
+ * {@link MCPHandler} owns the session map and creates sessions on
+ * {@code initialize}; the active transport ({@link HttpMCPServer} or
+ * {@link StdioMCPServer}) routes incoming requests to the appropriate
+ * session. Transport-level concerns (HTTP/stdio lifecycle, session
+ * creation/destruction, {@code initialize}, {@code ping}) live on the
+ * handler/transport; per-session protocol handling lives here.
  * <p>
  * Thread safety: callers must hold this session's intrinsic lock
  * ({@code synchronized(session)}) for the entire duration of
@@ -70,7 +72,7 @@ public class MCPSession {
      * Dispatches a parsed JSON-RPC request to the appropriate handler and
      * returns the result POJO. Called for all session-scoped methods
      * (everything except {@code initialize} and {@code ping}, which are
-     * handled by {@link TinyMCPServer}). The caller is responsible for
+     * handled by {@link MCPHandler}). The caller is responsible for
      * writing the result to the wire.
      *
      * @param request          the parsed JSON-RPC request
@@ -231,8 +233,8 @@ public class MCPSession {
 
     /**
      * Thread-local binding to the session currently dispatching a request.
-     * Set by {@link TinyMCPServer} around {@link #handlePost} and cleared
-     * immediately after; visible only on the HTTP dispatch thread.
+     * Set by {@link #runLocked} around the dispatched block and cleared
+     * immediately after; visible only on the dispatch thread.
      */
     private static final ThreadLocal<MCPSession> instance = new ThreadLocal<>();
 
@@ -242,7 +244,7 @@ public class MCPSession {
      * to reach its session without having it passed explicitly — for example,
      * to read or write session attributes.
      * <p>
-     * Only bound on the HTTP dispatch thread for the duration of
+     * Only bound on the dispatch thread for the duration of
      * {@link #handlePost}. If a tool marshals its work onto another thread
      * (e.g. the Swing EDT), resolve the session attribute <em>before</em> crossing the
      * thread boundary and capture it into the other thread's closure.

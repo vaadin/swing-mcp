@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 
 /**
  * Owns the tool registry and handles {@code tools/list} and {@code tools/call}
- * JSON-RPC methods. Extracted from {@link TinyMCPServer} so that all
+ * JSON-RPC methods. Extracted from {@link MCPHandler} so that all
  * tool-related functionality lives in one place.
  * <p>
  * The {@code handle*} methods are transport-agnostic: they consume parsed
@@ -23,11 +23,11 @@ class MCPToolHandler {
 
     private static class RegisteredTool {
         final MCPParameterParser parser;
-        final TinyMCPServer.ToolFunction function;
+        final ToolFunction function;
         final MCPProtocol.Tool descriptor;
 
         RegisteredTool(String name, String description, MCPProtocol.InputSchema inputSchema,
-                TinyMCPServer.ToolFunction function) {
+                ToolFunction function) {
             this.parser = new MCPParameterParser(name, inputSchema);
             this.function = function;
             this.descriptor = new MCPProtocol.Tool();
@@ -50,7 +50,7 @@ class MCPToolHandler {
      * @throws IllegalStateException    if a tool with the same name is already registered
      */
     void addTool(String name, String description, MCPProtocol.InputSchema inputSchema,
-            TinyMCPServer.ToolFunction function) {
+            ToolFunction function) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Tool name must not be null or blank");
         }

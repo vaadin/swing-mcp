@@ -61,7 +61,7 @@ public class SwingGetTextTool extends AbstractSwingTool {
                             + " does not support swing_get_text. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
-        // BR-05: all access happens on EDT (guaranteed by MCPServer.registerTool)
+        // BR-05: all access happens on EDT (guaranteed by SwingMCPHandler.registerTool)
         // Step 4: get total character count — needed independently of the
         // read itself to compose BR-09's truncation notice with the real total.
         AccessibleContext ac = accessible.getAccessibleContext();
