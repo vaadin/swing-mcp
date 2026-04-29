@@ -70,7 +70,7 @@ requires a servlet container — both are large dependency subtrees.
 ## DR-003 — Single-session policy as a constructor-injected predicate
 
 **Status:** Accepted (mechanism revised by DR-011)
-**Applies to:** MCPHandler session handling, swing-mcp `SwingMCPHandler`
+**Applies to:** MCPHandler session handling, swing-mcp `SwingMCP`
 
 **Decision.** `MCPHandler` itself is multi-session capable: it keeps a
 `ConcurrentHashMap<String, MCPSession>` and routes requests by the
@@ -83,7 +83,7 @@ Callers that want a single-session policy supply
 (`"Another session is already active"`). The blocked client simply
 fails — no queuing, no retry.
 
-swing-mcp's `SwingMCPHandler` applies this predicate because multiple
+swing-mcp's `SwingMCP` applies this predicate because multiple
 concurrent AI agents controlling the same Swing app would cause random
 concurrency issues (interleaved clicks, snapshot races) on the
 single-threaded EDT. Pure `MCPHandler` instances (e.g. its own unit
@@ -99,7 +99,7 @@ core, and multi-session is the MCP spec default. Baking
 single-session into the base class would either leak Swing-specific
 concurrency assumptions into tiny-mcp-server or force every reuser to
 work around them. A pluggable predicate keeps the base class general
-while letting `SwingMCPHandler` express its own constraint in one line.
+while letting `SwingMCP` express its own constraint in one line.
 
 **History.** Originally implemented as a `protected boolean
 acceptNewSession()` subclass hook on `TinyMCPServer`. DR-011 replaced
@@ -712,7 +712,7 @@ is the obvious next addition) breaks every callback signature again.
 Records pay the conversion cost once.
 
 **Migration impact.** In-tree, the only consumer is swing-mcp's
-`SwingMCPHandler.registerTool(AbstractSwingTool)` adapter, which already
+`SwingMCP.registerTool(AbstractSwingTool)` adapter, which already
 adapts at one seam. The change is a small refactor there. There are no
 external consumers (per the project-context: "internal dependency of
 swing-mcp and not meant to be used elsewhere").
@@ -782,7 +782,7 @@ JSON-RPC envelope.
 Tool code that previously reached for the executor via
 `MCPSession.getCurrent().getServer().getExecutor()` now uses
 `getHandler().getExecutor()` (only in-tree consumer:
-`SwingMCPHandler`).
+`SwingMCP`).
 
 **Why.** Two reasons.
 
@@ -820,7 +820,7 @@ Tool code that previously reached for the executor via
   it would force swing-mcp's single-session subclass to extend
   `MCPHandler` instead of the transport, breaking the existing
   `extends TinyMCPServer` pattern. **Subsequently accepted by
-  DR-011**: swing-mcp's `MCPServer` was renamed to `SwingMCPHandler`
+  DR-011**: swing-mcp's `MCPServer` was renamed to `SwingMCP`
   and converted from inheritance to composition, removing the
   inheritance constraint that motivated the original rejection.
 
@@ -830,7 +830,7 @@ Tool code that previously reached for the executor via
 
 **Status:** Accepted
 **Applies to:** `MCPHandler`, `HttpMCPServer` (renamed from
-`TinyMCPServer`), `StdioMCPServer`, `SwingMCPHandler` (renamed from
+`TinyMCPServer`), `StdioMCPServer`, `SwingMCP` (renamed from
 swing-mcp `MCPServer`), `ToolFunction`, `ResourceFunction`,
 `PromptFunction`
 **Refines:** DR-003 (single-session policy), DR-010 (transport-vs-
@@ -859,7 +859,7 @@ that take a configured handler. Concretely:
   `server.start()` calls `handler.start()`, `server.stop()` calls
   `handler.stop()`. A handler is paired with a single transport for
   one lifecycle cycle (no reuse).
-- swing-mcp's `MCPServer` class is renamed to `SwingMCPHandler` and
+- swing-mcp's `MCPServer` class is renamed to `SwingMCP` and
   switches from `extends TinyMCPServer` to composition: it constructs
   an `MCPHandler` (with `count -> count == 0`) and an `HttpMCPServer`
   wrapping it, and exposes the same public surface as before

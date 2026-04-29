@@ -26,12 +26,12 @@ will throw an exception on any malformed MCP JSON message. Don't use the
 ```
 com.vaadin.swingmcp.mcp
   SwingUtils.java   - any Swing-related utilities we may need; a collection of static utility methods
-  SwingMCPHandler.java    - starts/stops the MCP server with Swing-MCP-specific tools
+  SwingMCP.java    - starts/stops the MCP server with Swing-MCP-specific tools
 com.vaadin.swingmcp.mcp.tools - a package with all offered tools, one class per tool
   Parameters.java   - typed wrapper around the raw Map<String, Object> from MCP requests
 ```
 
-### SwingMCPHandler
+### SwingMCP
 
 Intended lifecycle: create a new instance, start it, then stop it.
 Creates a `HttpMCPServer` under the hood and registers all of the Swing-related
@@ -39,7 +39,7 @@ MCP tools.
 No need to support repeated start/stop cycles.
 The server binds to `127.0.0.1` only. Constructor accepts port and path similarly to `HttpMCPServer`.
 
-The SwingMCPHandler has a protected method which calculates which Windows are considered. Since tests can't instantiate Windows in headless mode, they will
+The SwingMCP has a protected method which calculates which Windows are considered. Since tests can't instantiate Windows in headless mode, they will
 use JPanel instead => the method should return `List<Component>` instead.
 The tests will override the method and will return their own component hierarchy,
 whatever suits the test needs.
@@ -50,9 +50,9 @@ For upcoming Swing Tools, we create an utility class AbstractSwingTool which:
 2. Gives assurance that it's run in Swing EDT thread
 
 Every Swing tool must extend that class. When swing tool is registered to
-SwingMCPHandler, it must register a wrapper ToolFunction which, upon invocation:
+SwingMCP, it must register a wrapper ToolFunction which, upon invocation:
 
-1. Acquires the SwingMCPHandler-level lock (see **Concurrency** below).
+1. Acquires the SwingMCP-level lock (see **Concurrency** below).
 2. Calls `runInEDT()` with a block that (all on the EDT):
    a. Retrieves a list of considered components.
    b. Calls `AbstractSwingTool.execute()`.
@@ -71,8 +71,8 @@ The client observes the outcome via `swing_snapshot` or `swing_screenshot`.
 **Concurrent tool calls are not supported.** Two clients controlling the same Swing app
 simultaneously would produce unpredictable, interleaved UI state.
 
-The wrapper function registered by `SwingMCPHandler.registerTool` acquires a `ReentrantLock`
-(`toolLock` field on `SwingMCPHandler`) for the entire duration of the tool call —
+The wrapper function registered by `SwingMCP.registerTool` acquires a `ReentrantLock`
+(`toolLock` field on `SwingMCP`) for the entire duration of the tool call —
 from lock acquisition through the `runInEDT()` call and the `invokeLater()` dispatch (for
 mutations). Both run inside `toolLock.lock()` / `toolLock.unlock()`. Rationale (why the lock spans the whole tool call rather than just the EDT turn, and why `ReentrantLock` rather than `synchronized`) is **DR-007**.
 
@@ -117,7 +117,7 @@ Non-parseable strings still produce `INVALID_PARAMS` errors.
 See `Parameters.java` for the full API. Error messages must name the parameter and the expected type, and — for wrong-type cases — include the observed value or its class to aid debugging, e.g.:
 `"Required parameter 'ref' is missing"`, `"Parameter 'ref' must be an integer, got 3.7"`, `"Parameter 'value' must be a number, got ListN"`.
 
-`AbstractSwingTool.execute` receives `Parameters` (constructed by `SwingMCPHandler.registerTool`
+`AbstractSwingTool.execute` receives `Parameters` (constructed by `SwingMCP.registerTool`
 from the raw map) instead of `Map<String, Object>`.
 
 ---
@@ -130,7 +130,7 @@ components. The ref system is shared across all tools and follows these rules:
 1. **Assignment.** `swing_snapshot` assigns refs starting from 1 to every node
    that exposes at least one `AccessibleAction`. Structural nodes (panels, labels,
    scroll panes, etc.) do not receive refs. The ref-to-component map is held by
-   `SwingMCPHandler` and replaced in its entirety on each `swing_snapshot` call.
+   `SwingMCP` and replaced in its entirety on each `swing_snapshot` call.
 
 2. **Validity window.** Refs are valid from the moment `swing_snapshot` returns
    until the next **interaction tool call** (`swing_click`, `swing_set_text`,
@@ -165,7 +165,7 @@ components. The ref system is shared across all tools and follows these rules:
    Tool calls must be issued **sequentially**, not in parallel. DR-007's
    `toolLock` serialises concurrent calls on the server side, so state stays
    consistent — but the second of two parallel mutations will always see a
-   cleared ref map and fail with a stale-ref error. The `SwingMCPHandler`
+   cleared ref map and fail with a stale-ref error. The `SwingMCP`
    `INSTRUCTIONS` blurb surfaces this rule to clients at `initialize` time.
 
 ---
@@ -585,7 +585,7 @@ Other specs reference this table instead of duplicating detection logic.
 | `single-selection` | `supportsSingleSelection()` | `supportsSelection()` AND NOT `isMultiSelectable()` | *(group label)* | Snapshot action group label. Signals that selection tools (`swing_get_selection`, `swing_set_selection`, `swing_clear_selection`, `swing_get_items`, `swing_get_item_count`) work on this component, but `swing_select_all` does not. See the [JTabbedPane caveat](#jtabbedpane-caveat) — JTabbedPane carries `single-selection` but the enumerate and `clear_selection` tools are not wired to it. |
 | `multi-selection` | `supportsMultiSelection()` | `supportsSelection()` AND `isMultiSelectable()` | *(group label)* | Snapshot action group label. Signals that all selection tools work on this component, including `swing_select_all`. |
 | `get_cell_count` | `isGetCellsSupported` (role is LIST or TREE) AND `childCount > MAX_DATA_ROW_NODES` | `getAccessibleChildrenCount()` | `swing_get_cell_count` | Returns the total number of accessible children. Only advertised on JList/JTree when the snapshot truncated the component's children. **JTable is excluded** — use `swing_get_item_count` for row counts. |
-| `get_cells` | `isGetCellsSupported` (role is LIST or TREE) AND `childCount > MAX_DATA_ROW_NODES` | `getAccessibleChild(int i)` | `swing_get_cells` | Returns a paged accessibility tree dump of the component's accessible children, with refs for actionable children inside cell renderers. Parameters: `ref` (integer), `offset` (integer, 0-based), `length` (integer, max children to return). The output format mirrors `swing_snapshot` — the same indented text tree — but rooted at the requested children rather than the full UI. Each child receives a ref, and `get_cells` **replaces the SwingMCPHandler ref map** with only the refs in its output window. Children outside the `offset`/`length` window are not interactable. The AI must call `swing_snapshot` again to return to the full-tree ref map. Only advertised on JList/JTree when the snapshot truncated the component's children. **JTable is excluded** — table cells are stamp-painted plain text labels with no actionable children; use `swing_get_items` for row access. |
+| `get_cells` | `isGetCellsSupported` (role is LIST or TREE) AND `childCount > MAX_DATA_ROW_NODES` | `getAccessibleChild(int i)` | `swing_get_cells` | Returns a paged accessibility tree dump of the component's accessible children, with refs for actionable children inside cell renderers. Parameters: `ref` (integer), `offset` (integer, 0-based), `length` (integer, max children to return). The output format mirrors `swing_snapshot` — the same indented text tree — but rooted at the requested children rather than the full UI. Each child receives a ref, and `get_cells` **replaces the SwingMCP ref map** with only the refs in its output window. Children outside the `offset`/`length` window are not interactable. The AI must call `swing_snapshot` again to return to the full-tree ref map. Only advertised on JList/JTree when the snapshot truncated the component's children. **JTable is excluded** — table cells are stamp-painted plain text labels with no actionable children; use `swing_get_items` for row access. |
 | `close` | `supportsClose()` | Synthetic — **Window:** dispatches `WindowEvent.WINDOW_CLOSING`; **JInternalFrame:** calls `doDefaultCloseAction()`; **JDesktopIcon:** resolves to JInternalFrame, then `doDefaultCloseAction()` | `swing_close` | Not from `AccessibleAction`. Exposed for `Window` instances (JFrame, JDialog), `JInternalFrame`, and `JDesktopIcon` (iconified internal frame) — `JOptionPane` is excluded because its containing JDialog already exposes `close`. Respects the app's close listeners and `defaultCloseOperation`; does **not** bypass `DO_NOTHING_ON_CLOSE`. `isEffectivelyEnabled()` is **not** checked — closing is a window/frame-level action, not a component-level one. |
 | *(no snapshot action)* | *(no detection)* | Auto-detected: `java.awt.Robot` OS-level mouse events when a display is available and the component is showing; otherwise synthetic `Component.dispatchEvent()` with `MOUSE_PRESSED` → `MOUSE_DRAGGED` × N → `MOUSE_RELEASED` | `swing_drag` | Not advertised in the snapshot. Always callable by the AI based on contextual knowledge (e.g., palette items are typically draggable). Both `source_ref` and `target_ref` are required — they identify the source and target components respectively (drag/drop at center by default). Optional `source_x`/`source_y` and `target_x`/`target_y` (component-relative offsets) override the default center points. Optional `via` array of `[ref, x, y, ...]` triplets defines intermediate waypoints for non-linear drag paths (e.g. self-edges). Robot mode (auto-selected) supports both MouseListener-based drag and Java's DnD framework. Synthetic fallback supports MouseListener-based drag (best effort for DnD). Virtual accessible children (JList items, JTree nodes) resolved to host Component at child's pixel bounds center. |
 

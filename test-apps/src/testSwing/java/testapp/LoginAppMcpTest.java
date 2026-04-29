@@ -1,6 +1,6 @@
 package testapp;
 
-import com.vaadin.swingmcp.mcp.SwingMCPHandler;
+import com.vaadin.swingmcp.mcp.SwingMCP;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class LoginAppMcpTest {
 
-    private SwingMCPHandler mcpServer;
+    private SwingMCP mcpServer;
     private McpSyncClient mcpClient;
 
     @BeforeAll
@@ -35,7 +35,7 @@ class LoginAppMcpTest {
     @BeforeEach
     void setUp() throws Exception {
         // Port 0 → OS-assigned ephemeral port, so parallel test runs don't collide.
-        mcpServer = new SwingMCPHandler(0, "/mcp");
+        mcpServer = new SwingMCP(0, "/mcp");
         mcpServer.start();
 
         Duration timeout = Duration.ofSeconds(10);

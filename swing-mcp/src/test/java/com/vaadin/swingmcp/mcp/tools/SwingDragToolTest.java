@@ -44,7 +44,7 @@ class SwingDragToolTest extends AbstractHeadlessTest {
     /**
      * Drags source_ref to target_ref. Drains the EDT so fire-and-forget action completes.
      * Clears the ref map afterwards only on successful dispatch, mirroring
-     * {@code SwingMCPHandler.registerTool} behaviour for mutation tools.
+     * {@code SwingMCP.registerTool} behaviour for mutation tools.
      */
     private MCPProtocol.Content dragToRef(int sourceRef, int targetRef) throws Exception {
         MCPProtocol.Content result = dragTool.execute(

@@ -1,6 +1,6 @@
 package com.vaadin.swingmcp.agent;
 
-import com.vaadin.swingmcp.mcp.SwingMCPHandler;
+import com.vaadin.swingmcp.mcp.SwingMCP;
 
 import java.lang.instrument.Instrumentation;
 import java.util.logging.Level;
@@ -29,7 +29,7 @@ public final class Agent {
      * The started server instance, or {@code null} if startup has not completed yet
      * (or failed). Package-private for test introspection.
      */
-    static volatile SwingMCPHandler server;
+    static volatile SwingMCP server;
 
     private Agent() {
     }
@@ -40,7 +40,7 @@ public final class Agent {
     public static void premain(String agentArgs, Instrumentation inst) {
         Thread starter = new Thread(() -> {
             try {
-                SwingMCPHandler s = buildServer();
+                SwingMCP s = buildServer();
                 s.startAndAutoStop();
                 server = s;
                 LOG.info("Swing MCP agent started on " + s.getUrl());
@@ -52,17 +52,17 @@ public final class Agent {
         starter.start();
     }
 
-    private static SwingMCPHandler buildServer() {
+    private static SwingMCP buildServer() {
         String value = System.getProperty(PORT_PROPERTY);
         if (value == null || value.isBlank()) {
-            return new SwingMCPHandler();
+            return new SwingMCP();
         }
         try {
             int port = Integer.parseInt(value.trim());
-            return new SwingMCPHandler(port, "/mcp");
+            return new SwingMCP(port, "/mcp");
         } catch (NumberFormatException e) {
             LOG.warning("Invalid " + PORT_PROPERTY + "=" + value + "; using default port");
-            return new SwingMCPHandler();
+            return new SwingMCP();
         }
     }
 }

@@ -6,7 +6,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Test double for {@link SwingMCPHandler} that allows tests to supply their own component
+ * Test double for {@link SwingMCP} that allows tests to supply their own component
  * hierarchies via {@link #setConsideredComponents(List)}.
  * <p>
  * The {@code useEDT} constructor flag controls {@link #runInEDT(Callable)} behaviour:
@@ -18,12 +18,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *       screen-mode tests where a real EDT is running.</li>
  * </ul>
  */
-public class FakeSwingMCPHandler extends SwingMCPHandler {
+public class FakeSwingMCP extends SwingMCP {
 
     private final boolean useEDT;
     private volatile List<Component> consideredComponents = new CopyOnWriteArrayList<>();
 
-    public FakeSwingMCPHandler(int port, String contextPath, boolean useEDT) {
+    public FakeSwingMCP(int port, String contextPath, boolean useEDT) {
         super(port, contextPath);
         this.useEDT = useEDT;
     }

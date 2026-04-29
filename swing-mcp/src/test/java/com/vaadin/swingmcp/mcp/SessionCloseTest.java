@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class SessionCloseTest {
 
-    private static FakeSwingMCPHandler server;
+    private static FakeSwingMCP server;
     private static HttpClient http;
     private static URI serverUri;
 
@@ -35,7 +35,7 @@ class SessionCloseTest {
 
     @BeforeAll
     static void startServer() throws Exception {
-        server = new FakeSwingMCPHandler(0, "/mcp", false);
+        server = new FakeSwingMCP(0, "/mcp", false);
         server.setConsideredComponents(List.of(new JButton("Test")));
         server.start();
         http = HttpClient.newHttpClient();

@@ -16,13 +16,13 @@ public abstract class AbstractHeadlessTest {
         assertEquals("true", System.getProperty("java.awt.headless"));
     }
 
-    protected static FakeSwingMCPHandler mcpServer;
+    protected static FakeSwingMCP mcpServer;
     protected static McpSyncClient mcpClient;
 
     @BeforeAll
     static void startMcpServer() throws Exception {
         // Port 0 → OS-assigned ephemeral port, so parallel test runs don't collide.
-        mcpServer = new FakeSwingMCPHandler(0, "/mcp", false);
+        mcpServer = new FakeSwingMCP(0, "/mcp", false);
         mcpServer.start();
 
         Duration timeout = Duration.ofSeconds(5);

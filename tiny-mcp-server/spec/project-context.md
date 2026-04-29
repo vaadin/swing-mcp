@@ -54,7 +54,7 @@ initial client surface — add when a use case asks. See DR-008.
 `MCPHandler` itself is multi-session: it keeps a map of active
 sessions and routes incoming requests to the one named by the
 `Mcp-Session-Id` header (in HTTP mode; stdio is single-session by
-definition). swing-mcp's `SwingMCPHandler` constructs its handler
+definition). swing-mcp's `SwingMCP` constructs its handler
 with the `IntPredicate count -> count == 0` to enforce a
 single-session policy, because multiple concurrent AI agents
 controlling the same Swing app would cause random concurrency issues

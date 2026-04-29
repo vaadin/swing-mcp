@@ -1,6 +1,6 @@
 package com.vaadin.swingmcp.mcpscreen;
 
-import com.vaadin.swingmcp.mcp.FakeSwingMCPHandler;
+import com.vaadin.swingmcp.mcp.FakeSwingMCP;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
@@ -21,13 +21,13 @@ public abstract class AbstractScreenTest {
         new JFrame(); // this fails on headless
     }
 
-    protected static FakeSwingMCPHandler mcpServer;
+    protected static FakeSwingMCP mcpServer;
     protected static McpSyncClient mcpClient;
 
     @BeforeAll
     static void startMcpServer() throws Exception {
         // Port 0 → OS-assigned ephemeral port, so parallel test runs don't collide.
-        mcpServer = new FakeSwingMCPHandler(0, "/mcp", true);
+        mcpServer = new FakeSwingMCP(0, "/mcp", true);
         mcpServer.start();
 
         Duration timeout = Duration.ofSeconds(5);

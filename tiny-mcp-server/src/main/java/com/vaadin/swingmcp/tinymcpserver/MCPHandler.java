@@ -33,7 +33,7 @@ import java.util.logging.Logger;
  * Per DR-007, stdio is single-session by definition; HTTP is multi-session
  * with sessions keyed by {@code Mcp-Session-Id} (DR-005). The handler
  * itself is multi-session capable; the {@code acceptNewSession} predicate
- * lets a caller (e.g. swing-mcp's {@code SwingMCPHandler}) clamp the
+ * lets a caller (e.g. swing-mcp's {@code SwingMCP}) clamp the
  * session count.
  */
 public class MCPHandler {

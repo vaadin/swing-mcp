@@ -33,9 +33,9 @@ import java.util.logging.Logger;
  * Intended lifecycle: create, start (or {@link #startAndAutoStop()}), then let
  * the JVM terminate. No need to support repeated start/stop cycles.
  */
-public class SwingMCPHandler {
+public class SwingMCP {
 
-    private static final Logger LOG = Logger.getLogger(SwingMCPHandler.class.getName());
+    private static final Logger LOG = Logger.getLogger(SwingMCP.class.getName());
 
     private static final String SERVER_NAME = "Swing MCP";
     private static final String SERVER_VERSION = "0.0.1";
@@ -66,7 +66,7 @@ public class SwingMCPHandler {
     /** Serialises all tool calls end-to-end (EDT phase + PostVerification polling). */
     private final Lock toolLock = new ReentrantLock();
 
-    public SwingMCPHandler(int port, String contextPath) {
+    public SwingMCP(int port, String contextPath) {
         MCPProtocol.Implementation serverInfo = new MCPProtocol.Implementation();
         serverInfo.setName(SERVER_NAME);
         serverInfo.setVersion(SERVER_VERSION);
@@ -77,7 +77,7 @@ public class SwingMCPHandler {
         registerTools();
     }
 
-    public SwingMCPHandler() {
+    public SwingMCP() {
         this(HttpMCPServer.DEFAULT_PORT, HttpMCPServer.DEFAULT_CONTEXT_PATH);
     }
 
@@ -116,7 +116,7 @@ public class SwingMCPHandler {
      * Registers a Swing tool with the underlying MCP handler. The tool is
      * wrapped so that every invocation:
      * <ol>
-     *   <li>Acquires the SwingMCPHandler-level lock, serialising all tool calls</li>
+     *   <li>Acquires the SwingMCP-level lock, serialising all tool calls</li>
      *   <li>Resolves the per-session {@link SwingToolContext} from the current
      *       {@link MCPSession} (lazily creating one on first use); this must
      *       happen on the dispatch thread where {@link MCPSession#getCurrent()}
@@ -169,7 +169,7 @@ public class SwingMCPHandler {
      */
     public void start() {
         server.start();
-        LOG.info("SwingMCPHandler started");
+        LOG.info("SwingMCP started");
     }
 
     /**
@@ -187,7 +187,7 @@ public class SwingMCPHandler {
             }
             shutdownHook = null;
         }
-        LOG.info("SwingMCPHandler stopped");
+        LOG.info("SwingMCP stopped");
     }
 
     /**
@@ -199,8 +199,8 @@ public class SwingMCPHandler {
         start();
         shutdownHook = new Thread(() -> {
             server.stop();
-            LOG.info("SwingMCPHandler stopped via shutdown hook");
-        }, "SwingMCPHandler-shutdown");
+            LOG.info("SwingMCP stopped via shutdown hook");
+        }, "SwingMCP-shutdown");
         Runtime.getRuntime().addShutdownHook(shutdownHook);
     }
 

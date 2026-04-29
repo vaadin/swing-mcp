@@ -18,7 +18,7 @@ import java.util.concurrent.Executor;
  * <p>
  * <b>Thread safety:</b> this class is not thread-safe. All mutation and
  * inspection must be serialised by the caller. In production
- * ({@code SwingMCPHandler.registerTool}) every access happens on the Swing event
+ * ({@code SwingMCP.registerTool}) every access happens on the Swing event
  * dispatch thread (inside {@code runInEDT}), which satisfies this
  * requirement. Tests may access the context off the EDT provided they use
  * a synchronous hand-off such as {@link javax.swing.SwingUtilities#invokeAndWait}
