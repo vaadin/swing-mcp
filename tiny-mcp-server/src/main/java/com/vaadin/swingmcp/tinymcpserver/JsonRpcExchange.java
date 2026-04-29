@@ -11,6 +11,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -35,6 +38,25 @@ class JsonRpcExchange {
 
     HttpExchange getHttpExchange() { return exchange; }
     void setSessionId(String sessionId) { this.sessionId = sessionId; }
+
+    /**
+     * Returns the request transport headers as an unmodifiable
+     * {@code Map<String, String>}, taking the first value for each header
+     * (HTTP allows multi-valued headers; MCP transport headers are
+     * single-valued in practice). Used by {@link MCPToolHandler},
+     * {@link MCPPromptHandler}, and {@link MCPResourceHandler} to populate
+     * the {@code transportHeaders} field on the request records.
+     */
+    Map<String, String> getTransportHeaders() {
+        Map<String, String> result = new LinkedHashMap<>();
+        for (Map.Entry<String, List<String>> entry : exchange.getRequestHeaders().entrySet()) {
+            List<String> values = entry.getValue();
+            if (values != null && !values.isEmpty()) {
+                result.put(entry.getKey(), values.get(0));
+            }
+        }
+        return Collections.unmodifiableMap(result);
+    }
 
     void sendResponse(Object result) {
         MCPProtocol.JsonRpcResponse response = new MCPProtocol.JsonRpcResponse();

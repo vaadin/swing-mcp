@@ -7,7 +7,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -34,18 +33,19 @@ public class TinyMCPServer {
     private static final String PROTOCOL_VERSION = "2024-11-05";
 
     /**
-     * A tool handler function that receives parsed parameters and returns content.
+     * A tool handler function that receives a {@link ToolRequest} and returns content.
      * Invoked synchronously on the HTTP handler thread that is serving the
      * {@code tools/call} request.
      *
-     * <p>The parameter map is always non-null, even when no parameters are defined or passed.
-     * Values are typed according to their schema: {@code String} for string parameters,
-     * {@code Integer} for integer parameters, {@code Double} for number parameters,
-     * {@code Boolean} for boolean parameters, {@code List<Object>} for array parameters,
-     * and {@code Map<String, Object>} for object parameters. Elements and values inside
-     * arrays and objects follow the same Java type mapping recursively. The function
-     * never receives raw GSON {@code JsonElement} instances. Optional parameters
-     * absent from the call are not included in the map.
+     * <p>{@link ToolRequest#arguments()} is always non-null, even when no parameters
+     * are defined or passed. Values are typed according to their schema:
+     * {@code String} for string parameters, {@code Integer} for integer parameters,
+     * {@code Double} for number parameters, {@code Boolean} for boolean parameters,
+     * {@code List<Object>} for array parameters, and {@code Map<String, Object>} for
+     * object parameters. Elements and values inside arrays and objects follow the same
+     * Java type mapping recursively. The function never receives raw GSON
+     * {@code JsonElement} instances. Optional parameters absent from the call are not
+     * included in the map.
      *
      * <p>Verified against the MCP specification (2025-03-26 schema):
      * {@code CallToolResult.content} is a required JSON array with no {@code minItems}
@@ -66,14 +66,14 @@ public class TinyMCPServer {
         /**
          * Invokes the tool.
          *
-         * @param params the parameter values, never null
+         * @param request the request bundle (name, arguments, transport headers, JSON-RPC {@code _meta}); never null
          * @return the result content (wrapped in a single-element array),
          *         or {@code null} for an empty result (produces {@code "content": []})
          * @throws MCPErrorResponseException to return {@code isError=true} with a clean message
          * @throws MCPServerException to return a JSON-RPC protocol error
          * @throws Exception if tool execution fails unexpectedly
          */
-        MCPProtocol.Content call(Map<String, Object> params) throws Exception;
+        MCPProtocol.Content call(ToolRequest request) throws Exception;
     }
 
     /**
@@ -91,13 +91,12 @@ public class TinyMCPServer {
     @FunctionalInterface
     public interface ResourceFunction {
         /**
-         * @param uri the URI of the resource being read (matches the
-         *            registered URI verbatim)
+         * @param request the request bundle (uri, transport headers, JSON-RPC {@code _meta}); never null
          * @return the resource contents; must not be null
          * @throws MCPServerException to return a JSON-RPC protocol error
          * @throws Exception          if resource loading fails unexpectedly
          */
-        java.util.List<MCPProtocol.ResourceContents> call(String uri) throws Exception;
+        java.util.List<MCPProtocol.ResourceContents> call(ResourceRequest request) throws Exception;
     }
 
     /**
@@ -109,14 +108,14 @@ public class TinyMCPServer {
     @FunctionalInterface
     public interface PromptFunction {
         /**
-         * @param arguments the argument map, always non-null and containing
-         *                  only declared keys; missing optional arguments
-         *                  are simply absent
+         * @param request the request bundle (name, arguments, transport headers, JSON-RPC {@code _meta});
+         *                {@link PromptRequest#arguments()} is always non-null and contains only declared
+         *                keys — missing optional arguments are simply absent
          * @return the prompt result; must not be null
          * @throws MCPServerException to return a JSON-RPC protocol error
          * @throws Exception          if prompt expansion fails unexpectedly
          */
-        MCPProtocol.GetPromptResult call(Map<String, String> arguments) throws Exception;
+        MCPProtocol.GetPromptResult call(PromptRequest request) throws Exception;
     }
 
     /**

@@ -128,13 +128,13 @@ public class MCPServer {
      * @param tool the Swing tool to register
      */
     protected void registerTool(AbstractSwingTool tool) {
-        server.addTool(tool.getName(), tool.getDescription(), tool.getInputSchema(), params -> {
+        server.addTool(tool.getName(), tool.getDescription(), tool.getInputSchema(), request -> {
             SwingToolContext context = currentSessionContext();
             toolLock.lock();
             try {
                 return runInEDT(() -> {
                     context.setConsideredComponents(getConsideredComponents());
-                    MCPProtocol.Content result = tool.execute(new Parameters(params), context);
+                    MCPProtocol.Content result = tool.execute(new Parameters(request.arguments()), context);
                     if (tool.isMutation()) {
                         context.clearRefMap();
                     }

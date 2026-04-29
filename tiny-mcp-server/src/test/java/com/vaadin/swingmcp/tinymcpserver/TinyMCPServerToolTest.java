@@ -38,7 +38,7 @@ class TinyMCPServerToolTest {
                 new InputSchemaBuilder()
                         .requiredString("message", "The message to echo")
                         .build(),
-                params -> MCPProtocol.Content.text((String) params.get("message")));
+                request -> MCPProtocol.Content.text((String) request.arguments().get("message")));
 
         // Tool: add_integers — returns sum of two integers as text
         server.addTool("add_integers", "Add two integers",
@@ -46,8 +46,8 @@ class TinyMCPServerToolTest {
                         .requiredInteger("a", "First integer")
                         .requiredInteger("b", "Second integer")
                         .build(),
-                params -> MCPProtocol.Content.text(
-                        String.valueOf((Integer) params.get("a") + (Integer) params.get("b"))));
+                request -> MCPProtocol.Content.text(
+                        String.valueOf((Integer) request.arguments().get("a") + (Integer) request.arguments().get("b"))));
 
         // Tool: multi_type — accepts all parameter types, records args, returns text
         server.addTool("multi_type", "Test all parameter types",
@@ -57,8 +57,8 @@ class TinyMCPServerToolTest {
                         .requiredNumber("num_param", "A number")
                         .requiredBoolean("bool_param", "A boolean")
                         .build(),
-                params -> {
-                    lastCallArgs.set(Map.copyOf(params));
+                request -> {
+                    lastCallArgs.set(Map.copyOf(request.arguments()));
                     return MCPProtocol.Content.text("ok");
                 });
 
@@ -68,30 +68,30 @@ class TinyMCPServerToolTest {
                         .requiredString("required_str", "Required string")
                         .optionalString("optional_str", "Optional string")
                         .build(),
-                params -> {
-                    lastCallArgs.set(Map.copyOf(params));
+                request -> {
+                    lastCallArgs.set(Map.copyOf(request.arguments()));
                     return MCPProtocol.Content.text("ok");
                 });
 
         // Tool: return_null — always returns null content
         server.addTool("return_null", "Returns null content",
                 new InputSchemaBuilder().build(),
-                params -> null);
+                request -> null);
 
         // Tool: return_image — returns image content
         server.addTool("return_image", "Returns image content",
                 new InputSchemaBuilder().build(),
-                params -> MCPProtocol.Content.image("aW1hZ2VkYXRh", "image/png"));
+                request -> MCPProtocol.Content.image("aW1hZ2VkYXRh", "image/png"));
 
         // Tool: return_audio — returns audio content
         server.addTool("return_audio", "Returns audio content",
                 new InputSchemaBuilder().build(),
-                params -> MCPProtocol.Content.audio("YXVkaW9kYXRh", "audio/wav"));
+                request -> MCPProtocol.Content.audio("YXVkaW9kYXRh", "audio/wav"));
 
         // Tool: return_resource — returns embedded resource content
         server.addTool("return_resource", "Returns resource content",
                 new InputSchemaBuilder().build(),
-                params -> {
+                request -> {
                     MCPProtocol.ResourceContents rc = new MCPProtocol.ResourceContents();
                     rc.setUri("file:///test.txt");
                     rc.setMimeType("text/plain");
@@ -102,12 +102,12 @@ class TinyMCPServerToolTest {
         // Tool: throw_exception — always throws
         server.addTool("throw_exception", "Always throws an exception",
                 new InputSchemaBuilder().build(),
-                params -> { throw new RuntimeException("something went wrong"); });
+                request -> { throw new RuntimeException("something went wrong"); });
 
         // Tool: throw_mcp_internal_error — throws MCPServerException with INTERNAL_ERROR
         server.addTool("throw_mcp_internal_error", "Throws MCPServerException INTERNAL_ERROR",
                 new InputSchemaBuilder().build(),
-                params -> {
+                request -> {
                     throw new MCPServerException(MCPServerException.INTERNAL_ERROR, "internal failure");
                 });
 
@@ -116,7 +116,7 @@ class TinyMCPServerToolTest {
                 new InputSchemaBuilder()
                         .requiredString("value", "A value to validate")
                         .build(),
-                params -> {
+                request -> {
                     throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                             "value must be non-empty");
                 });
@@ -124,22 +124,22 @@ class TinyMCPServerToolTest {
         // Tool: throw_mcp_custom_code — throws MCPServerException with a custom code
         server.addTool("throw_mcp_custom_code", "Throws MCPServerException with custom code",
                 new InputSchemaBuilder().build(),
-                params -> {
+                request -> {
                     throw new MCPServerException(-32000, "custom server error");
                 });
 
         // Tool: throw_mcp_error_response — throws MCPErrorResponseException
         server.addTool("throw_mcp_error_response", "Throws MCPErrorResponseException",
                 new InputSchemaBuilder().build(),
-                params -> {
+                request -> {
                     throw new MCPErrorResponseException("clean error message");
                 });
 
         // Tool: no_params_tool — has no defined params, to test unknown param rejection
         server.addTool("no_params_tool", "Tool with no params",
                 new InputSchemaBuilder().build(),
-                params -> {
-                    lastCallArgs.set(Map.copyOf(params));
+                request -> {
+                    lastCallArgs.set(Map.copyOf(request.arguments()));
                     return MCPProtocol.Content.text("ok");
                 });
 
@@ -150,8 +150,8 @@ class TinyMCPServerToolTest {
                         .withMinimum(1)
                         .withMaximum(100)
                         .build(),
-                params -> {
-                    lastCallArgs.set(Map.copyOf(params));
+                request -> {
+                    lastCallArgs.set(Map.copyOf(request.arguments()));
                     return MCPProtocol.Content.text("ok");
                 });
 
@@ -161,8 +161,8 @@ class TinyMCPServerToolTest {
                         .requiredString("color", "A color")
                         .withEnum("red", "green", "blue")
                         .build(),
-                params -> {
-                    lastCallArgs.set(Map.copyOf(params));
+                request -> {
+                    lastCallArgs.set(Map.copyOf(request.arguments()));
                     return MCPProtocol.Content.text("ok");
                 });
 
@@ -171,14 +171,14 @@ class TinyMCPServerToolTest {
                 new InputSchemaBuilder()
                         .requiredArray("items", "The items to echo")
                         .build(),
-                params -> MCPProtocol.Content.json(params.get("items")));
+                request -> MCPProtocol.Content.json(request.arguments().get("items")));
 
         // Tool: echo_object — accepts a required object param, returns it as JSON content
         server.addTool("echo_object", "Echoes an object back as JSON",
                 new InputSchemaBuilder()
                         .requiredObject("config", "The config to echo")
                         .build(),
-                params -> MCPProtocol.Content.json(params.get("config")));
+                request -> MCPProtocol.Content.json(request.arguments().get("config")));
 
         server.start();
 

@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class MCPResourceHandlerTest {
 
     private static TinyMCPServer.ResourceFunction constResource() {
-        return uri -> List.of(MCPProtocol.ResourceContents.text(uri, "text/plain", "hello"));
+        return request -> List.of(MCPProtocol.ResourceContents.text(request.uri(), "text/plain", "hello"));
     }
 
     // ===== Registration validation =====
@@ -163,7 +163,7 @@ class MCPResourceHandlerTest {
     void handleResourcesReadReturnsFunctionResult() {
         MCPResourceHandler handler = new MCPResourceHandler();
         handler.addResource("file://hello", "hello", "desc", "text/plain",
-                uri -> List.of(MCPProtocol.ResourceContents.text(uri, "text/plain", "Hi!")));
+                request -> List.of(MCPProtocol.ResourceContents.text(request.uri(), "text/plain", "Hi!")));
 
         JsonObject body = doRead(handler, buildReadRequest("file://hello"));
         JsonArray contents = body.getAsJsonObject("result").getAsJsonArray("contents");
@@ -178,9 +178,9 @@ class MCPResourceHandlerTest {
     void handleResourcesReadPassesUriToFunction() {
         MCPResourceHandler handler = new MCPResourceHandler();
         java.util.concurrent.atomic.AtomicReference<String> seen = new java.util.concurrent.atomic.AtomicReference<>();
-        handler.addResource("file://capture", "capture", null, null, uri -> {
-            seen.set(uri);
-            return List.of(MCPProtocol.ResourceContents.text(uri, "text/plain", "x"));
+        handler.addResource("file://capture", "capture", null, null, request -> {
+            seen.set(request.uri());
+            return List.of(MCPProtocol.ResourceContents.text(request.uri(), "text/plain", "x"));
         });
 
         doRead(handler, buildReadRequest("file://capture"));
@@ -191,9 +191,9 @@ class MCPResourceHandlerTest {
     void handleResourcesReadSupportsMultipleContents() {
         MCPResourceHandler handler = new MCPResourceHandler();
         handler.addResource("file://multi", "multi", null, null,
-                uri -> List.of(
-                        MCPProtocol.ResourceContents.text(uri, "text/plain", "part 1"),
-                        MCPProtocol.ResourceContents.text(uri, "text/plain", "part 2")));
+                request -> List.of(
+                        MCPProtocol.ResourceContents.text(request.uri(), "text/plain", "part 1"),
+                        MCPProtocol.ResourceContents.text(request.uri(), "text/plain", "part 2")));
 
         JsonObject body = doRead(handler, buildReadRequest("file://multi"));
         JsonArray contents = body.getAsJsonObject("result").getAsJsonArray("contents");
@@ -206,7 +206,7 @@ class MCPResourceHandlerTest {
     void handleResourcesReadSupportsBlobContents() {
         MCPResourceHandler handler = new MCPResourceHandler();
         handler.addResource("file://icon.png", "icon", null, "image/png",
-                uri -> List.of(MCPProtocol.ResourceContents.blob(uri, "image/png", "AAAA")));
+                request -> List.of(MCPProtocol.ResourceContents.blob(request.uri(), "image/png", "AAAA")));
 
         JsonObject body = doRead(handler, buildReadRequest("file://icon.png"));
         JsonObject c0 = body.getAsJsonObject("result").getAsJsonArray("contents")
@@ -218,7 +218,7 @@ class MCPResourceHandlerTest {
     @Test
     void handleResourcesReadEmptyListIsAllowed() {
         MCPResourceHandler handler = new MCPResourceHandler();
-        handler.addResource("file://empty", "empty", null, null, uri -> Collections.emptyList());
+        handler.addResource("file://empty", "empty", null, null, request -> Collections.emptyList());
 
         JsonObject body = doRead(handler, buildReadRequest("file://empty"));
         assertEquals(0, body.getAsJsonObject("result").getAsJsonArray("contents").size());
@@ -257,7 +257,7 @@ class MCPResourceHandlerTest {
     @Test
     void handleResourcesReadNullResultThrowsInternalError() {
         MCPResourceHandler handler = new MCPResourceHandler();
-        handler.addResource("file://nully", "nully", null, null, uri -> null);
+        handler.addResource("file://nully", "nully", null, null, request -> null);
         MCPServerException ex = assertThrows(MCPServerException.class, () ->
                 doRead(handler, buildReadRequest("file://nully")));
         assertEquals(MCPServerException.INTERNAL_ERROR, ex.getCode());
@@ -266,7 +266,7 @@ class MCPResourceHandlerTest {
     @Test
     void handleResourcesReadFunctionExceptionBecomesInternalError() {
         MCPResourceHandler handler = new MCPResourceHandler();
-        handler.addResource("file://boom", "boom", null, null, uri -> {
+        handler.addResource("file://boom", "boom", null, null, request -> {
             throw new RuntimeException("kaboom");
         });
         MCPServerException ex = assertThrows(MCPServerException.class, () ->
@@ -278,7 +278,7 @@ class MCPResourceHandlerTest {
     @Test
     void handleResourcesReadPropagatesMCPServerException() {
         MCPResourceHandler handler = new MCPResourceHandler();
-        handler.addResource("file://reject", "reject", null, null, uri -> {
+        handler.addResource("file://reject", "reject", null, null, request -> {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS, "no");
         });
         MCPServerException ex = assertThrows(MCPServerException.class, () ->

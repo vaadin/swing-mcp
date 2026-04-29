@@ -29,36 +29,39 @@ class TinyMCPServerSessionTest {
         server = new TinyMCPServer(0, "/mcp");
         server.addTool("echo", "Echo tool",
                 new InputSchemaBuilder().requiredString("msg", "message").build(),
-                params -> MCPProtocol.Content.text((String) params.get("msg")));
+                request -> MCPProtocol.Content.text((String) request.arguments().get("msg")));
         server.addTool("whoami", "Returns MCPSession.getCurrent().getId()",
                 new InputSchemaBuilder().build(),
-                params -> MCPProtocol.Content.text(MCPSession.getCurrent().getId()));
+                request -> MCPProtocol.Content.text(MCPSession.getCurrent().getId()));
         server.addTool("set_attr", "Store an attribute on the current session",
                 new InputSchemaBuilder()
                         .requiredString("key", "key")
                         .requiredString("value", "value")
                         .build(),
-                params -> {
-                    MCPSession.getCurrent().setAttribute((String) params.get("key"), params.get("value"));
+                request -> {
+                    MCPSession.getCurrent().setAttribute(
+                            (String) request.arguments().get("key"),
+                            request.arguments().get("value"));
                     return MCPProtocol.Content.text("ok");
                 });
         server.addTool("get_attr", "Read an attribute from the current session",
                 new InputSchemaBuilder().requiredString("key", "key").build(),
-                params -> {
-                    Object v = MCPSession.getCurrent().getAttribute((String) params.get("key"));
+                request -> {
+                    Object v = MCPSession.getCurrent().getAttribute(
+                            (String) request.arguments().get("key"));
                     return MCPProtocol.Content.text(v == null ? "<null>" : v.toString());
                 });
         server.addPrompt("greet", "Greet someone",
                 new PromptArgumentsBuilder()
                         .required("name", "Who to greet")
                         .optional("style", "Greeting style"),
-                args -> {
+                request -> {
                     MCPProtocol.GetPromptResult r = new MCPProtocol.GetPromptResult();
-                    String style = args.getOrDefault("style", "friendly");
+                    String style = request.arguments().getOrDefault("style", "friendly");
                     r.setDescription(style + " greeting");
                     MCPProtocol.PromptMessage msg = new MCPProtocol.PromptMessage();
                     msg.setRole("user");
-                    msg.setContent(MCPProtocol.Content.text("Hello, " + args.get("name") + "!"));
+                    msg.setContent(MCPProtocol.Content.text("Hello, " + request.arguments().get("name") + "!"));
                     r.setMessages(java.util.List.of(msg));
                     return r;
                 });
@@ -415,7 +418,7 @@ class TinyMCPServerSessionTest {
         };
         singleSessionServer.addTool("echo", "Echo tool",
                 new InputSchemaBuilder().requiredString("msg", "message").build(),
-                params -> MCPProtocol.Content.text((String) params.get("msg")));
+                request -> MCPProtocol.Content.text((String) request.arguments().get("msg")));
         singleSessionServer.start();
         try {
             URI uri = URI.create(singleSessionServer.getUrl());

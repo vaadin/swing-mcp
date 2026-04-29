@@ -93,9 +93,12 @@ class MCPResourceHandler {
                     "Unknown resource: " + uri);
         }
 
+        ResourceRequest req = new ResourceRequest(uri,
+                rpc.getTransportHeaders(),
+                request.getMeta());
         List<MCPProtocol.ResourceContents> contents;
         try {
-            contents = resource.function.call(uri);
+            contents = resource.function.call(req);
         } catch (MCPServerException e) {
             throw e;
         } catch (Exception e) {

@@ -23,7 +23,7 @@ class MCPPromptHandlerTest {
     }
 
     private static TinyMCPServer.PromptFunction constPrompt() {
-        return args -> {
+        return request -> {
             MCPProtocol.GetPromptResult r = new MCPProtocol.GetPromptResult();
             r.setMessages(Collections.emptyList());
             return r;
@@ -177,12 +177,12 @@ class MCPPromptHandlerTest {
         MCPPromptHandler handler = new MCPPromptHandler();
         PromptArgumentsBuilder argSpec = new PromptArgumentsBuilder()
                 .required("name", "Who");
-        handler.addPrompt("greet", "Greet", argSpec, args -> {
+        handler.addPrompt("greet", "Greet", argSpec, request -> {
             MCPProtocol.GetPromptResult r = new MCPProtocol.GetPromptResult();
-            r.setDescription("Hi " + args.get("name"));
+            r.setDescription("Hi " + request.arguments().get("name"));
             MCPProtocol.PromptMessage msg = new MCPProtocol.PromptMessage();
             msg.setRole("user");
-            msg.setContent(MCPProtocol.Content.text("Hello, " + args.get("name") + "!"));
+            msg.setContent(MCPProtocol.Content.text("Hello, " + request.arguments().get("name") + "!"));
             r.setMessages(List.of(msg));
             return r;
         });
@@ -204,8 +204,8 @@ class MCPPromptHandlerTest {
                 .required("a", "A")
                 .optional("b", "B");
         java.util.concurrent.atomic.AtomicReference<Map<String, String>> seen = new java.util.concurrent.atomic.AtomicReference<>();
-        handler.addPrompt("cap", "capture", argSpec, args -> {
-            seen.set(args);
+        handler.addPrompt("cap", "capture", argSpec, request -> {
+            seen.set(request.arguments());
             MCPProtocol.GetPromptResult r = new MCPProtocol.GetPromptResult();
             r.setMessages(Collections.emptyList());
             return r;
@@ -222,8 +222,8 @@ class MCPPromptHandlerTest {
                 .required("a", "A")
                 .optional("b", "B");
         java.util.concurrent.atomic.AtomicReference<Map<String, String>> seen = new java.util.concurrent.atomic.AtomicReference<>();
-        handler.addPrompt("cap", "capture", argSpec, args -> {
-            seen.set(args);
+        handler.addPrompt("cap", "capture", argSpec, request -> {
+            seen.set(request.arguments());
             MCPProtocol.GetPromptResult r = new MCPProtocol.GetPromptResult();
             r.setMessages(Collections.emptyList());
             return r;
@@ -283,7 +283,7 @@ class MCPPromptHandlerTest {
     @Test
     void handlePromptsGetNullResultThrowsInternalError() {
         MCPPromptHandler handler = new MCPPromptHandler();
-        handler.addPrompt("nully", "null returner", emptyArgs(), args -> null);
+        handler.addPrompt("nully", "null returner", emptyArgs(), request -> null);
         MCPServerException ex = assertThrows(MCPServerException.class, () ->
                 doGet(handler, buildGetRequest("nully", Map.of())));
         assertEquals(MCPServerException.INTERNAL_ERROR, ex.getCode());
@@ -292,7 +292,7 @@ class MCPPromptHandlerTest {
     @Test
     void handlePromptsGetFunctionExceptionBecomesInternalError() {
         MCPPromptHandler handler = new MCPPromptHandler();
-        handler.addPrompt("boom", "throws", emptyArgs(), args -> {
+        handler.addPrompt("boom", "throws", emptyArgs(), request -> {
             throw new RuntimeException("kaboom");
         });
         MCPServerException ex = assertThrows(MCPServerException.class, () ->
@@ -304,7 +304,7 @@ class MCPPromptHandlerTest {
     @Test
     void handlePromptsGetPropagatesMCPServerException() {
         MCPPromptHandler handler = new MCPPromptHandler();
-        handler.addPrompt("reject", "rejects", emptyArgs(), args -> {
+        handler.addPrompt("reject", "rejects", emptyArgs(), request -> {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS, "no");
         });
         MCPServerException ex = assertThrows(MCPServerException.class, () ->

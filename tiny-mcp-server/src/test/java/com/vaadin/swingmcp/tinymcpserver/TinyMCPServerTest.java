@@ -99,7 +99,7 @@ class TinyMCPServerTest {
         s.start();
         try {
             assertThrows(IllegalStateException.class, () ->
-                    s.addTool("my_tool", "desc", new InputSchemaBuilder().build(), params -> null));
+                    s.addTool("my_tool", "desc", new InputSchemaBuilder().build(), request -> null));
         } finally {
             s.stop();
         }
@@ -112,8 +112,8 @@ class TinyMCPServerTest {
         try {
             assertThrows(IllegalStateException.class, () ->
                     s.addResource("file://x", "x", "desc", "text/plain",
-                            uri -> java.util.List.of(
-                                    MCPProtocol.ResourceContents.text(uri, "text/plain", "x"))));
+                            request -> java.util.List.of(
+                                    MCPProtocol.ResourceContents.text(request.uri(), "text/plain", "x"))));
         } finally {
             s.stop();
         }
@@ -123,8 +123,8 @@ class TinyMCPServerTest {
     void resourcesListAndRead() throws Exception {
         TinyMCPServer s = new TinyMCPServer(0, "/mcp");
         s.addResource("file://greeting", "Greeting", "A friendly greeting", "text/plain",
-                uri -> java.util.List.of(
-                        MCPProtocol.ResourceContents.text(uri, "text/plain", "Hello, world!")));
+                request -> java.util.List.of(
+                        MCPProtocol.ResourceContents.text(request.uri(), "text/plain", "Hello, world!")));
         s.start();
         try {
             HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport
@@ -224,7 +224,7 @@ class TinyMCPServerTest {
         TinyMCPServer s = new TinyMCPServer(0, "/mcp");
         s.addTool("boom", "Throws",
                 new InputSchemaBuilder().build(),
-                params -> { throw new RuntimeException("kaboom"); });
+                request -> { throw new RuntimeException("kaboom"); });
         s.start();
         try {
             HttpClient http = HttpClient.newHttpClient();
@@ -251,7 +251,7 @@ class TinyMCPServerTest {
         // by the resource handler, then rendered as a JSON-RPC error at HTTP 200 (default).
         TinyMCPServer s = new TinyMCPServer(0, "/mcp");
         s.addResource("file://boom", "boom", "throws", "text/plain",
-                uri -> { throw new RuntimeException("kaboom"); });
+                request -> { throw new RuntimeException("kaboom"); });
         s.start();
         try {
             HttpClient http = HttpClient.newHttpClient();
@@ -276,7 +276,7 @@ class TinyMCPServerTest {
         // Mirrors the resource case — prompts also get INTERNAL_ERROR at HTTP 200.
         TinyMCPServer s = new TinyMCPServer(0, "/mcp");
         s.addPrompt("boom", "throws", new PromptArgumentsBuilder(),
-                args -> { throw new RuntimeException("kaboom"); });
+                request -> { throw new RuntimeException("kaboom"); });
         s.start();
         try {
             HttpClient http = HttpClient.newHttpClient();

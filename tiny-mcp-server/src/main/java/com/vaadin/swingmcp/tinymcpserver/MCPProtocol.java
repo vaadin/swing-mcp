@@ -3,6 +3,7 @@ package com.vaadin.swingmcp.tinymcpserver;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.ToNumberPolicy;
 import com.google.gson.annotations.SerializedName;
 
@@ -83,6 +84,25 @@ public class MCPProtocol {
 
         public void setParamsFrom(Object obj) {
             this.params = GSON.toJsonTree(obj);
+        }
+
+        /**
+         * Returns the {@code params._meta} object from the JSON-RPC envelope,
+         * or {@code null} if the request has no params, the params are not a
+         * JSON object, the {@code _meta} field is absent, or {@code _meta} is
+         * not itself a JSON object. MCP uses {@code _meta} to carry
+         * cross-cutting fields such as {@code progressToken}; handlers that
+         * forward requests upstream typically pass it through verbatim.
+         */
+        public JsonObject getMeta() {
+            if (params == null || !params.isJsonObject()) {
+                return null;
+            }
+            JsonElement metaElement = params.getAsJsonObject().get("_meta");
+            if (metaElement == null || !metaElement.isJsonObject()) {
+                return null;
+            }
+            return metaElement.getAsJsonObject();
         }
     }
 

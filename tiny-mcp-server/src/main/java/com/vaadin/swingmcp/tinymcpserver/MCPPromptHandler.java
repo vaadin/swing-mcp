@@ -1,6 +1,7 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -121,9 +122,13 @@ class MCPPromptHandler {
             typedArgs.put(entry.getKey(), (String) entry.getValue());
         }
 
+        PromptRequest req = new PromptRequest(promptName,
+                Collections.unmodifiableMap(typedArgs),
+                rpc.getTransportHeaders(),
+                request.getMeta());
         MCPProtocol.GetPromptResult result;
         try {
-            result = prompt.function.call(typedArgs);
+            result = prompt.function.call(req);
         } catch (MCPServerException e) {
             throw e;
         } catch (Exception e) {

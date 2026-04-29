@@ -95,7 +95,11 @@ class MCPToolHandler {
         // Parse parameters and invoke the tool function
         try {
             Map<String, Object> callArgs = tool.parser.parse(rawArgs);
-            MCPProtocol.Content content = tool.function.call(callArgs);
+            ToolRequest req = new ToolRequest(toolName,
+                    Collections.unmodifiableMap(callArgs),
+                    rpc.getTransportHeaders(),
+                    request.getMeta());
+            MCPProtocol.Content content = tool.function.call(req);
             MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
             if (content == null) {
                 result.setContent(Collections.emptyList());
