@@ -73,17 +73,10 @@ class SessionCleanupTest {
 
     /**
      * Retrieves the {@link MCPSession} with the given id from a server.
-     * Uses reflection on the private {@code sessions} map because the
-     * server does not otherwise expose sessions — acceptable for in-package
-     * tests of cleanup mechanics.
+     * Uses the package-private {@code getHandler().getSession(id)} accessor.
      */
-    private static MCPSession findSessionById(TinyMCPServer server, String id) throws Exception {
-        java.lang.reflect.Field f = TinyMCPServer.class.getDeclaredField("sessions");
-        f.setAccessible(true);
-        @SuppressWarnings("unchecked")
-        java.util.concurrent.ConcurrentHashMap<String, MCPSession> map =
-                (java.util.concurrent.ConcurrentHashMap<String, MCPSession>) f.get(server);
-        MCPSession s = map.get(id);
+    private static MCPSession findSessionById(TinyMCPServer server, String id) {
+        MCPSession s = server.getHandler().getSession(id);
         assertNotNull(s, "no session with id " + id);
         return s;
     }
@@ -109,7 +102,7 @@ class SessionCleanupTest {
                     "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"));
             MCPProtocol.JsonRpcRequest req = rpc.parsePost();
             MCPServerException ex = assertThrows(MCPServerException.class,
-                    () -> session.handlePost(rpc, req));
+                    () -> session.handlePost(req, rpc.getTransportHeaders()));
             assertEquals(404, ex.getHttpStatus());
         } finally {
             server.stop();
@@ -193,7 +186,7 @@ class SessionCleanupTest {
                     "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}");
             JsonRpcExchange rpc = new JsonRpcExchange(exchange);
             MCPProtocol.JsonRpcRequest req = rpc.parsePost();
-            session.handlePost(rpc, req);
+            session.handlePost(req, rpc.getTransportHeaders());
 
             assertTrue(session.getLastAccessNanos() > before,
                     "handlePost must advance lastAccessNanos");
@@ -281,14 +274,14 @@ class SessionCleanupTest {
     }
 
     @Test
-    void sessionGetServerReturnsOwningServer() throws Exception {
+    void sessionGetHandlerReturnsOwningHandler() throws Exception {
         RecordingServer server = newServer();
         server.start();
         try {
             MCPSession session = initAndGetSession(server);
-            assertSame(server, session.getServer(),
-                    "getServer() must return the TinyMCPServer that created the session");
-            assertSame(server.getExecutor(), session.getServer().getExecutor(),
+            assertSame(server.getHandler(), session.getHandler(),
+                    "getHandler() must return the MCPHandler that created the session");
+            assertSame(server.getExecutor(), session.getHandler().getExecutor(),
                     "executor must be shared via the session back-pointer");
         } finally {
             server.stop();

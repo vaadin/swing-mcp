@@ -93,12 +93,12 @@ class MCPPromptHandlerTest {
 
     // ===== handlePromptsList =====
 
-    private static JsonObject dispatch(java.util.function.Consumer<JsonRpcExchange> action) {
+    private static JsonObject dispatch(java.util.function.Supplier<Object> action) {
         FakeHttpExchange exchange = new FakeHttpExchange(
                 "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"x\"}");
         JsonRpcExchange rpc = new JsonRpcExchange(exchange);
         rpc.parsePost();
-        action.accept(rpc);
+        rpc.sendResponse(action.get());
         return MCPProtocol.fromJson(exchange.getResponseBodyString(), JsonObject.class);
     }
 
@@ -168,7 +168,7 @@ class MCPPromptHandlerTest {
                 "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"prompts/get\"}");
         JsonRpcExchange rpc = new JsonRpcExchange(exchange);
         rpc.parsePost();
-        handler.handlePromptsGet(rpc, req);
+        rpc.sendResponse(handler.handlePromptsGet(req, Collections.emptyMap()));
         return MCPProtocol.fromJson(exchange.getResponseBodyString(), JsonObject.class);
     }
 

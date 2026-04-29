@@ -12,6 +12,10 @@ import java.util.logging.Logger;
  * Owns the tool registry and handles {@code tools/list} and {@code tools/call}
  * JSON-RPC methods. Extracted from {@link TinyMCPServer} so that all
  * tool-related functionality lives in one place.
+ * <p>
+ * The {@code handle*} methods are transport-agnostic: they consume parsed
+ * JSON-RPC requests and return the corresponding result POJO. The caller
+ * (HTTP or stdio transport) writes the response.
  */
 class MCPToolHandler {
 
@@ -68,17 +72,29 @@ class MCPToolHandler {
         tools.put(name, new RegisteredTool(name, description, inputSchema, function));
     }
 
-    void handleToolsList(JsonRpcExchange rpc) {
+    MCPProtocol.ListToolsResult handleToolsList() {
         MCPProtocol.ListToolsResult result = new MCPProtocol.ListToolsResult();
         List<MCPProtocol.Tool> toolList = new ArrayList<>();
         for (RegisteredTool rt : tools.values()) {
             toolList.add(rt.descriptor);
         }
         result.setTools(toolList);
-        rpc.sendResponse(result);
+        return result;
     }
 
-    void handleToolsCall(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) {
+    /**
+     * Dispatches {@code tools/call}. Tool-application errors
+     * ({@link MCPErrorResponseException} or any non-{@link MCPServerException}
+     * thrown by the tool function) are returned as {@code CallToolResult}
+     * with {@code isError=true} (DR-004 layer 3). Protocol errors throw
+     * {@link MCPServerException}.
+     *
+     * @param request          the parsed JSON-RPC request envelope
+     * @param transportHeaders headers from the underlying transport (HTTP
+     *                         request headers; empty for stdio)
+     */
+    MCPProtocol.CallToolResult handleToolsCall(MCPProtocol.JsonRpcRequest request,
+            Map<String, String> transportHeaders) {
         MCPProtocol.CallToolParams params = request.getParamsAs(MCPProtocol.CallToolParams.class);
         if (params == null || params.getName() == null) {
             throw new MCPServerException(MCPServerException.METHOD_NOT_FOUND, "Method not found");
@@ -92,12 +108,11 @@ class MCPToolHandler {
 
         Map<String, Object> rawArgs = params.getArguments() != null ? params.getArguments() : Collections.emptyMap();
 
-        // Parse parameters and invoke the tool function
         try {
             Map<String, Object> callArgs = tool.parser.parse(rawArgs);
             ToolRequest req = new ToolRequest(toolName,
                     Collections.unmodifiableMap(callArgs),
-                    rpc.getTransportHeaders(),
+                    transportHeaders,
                     request.getMeta());
             MCPProtocol.Content content = tool.function.call(req);
             MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
@@ -106,16 +121,22 @@ class MCPToolHandler {
             } else {
                 result.setContent(Collections.singletonList(content));
             }
-            rpc.sendResponse(result);
+            return result;
         } catch (MCPErrorResponseException e) {
             LOG.fine("Tool '" + toolName + "' returned error response: " + e.getMessage());
-            rpc.sendToolError(e.getMessage());
+            return toolError(e.getMessage());
         } catch (MCPServerException e) {
-            // Protocol-level error — let MCPSession.handlePost translate to JSON-RPC error.
             throw e;
         } catch (Exception e) {
             LOG.log(Level.WARNING, "Tool '" + toolName + "' threw an exception", e);
-            rpc.sendToolError(e.toString());
+            return toolError(e.toString());
         }
+    }
+
+    private static MCPProtocol.CallToolResult toolError(String message) {
+        MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
+        result.setIsError(true);
+        result.setContent(Collections.singletonList(MCPProtocol.Content.text(message)));
+        return result;
     }
 }

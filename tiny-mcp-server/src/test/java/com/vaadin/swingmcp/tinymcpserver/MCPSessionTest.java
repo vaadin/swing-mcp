@@ -31,7 +31,8 @@ class MCPSessionTest {
         JsonRpcExchange rpc = new JsonRpcExchange(exchange);
         MCPProtocol.JsonRpcRequest request = rpc.parsePost();
         assertNotNull(request, "parsePost should succeed for valid JSON-RPC");
-        session.handlePost(rpc, request);
+        Object result = session.handlePost(request, rpc.getTransportHeaders());
+        rpc.sendResponse(result);
         return exchange;
     }
 

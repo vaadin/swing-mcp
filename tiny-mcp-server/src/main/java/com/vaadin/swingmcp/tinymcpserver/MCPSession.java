@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 
 /**
  * Represents a single MCP session and handles protocol dispatch for all
@@ -24,7 +25,7 @@ public class MCPSession {
     private final MCPToolHandler toolHandler;
     private final MCPResourceHandler resourceHandler;
     private final MCPPromptHandler promptHandler;
-    private final TinyMCPServer server;
+    private final MCPHandler handler;
     private final Map<String, Object> attributes = new HashMap<>();
     /**
      * The session lock, prevents concurrent access to the session.
@@ -48,12 +49,12 @@ public class MCPSession {
     private volatile boolean closed = false;
 
     MCPSession(String id, MCPToolHandler toolHandler, MCPResourceHandler resourceHandler,
-            MCPPromptHandler promptHandler, TinyMCPServer server) {
+            MCPPromptHandler promptHandler, MCPHandler handler) {
         this.id = id;
         this.toolHandler = toolHandler;
         this.resourceHandler = resourceHandler;
         this.promptHandler = promptHandler;
-        this.server = server;
+        this.handler = handler;
     }
 
     /**
@@ -66,13 +67,20 @@ public class MCPSession {
     }
 
     /**
-     * Dispatches a parsed JSON-RPC request to the appropriate handler.
-     * Called for all session-scoped methods (everything except
-     * {@code initialize} and {@code ping}, which are handled by
-     * {@link TinyMCPServer}).
+     * Dispatches a parsed JSON-RPC request to the appropriate handler and
+     * returns the result POJO. Called for all session-scoped methods
+     * (everything except {@code initialize} and {@code ping}, which are
+     * handled by {@link TinyMCPServer}). The caller is responsible for
+     * writing the result to the wire.
+     *
+     * @param request          the parsed JSON-RPC request
+     * @param transportHeaders headers from the underlying transport (HTTP
+     *                         request headers; empty for stdio)
+     * @return the JSON-RPC {@code result} POJO produced by the matching
+     *         handler — never {@code null}
      */
-    void handlePost(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) {
-        runLocked(() -> doHandlePost(rpc, request));
+    Object handlePost(MCPProtocol.JsonRpcRequest request, Map<String, String> transportHeaders) {
+        return runLocked(() -> doHandlePost(request, transportHeaders));
     }
 
     /**
@@ -114,42 +122,37 @@ public class MCPSession {
     }
 
     /**
-     * Returns the {@link TinyMCPServer} that owns this session, giving tool
+     * Returns the {@link MCPHandler} that owns this session, giving tool
      * handlers access to the shared scheduled executor (see
-     * {@link TinyMCPServer#getExecutor()}) and other server-level services.
+     * {@link MCPHandler#getExecutor()}) and other handler-level services.
      *
      * @throws IllegalStateException if this session was constructed without
-     *                               an owning server (tests only)
+     *                               an owning handler (tests only)
      */
-    public TinyMCPServer getServer() {
-        if (server == null) {
-            throw new IllegalStateException("Session was constructed without an owning server");
+    public MCPHandler getHandler() {
+        if (handler == null) {
+            throw new IllegalStateException("Session was constructed without an owning handler");
         }
-        return server;
+        return handler;
     }
 
-    private void doHandlePost(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) {
+    private Object doHandlePost(MCPProtocol.JsonRpcRequest request,
+            Map<String, String> transportHeaders) {
         checkLocked();
         String rpcMethod = request.getMethod();
         switch (rpcMethod != null ? rpcMethod : "") {
             case "tools/list":
-                toolHandler.handleToolsList(rpc);
-                break;
+                return toolHandler.handleToolsList();
             case "tools/call":
-                toolHandler.handleToolsCall(rpc, request);
-                break;
+                return toolHandler.handleToolsCall(request, transportHeaders);
             case "resources/list":
-                resourceHandler.handleResourcesList(rpc);
-                break;
+                return resourceHandler.handleResourcesList();
             case "resources/read":
-                resourceHandler.handleResourcesRead(rpc, request);
-                break;
+                return resourceHandler.handleResourcesRead(request, transportHeaders);
             case "prompts/list":
-                promptHandler.handlePromptsList(rpc);
-                break;
+                return promptHandler.handlePromptsList();
             case "prompts/get":
-                promptHandler.handlePromptsGet(rpc, request);
-                break;
+                return promptHandler.handlePromptsGet(request, transportHeaders);
             default:
                 throw new MCPServerException(-32601, "Method not found: " + rpcMethod);
         }
@@ -266,6 +269,18 @@ public class MCPSession {
      * {@link #tryClose()} caller).
      */
     void runLocked(Runnable block) {
+        runLocked(() -> {
+            block.run();
+            return null;
+        });
+    }
+
+    /**
+     * Result-returning variant of {@link #runLocked(Runnable)} — same lock
+     * acquisition and {@code closed}/timestamp semantics, but propagates the
+     * value produced by {@code block}.
+     */
+    <T> T runLocked(Supplier<T> block) {
         sessionLock.lock();
         try {
             if (closed) {
@@ -275,7 +290,7 @@ public class MCPSession {
             lastAccessNanos = System.nanoTime();
             instance.set(this);
             try {
-                block.run();
+                return block.get();
             } finally {
                 instance.remove();
             }

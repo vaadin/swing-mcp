@@ -80,12 +80,12 @@ class MCPResourceHandlerTest {
 
     // ===== handleResourcesList =====
 
-    private static JsonObject dispatch(java.util.function.Consumer<JsonRpcExchange> action) {
+    private static JsonObject dispatch(java.util.function.Supplier<Object> action) {
         FakeHttpExchange exchange = new FakeHttpExchange(
                 "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"x\"}");
         JsonRpcExchange rpc = new JsonRpcExchange(exchange);
         rpc.parsePost();
-        action.accept(rpc);
+        rpc.sendResponse(action.get());
         return MCPProtocol.fromJson(exchange.getResponseBodyString(), JsonObject.class);
     }
 
@@ -155,7 +155,7 @@ class MCPResourceHandlerTest {
                 "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"resources/read\"}");
         JsonRpcExchange rpc = new JsonRpcExchange(exchange);
         rpc.parsePost();
-        handler.handleResourcesRead(rpc, req);
+        rpc.sendResponse(handler.handleResourcesRead(req, Collections.emptyMap()));
         return MCPProtocol.fromJson(exchange.getResponseBodyString(), JsonObject.class);
     }
 

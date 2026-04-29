@@ -157,7 +157,7 @@ public class MCPServer {
         MCPSession session = MCPSession.getCurrent();
         SwingToolContext context = session.getAttribute(SwingToolContext.class);
         if (context == null) {
-            context = new SwingToolContext(session.getServer().getExecutor());
+            context = new SwingToolContext(session.getHandler().getExecutor());
             session.setAttribute(SwingToolContext.class, context);
         }
         return context;

@@ -85,13 +85,6 @@ class JsonRpcExchange {
         sendJsonBody(httpStatus, GSON_WITH_NULLS.toJson(error));
     }
 
-    void sendToolError(String message) {
-        MCPProtocol.CallToolResult result = new MCPProtocol.CallToolResult();
-        result.setIsError(true);
-        result.setContent(Collections.singletonList(MCPProtocol.Content.text(message)));
-        sendResponse(result);
-    }
-
     String readBody() {
         try (InputStream is = exchange.getRequestBody()) {
             return new String(is.readAllBytes(), StandardCharsets.UTF_8);

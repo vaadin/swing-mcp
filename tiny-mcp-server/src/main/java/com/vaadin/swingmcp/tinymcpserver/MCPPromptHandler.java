@@ -17,6 +17,10 @@ import java.util.logging.Logger;
  * (missing-required, unknown args with did-you-mean hints) is delegated
  * to {@link MCPParameterParser}, the same parser used for tool calls —
  * it has a dedicated constructor for prompt-argument lists.
+ * <p>
+ * The {@code handle*} methods are transport-agnostic: they consume parsed
+ * JSON-RPC requests and return the corresponding result POJO. The caller
+ * (HTTP or stdio transport) writes the response.
  */
 class MCPPromptHandler {
 
@@ -79,17 +83,26 @@ class MCPPromptHandler {
         prompts.put(name, new RegisteredPrompt(name, description, arguments.build(), function));
     }
 
-    void handlePromptsList(JsonRpcExchange rpc) {
+    MCPProtocol.ListPromptsResult handlePromptsList() {
         MCPProtocol.ListPromptsResult result = new MCPProtocol.ListPromptsResult();
         List<MCPProtocol.Prompt> descriptors = new ArrayList<>();
         for (RegisteredPrompt rp : prompts.values()) {
             descriptors.add(rp.descriptor);
         }
         result.setPrompts(descriptors);
-        rpc.sendResponse(result);
+        return result;
     }
 
-    void handlePromptsGet(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) {
+    /**
+     * Dispatches {@code prompts/get}. Like resources, prompts have no
+     * tool-layer "isError" channel, so failures become JSON-RPC protocol
+     * errors.
+     *
+     * @param request          the parsed JSON-RPC request envelope
+     * @param transportHeaders headers from the underlying transport
+     */
+    MCPProtocol.GetPromptResult handlePromptsGet(MCPProtocol.JsonRpcRequest request,
+            Map<String, String> transportHeaders) {
         MCPProtocol.GetPromptParams params = request.getParamsAs(MCPProtocol.GetPromptParams.class);
         if (params == null || params.getName() == null) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
@@ -124,7 +137,7 @@ class MCPPromptHandler {
 
         PromptRequest req = new PromptRequest(promptName,
                 Collections.unmodifiableMap(typedArgs),
-                rpc.getTransportHeaders(),
+                transportHeaders,
                 request.getMeta());
         MCPProtocol.GetPromptResult result;
         try {
@@ -140,6 +153,6 @@ class MCPPromptHandler {
             throw new MCPServerException(MCPServerException.INTERNAL_ERROR,
                     "Prompt '" + promptName + "' returned null");
         }
-        rpc.sendResponse(result);
+        return result;
     }
 }

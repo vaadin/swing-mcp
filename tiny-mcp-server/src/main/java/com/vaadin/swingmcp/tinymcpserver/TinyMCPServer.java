@@ -5,24 +5,22 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * A minimal in-process MCP server using Java's built-in HttpServer.
- * Supports only HTTP transport (no STDIO), binds to 127.0.0.1 only.
+ * Binds to 127.0.0.1 only.
  * <p>
- * Handles HTTP lifecycle, session creation/destruction, and routing.
- * Protocol dispatch for session-scoped requests is delegated to
- * {@link MCPSession}.
+ * This class is the HTTP transport: it owns the {@link HttpServer},
+ * routes incoming POST/DELETE requests, validates the
+ * {@code Mcp-Session-Id} header, and writes JSON-RPC responses to the
+ * wire. All protocol logic — registries, session lifecycle, dispatch of
+ * {@code initialize}/{@code ping}/session-scoped methods — is delegated
+ * to {@link MCPHandler}.
  */
 public class TinyMCPServer {
 
@@ -30,21 +28,6 @@ public class TinyMCPServer {
 
     public static final int DEFAULT_PORT = 18088;
     public static final String DEFAULT_CONTEXT_PATH = "/mcp";
-
-    /**
-     * Protocol versions this server speaks. Order does not matter for
-     * negotiation: {@link #handleInitialize} echoes the client's
-     * requested version back if it appears here, otherwise it picks
-     * {@link #LATEST_PROTOCOL_VERSION}.
-     */
-    private static final java.util.Set<String> SUPPORTED_PROTOCOL_VERSIONS = java.util.Set.of(
-            "2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25");
-
-    /**
-     * Returned by {@code initialize} when the client requests a version
-     * we don't speak. Per the MCP spec the client may then disconnect.
-     */
-    private static final String LATEST_PROTOCOL_VERSION = "2025-11-25";
 
     /**
      * A tool handler function that receives a {@link ToolRequest} and returns content.
@@ -139,34 +122,10 @@ public class TinyMCPServer {
      */
     private final int port;
     private final String contextPath;
-    private final MCPProtocol.Implementation serverInfo;
-    private final String instructions;
-    private final MCPToolHandler toolHandler = new MCPToolHandler();
-    private final MCPResourceHandler resourceHandler = new MCPResourceHandler();
-    private final MCPPromptHandler promptHandler = new MCPPromptHandler();
-    private volatile boolean started = false;
+    private final MCPHandler handler;
     private HttpServer httpServer;
     /** Populated by {@link #start()} once the OS has assigned a port. */
     private volatile int boundPort = -1;
-
-    private final ConcurrentHashMap<String, MCPSession> sessions = new ConcurrentHashMap<>();
-    /** Guards all session-map mutations (put, remove, clear) to prevent races. */
-    private final Object sessionGuardLock = new Object();
-
-    /**
-     * Sessions idle for at least this long are evicted by the cleanup tick.
-     * Package-private so tests can substitute a short value via reflection.
-     */
-    static final long IDLE_TIMEOUT_NANOS = TimeUnit.MINUTES.toNanos(30);
-    /** Interval between cleanup ticks. */
-    static final long CLEANUP_TICK_SECONDS = 60;
-
-    /**
-     * Shared scheduled executor. Created in {@link #start()}, shut down in
-     * {@link #stop()}. Runs the session-idle-cleanup tick and is exposed via
-     * {@link #getExecutor()} for tool handlers that need background work.
-     */
-    private ScheduledExecutorService executor;
 
     public TinyMCPServer() {
         this(DEFAULT_PORT, DEFAULT_CONTEXT_PATH);
@@ -194,8 +153,9 @@ public class TinyMCPServer {
             throw new IllegalArgumentException("Parameter contextPath: invalid value " + contextPath + ": must start with a slash");
         }
         this.contextPath = contextPath;
-        this.serverInfo = serverInfo != null ? serverInfo : new MCPProtocol.Implementation();
-        this.instructions = instructions;
+        this.handler = new MCPHandler(serverInfo, instructions,
+                count -> acceptNewSession(),
+                this::onSessionClosed);
     }
 
     public String getUrl() {
@@ -232,10 +192,7 @@ public class TinyMCPServer {
      * @throws IllegalStateException    if a tool with the same name is already registered
      */
     public void addTool(String name, String description, MCPProtocol.InputSchema inputSchema, ToolFunction function) {
-        if (started) {
-            throw new IllegalStateException("Cannot add tools after server has been started");
-        }
-        toolHandler.addTool(name, description, inputSchema, function);
+        handler.addTool(name, description, inputSchema, function);
     }
 
     /**
@@ -264,10 +221,7 @@ public class TinyMCPServer {
      */
     public void addResource(String uri, String name, String description, String mimeType,
             ResourceFunction function) {
-        if (started) {
-            throw new IllegalStateException("Cannot add resources after server has been started");
-        }
-        resourceHandler.addResource(uri, name, description, mimeType, function);
+        handler.addResource(uri, name, description, mimeType, function);
     }
 
     /**
@@ -285,14 +239,10 @@ public class TinyMCPServer {
      * @throws IllegalStateException    if a prompt with the same name is already registered
      */
     public void addPrompt(String name, String description, PromptArgumentsBuilder arguments, PromptFunction function) {
-        if (started) {
-            throw new IllegalStateException("Cannot add prompts after server has been started");
-        }
-        promptHandler.addPrompt(name, description, arguments, function);
+        handler.addPrompt(name, description, arguments, function);
     }
 
     public void start() {
-        started = true;
         try {
             httpServer = HttpServer.create(
                     new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port), 0);
@@ -307,14 +257,7 @@ public class TinyMCPServer {
             return t;
         }));
         httpServer.createContext(contextPath, this::handleRequest);
-        AtomicInteger threadNum = new AtomicInteger();
-        executor = Executors.newScheduledThreadPool(1, r -> {
-            Thread t = new Thread(r, "tiny-mcp-server-" + threadNum.getAndIncrement());
-            t.setDaemon(true);
-            return t;
-        });
-        executor.scheduleAtFixedRate(this::cleanupIdleSessionsSafe,
-                CLEANUP_TICK_SECONDS, CLEANUP_TICK_SECONDS, TimeUnit.SECONDS);
+        handler.start();
         // Start from a daemon thread so that HTTP-Dispatcher inherits daemon status,
         // preventing it from keeping the JVM alive after the Swing app closes.
         Thread starter = new Thread(httpServer::start, "mcp-server-starter");
@@ -329,10 +272,7 @@ public class TinyMCPServer {
     }
 
     public void stop() {
-        if (executor != null) {
-            executor.shutdownNow();
-            executor = null;
-        }
+        handler.stop();
         if (httpServer != null) {
             httpServer.stop(0);
             httpServer = null;
@@ -354,10 +294,7 @@ public class TinyMCPServer {
      * @throws IllegalStateException if the server is not started
      */
     public ScheduledExecutorService getExecutor() {
-        if (executor == null) {
-            throw new IllegalStateException("Server not started");
-        }
-        return executor;
+        return handler.getExecutor();
     }
 
     /**
@@ -421,7 +358,7 @@ public class TinyMCPServer {
         // Session ID header validation: if present, must match a known session
         String incomingSessionId = rpc.getHttpExchange().getRequestHeaders()
                 .getFirst("Mcp-Session-Id");
-        if (incomingSessionId != null && !sessions.containsKey(incomingSessionId)) {
+        if (incomingSessionId != null && handler.getSession(incomingSessionId) == null) {
             LOG.warning("Rejecting request: unknown Mcp-Session-Id " + incomingSessionId);
             throw new MCPServerException(404,
                     MCPServerException.SERVER_NOT_INITIALIZED, "Session not found.");
@@ -434,11 +371,13 @@ public class TinyMCPServer {
 
         // Server-level methods (no session required)
         if ("initialize".equals(rpcMethod)) {
-            handleInitialize(rpc, request);
+            MCPHandler.InitializeOutcome outcome = handler.dispatchInitialize(request);
+            rpc.setSessionId(outcome.sessionId());
+            rpc.sendResponse(outcome.result());
             return;
         }
         if ("ping".equals(rpcMethod)) {
-            handlePing(rpc);
+            rpc.sendResponse(handler.dispatchPing());
             return;
         }
 
@@ -449,7 +388,7 @@ public class TinyMCPServer {
                     MCPServerException.SERVER_NOT_INITIALIZED,
                     "Server not initialized. Send 'initialize' first.");
         }
-        MCPSession session = sessions.get(incomingSessionId);
+        MCPSession session = handler.getSession(incomingSessionId);
         if (session == null) {
             // Race: session removed between header check and lookup
             throw new MCPServerException(404,
@@ -457,81 +396,23 @@ public class TinyMCPServer {
         }
 
         rpc.setSessionId(session.getId());
-        session.handlePost(rpc, request);
-    }
-
-    private void handleInitialize(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) {
-        MCPSession session;
-        synchronized (sessionGuardLock) {
-            if (!acceptNewSession()) {
-                LOG.warning("Rejecting initialization: acceptNewSession() returned false");
-                throw new MCPServerException(409,
-                        MCPServerException.SERVER_NOT_INITIALIZED, "Another session is already active");
-            }
-            String sessionId = UUID.randomUUID().toString();
-            session = new MCPSession(sessionId, toolHandler, resourceHandler, promptHandler, this);
-            sessions.put(sessionId, session);
-        }
-        rpc.setSessionId(session.getId());
-
-        MCPProtocol.InitializeResult result = new MCPProtocol.InitializeResult();
-        result.setProtocolVersion(negotiateProtocolVersion(request));
-
-        result.setServerInfo(this.serverInfo);
-        result.setInstructions(this.instructions);
-
-        MCPProtocol.ServerCapabilities capabilities = new MCPProtocol.ServerCapabilities();
-        capabilities.setTools(new MCPProtocol.ToolsCapability());
-        capabilities.setResources(new MCPProtocol.ResourcesCapability());
-        capabilities.setPrompts(new MCPProtocol.PromptsCapability());
-        result.setCapabilities(capabilities);
-
+        Object result = session.handlePost(request, rpc.getTransportHeaders());
         rpc.sendResponse(result);
-    }
-
-    private void handlePing(JsonRpcExchange rpc) {
-        rpc.sendResponseRaw("{}");
-    }
-
-    /**
-     * Picks the protocol version to advertise back to the client.
-     * Per the MCP spec ({@code initialize} lifecycle): if the client's
-     * requested version is supported, echo it back; otherwise reply with
-     * a version we do support (here, {@link #LATEST_PROTOCOL_VERSION})
-     * and let the client decide whether to proceed.
-     */
-    private static String negotiateProtocolVersion(MCPProtocol.JsonRpcRequest request) {
-        try {
-            MCPProtocol.InitializeParams params = request.getParamsAs(MCPProtocol.InitializeParams.class);
-            String requested = params != null ? params.getProtocolVersion() : null;
-            if (requested != null && SUPPORTED_PROTOCOL_VERSIONS.contains(requested)) {
-                return requested;
-            }
-        } catch (RuntimeException e) {
-            // Malformed initialize params — fall back to the latest version.
-            LOG.log(Level.FINE, "Could not parse initialize params", e);
-        }
-        return LATEST_PROTOCOL_VERSION;
     }
 
     private void handleDelete(JsonRpcExchange rpc) {
         String incomingSessionId = rpc.getHttpExchange().getRequestHeaders()
                 .getFirst("Mcp-Session-Id");
         List<MCPSession> closed;
-        synchronized (sessionGuardLock) {
-            if (incomingSessionId != null) {
-                // Close specific session
-                MCPSession session = sessions.remove(incomingSessionId);
-                closed = session != null ? List.of(session) : List.of();
-            } else {
-                // No session ID header — close all sessions
-                closed = new ArrayList<>(sessions.values());
-                sessions.clear();
-            }
+        if (incomingSessionId != null) {
+            MCPSession session = handler.removeSession(incomingSessionId);
+            closed = session != null ? List.of(session) : List.of();
+        } else {
+            closed = handler.removeAllSessions();
         }
         for (MCPSession session : closed) {
             LOG.info("Session terminated: " + session.getId());
-            onSessionClosed(session);
+            handler.notifySessionClosed(session);
         }
         rpc.sendPlain(200, "");
     }
@@ -543,8 +424,8 @@ public class TinyMCPServer {
      * <p>
      * The default implementation always returns {@code true} (unlimited sessions).
      * <p>
-     * This method is called while holding the session guard lock, so
-     * the session count will not change between this check and the
+     * This method is called while holding the handler's session guard lock,
+     * so the session count will not change between this check and the
      * session being added to the map.
      *
      * @return {@code true} to accept the new session, {@code false} to reject
@@ -558,7 +439,7 @@ public class TinyMCPServer {
      * Returns the number of active sessions.
      */
     protected int getSessionCount() {
-        return sessions.size();
+        return handler.getSessionCount();
     }
 
     /**
@@ -577,45 +458,18 @@ public class TinyMCPServer {
         // no-op by default
     }
 
-    private void cleanupIdleSessionsSafe() {
-        try {
-            cleanupIdleSessions();
-        } catch (Throwable t) {
-            LOG.log(Level.SEVERE, "Session cleanup tick failed", t);
-        }
+    /**
+     * Test hook: synchronously runs the idle-session cleanup tick. Used by
+     * {@code SessionCleanupTest}; package-private.
+     */
+    void cleanupIdleSessions() {
+        handler.cleanupIdleSessions();
     }
 
     /**
-     * Evicts sessions whose last access is older than {@link #IDLE_TIMEOUT_NANOS}.
-     * For each candidate, attempts {@link MCPSession#tryClose()} — if a
-     * request is in flight the session is skipped and re-evaluated on the
-     * next tick. Removed sessions are reported via {@link #onSessionClosed}.
-     * <p>
-     * Package-private so tests can invoke the tick synchronously without
-     * waiting for the scheduler.
+     * Test hook: returns the underlying handler. Package-private.
      */
-    void cleanupIdleSessions() {
-        long now = System.nanoTime();
-        List<MCPSession> closed = new ArrayList<>();
-        for (MCPSession s : sessions.values()) {
-            if (now - s.getLastAccessNanos() < IDLE_TIMEOUT_NANOS) {
-                continue;
-            }
-            if (!s.tryClose()) {
-                continue;
-            }
-            synchronized (sessionGuardLock) {
-                sessions.remove(s.getId(), s);
-            }
-            closed.add(s);
-        }
-        for (MCPSession s : closed) {
-            LOG.info("Session expired (idle): " + s.getId());
-            try {
-                onSessionClosed(s);
-            } catch (RuntimeException e) {
-                LOG.log(Level.WARNING, "onSessionClosed threw for " + s.getId(), e);
-            }
-        }
+    MCPHandler getHandler() {
+        return handler;
     }
 }

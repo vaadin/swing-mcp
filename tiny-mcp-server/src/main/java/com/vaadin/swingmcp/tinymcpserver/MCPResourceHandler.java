@@ -16,6 +16,10 @@ import java.util.logging.Logger;
  * (name, description, mimeType) exposed via {@code resources/list}; the
  * {@link TinyMCPServer.ResourceFunction} is invoked for {@code resources/read}
  * and returns the current contents.
+ * <p>
+ * The {@code handle*} methods are transport-agnostic: they consume parsed
+ * JSON-RPC requests and return the corresponding result POJO. The caller
+ * (HTTP or stdio transport) writes the response.
  */
 class MCPResourceHandler {
 
@@ -70,17 +74,26 @@ class MCPResourceHandler {
         resources.put(uri, new RegisteredResource(uri, name, description, mimeType, function));
     }
 
-    void handleResourcesList(JsonRpcExchange rpc) {
+    MCPProtocol.ListResourcesResult handleResourcesList() {
         MCPProtocol.ListResourcesResult result = new MCPProtocol.ListResourcesResult();
         List<MCPProtocol.Resource> descriptors = new ArrayList<>();
         for (RegisteredResource rr : resources.values()) {
             descriptors.add(rr.descriptor);
         }
         result.setResources(descriptors);
-        rpc.sendResponse(result);
+        return result;
     }
 
-    void handleResourcesRead(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) {
+    /**
+     * Dispatches {@code resources/read}. Resource handlers have no
+     * tool-layer "isError" channel (DR-004 layer 3 is tools-only), so any
+     * failure becomes a JSON-RPC protocol error.
+     *
+     * @param request          the parsed JSON-RPC request envelope
+     * @param transportHeaders headers from the underlying transport
+     */
+    MCPProtocol.ReadResourceResult handleResourcesRead(MCPProtocol.JsonRpcRequest request,
+            Map<String, String> transportHeaders) {
         MCPProtocol.ReadResourceParams params = request.getParamsAs(MCPProtocol.ReadResourceParams.class);
         if (params == null || params.getUri() == null || params.getUri().isBlank()) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
@@ -94,7 +107,7 @@ class MCPResourceHandler {
         }
 
         ResourceRequest req = new ResourceRequest(uri,
-                rpc.getTransportHeaders(),
+                transportHeaders,
                 request.getMeta());
         List<MCPProtocol.ResourceContents> contents;
         try {
@@ -113,6 +126,6 @@ class MCPResourceHandler {
 
         MCPProtocol.ReadResourceResult result = new MCPProtocol.ReadResourceResult();
         result.setContents(contents);
-        rpc.sendResponse(result);
+        return result;
     }
 }
