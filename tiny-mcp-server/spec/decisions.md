@@ -297,19 +297,22 @@ distinguish `initialize`/`ping` from regular tool calls.
 
 ## DR-006 — Idle session eviction via a shared scheduled executor
 
-**Status:** Accepted
-**Applies to:** `TinyMCPServer`, `MCPSession`
+**Status:** Accepted (executor ownership moved to `MCPHandler` by DR-010)
+**Applies to:** `MCPHandler`, `TinyMCPServer`, `MCPSession`
 **Supersedes the "Idle timeout" deferral in:** DR-003
 
-**Decision.** `TinyMCPServer` owns a single `ScheduledExecutorService`
-(one daemon thread, named `tiny-mcp-server-N`) created in `start()` and
-shut down in `stop()`. Once per minute it runs a cleanup tick that
-evicts every session whose last access is older than 30 minutes. The
-same executor is exposed via `getExecutor()` for tool handlers that need
-background work (debouncing, deferred cleanup, short periodic polling)
-— reachable from tool code via `MCPSession.getCurrent().getServer()`.
-Heavy or long-blocking work must use its own executor so the cleanup
-tick cannot be starved.
+**Decision.** `MCPHandler` owns a single `ScheduledExecutorService`
+(one daemon thread, named `tiny-mcp-server-N`) created in its
+`start()` and shut down in `stop()`. `TinyMCPServer.start()` /
+`stop()` delegate the lifecycle calls. Once per minute the executor
+runs a cleanup tick that evicts every session whose last access is
+older than 30 minutes. The same executor is exposed via
+`MCPHandler.getExecutor()` (also surfaced by `TinyMCPServer.getExecutor()`)
+for tool handlers that need background work (debouncing, deferred
+cleanup, short periodic polling) — reachable from tool code via
+`MCPSession.getCurrent().getHandler().getExecutor()`. Heavy or
+long-blocking work must use its own executor so the cleanup tick
+cannot be starved.
 
 The cleanup tick and request dispatch synchronise through a single
 chokepoint in `MCPSession.runLocked`:
@@ -722,3 +725,90 @@ swing-mcp and not meant to be used elsewhere").
   Rejected — symmetry across tools/prompts/resources is more valuable
   than saving one record. A future `_meta` need on resources would
   re-open this question.
+
+---
+
+## DR-010 — Transport-vs-protocol seam: extract `MCPHandler`
+
+**Status:** Accepted
+**Applies to:** `TinyMCPServer`, `MCPHandler`, `MCPSession`,
+`MCPToolHandler`, `MCPResourceHandler`, `MCPPromptHandler`
+**Enables:** DR-007 (stdio transport)
+
+**Decision.** Split `TinyMCPServer` along the HTTP-vs-protocol seam. A
+new `MCPHandler` class owns everything transport-agnostic:
+
+- the tool / resource / prompt registries,
+- the session map and `sessionGuardLock`,
+- the shared `ScheduledExecutorService` (daemon, `tiny-mcp-server-N`),
+- the once-per-minute idle-cleanup tick,
+- the JSON-RPC dispatch for `initialize` / `ping` and routing to
+  `MCPSession`.
+
+`TinyMCPServer` keeps only HTTP-specific concerns: the JDK `HttpServer`
+and its executor, request routing (POST / DELETE / 405),
+`Mcp-Session-Id` header validation, and JSON-RPC response framing via
+`JsonRpcExchange`. `TinyMCPServer.handleRequest` remains the single
+HTTP-side seam where `MCPServerException` / `TransportIOException` /
+unexpected `RuntimeException` are translated into HTTP responses
+(DR-004). All public APIs on `TinyMCPServer` (`addTool`, `addResource`,
+`addPrompt`, `start`, `stop`, `getExecutor`, `getPort`, `getUrl`,
+`getContextPath`) and the protected hooks (`acceptNewSession`,
+`onSessionClosed`, `getSessionCount`) are unchanged in shape; they
+forward to `MCPHandler`. The hooks are wired into `MCPHandler` at
+construction time as method-reference callbacks
+(`count -> acceptNewSession()`, `this::onSessionClosed`), so subclass
+semantics are identical.
+
+**Error rendering moves above transport.** Handler methods on
+`MCPToolHandler` / `MCPResourceHandler` / `MCPPromptHandler` and on
+`MCPSession.handlePost` now return result POJOs (or throw
+`MCPServerException`) instead of writing through `JsonRpcExchange`.
+The transport renders the response. This makes the entire dispatch
+core reusable from a future stdio transport that ignores the HTTP-
+status hint on `MCPServerException` and renders every error as a
+JSON-RPC envelope.
+
+**`MCPSession`'s back-pointer** is retyped from `TinyMCPServer` to
+`MCPHandler`, and the accessor renamed `getServer` → `getHandler`.
+Tool code that previously reached for the executor via
+`MCPSession.getCurrent().getServer().getExecutor()` now uses
+`getHandler().getExecutor()` (only in-tree consumer:
+`swing-mcp.MCPServer`).
+
+**Why.** Two reasons.
+
+- **DR-007 enablement.** Stdio is single-session, has no
+  `Mcp-Session-Id` header, no HTTP status to surface, and frames
+  messages as newline-delimited JSON instead of an HTTP response. None
+  of those concerns belong in the registries, dispatch, or session
+  cleanup. Pulling them apart cleanly means the stdio transport can be
+  added without touching `MCPHandler` — it just constructs one,
+  drives messages into `dispatchInitialize` / `dispatchPing` /
+  `MCPSession.handlePost`, and writes the returned POJOs.
+- **Smaller `TinyMCPServer`.** The class previously bundled HTTP
+  framing with protocol logic, registries, and lifecycle in one ~440
+  LOC file. After the split, `TinyMCPServer` is the HTTP-specific
+  half; `MCPHandler` is the protocol-specific half. Each is testable
+  in isolation.
+
+**Alternatives considered.**
+- **Keep everything in `TinyMCPServer` and add a `runStdio` method
+  alongside `start()`.** Rejected — would force every stdio code path
+  to thread around HTTP-specific machinery (header lookups,
+  `JsonRpcExchange`) it does not need, and would couple stdio's
+  single-session simplicity to the HTTP multi-session map invariants.
+- **Make `MCPHandler` the public class and have `TinyMCPServer`
+  extend it.** Rejected — composition over inheritance. A future
+  stdio transport composes the same way; it does not extend
+  `TinyMCPServer`.
+- **Pass `MCPSession.handlePost` a writer callback so the session
+  could write responses itself.** Rejected — leaks transport framing
+  into the session, where it doesn't belong, and forces every
+  transport to expose an identical writer abstraction. Returning
+  POJOs is simpler.
+- **Move `acceptNewSession` / `onSessionClosed` onto `MCPHandler`
+  directly (drop the callbacks).** Rejected for now — would force
+  swing-mcp's single-session subclass to extend `MCPHandler` rather
+  than `TinyMCPServer`, breaking the existing `extends TinyMCPServer`
+  pattern. The callbacks let the public API stay where it is.

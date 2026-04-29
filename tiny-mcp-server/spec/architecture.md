@@ -38,22 +38,49 @@ Alternatively we can use `LangChain4j`.
 All classes live in `com.vaadin.swingmcp.tinymcpserver`. The split follows
 the natural seams in the protocol:
 
-- **`TinyMCPServer`** — server lifecycle, the session map, routing of
-  `initialize` / `ping` / `DELETE`, and the single exception-to-response
-  seam (`handleRequest`). Registration APIs (`addTool`, `addResource`,
-  `addPrompt`) also live here. Two transport entry points:
-  - `start()` — bind the HTTP listener and return; request handling
-    runs on HTTP-server threads. Default address `127.0.0.1:18088/mcp`.
-  - `runStdio(InputStream in, OutputStream out)` — block on a
-    newline-delimited JSON-RPC read loop until `in` reaches EOF.
-    Single-session by definition (DR-007). Repoints `System.out` to
-    `System.err` at entry so stray prints can't corrupt the wire.
+- **`TinyMCPServer`** — HTTP transport. Owns the JDK `HttpServer`,
+  routes incoming POST / DELETE / 405, validates the `Mcp-Session-Id`
+  header, and writes JSON-RPC responses to the wire (the single
+  exception-to-response seam, `handleRequest`). The public
+  registration APIs (`addTool`, `addResource`, `addPrompt`) and
+  lifecycle (`start()` / `stop()` / `getExecutor()` / `getPort()` /
+  `getUrl()`) live here and forward to the embedded `MCPHandler`.
+  `start()` binds the HTTP listener on `127.0.0.1` (default
+  `127.0.0.1:18088/mcp`) and returns; request handling runs on
+  HTTP-server threads. Subclass hooks `acceptNewSession()` and
+  `onSessionClosed(MCPSession)` are preserved and forwarded to
+  `MCPHandler` via callbacks at construction time. See DR-010.
 
-  Also owns the shared `ScheduledExecutorService` (daemon threads named
-  `tiny-mcp-server-N`) created in `start()` / `runStdio` and shut down
-  in `stop()` / on EOF; it runs the once-per-minute idle-session
-  cleanup tick and is exposed to tool handlers via `getExecutor()` for
-  short background work (see DR-006).
+- **`StdioMCPServer`** — sibling stdio transport (DR-007). Owns the
+  newline-delimited JSON-RPC read loop on the caller-supplied
+  `InputStream` / `OutputStream`. `runStdio(in, out)` blocks the calling
+  thread until `in` reaches EOF, redirecting `System.out` to
+  `System.err` only when `out == System.out` so stray prints can't
+  corrupt the wire while leaving piped-stream tests unaffected.
+  Single-session by definition: tracks one active `MCPSession` lazily
+  populated on the first `initialize`; a re-`initialize` evicts the
+  previous session before creating the new one. Constructs an
+  `MCPHandler` with always-accept and no-op session-closed callbacks.
+  Forwards `addTool` / `addResource` / `addPrompt` to the handler.
+- **`MCPHandler`** — transport-agnostic MCP dispatch core. Owns the
+  tool / resource / prompt registries, the session map (keyed by
+  `Mcp-Session-Id`), the shared `ScheduledExecutorService` (daemon
+  threads named `tiny-mcp-server-N`) created in `start()` and shut
+  down in `stop()`, the once-per-minute idle-session cleanup tick, and
+  the JSON-RPC dispatch for `initialize` / `ping` / routing to
+  `MCPSession`. Knows nothing about HTTP or stdio framing; both
+  transports drive the same handler instance. Constructed by
+  `TinyMCPServer` with method-reference callbacks for
+  `acceptNewSession` (an `IntPredicate` over the current session
+  count) and `onSessionClosed` (a `Consumer<MCPSession>`).
+  `StdioMCPServer` constructs its own handler with always-accept +
+  no-op callbacks since stdio is single-session by definition.
+
+  Methods that fail throw `MCPServerException` rather than writing a
+  response; the transport translates. The shared executor is exposed
+  via `getExecutor()` for tool handlers that need short background
+  work (see DR-006), reachable from tool code via
+  `MCPSession.getCurrent().getHandler().getExecutor()`.
 - **`MCPClient` / `TinyMCPClient` / `AutoRetryMCPClient`** — small HTTP
   client speaking the MCP transport from the caller side. Lives in a
   separate package, `com.vaadin.swingmcp.tinymcpclient`, within the same
@@ -71,13 +98,18 @@ the natural seams in the protocol:
   a thread-local for handler code. Every request flows through
   `runLocked`, which refreshes the session's last-access timestamp and
   fails fast with HTTP 404 if the session has already been evicted by
-  the cleanup tick; `getServer()` gives tool code access to the owning
-  `TinyMCPServer` (and thus its shared executor).
+  the cleanup tick. `handlePost` returns the JSON-RPC `result` POJO
+  rather than writing it; the transport renders the response.
+  `getHandler()` gives tool code access to the owning `MCPHandler`
+  (and thus its shared executor).
 - **`MCPToolHandler` / `MCPResourceHandler` / `MCPPromptHandler`** — the
   three feature handlers. Each owns its registry and implements the
-  corresponding `*/list` and `*/call|read|get` methods.
-- **`JsonRpcExchange`** — request-scoped wrapper around `HttpExchange`
-  with JSON-RPC parse + response helpers.
+  corresponding `*/list` and `*/call|read|get` methods. Handler
+  methods return the result POJO or throw `MCPServerException`; they
+  do not touch the transport (DR-010).
+- **`JsonRpcExchange`** — HTTP-transport-scoped wrapper around
+  `HttpExchange` with JSON-RPC parse + response helpers. Used only by
+  `TinyMCPServer`.
 - **`MCPProtocol`** — all GSON POJOs plus small JSON utilities. Also
   hosts the request records `ToolRequest`, `PromptRequest`, and
   `ResourceRequest` (see DR-009) carrying the request key (name or
@@ -95,13 +127,15 @@ the natural seams in the protocol:
 ### TinyMCPServer
 
 Intended lifecycle: create a new instance, register tools / resources /
-prompts, then either call `start()` (HTTP) or `runStdio(in, out)`
-(stdio). HTTP mode pairs with `stop()`; stdio mode terminates when
-`in` reaches EOF. A given instance picks one transport for its
-lifetime — there is no `start()`-then-`runStdio` switching. No repeated
-start/stop cycles. In HTTP mode the server binds to `127.0.0.1` only;
-port `0` is accepted and means "let the OS pick an ephemeral port" —
-after `start()`, `getPort()` returns the actual bound port.
+prompts, then call `start()`. `stop()` shuts the HTTP listener and
+the shared executor (via the underlying `MCPHandler`). No repeated
+start/stop cycles. The server binds to `127.0.0.1` only; port `0` is
+accepted and means "let the OS pick an ephemeral port" — after
+`start()`, `getPort()` returns the actual bound port.
+
+`StdioMCPServer` is the sibling stdio transport (DR-007) driving its
+own `MCPHandler` instance; HTTP and stdio are mutually exclusive per
+handler.
 
 By default the server accepts multiple concurrent sessions. Subclasses
 can enforce a single-session policy (as swing-mcp does) by overriding
