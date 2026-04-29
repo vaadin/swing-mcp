@@ -72,7 +72,8 @@ public class SwingMCP {
         serverInfo.setVersion(SERVER_VERSION);
         // Single-session policy: reject any initialize that would create a
         // second concurrent session.
-        this.handler = new MCPHandler(serverInfo, INSTRUCTIONS, count -> count == 0, session -> {});
+        this.handler = new MCPHandler(serverInfo, INSTRUCTIONS)
+                .setAcceptNewSession(count -> count == 0);
         this.server = new HttpMCPServer(port, contextPath, handler);
         registerTools();
     }

@@ -187,8 +187,8 @@ class HttpMCPServerTest {
         // not TransportIOException) must return HTTP 500 with a JSON-RPC INTERNAL_ERROR
         // body. Using the acceptNewSession predicate as the injection point — it runs
         // under the try block in handleRequest but isn't normally expected to throw.
-        MCPHandler crashingHandler = new MCPHandler(null, null,
-                count -> { throw new IllegalStateException("boom"); }, session -> {});
+        MCPHandler crashingHandler = new MCPHandler(null, null)
+                .setAcceptNewSession(count -> { throw new IllegalStateException("boom"); });
         HttpMCPServer crashingServer = new HttpMCPServer(0, "/mcp", crashingHandler);
         crashingServer.start();
         try {

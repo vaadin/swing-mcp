@@ -44,12 +44,13 @@ class SessionCleanupTest {
         final HttpMCPServer server;
 
         RecordingServer() {
-            this.handler = new MCPHandler(null, null, count -> true, session -> {
-                closedSessionIds.add(session.getId());
-                if (closeThrow != null) {
-                    throw closeThrow;
-                }
-            });
+            this.handler = new MCPHandler(null, null)
+                    .setOnSessionClosed(session -> {
+                        closedSessionIds.add(session.getId());
+                        if (closeThrow != null) {
+                            throw closeThrow;
+                        }
+                    });
             this.server = new HttpMCPServer(0, "/mcp", handler);
         }
 

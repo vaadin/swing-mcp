@@ -1,5 +1,7 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
+import com.vaadin.swingmcp.ToolDescriptor;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -24,8 +26,8 @@ import java.util.logging.Logger;
  * same handler instance.
  * <p>
  * Configure the handler (call {@code addTool}/{@code addResource}/{@code addPrompt}
- * and supply the {@code acceptNewSession} / {@code onSessionClosed} callbacks via
- * the constructor) <em>before</em> handing it to a transport such as
+ * and the {@link #setAcceptNewSession}/{@link #setOnSessionStarted}/{@link #setOnSessionClosed}
+ * fluent setters) <em>before</em> handing it to a transport such as
  * {@link HttpMCPServer} or {@link StdioMCPServer}. The transport calls
  * {@link #start()} on {@code start()} and {@link #stop()} on {@code stop()};
  * a single handler instance is paired with a single transport for one
@@ -36,6 +38,13 @@ import java.util.logging.Logger;
  * itself is multi-session capable; the {@code acceptNewSession} predicate
  * lets a caller (e.g. swing-mcp's {@code SwingMCP}) clamp the
  * session count.
+ * <p>
+ * Per DR-013, the three session-lifecycle listeners are settable until
+ * the first session is accepted, then locked — calling any setter
+ * afterwards throws {@link IllegalStateException}. This matches the
+ * "one handler, one transport, one lifecycle cycle" rule while letting
+ * factories (e.g. {@link MCPProxy#newHandler}) wire listeners
+ * post-construction.
  */
 public class MCPHandler {
 
@@ -66,8 +75,21 @@ public class MCPHandler {
 
     private final MCPProtocol.Implementation serverInfo;
     private final String instructions;
-    private final IntPredicate acceptNewSession;
-    private final Consumer<MCPSession> onSessionClosed;
+
+    /**
+     * Session-lifecycle listeners. Settable via fluent setters until the
+     * first session is accepted, then locked (DR-013). Defaults are no-op
+     * (always accept, do nothing on start/close).
+     */
+    private volatile IntPredicate acceptNewSession = count -> true;
+    private volatile Consumer<MCPSession> onSessionStarted = session -> {};
+    private volatile Consumer<MCPSession> onSessionClosed = session -> {};
+    /**
+     * Set under {@link #sessionGuardLock} the moment the first session is
+     * placed in the session map. Once true, listener setters reject with
+     * {@link IllegalStateException}.
+     */
+    private volatile boolean firstSessionAccepted = false;
 
     private final MCPToolHandler toolHandler = new MCPToolHandler();
     private final MCPResourceHandler resourceHandler = new MCPResourceHandler();
@@ -85,37 +107,84 @@ public class MCPHandler {
      */
     private ScheduledExecutorService executor;
 
-    /** Convenience constructor: empty server info, no instructions, accept all sessions. */
+    /** Convenience constructor: empty server info, no instructions. */
     public MCPHandler() {
         this(new MCPProtocol.Implementation(), null);
     }
 
-    /** Convenience constructor: accept all sessions, no session-close callback. */
+    /**
+     * @param serverInfo   advertised in {@code initialize.serverInfo};
+     *                     {@code null} means "use a default empty
+     *                     {@link MCPProtocol.Implementation}"
+     * @param instructions advertised in {@code initialize.instructions}; may be null
+     */
     public MCPHandler(MCPProtocol.Implementation serverInfo, String instructions) {
-        this(serverInfo, instructions, count -> true, session -> {});
+        this.serverInfo = serverInfo != null ? serverInfo : new MCPProtocol.Implementation();
+        this.instructions = instructions;
+    }
+
+    // ===== Session-lifecycle listener setters (DR-013) =====
+
+    /**
+     * Sets the predicate consulted on every {@code initialize} to decide
+     * whether to accept a new session. Called under the session guard
+     * lock with the current session count; return {@code true} to accept,
+     * {@code false} to reject with HTTP 409 + JSON-RPC
+     * {@code SERVER_NOT_INITIALIZED}.
+     * <p>
+     * Default: {@code count -> true} (always accept). Pass
+     * {@code count -> count == 0} to enforce single-session.
+     *
+     * @throws NullPointerException if {@code accept} is null
+     * @throws IllegalStateException if a session has already been accepted
+     */
+    public MCPHandler setAcceptNewSession(IntPredicate accept) {
+        Objects.requireNonNull(accept, "acceptNewSession");
+        checkListenersUnlocked();
+        this.acceptNewSession = accept;
+        return this;
     }
 
     /**
-     * @param serverInfo       advertised in {@code initialize.serverInfo};
-     *                         {@code null} means "use a default empty
-     *                         {@link MCPProtocol.Implementation}"
-     * @param instructions     advertised in {@code initialize.instructions}; may be null
-     * @param acceptNewSession called under the session guard lock with the
-     *                         current session count; return {@code true} to
-     *                         accept the new session, {@code false} to reject
-     *                         (the dispatch raises a 409 / SERVER_NOT_INITIALIZED).
-     *                         Not null — pass {@code count -> true} to always accept.
-     * @param onSessionClosed  called outside any handler lock after a session
-     *                         has been removed from the map (via DELETE,
-     *                         explicit removal, or idle eviction).
-     *                         Not null — pass {@code session -> {}} for a no-op.
+     * Sets the listener invoked the moment a fresh session has been added
+     * to the session map (after {@code acceptNewSession} returned true,
+     * before the {@code initialize} response is built). Used by
+     * {@link MCPProxy} to allocate per-session upstream-client state.
+     * <p>
+     * Default: no-op.
+     *
+     * @throws NullPointerException if {@code onStarted} is null
+     * @throws IllegalStateException if a session has already been accepted
      */
-    public MCPHandler(MCPProtocol.Implementation serverInfo, String instructions,
-            IntPredicate acceptNewSession, Consumer<MCPSession> onSessionClosed) {
-        this.serverInfo = serverInfo != null ? serverInfo : new MCPProtocol.Implementation();
-        this.instructions = instructions;
-        this.acceptNewSession = Objects.requireNonNull(acceptNewSession, "acceptNewSession");
-        this.onSessionClosed = Objects.requireNonNull(onSessionClosed, "onSessionClosed");
+    public MCPHandler setOnSessionStarted(Consumer<MCPSession> onStarted) {
+        Objects.requireNonNull(onStarted, "onSessionStarted");
+        checkListenersUnlocked();
+        this.onSessionStarted = onStarted;
+        return this;
+    }
+
+    /**
+     * Sets the listener invoked outside any handler lock after a session
+     * has been removed from the map (via DELETE, explicit removal, or
+     * idle eviction).
+     * <p>
+     * Default: no-op.
+     *
+     * @throws NullPointerException if {@code onClosed} is null
+     * @throws IllegalStateException if a session has already been accepted
+     */
+    public MCPHandler setOnSessionClosed(Consumer<MCPSession> onClosed) {
+        Objects.requireNonNull(onClosed, "onSessionClosed");
+        checkListenersUnlocked();
+        this.onSessionClosed = onClosed;
+        return this;
+    }
+
+    private void checkListenersUnlocked() {
+        if (firstSessionAccepted) {
+            throw new IllegalStateException(
+                    "Session-lifecycle listeners are locked once the first session has been accepted");
+        }
     }
 
     // ===== Registries =====
@@ -156,6 +225,24 @@ public class MCPHandler {
             throw new IllegalStateException("Cannot add tools after server has been started");
         }
         toolHandler.addTool(name, description, inputSchema, function);
+    }
+
+    /**
+     * Convenience overload registering a tool from a {@link ToolDescriptor}
+     * (DR-013). Delegates to the four-arg form. Lets callers that already
+     * hold a descriptor — e.g. {@code MCPProxy.newHandler}, swing-mcp's
+     * {@code AbstractSwingTool} — register without unpacking the record.
+     *
+     * @param descriptor the tool descriptor; not null
+     * @param function   the handler to invoke when the tool is called; not null
+     * @throws IllegalArgumentException if {@code function} is null, or if
+     *                                  any descriptor field is null/blank
+     * @throws IllegalStateException    if the handler has already been started
+     * @throws IllegalStateException    if a tool with the same name is already registered
+     */
+    public void addTool(ToolDescriptor descriptor, ToolFunction function) {
+        Objects.requireNonNull(descriptor, "descriptor");
+        addTool(descriptor.name(), descriptor.description(), descriptor.inputSchema(), function);
     }
 
     /**
@@ -334,6 +421,21 @@ public class MCPHandler {
             String sessionId = UUID.randomUUID().toString();
             session = new MCPSession(sessionId, toolHandler, resourceHandler, promptHandler, this);
             sessions.put(sessionId, session);
+            // DR-013: lock listener setters now that a session has been
+            // placed in the map. Any subsequent setter call fails fast.
+            firstSessionAccepted = true;
+        }
+
+        try {
+            onSessionStarted.accept(session);
+        } catch (RuntimeException e) {
+            // Listener failure must not corrupt the session map. Roll back
+            // and rethrow so the caller sees a clean failure.
+            LOG.log(Level.WARNING, "onSessionStarted threw for " + session.getId(), e);
+            synchronized (sessionGuardLock) {
+                sessions.remove(session.getId(), session);
+            }
+            throw e;
         }
 
         MCPProtocol.InitializeResult result = new MCPProtocol.InitializeResult();

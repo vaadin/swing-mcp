@@ -7,8 +7,11 @@ import com.google.gson.JsonObject;
 import com.google.gson.ToNumberPolicy;
 import com.google.gson.annotations.SerializedName;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * MCP Protocol JSON POJOs and serialization utilities.
@@ -418,6 +421,30 @@ public class MCPProtocol {
         public void setProperties(Map<String, PropertySchema> properties) { this.properties = properties; }
         public List<String> getRequired() { return required; }
         public void setRequired(List<String> required) { this.required = required; }
+
+        // DR-014: structural equals/hashCode. `properties` is a Map, so its
+        // own equals already ignores iteration order (and PropertySchema has
+        // its own structural equals below). `required` is compared as a Set
+        // — JSON Schema says required is set-valued, but the JSON wire form
+        // is an array whose order varies across producers.
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            InputSchema other = (InputSchema) o;
+            return Objects.equals(type, other.type)
+                && Objects.equals(properties, other.properties)
+                && Objects.equals(asSet(required), asSet(other.required));
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(type, properties, asSet(required));
+        }
+
+        private static Set<String> asSet(List<String> list) {
+            return list == null ? null : new HashSet<>(list);
+        }
     }
 
     public static class PropertySchema extends McpPojo {
@@ -438,6 +465,26 @@ public class MCPProtocol {
         public void setMinimum(Number minimum) { this.minimum = minimum; }
         public Number getMaximum() { return maximum; }
         public void setMaximum(Number maximum) { this.maximum = maximum; }
+
+        // DR-014: structural equals/hashCode. enum is an ordered list per
+        // JSON Schema semantics; numeric bounds compare via Objects.equals
+        // (mostly null in practice — InputSchemaBuilder doesn't set them).
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            PropertySchema other = (PropertySchema) o;
+            return Objects.equals(type, other.type)
+                && Objects.equals(description, other.description)
+                && Objects.equals(enumValues, other.enumValues)
+                && Objects.equals(minimum, other.minimum)
+                && Objects.equals(maximum, other.maximum);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(type, description, enumValues, minimum, maximum);
+        }
     }
 
     public static class ListToolsParams extends McpPojo {

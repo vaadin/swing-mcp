@@ -282,6 +282,28 @@ class TinyMCPClientTest {
         }
     }
 
+    @Test
+    void callToolThreeArgOverloadForwardsMeta() throws IOException {
+        // DR-013: explicit-meta convenience overload used by MCPProxy.
+        JsonObject meta = new JsonObject();
+        meta.addProperty("progressToken", "tkn-3arg");
+        try (MCPClient client = newClient()) {
+            client.callTool("capture", Map.of("s", "via-3arg"), meta);
+        }
+        JsonObject received = lastRequest.get().jsonRpcMeta();
+        assertNotNull(received);
+        assertEquals("tkn-3arg", received.get("progressToken").getAsString());
+        assertEquals("via-3arg", capturedArgs().get("s"));
+    }
+
+    @Test
+    void callToolThreeArgOverloadAcceptsNullMeta() throws IOException {
+        try (MCPClient client = newClient()) {
+            client.callTool("capture", Map.of("s", "x"), null);
+        }
+        assertNull(lastRequest.get().jsonRpcMeta());
+    }
+
     // ===== _meta forwarding (DR-009) =====
 
     @Test

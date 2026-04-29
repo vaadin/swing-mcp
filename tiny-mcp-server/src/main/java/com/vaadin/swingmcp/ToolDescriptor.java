@@ -1,0 +1,43 @@
+package com.vaadin.swingmcp;
+
+import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+
+import java.util.Objects;
+
+/**
+ * In-memory contract type for an MCP tool: name, description, and input
+ * schema. Distinct from the wire-shape POJO {@link MCPProtocol.Tool} —
+ * that one is shaped for GSON serialization, this one is the
+ * canonical descriptor passed around by callers (manifest declarations,
+ * proxy wiring, in-process registration).
+ *
+ * <p>Equality is structural: two descriptors compare equal iff their
+ * names, descriptions, and input schemas are equal. Schema equality
+ * follows {@link MCPProtocol.InputSchema#equals(Object)} (DR-014):
+ * deep, set-semantics on {@code required}, order-insensitive on
+ * {@code properties}, order-sensitive on {@code enum}. This is the
+ * predicate {@code MCPProxy}'s drift probe uses (DR-012) — extra care
+ * with that contract is warranted because false positives become
+ * spurious drift errors and false negatives become silent
+ * mismatched-version bugs.
+ *
+ * <p>See DR-013 for the rationale of the type living in this parent
+ * package alongside generic protocol types rather than under
+ * {@code tinymcpserver} (which is the transport implementation).
+ *
+ * @param name        tool name; must match {@code [a-zA-Z_][a-zA-Z0-9_]*}
+ * @param description human-readable description
+ * @param inputSchema input parameter schema; usually built via
+ *                    {@link com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder}
+ */
+public record ToolDescriptor(
+        String name,
+        String description,
+        MCPProtocol.InputSchema inputSchema) {
+
+    public ToolDescriptor {
+        Objects.requireNonNull(name, "name");
+        Objects.requireNonNull(description, "description");
+        Objects.requireNonNull(inputSchema, "inputSchema");
+    }
+}

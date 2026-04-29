@@ -1,5 +1,6 @@
 package com.vaadin.swingmcp.tinymcpclient;
 
+import com.google.gson.JsonObject;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.ToolRequest;
 
@@ -102,11 +103,31 @@ public interface MCPClient extends Closeable {
      * @throws IOException             if the underlying HTTP transport fails
      */
     default MCPProtocol.CallToolResult callTool(String name, Map<String, Object> arguments) throws IOException {
+        return callTool(name, arguments, null);
+    }
+
+    /**
+     * Convenience overload of {@link #callTool(ToolRequest)} accepting an
+     * explicit JSON-RPC {@code _meta} object. Used by forwarding proxies
+     * (DR-012 / DR-013) so cross-cutting envelope fields like
+     * {@code progressToken} survive end-to-end through a proxy hop.
+     *
+     * @param name      the tool name; not null
+     * @param arguments the tool arguments; may be {@code null} or empty
+     * @param meta      the JSON-RPC {@code _meta} object to forward; may
+     *                  be {@code null} for "no meta"
+     * @return the {@code CallToolResult}; never {@code null}
+     * @throws MCPSessionLostException if the server returned HTTP 404
+     * @throws MCPClientException      if the server returned any other
+     *                                 protocol error
+     * @throws IOException             if the underlying HTTP transport fails
+     */
+    default MCPProtocol.CallToolResult callTool(String name, Map<String, Object> arguments, JsonObject meta) throws IOException {
         return callTool(new ToolRequest(
                 name,
                 arguments != null ? arguments : Collections.emptyMap(),
                 Collections.emptyMap(),
-                null));
+                meta));
     }
 
     /**
