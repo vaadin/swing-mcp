@@ -392,7 +392,9 @@ public class MCPHandler {
     }
 
     void notifySessionClosed(MCPSession session) {
-        onSessionClosed.accept(session);
+        // Wrap in runListenerHook so the listener can safely read
+        // attributes populated by onSessionStarted (DR-013).
+        session.runListenerHook(() -> onSessionClosed.accept(session));
     }
 
     // ===== Protocol dispatch =====
@@ -427,7 +429,12 @@ public class MCPHandler {
         }
 
         try {
-            onSessionStarted.accept(session);
+            // Run inside session.runListenerHook so the listener can
+            // populate session attributes safely (the public
+            // setAttribute/getAttribute API requires the session lock for
+            // memory visibility).
+            MCPSession s = session;
+            session.runListenerHook(() -> onSessionStarted.accept(s));
         } catch (RuntimeException e) {
             // Listener failure must not corrupt the session map. Roll back
             // and rethrow so the caller sees a clean failure.

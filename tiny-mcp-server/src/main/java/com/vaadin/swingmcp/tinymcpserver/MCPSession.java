@@ -300,4 +300,35 @@ public class MCPSession {
             sessionLock.unlock();
         }
     }
+
+    /**
+     * Briefly acquires the session lock to run a session-lifecycle
+     * listener (e.g. {@code onSessionStarted}, {@code onSessionClosed}).
+     * Differs from {@link #runLocked(Runnable)} in two ways:
+     * <ul>
+     *   <li>Bypasses the {@code closed} check — necessary for
+     *       {@code onSessionClosed} on the cleanup-tick path where
+     *       {@code closed} has just been set to {@code true}.</li>
+     *   <li>Does not refresh {@code lastAccessNanos} — listener calls
+     *       are not "activity" for idle-timeout purposes.</li>
+     * </ul>
+     * Holding the session lock during the listener gives the listener
+     * proper synchronization with later {@link #setAttribute}/{@link #getAttribute}
+     * calls (which require the lock to ensure memory visibility), and
+     * sets the {@link #getCurrent()} thread-local so the listener can
+     * use the same accessor pattern as a tool callback.
+     */
+    void runListenerHook(Runnable block) {
+        sessionLock.lock();
+        try {
+            instance.set(this);
+            try {
+                block.run();
+            } finally {
+                instance.remove();
+            }
+        } finally {
+            sessionLock.unlock();
+        }
+    }
 }
