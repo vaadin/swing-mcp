@@ -104,6 +104,27 @@ public final class MCPProxy {
             List<ToolDescriptor> tools,
             URI upstreamUrl,
             ProxyMessages messages) {
+        return newHandler(null, null, tools, upstreamUrl, messages);
+    }
+
+    /**
+     * Variant of {@link #newHandler(List, URI, ProxyMessages)} that also
+     * sets the {@code initialize.serverInfo} and {@code initialize.instructions}
+     * advertised by the proxy. Used by {@code swing-mcp-proxy.Main} so the
+     * proxy presents bit-identical identity to whatever the in-process
+     * server would present (sourced from the shared
+     * {@code swing-mcp-tool-defs} module).
+     *
+     * @param serverInfo   server identity, or {@code null} for the default
+     *                     empty {@link MCPProtocol.Implementation}
+     * @param instructions {@code initialize.instructions} block, or {@code null}
+     */
+    public static MCPHandler newHandler(
+            MCPProtocol.Implementation serverInfo,
+            String instructions,
+            List<ToolDescriptor> tools,
+            URI upstreamUrl,
+            ProxyMessages messages) {
         Objects.requireNonNull(tools, "tools");
         Objects.requireNonNull(upstreamUrl, "upstreamUrl");
         Objects.requireNonNull(messages, "messages");
@@ -112,7 +133,7 @@ public final class MCPProxy {
         }
         List<ToolDescriptor> manifest = List.copyOf(tools);
 
-        MCPHandler handler = new MCPHandler();
+        MCPHandler handler = new MCPHandler(serverInfo, instructions);
         handler.setAcceptNewSession(count -> count == 0);
         handler.setOnSessionStarted(session -> {
             ProxySessionState state = new ProxySessionState(new TinyMCPClient(upstreamUrl));
