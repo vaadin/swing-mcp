@@ -1,6 +1,6 @@
 package com.vaadin.swingmcp.mcpscreen.tools;
 
-import com.vaadin.swingmcp.mcp.tools.Parameters;
+import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.mcp.tools.SwingSetValueTool;
 import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;

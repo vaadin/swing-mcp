@@ -1,6 +1,5 @@
-package com.vaadin.swingmcp.mcp.tools;
+package com.vaadin.swingmcp.tinymcpserver;
 
-import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;

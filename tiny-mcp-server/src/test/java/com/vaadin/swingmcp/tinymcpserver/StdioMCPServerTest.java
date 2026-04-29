@@ -137,7 +137,7 @@ class StdioMCPServerTest {
     void toolsCallExecutesRegisteredTool() throws Exception {
         handler.addTool("echo", "Echoes its argument",
                 new InputSchemaBuilder().requiredString("text", "the text").build(),
-                request -> MCPProtocol.Content.text((String) request.arguments().get("text")));
+                request -> MCPProtocol.Content.text((String) request.arguments().raw().get("text")));
         BufferedWriter w = startWorker();
         send(w, initRequest(1));
         readResponse();

@@ -119,7 +119,7 @@ public final class TinyMCPClient implements MCPClient {
         }
         MCPProtocol.CallToolParams params = new MCPProtocol.CallToolParams();
         params.setName(request.name());
-        params.setArguments(request.arguments() != null ? request.arguments() : Collections.emptyMap());
+        params.setArguments(request.arguments() != null ? request.arguments().raw() : Collections.emptyMap());
 
         JsonElement resultEl = sendRequest("tools/call", params, request.jsonRpcMeta());
         return MCPProtocol.fromJson(resultEl.toString(), MCPProtocol.CallToolResult.class);

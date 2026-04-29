@@ -140,7 +140,7 @@ class MCPProxyTest {
         assertNotEquals(Boolean.TRUE, r.getIsError());
         assertEquals("upstream:echo", textOf(r));
         assertEquals("echo", lastUpstreamRequest.get().name());
-        assertEquals("hello", lastUpstreamRequest.get().arguments().get("text"));
+        assertEquals("hello", lastUpstreamRequest.get().arguments().raw().get("text"));
     }
 
     @Test

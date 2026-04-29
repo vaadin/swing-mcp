@@ -20,7 +20,7 @@ class MCPSessionTest {
         MCPToolHandler toolHandler = new MCPToolHandler();
         toolHandler.addTool("echo", "Echo tool",
                 new InputSchemaBuilder().requiredString("msg", "message").build(),
-                request -> MCPProtocol.Content.text((String) request.arguments().get("msg")));
+                request -> MCPProtocol.Content.text((String) request.arguments().raw().get("msg")));
         session = new MCPSession("test-session-id", toolHandler, new MCPResourceHandler(), new MCPPromptHandler(), null);
     }
 

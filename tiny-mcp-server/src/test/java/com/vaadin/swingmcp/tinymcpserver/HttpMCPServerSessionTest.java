@@ -29,7 +29,7 @@ class HttpMCPServerSessionTest {
         MCPHandler handler = new MCPHandler();
         handler.addTool("echo", "Echo tool",
                 new InputSchemaBuilder().requiredString("msg", "message").build(),
-                request -> MCPProtocol.Content.text((String) request.arguments().get("msg")));
+                request -> MCPProtocol.Content.text((String) request.arguments().raw().get("msg")));
         handler.addTool("whoami", "Returns MCPSession.getCurrent().getId()",
                 new InputSchemaBuilder().build(),
                 request -> MCPProtocol.Content.text(MCPSession.getCurrent().getId()));
@@ -40,15 +40,15 @@ class HttpMCPServerSessionTest {
                         .build(),
                 request -> {
                     MCPSession.getCurrent().setAttribute(
-                            (String) request.arguments().get("key"),
-                            request.arguments().get("value"));
+                            (String) request.arguments().raw().get("key"),
+                            request.arguments().raw().get("value"));
                     return MCPProtocol.Content.text("ok");
                 });
         handler.addTool("get_attr", "Read an attribute from the current session",
                 new InputSchemaBuilder().requiredString("key", "key").build(),
                 request -> {
                     Object v = MCPSession.getCurrent().getAttribute(
-                            (String) request.arguments().get("key"));
+                            (String) request.arguments().raw().get("key"));
                     return MCPProtocol.Content.text(v == null ? "<null>" : v.toString());
                 });
         handler.addPrompt("greet", "Greet someone",
@@ -415,7 +415,7 @@ class HttpMCPServerSessionTest {
                 .setAcceptNewSession(count -> count == 0);
         singleSessionHandler.addTool("echo", "Echo tool",
                 new InputSchemaBuilder().requiredString("msg", "message").build(),
-                request -> MCPProtocol.Content.text((String) request.arguments().get("msg")));
+                request -> MCPProtocol.Content.text((String) request.arguments().raw().get("msg")));
         HttpMCPServer singleSessionServer = new HttpMCPServer(0, "/mcp", singleSessionHandler);
         singleSessionServer.start();
         try {

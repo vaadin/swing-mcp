@@ -38,7 +38,7 @@ class HttpMCPServerToolTest {
                 new InputSchemaBuilder()
                         .requiredString("message", "The message to echo")
                         .build(),
-                request -> MCPProtocol.Content.text((String) request.arguments().get("message")));
+                request -> MCPProtocol.Content.text((String) request.arguments().raw().get("message")));
 
         // Tool: add_integers — returns sum of two integers as text
         server.getHandler().addTool("add_integers", "Add two integers",
@@ -47,7 +47,7 @@ class HttpMCPServerToolTest {
                         .requiredInteger("b", "Second integer")
                         .build(),
                 request -> MCPProtocol.Content.text(
-                        String.valueOf((Integer) request.arguments().get("a") + (Integer) request.arguments().get("b"))));
+                        String.valueOf((Integer) request.arguments().raw().get("a") + (Integer) request.arguments().raw().get("b"))));
 
         // Tool: multi_type — accepts all parameter types, records args, returns text
         server.getHandler().addTool("multi_type", "Test all parameter types",
@@ -58,7 +58,7 @@ class HttpMCPServerToolTest {
                         .requiredBoolean("bool_param", "A boolean")
                         .build(),
                 request -> {
-                    lastCallArgs.set(Map.copyOf(request.arguments()));
+                    lastCallArgs.set(Map.copyOf(request.arguments().raw()));
                     return MCPProtocol.Content.text("ok");
                 });
 
@@ -69,7 +69,7 @@ class HttpMCPServerToolTest {
                         .optionalString("optional_str", "Optional string")
                         .build(),
                 request -> {
-                    lastCallArgs.set(Map.copyOf(request.arguments()));
+                    lastCallArgs.set(Map.copyOf(request.arguments().raw()));
                     return MCPProtocol.Content.text("ok");
                 });
 
@@ -139,7 +139,7 @@ class HttpMCPServerToolTest {
         server.getHandler().addTool("no_params_tool", "Tool with no params",
                 new InputSchemaBuilder().build(),
                 request -> {
-                    lastCallArgs.set(Map.copyOf(request.arguments()));
+                    lastCallArgs.set(Map.copyOf(request.arguments().raw()));
                     return MCPProtocol.Content.text("ok");
                 });
 
@@ -151,7 +151,7 @@ class HttpMCPServerToolTest {
                         .withMaximum(100)
                         .build(),
                 request -> {
-                    lastCallArgs.set(Map.copyOf(request.arguments()));
+                    lastCallArgs.set(Map.copyOf(request.arguments().raw()));
                     return MCPProtocol.Content.text("ok");
                 });
 
@@ -162,7 +162,7 @@ class HttpMCPServerToolTest {
                         .withEnum("red", "green", "blue")
                         .build(),
                 request -> {
-                    lastCallArgs.set(Map.copyOf(request.arguments()));
+                    lastCallArgs.set(Map.copyOf(request.arguments().raw()));
                     return MCPProtocol.Content.text("ok");
                 });
 
@@ -171,14 +171,14 @@ class HttpMCPServerToolTest {
                 new InputSchemaBuilder()
                         .requiredArray("items", "The items to echo")
                         .build(),
-                request -> MCPProtocol.Content.json(request.arguments().get("items")));
+                request -> MCPProtocol.Content.json(request.arguments().raw().get("items")));
 
         // Tool: echo_object — accepts a required object param, returns it as JSON content
         server.getHandler().addTool("echo_object", "Echoes an object back as JSON",
                 new InputSchemaBuilder()
                         .requiredObject("config", "The config to echo")
                         .build(),
-                request -> MCPProtocol.Content.json(request.arguments().get("config")));
+                request -> MCPProtocol.Content.json(request.arguments().raw().get("config")));
 
         server.start();
 

@@ -227,7 +227,7 @@ public final class MCPProxy {
             try {
                 result = state.upstream.callTool(
                         request.name(),
-                        request.arguments(),
+                        request.arguments().raw(),
                         request.jsonRpcMeta());
             } catch (MCPSessionLostException e) {
                 state.initialized = false;

@@ -1,6 +1,6 @@
 package com.vaadin.swingmcp.mcpscreen.tools;
 
-import com.vaadin.swingmcp.mcp.tools.Parameters;
+import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.mcp.tools.SwingGetSelectionTool;
 import com.vaadin.swingmcp.mcp.tools.SwingSelectAllTool;
 import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;

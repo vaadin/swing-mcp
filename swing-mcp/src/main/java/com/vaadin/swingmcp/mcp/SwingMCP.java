@@ -7,7 +7,6 @@ import com.vaadin.swingmcp.tinymcpserver.MCPSession;
 import com.vaadin.swingmcp.tools.SwingTools;
 import javax.swing.SwingUtilities;
 import com.vaadin.swingmcp.mcp.tools.AbstractSwingTool;
-import com.vaadin.swingmcp.mcp.tools.Parameters;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 
 import java.awt.Component;
@@ -114,7 +113,7 @@ public class SwingMCP {
             try {
                 return runInEDT(() -> {
                     context.setConsideredComponents(getConsideredComponents());
-                    MCPProtocol.Content result = tool.execute(new Parameters(request.arguments()), context);
+                    MCPProtocol.Content result = tool.execute(request.arguments(), context);
                     if (tool.isMutation()) {
                         context.clearRefMap();
                     }

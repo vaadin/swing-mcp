@@ -4,6 +4,7 @@ import com.vaadin.swingmcp.ToolDescriptor;
 import com.vaadin.swingmcp.mcp.SwingUtils;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tinymcpserver.Parameters;
 
 import javax.accessibility.Accessible;
 import javax.swing.JTable;

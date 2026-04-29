@@ -67,7 +67,7 @@ class TinyMCPClientTest {
         server.getHandler().addTool("echo",
                 "Echoes its required 'text' string",
                 new InputSchemaBuilder().requiredString("text", "the text").build(),
-                request -> MCPProtocol.Content.text((String) request.arguments().get("text")));
+                request -> MCPProtocol.Content.text((String) request.arguments().raw().get("text")));
 
         server.start();
     }
@@ -389,6 +389,6 @@ class TinyMCPClientTest {
     private static Map<String, Object> capturedArgs() {
         ToolRequest req = lastRequest.get();
         assertNotNull(req, "tool was not invoked");
-        return req.arguments();
+        return req.arguments().raw();
     }
 }

@@ -1,23 +1,34 @@
-package com.vaadin.swingmcp.mcp.tools;
-
-import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
+package com.vaadin.swingmcp.tinymcpserver;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Typed wrapper around the raw {@code Map<String, Object>} received from MCP
  * tool requests. Provides type-safe accessors that throw
  * {@link MCPServerException} with {@link MCPServerException#INVALID_PARAMS}
  * when a required parameter is missing or has the wrong type.
+ *
+ * <p>Equality and {@link #hashCode()} are defined over the underlying raw
+ * map, so two {@code Parameters} wrapping equal maps compare equal.
  */
-public class Parameters {
+public final class Parameters {
 
     private final Map<String, Object> raw;
 
     public Parameters(Map<String, Object> raw) {
         this.raw = raw == null ? Map.of() : raw;
+    }
+
+    /**
+     * Returns the underlying raw {@code Map<String, Object>}. Useful for
+     * forwarding-proxy use cases that need to pass the arguments through
+     * unchanged.
+     */
+    public Map<String, Object> raw() {
+        return raw;
     }
 
     /**
@@ -205,5 +216,22 @@ public class Parameters {
                     "Parameter '" + key + "' must be an integer, got " + num);
         }
         return num.intValue();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Parameters)) return false;
+        return raw.equals(((Parameters) o).raw);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(raw);
+    }
+
+    @Override
+    public String toString() {
+        return "Parameters" + raw;
     }
 }
