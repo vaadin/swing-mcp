@@ -3,6 +3,7 @@ package com.vaadin.swingmcp.tinymcpserver;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -86,12 +87,12 @@ public class MCPHandler {
 
     /** Convenience constructor: empty server info, no instructions, accept all sessions. */
     public MCPHandler() {
-        this(new MCPProtocol.Implementation(), null, null, null);
+        this(new MCPProtocol.Implementation(), null);
     }
 
     /** Convenience constructor: accept all sessions, no session-close callback. */
     public MCPHandler(MCPProtocol.Implementation serverInfo, String instructions) {
-        this(serverInfo, instructions, null, null);
+        this(serverInfo, instructions, count -> true, session -> {});
     }
 
     /**
@@ -103,18 +104,18 @@ public class MCPHandler {
      *                         current session count; return {@code true} to
      *                         accept the new session, {@code false} to reject
      *                         (the dispatch raises a 409 / SERVER_NOT_INITIALIZED).
-     *                         {@code null} means always accept.
+     *                         Not null — pass {@code count -> true} to always accept.
      * @param onSessionClosed  called outside any handler lock after a session
      *                         has been removed from the map (via DELETE,
      *                         explicit removal, or idle eviction).
-     *                         {@code null} means do nothing.
+     *                         Not null — pass {@code session -> {}} for a no-op.
      */
     public MCPHandler(MCPProtocol.Implementation serverInfo, String instructions,
             IntPredicate acceptNewSession, Consumer<MCPSession> onSessionClosed) {
         this.serverInfo = serverInfo != null ? serverInfo : new MCPProtocol.Implementation();
         this.instructions = instructions;
-        this.acceptNewSession = acceptNewSession;
-        this.onSessionClosed = onSessionClosed;
+        this.acceptNewSession = Objects.requireNonNull(acceptNewSession, "acceptNewSession");
+        this.onSessionClosed = Objects.requireNonNull(onSessionClosed, "onSessionClosed");
     }
 
     // ===== Registries =====
@@ -304,9 +305,7 @@ public class MCPHandler {
     }
 
     void notifySessionClosed(MCPSession session) {
-        if (onSessionClosed != null) {
-            onSessionClosed.accept(session);
-        }
+        onSessionClosed.accept(session);
     }
 
     // ===== Protocol dispatch =====
@@ -327,7 +326,7 @@ public class MCPHandler {
     InitializeOutcome dispatchInitialize(MCPProtocol.JsonRpcRequest request) {
         MCPSession session;
         synchronized (sessionGuardLock) {
-            if (acceptNewSession != null && !acceptNewSession.test(sessions.size())) {
+            if (!acceptNewSession.test(sessions.size())) {
                 LOG.warning("Rejecting initialization: acceptNewSession() returned false");
                 throw new MCPServerException(409,
                         MCPServerException.SERVER_NOT_INITIALIZED, "Another session is already active");

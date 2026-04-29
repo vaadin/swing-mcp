@@ -188,7 +188,7 @@ class HttpMCPServerTest {
         // body. Using the acceptNewSession predicate as the injection point — it runs
         // under the try block in handleRequest but isn't normally expected to throw.
         MCPHandler crashingHandler = new MCPHandler(null, null,
-                count -> { throw new IllegalStateException("boom"); }, null);
+                count -> { throw new IllegalStateException("boom"); }, session -> {});
         HttpMCPServer crashingServer = new HttpMCPServer(0, "/mcp", crashingHandler);
         crashingServer.start();
         try {
