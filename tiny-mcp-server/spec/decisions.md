@@ -897,3 +897,390 @@ inject a predicate.
   required call to every callsite for no gain. Transport-driven
   lifecycle matches today's behaviour and pairs naturally with the
   "one handler, one transport" rule.
+
+---
+
+## DR-012 — Generic MCP forwarding-proxy machinery (`MCPProxy`)
+
+**Status:** Accepted
+**Applies to:** new `MCPProxy` factory in `tiny-mcp-server`,
+`MCPHandler`, `MCPSession`, `MCPClient` / `TinyMCPClient`,
+`ProxyMessages`
+**Builds on:** DR-007 (stdio transport), DR-008 (HTTP client),
+DR-009 (`ToolRequest._meta`), DR-010 / DR-011 (handler is the
+configuration object)
+
+**Decision.** `tiny-mcp-server` ships a generic forwarding-proxy
+factory:
+
+```java
+public final class MCPProxy {
+    public static MCPHandler newHandler(
+        List<ToolDescriptor> tools,
+        URI upstreamUrl,
+        ProxyMessages messages);
+}
+```
+
+The returned `MCPHandler` is fully wired and ready for a transport
+(typically `StdioMCPServer`) to run. There is no `MCPProxy` instance
+to hold — all per-session state lives on `MCPSession.attributes`
+(the bag already exposed by `MCPSession`).
+
+**`tools/list` is answered from the static `tools` list, always** —
+even after a drift failure has been cached, even before upstream has
+been contacted. The proxy advertises the same manifest its caller
+declared, regardless of upstream availability. The tools' authority
+to act is verified per call, not per list.
+
+**Per-session lifecycle.** `MCPProxy.newHandler` configures the
+returned handler as follows:
+
+- **`acceptNewSession = count -> count == 0`** — single-session by
+  default. Stdio is one-client-per-JVM, so concurrent sessions are
+  out of scope. Callers needing a non-stdio multi-session proxy can
+  override the predicate via the setter (DR-013).
+- **`onSessionStarted`** — creates a per-session state object
+  (`upstream = new TinyMCPClient(upstreamUrl)`,
+  `initialized = false`, `driftFailure = null`) and stashes it on
+  `MCPSession.attributes`. No upstream traffic yet.
+- **`onSessionClosed`** — best-effort `state.upstream.close()`,
+  swallowing `IOException`. Idempotent so a JVM shutdown hook can
+  also close the client without double-close errors.
+- **One forwarding `ToolFunction` per descriptor**, all sharing one
+  implementation that:
+  1. Reads the per-session state from `MCPSession.attributes`.
+  2. If `state.driftFailure != null` → return the cached drift
+     `isError`. Permanent for the session.
+  3. If not yet initialized → lazy-init upstream:
+     - On `IOException` → return `messages.upstreamDownMessage()`
+       as `isError`. **Do not** mark permanently dead: the next
+       call retries init from scratch. (Operator just had to start
+       the upstream.)
+     - On success → run the **drift probe** below. On mismatch,
+       cache as `state.driftFailure` and return
+       `messages.driftMessage()` as `isError`.
+  4. Forward
+     `client.callTool(req.name(), req.arguments(), req.jsonRpcMeta())`:
+     - `MCPSessionLostException` → return
+       `messages.sessionLostMessage()` as `isError`. **Surface,
+       don't auto re-initialize.** Reset `state.initialized = false`
+       so the next call walks lazy-init again. (Same rationale as
+       DR-008's "no auto-retry by default": session-bound state
+       can't survive a fresh `initialize`.)
+     - `IOException` mid-call → return
+       `messages.ioMidCallMessage()` as `isError`. Reset
+       `state.initialized = false`.
+     - `MCPClientException` → forward upstream's JSON-RPC error
+       message verbatim as `isError`.
+     - `CallToolResult.isError == true` → forward `Content` and
+       the `isError` flag verbatim.
+
+**Drift probe.** At first successful upstream `initialize`,
+`MCPProxy` calls `client.listTools()` and compares the response
+against the supplied `tools` list as a set keyed by tool name.
+Comparison is **symmetric, hard-fail**: a tool present in either
+side but missing from the other is drift; same name with different
+fields (description, schema) is drift. Equality follows DR-014's
+structural rules. Newer agent tools could mean **subtle changes in
+shared-tool behavior** even if the extra tools never reach Claude;
+treating mismatched versions as drift is the deployment failure
+the probe exists to catch.
+
+The probe runs **once per fresh upstream session**. The first
+`tools/call` after each fresh upstream session pays three localhost
+round-trips (initialize + listTools + the actual forward); this is
+accepted (Q14).
+
+**Session lifetime.** A drift failure caches for the lifetime of
+the *current* session. A re-`initialize` from the MCP client opens
+a fresh session: `onSessionClosed` closes the old upstream client,
+`onSessionStarted` creates a new one, the next `tools/call` walks
+lazy-init + drift probe again. Consistent with DR-008's "no hidden
+state across sessions."
+
+**`ProxyMessages` shape.** Four pre-formatted strings, no
+templating:
+
+```java
+public record ProxyMessages(
+    String upstreamDownMessage,
+    String driftMessage,
+    String sessionLostMessage,
+    String ioMidCallMessage) { }
+```
+
+`tiny-mcp-server` is template-free — `MCPProxy` emits each string
+verbatim as the `Content` of an `isError: true` result. Callers
+interpolate any URL / remote-name references at construction time.
+Each field's javadoc carries an example string showing the voice
+and concreteness expected of a good message (clear cause, named
+remediation, "do not retry" where appropriate).
+
+**Server description is load-bearing.** `tools/list` always returns
+the static manifest, even when upstream is down. To keep the LLM
+oriented in that state, the proxy's MCP server-info description
+itself must spell out the model: "this is a proxy to an in-process
+MCP server; if the upstream isn't running, every tool call fails
+with an error explaining the situation; tell the user to start the
+upstream." Treat the server description as a first-class artifact,
+not boilerplate. (See Q29.)
+
+**Why.** The new use case (DR-007's stdio rationale) is a proxy
+spawned by Claude Code as a subprocess that forwards `tools/call`
+to a separately-running in-process MCP server (e.g. `SwingMCP`).
+Claude Code dispatches `tools/list` at startup and drops any MCP
+that errors on it — so the proxy must succeed in answering
+`tools/list` even when the upstream isn't yet running. That forces
+the manifest to be a static input to the proxy, separate from the
+upstream. Once the manifest is static, drift between proxy and
+upstream becomes a real failure mode, and the probe is the one
+place that detects it.
+
+**Why static factory, not a class instance.** All proxy state lives
+on the per-session attribute bag. There is nothing to hold across
+sessions; an instance would be empty. The factory shape also makes
+the wiring rule visible at the call site — `MCPProxy.newHandler`
+returns a configured `MCPHandler`, the caller wraps it in a
+transport.
+
+**Alternatives considered.**
+- **`tools/list` triggers init + probe.** Rejected — `tools/list`
+  fires at MCP-client init time; an error there causes Claude Code
+  to drop the MCP entirely. Defeats the whole point of a proxy that
+  survives upstream-down.
+- **Empty `tools/list` once drift is cached.** Rejected — Claude
+  sees an empty list, decides the MCP is broken, stops using it.
+  Worse than the "lying-list + clear `isError` body" combination.
+- **Auto-retry on `MCPSessionLostException`.** Rejected — silent
+  state loss. Same rationale as DR-008's no-auto-retry default.
+  The proxy's session-lost message tells the LLM exactly how to
+  recover; that's better than fake success on a stale session.
+- **`Supplier<MCPClient>` parameter instead of `URI`.** Rejected
+  (originally accepted, then walked back). Tests already use HTTP
+  loopback for the client surface; a supplier abstraction earned
+  no mock-injection benefit and added a failure mode (supplier
+  throws). Direct `new TinyMCPClient(uri)` is simpler and the URI
+  is validated once at startup. If a future non-HTTP transport
+  needs proxying, add a supplier overload then.
+- **Soft-fail on drift (warn but forward anyway).** Rejected — the
+  whole point of the probe is to catch deployment mismatches. A
+  drifted manifest can mean different argument semantics or
+  different return shapes; forwarding produces silently-wrong
+  results.
+- **Async drift probe at session start.** Rejected — adds a race
+  between the probe and the first `tools/call`. The 3-round-trip
+  cost on the first call is the simplest and most predictable
+  shape.
+
+---
+
+## DR-013 — Settable `MCPHandler` listeners; `ToolDescriptor`; `_meta` callTool overload
+
+**Status:** Accepted
+**Applies to:** `MCPHandler`, new `ToolDescriptor` record in
+`com.vaadin.swingmcp` (parent package), `MCPClient.callTool`
+overload
+**Refines:** DR-011 (handler-as-configuration)
+**Supersedes:** the recent commit tightening `acceptNewSession` /
+`onSessionClosed` to non-null constructor parameters
+(`b128690 — "Require non-null acceptNewSession / onSessionClosed
+in MCPHandler"`)
+
+**Decision.** Three coupled API extensions to `tiny-mcp-server` so
+`MCPProxy` (DR-012) can wire a handler post-construction without
+forcing every caller through a fat constructor.
+
+### 1. `MCPHandler` listener accessors with one-shot lockdown
+
+`acceptNewSession`, `onSessionStarted` (new), and `onSessionClosed`
+are configured via setters, not constructor parameters:
+
+```java
+public MCPHandler setAcceptNewSession(IntPredicate accept);
+public MCPHandler setOnSessionStarted(Consumer<MCPSession> on);
+public MCPHandler setOnSessionClosed(Consumer<MCPSession> on);
+```
+
+Each defaults to a sensible no-op:
+
+| Listener | Default |
+|---|---|
+| `acceptNewSession` | `count -> true` (multi-session by default — MCP spec default) |
+| `onSessionStarted` | `s -> {}` |
+| `onSessionClosed` | `s -> {}` |
+
+Setters are **settable until the first session opens**; calling
+any setter after that throws `IllegalStateException` ("listener
+locked once first session has been accepted"). The lockdown
+matches the existing "one handler, one transport, one lifecycle
+cycle" rule (DR-011): listener semantics that change mid-flight
+would be a footgun, but pre-flight reconfiguration is exactly what
+factories like `MCPProxy.newHandler` need.
+
+`MCPHandler`'s constructor returns to its 0-arg form (the original
+shape, before the b128690 tightening). The `(IntPredicate,
+Consumer<MCPSession>)` ctor introduced by DR-011 is removed —
+callers that previously wrote `new MCPHandler(p, c)` now write
+`new MCPHandler().setAcceptNewSession(p).setOnSessionClosed(c)`.
+
+`onSessionStarted` is new in this DR. It fires after a session is
+created but before the `initialize` response is returned to the
+client. Used by `MCPProxy` to allocate per-session state. Both new
+and existing transports invoke it from the same dispatch path.
+
+### 2. `ToolDescriptor` record
+
+A new public record in `com.vaadin.swingmcp` (the parent package,
+which is currently empty — see DR-012 / Q23):
+
+```java
+public record ToolDescriptor(
+    String name,
+    String description,
+    MCPProtocol.InputSchema inputSchema) { }
+```
+
+Distinct from the wire-shape POJO `MCPProtocol.Tool` (which carries
+the same fields but is structured for GSON serialization).
+`ToolDescriptor` is the in-memory contract artifact that gets
+passed to `MCPProxy.newHandler` and embedded in
+`AbstractSwingTool` constructors (see swing-mcp `architecture.md`).
+
+A new convenience overload registers a tool from a descriptor:
+
+```java
+public MCPHandler addTool(ToolDescriptor descriptor, ToolFunction fn);
+```
+
+It delegates to the existing 4-arg
+`addTool(name, description, schema, fn)`. This keeps the manifest
+(in `swing-mcp-tool-defs`) as the single source for both proxy
+forwarding and direct registration in the in-process server,
+without rewiring all of `SwingMCP.registerTools()` (Q31).
+
+`InputSchema.equals` / `hashCode` are structural per DR-014, so
+two descriptors with the same logical schema compare equal even
+across separate parsings.
+
+> Note: package `com.vaadin.swingmcp` will be renamed in a future
+> task. Out of scope for this DR.
+
+### 3. `MCPClient.callTool` overload accepting `_meta`
+
+```java
+CallToolResult callTool(
+    String name,
+    Map<String, Object> arguments,
+    JsonObject _meta) throws IOException;
+```
+
+The existing two-arg form delegates to the three-arg form with
+`null`. `MCPProxy`'s forwarding lambda calls the three-arg form
+with `request.jsonRpcMeta()` (DR-009), so cross-cutting envelope
+fields like `progressToken` survive a hop through the proxy.
+
+`AutoRetryMCPClient` (DR-008) forwards `_meta` to its inner
+client.
+
+**Why.**
+
+- **Setters over ctor params.** DR-011 / b128690 made the listeners
+  constructor-only. That works for direct callers (which know all
+  their callbacks at construction time) but blocks factories that
+  build the handler then layer per-session lifecycle on top.
+  `MCPProxy.newHandler` is exactly that pattern. Setters with
+  one-shot lockdown preserve the "no semantic change mid-flight"
+  invariant the b128690 commit was reaching for, without forcing
+  every caller through a fat constructor.
+- **`onSessionStarted`.** Today there is no hook for "a session
+  was just born." `onSessionClosed` already exists as the
+  symmetric end. Adding the start hook makes per-session resource
+  setup natural and removes the alternative ("lazy-init inside
+  every `ToolFunction`") which would scatter the wiring across N
+  registrations.
+- **`ToolDescriptor`.** `MCPProtocol.Tool` is the wire POJO,
+  shaped for GSON. Reusing it as the in-memory contract type would
+  expose serializer concerns to callers (constructors, default
+  values, etc.). A small record in `com.vaadin.swingmcp` is the
+  honest type for the contract.
+- **`_meta` overload.** DR-009 added `_meta` to incoming
+  `ToolRequest`s. A forwarding proxy that drops `_meta` silently
+  loses progress tokens, sampling hints, and any future envelope
+  fields. The overload restores end-to-end transparency.
+
+**Alternatives considered.**
+- **Keep the b128690 non-null ctor enforcement.** Rejected —
+  blocks factory wiring (DR-012). The defaults are sensible, and
+  a caller that forgets to override a listener will see the
+  resulting behaviour (unlimited sessions, no per-session work)
+  in their first integration test.
+- **Always-settable listeners (no first-session lockdown).**
+  Rejected — listener semantics changing mid-flight is a footgun.
+  The lockdown is cheap and matches the one-handler-one-lifecycle
+  rule.
+- **Reuse `MCPProtocol.Tool` as the descriptor.** Rejected — wire
+  POJO leaks GSON shape into call sites.
+- **Replace the existing 4-arg `addTool`.** Rejected — too much
+  churn for callers who already have `(name, description, schema,
+  fn)` in hand. The descriptor overload delegates.
+- **Add `_meta` as a third arg on the existing two-arg
+  `callTool`.** Rejected — breaks every existing call site for a
+  field the proxy is the only current consumer of. Overload
+  preserves source compatibility.
+
+---
+
+## DR-014 — `MCPProtocol.InputSchema` structural `equals` / `hashCode`
+
+**Status:** Accepted
+**Applies to:** `MCPProtocol.InputSchema`
+**Consumed by:** DR-012 (drift probe), `ToolDescriptor` equality
+(DR-013)
+
+**Decision.** `MCPProtocol.InputSchema` (and any nested types it
+references — property descriptors, etc.) implements deep
+structural `equals` and `hashCode`:
+
+- `type` field — equal as strings.
+- `properties` map — same keys, and per-property: same `name`,
+  `type`, `description`, `enum` values (compared as ordered list,
+  matching JSON Schema semantics), and any other text fields.
+- `required` — compared as a **set**, not an ordered list. JSON
+  Schema's `required` is set-semantics; serialized order varies.
+- Any extension fields the spec adds in future versions of the
+  schema POJO must also be compared structurally.
+- Field order is **insensitive**: two schemas whose `properties`
+  iterate in different orders but contain the same entries compare
+  equal.
+
+`hashCode` is consistent with `equals` (same fields, set-hash for
+`required`).
+
+**Why.** DR-012's drift probe compares descriptor lists. Equality
+is a property of the type, not a one-off comparator inside
+`MCPProxy`. A bug in the predicate would manifest as silent false
+positives (drift errors that aren't really drift) or — worse —
+silent false negatives (missed drift, with downstream silently-
+wrong tool calls). Centralising the predicate on the type means
+one place to audit, one place to test, and free reuse for any
+future caller that wants to compare schemas (test assertions,
+schema-cache deduplication, etc.).
+
+Schemas are produced by `InputSchemaBuilder` and round-tripped
+through GSON. Both paths must produce equal results for the same
+logical schema, so the equality contract is "two `InputSchema`s
+are equal iff they describe the same JSON Schema document modulo
+property order."
+
+**Alternatives considered.**
+- **Custom comparator at each call site.** Rejected — drift across
+  consumers; bug fixes wouldn't propagate.
+- **JSON-serialize and string-compare.** Rejected — GSON property
+  order is not part of the contract; two equal schemas might
+  serialize to different strings on different days. Also slower
+  and surprises tests that hold `InputSchema` instances directly.
+- **Reflective deep equals (e.g. Apache Commons
+  `EqualsBuilder.reflectionEquals`).** Rejected — pulls a
+  dependency for one method, and reflection silently treats
+  `required` as a list rather than a set.

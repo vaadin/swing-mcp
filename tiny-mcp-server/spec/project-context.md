@@ -39,15 +39,58 @@ on the same machine is a corner case handled by changing the port.
 The tiny-mcp-server subproject also ships a minimal HTTP MCP client in
 a sibling package, `com.vaadin.swingmcp.tinymcpclient`, with just enough
 surface to run a forwarding proxy: `initialize`, `listTools`,
-`callTool`, `close`. The `MCPClient` interface is the public type;
-`TinyMCPClient` is the no-retry concrete implementation that throws
-`MCPSessionLostException` on HTTP 404 — by default the caller is told
-clearly when the session is gone, because re-initializing would silently
-discard session-bound state (e.g. swing-mcp's component refs).
-Stateless callers can opt into transparent recovery via the
-`MCPClient.autoRetry()` default method, which wraps the client in an
-`AutoRetryMCPClient` decorator. Resources and prompts are not in the
-initial client surface — add when a use case asks. See DR-008.
+`callTool` (with an overload that forwards the JSON-RPC `_meta`
+object end-to-end, DR-013), `close`. The `MCPClient` interface is the
+public type; `TinyMCPClient` is the no-retry concrete implementation
+that throws `MCPSessionLostException` on HTTP 404 — by default the
+caller is told clearly when the session is gone, because
+re-initializing would silently discard session-bound state (e.g.
+swing-mcp's component refs). Stateless callers can opt into
+transparent recovery via the `MCPClient.autoRetry()` default method,
+which wraps the client in an `AutoRetryMCPClient` decorator.
+Resources and prompts are not in the initial client surface — add
+when a use case asks. See DR-008.
+
+### Forwarding-proxy machinery
+
+Forwarding an MCP server over a different transport is a first-class
+capability. `MCPProxy.newHandler(toolDescriptors, upstreamUri,
+proxyMessages)` (DR-012) returns a fully-wired `MCPHandler` that
+answers `tools/list` from a static `ToolDescriptor` manifest and
+forwards every `tools/call` to an upstream MCP server via the
+embedded HTTP client. The caller wraps the returned handler in any
+transport — typically `StdioMCPServer` — and runs it.
+
+This shape exists because Claude Code (and most MCP clients) launch
+their MCP servers as subprocesses, but in-process embedding cases
+(e.g. `SwingMCP`) need to live inside the host application's JVM.
+The proxy bridges the two: a stdio process Claude Code can spawn,
+forwarding to an HTTP server hosted in the running application.
+
+Three properties make the proxy usable in practice:
+
+- **`tools/list` always answers from the static manifest.** Claude
+  Code dispatches `tools/list` at MCP-init time and drops any MCP
+  that errors. Answering locally lets the proxy stay registered
+  even when the upstream isn't running yet — the LLM sees a clear
+  `isError` body on the first `tools/call` instead of losing the
+  whole MCP server.
+- **Drift detection at first call.** When the upstream becomes
+  reachable, the proxy compares its static manifest against
+  upstream's `listTools()` (set-keyed by tool name, structural
+  equality on each entry per DR-014). Hard-fail symmetric on any
+  difference — extra on either side is a deployment-version
+  mismatch, and so are field-level differences. Subsequent calls
+  in the same session return the cached drift error verbatim.
+- **`ProxyMessages` is template-free.** The proxy emits four
+  pre-formatted strings supplied at construction time
+  (upstream-down, drift, session-lost, IO-mid-call). All
+  URL/remote-name interpolation happens at the call site;
+  `tiny-mcp-server` never templates. Diagnostic detail goes to
+  JUL WARNING on stderr.
+
+`swing-mcp-proxy` is the first concrete consumer; the machinery
+itself is generic and doesn't depend on Swing.
 
 ### Session model
 
@@ -84,20 +127,27 @@ and HTTP statuses.
 
 ## 1. Vision
 
-This subproject is an internal dependency of swing-mcp and not meant
-to be used elsewhere. Its purpose is to have as few dependencies as possible,
-to avoid transitive dependency clashes when embedding into customer
-Swing Java apps.
+This subproject is an internal dependency of the swing-mcp ecosystem
+and not meant to be used elsewhere. Its purpose is to have as few
+dependencies as possible, to avoid transitive dependency clashes when
+embedding into customer Swing Java apps.
 
 The broader context: swing-mcp is part of a Vaadin migration workflow where
 a customer migrates a Java Swing app to Vaadin. An AI agent uses MCP to
 inspect and navigate the Swing app, gathering screenshots and accessibility
 snapshots to inform the migration.
 
+The protocol primitives (server, client, proxy machinery) are
+generic and Swing-agnostic — they live here so any consumer in the
+ecosystem can pick the pieces it needs without pulling in Swing.
+
 ## 2. Users
 
-Internal project: no human users, only the swing-mcp subproject is
-the intended user.
+Internal project. Two intended consumers today: `swing-mcp` (the
+in-process Swing MCP server) and `swing-mcp-proxy` (the stdio
+forwarding proxy that Claude Code spawns). Both depend on this
+subproject's protocol POJOs, dispatch core, and — for the proxy —
+the `MCPProxy` factory and embedded `MCPClient`.
 
 ## 3. Constraints
 

@@ -47,15 +47,22 @@ the natural seams in the protocol:
   `stop()`, the once-per-minute idle-session cleanup tick, and the
   JSON-RPC dispatch for `initialize` / `ping` / routing to
   `MCPSession`. Knows nothing about HTTP or stdio framing; both
-  transports drive the same handler instance. Per DR-011, the
-  `acceptNewSession` (an `IntPredicate` over the current session
-  count) and `onSessionClosed` (a `Consumer<MCPSession>`) callbacks
-  are constructor parameters; pass `null` for default behaviour
-  (always accept, no-op on close). Methods that fail throw
-  `MCPServerException` rather than writing a response; the transport
-  translates. The shared executor is exposed via `getExecutor()` for
-  tool handlers that need short background work (see DR-006),
-  reachable from tool code via
+  transports drive the same handler instance. Constructor is
+  0-arg; per DR-013, the session-lifecycle listeners
+  (`acceptNewSession` — `IntPredicate` over the current session
+  count, `onSessionStarted` and `onSessionClosed` —
+  `Consumer<MCPSession>`) are configured via fluent setters
+  (`setAcceptNewSession`, `setOnSessionStarted`,
+  `setOnSessionClosed`) with sensible no-op defaults
+  (always-accept, no-op on start/close). Setters are settable
+  until the first session opens, then locked — calling any setter
+  later throws `IllegalStateException`. `addTool` has an overload
+  taking `ToolDescriptor` (DR-013) for callers that already hold a
+  descriptor (e.g. `MCPProxy`, `AbstractSwingTool`). Methods that
+  fail throw `MCPServerException` rather than writing a response;
+  the transport translates. The shared executor is exposed via
+  `getExecutor()` for tool handlers that need short background
+  work (see DR-006), reachable from tool code via
   `MCPSession.getCurrent().getHandler().getExecutor()`.
 
 - **`HttpMCPServer`** — HTTP transport (formerly `TinyMCPServer`).
@@ -92,7 +99,43 @@ the natural seams in the protocol:
   method that re-initializes once and replays the failed call.
   Stateless callers opt in; stateful callers (including the swing-mcp
   proxy) deliberately do not. Minimal surface: `initialize`,
-  `listTools`, `callTool`, `close`. See DR-008.
+  `listTools`, `callTool` (two- and three-arg overloads — the
+  three-arg form takes a JSON-RPC `_meta` object, DR-013), `close`.
+  See DR-008.
+- **`MCPProxy`** — generic forwarding-proxy factory (DR-012).
+  Static `MCPProxy.newHandler(List<ToolDescriptor>, URI upstreamUrl,
+  ProxyMessages)` returns a fully-wired single-session
+  `MCPHandler` whose tool functions forward to the upstream MCP
+  server at `upstreamUrl` via `TinyMCPClient`. The caller wraps
+  the returned handler in a transport (typically `StdioMCPServer`)
+  and runs it. There is no `MCPProxy` instance — per-session state
+  (lazy-initialized upstream client, drift cache) lives on
+  `MCPSession.attributes`. `tools/list` is always answered from
+  the supplied `ToolDescriptor` list; drift between that list and
+  upstream's actual `listTools()` is detected at first call and
+  cached as a permanent error for the session. `ProxyMessages`
+  carries four pre-formatted error strings (upstream-down, drift,
+  session-lost, IO-mid-call) which `MCPProxy` emits verbatim — no
+  templating happens inside `tiny-mcp-server`. See DR-012 for the
+  full lifecycle, drift policy, and error taxonomy.
+- **`ToolDescriptor`** — public record `(name, description,
+  InputSchema)` in the parent package `com.vaadin.swingmcp`
+  (currently empty, intentional — see DR-013 / Q23). The in-memory
+  contract type for a tool, distinct from the wire-shape POJO
+  `MCPProtocol.Tool`. Consumed by `MCPProxy.newHandler` as the
+  manifest, by `MCPHandler.addTool(ToolDescriptor, ToolFunction)`
+  for direct registration, and by `swing-mcp-tool-defs` as the
+  shared descriptor list across `swing-mcp` and
+  `swing-mcp-proxy`. Equality on `ToolDescriptor` is structural
+  via `MCPProtocol.InputSchema`'s structural `equals` / `hashCode`
+  (DR-014).
+- **`ProxyMessages`** — public record carrying the four
+  human-readable error strings emitted by `MCPProxy` when upstream
+  is down, drifting, lost the session, or threw an `IOException`
+  mid-call. Each field's javadoc carries an example string showing
+  the voice and concreteness expected (clear cause, named
+  remediation, "do not retry" where appropriate). Defined in the
+  same package as `MCPProxy` inside `tiny-mcp-server`.
 - **`MCPSession`** — one per active session; dispatches session-scoped
   methods (`tools/*`, `resources/*`, `prompts/*`) under a per-session
   `ReentrantLock`. Owns session attributes and exposes `getCurrent()` as
@@ -115,7 +158,10 @@ the natural seams in the protocol:
   hosts the request records `ToolRequest`, `PromptRequest`, and
   `ResourceRequest` (see DR-009) carrying the request key (name or
   URI), arguments, transport headers, and the JSON-RPC `_meta` object.
-  No hand-rolled JSON anywhere else.
+  No hand-rolled JSON anywhere else. `MCPProtocol.InputSchema` (and
+  the property descriptors it references) implements deep
+  structural `equals` / `hashCode` per DR-014 — used by `MCPProxy`'s
+  drift probe and by `ToolDescriptor` equality.
 - **`InputSchemaBuilder` / `PromptArgumentsBuilder`** — fluent builders
   for tool input schemas and prompt argument lists.
 - **`MCPParameterParser`** — parses and type-coerces incoming tool
@@ -140,15 +186,52 @@ actual bound port.
 own `MCPHandler` instance; HTTP and stdio are mutually exclusive per
 handler.
 
+### MCPProxy
+
+Intended lifecycle: call
+`MCPProxy.newHandler(toolDescriptors, upstreamUri, proxyMessages)` to
+get a configured `MCPHandler`, wrap it in a transport (typically
+`new StdioMCPServer(handler)`), and run the transport. There is no
+`MCPProxy` instance to hold — see DR-012 for the rationale.
+
+Behaviourally:
+
+- `tools/list` is answered locally from `toolDescriptors`. Always.
+  Even when upstream is down. Even after drift has been detected.
+- The first `tools/call` of each fresh session pays three localhost
+  round-trips: upstream `initialize`, `listTools` drift probe, and
+  the actual forwarded call. Subsequent calls in the same fresh
+  session pay one.
+- The drift probe compares the supplied `toolDescriptors` set
+  against upstream's `listTools()` set, hard-fail symmetric — any
+  difference (extra on either side, or same name with different
+  fields per DR-014's structural equality) caches a permanent
+  `isError` for the session.
+- Errors emitted to the LLM are the `ProxyMessages` strings,
+  verbatim. Diagnostic detail (full descriptor JSONs on drift,
+  exception stack traces on IO failure) goes to JUL WARNING on
+  stderr — two audiences, two channels. The proxy module choosing
+  the messages decides what to interpolate (URLs, remote names,
+  etc.); `tiny-mcp-server` does no templating.
+
+A re-`initialize` from the MCP client closes the current upstream
+client and opens a new one; the next `tools/call` walks the
+lazy-init + drift-probe path again. Consistent with the
+"no hidden state across sessions" rule from DR-008.
+
 By default the handler accepts multiple concurrent sessions. Callers
-that need a single-session policy (as swing-mcp does) supply an
-`IntPredicate` such as `count -> count == 0` to the `MCPHandler`
-constructor — when it returns `false`, `initialize` is rejected with
-HTTP 409 and JSON-RPC code `-32002`. Sessions idle for 30 minutes are
-evicted by a background cleanup tick, which invokes the optional
-`onSessionClosed` callback (also a constructor parameter on
-`MCPHandler`) the same way an explicit DELETE does. See DR-003 /
-DR-005 / DR-006 / DR-011 for the full session lifecycle and
+that need a single-session policy (as swing-mcp does) call
+`handler.setAcceptNewSession(count -> count == 0)` before the first
+session opens — when the predicate returns `false`, `initialize` is
+rejected with HTTP 409 and JSON-RPC code `-32002`. Sessions idle for
+30 minutes are evicted by a background cleanup tick, which invokes
+the (optional) listener registered via `setOnSessionClosed` the same
+way an explicit DELETE does. `setOnSessionStarted` (DR-013) is the
+symmetric per-session-init hook — `MCPProxy.newHandler` uses it to
+allocate per-session upstream-client state. All three setters lock
+once the first session is accepted; later calls throw
+`IllegalStateException`. See DR-003 / DR-005 / DR-006 / DR-011 /
+DR-013 for the full session lifecycle, listener API, and
 idle-eviction policy.
 
 #### Tool registration API
@@ -237,4 +320,40 @@ The builder supports:
   streams and verifies the round-trip — proving that DR-007 (stdio),
   DR-008 (client), and DR-009 (request records) compose end-to-end
   without Swing.
+- **`MCPProxy` integration tests** (DR-012) — drive the factory
+  output through a `StdioMCPServer` against a real upstream
+  `HttpMCPServer` over loopback. Required scenarios:
+  - **Down-then-up.** Start the proxy without the upstream;
+    `tools/list` succeeds (static manifest); `tools/call` returns
+    `messages.upstreamDownMessage()`. Start the upstream; the next
+    `tools/call` succeeds. Confirms lazy init isn't permanently
+    poisoned by an early failure.
+  - **Drift symmetric — extra on manifest.** Manifest declares a
+    tool the upstream doesn't expose. First `tools/call` returns
+    `messages.driftMessage()`; subsequent calls in the same session
+    return the same cached message; a re-`initialize` clears the
+    cache.
+  - **Drift symmetric — extra upstream.** Upstream exposes a tool
+    not in the manifest. Same outcome as the previous scenario —
+    deployment-version mismatch is the failure mode regardless of
+    which side has more.
+  - **Drift on field difference.** Same name on both sides, but
+    description / schema differ. Drift detected via DR-014's
+    structural equality.
+  - **Session-lost mid-call.** Upstream evicts the session between
+    two `tools/call`s; the second call returns
+    `messages.sessionLostMessage()` and resets `state.initialized`
+    so a subsequent call walks lazy-init from scratch. No silent
+    re-initialize.
+  - **`IOException` mid-call.** Upstream is killed mid-call; the
+    proxy returns `messages.ioMidCallMessage()`.
+  - **`_meta` passthrough.** A `progressToken` set in `_meta` on
+    the proxy's incoming `tools/call` reaches the upstream
+    handler's `ToolRequest._meta` unchanged (DR-013's three-arg
+    `callTool` overload).
+  - **First-call round-trip count.** Assert that the first
+    `tools/call` of a fresh session triggers exactly three
+    upstream HTTP requests (`initialize`, `listTools`, `callTool`)
+    and subsequent calls trigger one. Cheap regression guard
+    against an accidental probe-per-call.
 

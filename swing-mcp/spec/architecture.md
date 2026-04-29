@@ -39,6 +39,18 @@ MCP tools.
 No need to support repeated start/stop cycles.
 The server binds to `127.0.0.1` only. Constructor accepts port and path similarly to `HttpMCPServer`.
 
+**Server identity is sourced from `swing-mcp-tool-defs`.** `SwingMCP`
+sets `serverInfo` (`SERVER_NAME` / `SERVER_VERSION`) and `instructions`
+(`INSTRUCTIONS`) from the constants exported by that module. The
+`swing-mcp-proxy` stdio transport consumes the same constants, so the
+two transports present bit-identical identity to any MCP client. See
+`swing-mcp-tool-defs/spec/project-context.md`. The session-lost
+message that `SwingMCP` returns when its single session has been
+evicted is also sourced from that module
+(`SwingTools.SESSION_LOST_MESSAGE`), aligning the in-process server's
+wording with the proxy's locked string set (grilling Sub-item 1; the
+DR-008 example wording is updated to match).
+
 The SwingMCP has a protected method which calculates which Windows are considered. Since tests can't instantiate Windows in headless mode, they will
 use JPanel instead => the method should return `List<Component>` instead.
 The tests will override the method and will return their own component hierarchy,
@@ -47,7 +59,26 @@ whatever suits the test needs.
 For upcoming Swing Tools, we create an utility class AbstractSwingTool which:
 
 1. Implements a function similar to ToolFunction, but also receives the list of considered components.
-2. Gives assurance that it's run in Swing EDT thread
+2. Gives assurance that it's run in Swing EDT thread.
+3. **Binds to a `ToolDescriptor` from `swing-mcp-tool-defs` at construction time.**
+   The `AbstractSwingTool` constructor takes a `ToolDescriptor`
+   (one of the `SwingTools.SWING_*` constants) and stores it.
+   `getName()` / `getDescription()` / `getInputSchema()` become
+   `final` methods that delegate to the stored descriptor.
+   Subclasses pass the matching constant via `super(SwingTools.SWING_CLICK)`
+   etc., so a tool implementation cannot drift from the manifest by
+   accident — name, description, and schema all live in one place.
+
+   Coherence between `SwingTools.ALL` and the tools actually
+   registered by `SwingMCP.registerTools()` is enforced by a unit
+   test that boots `SwingMCP`, calls `listTools`, and deep-equals
+   the result against `SwingTools.ALL` (using `ToolDescriptor`
+   structural equality from DR-013 / DR-014). Same test also
+   asserts the `serverInfo` and `INSTRUCTIONS` returned by
+   `initialize` match the `swing-mcp-tool-defs` constants.
+   Catches manifest-vs-registration drift at developer-test time —
+   so the proxy's runtime drift probe (DR-012) only ever fires on
+   genuine deployment-version mismatches.
 
 Every Swing tool must extend that class. When swing tool is registered to
 SwingMCP, it must register a wrapper ToolFunction which, upon invocation:
