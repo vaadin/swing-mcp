@@ -2,6 +2,7 @@ package com.vaadin.swingmcp.tinymcpserver;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.vaadin.swingmcp.ToolDescriptor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -18,8 +19,8 @@ class MCPSessionTest {
     @BeforeAll
     static void setup() {
         MCPToolHandler toolHandler = new MCPToolHandler();
-        toolHandler.addTool("echo", "Echo tool",
-                new InputSchemaBuilder().requiredString("msg", "message").build(),
+        toolHandler.addTool(new ToolDescriptor("echo", "Echo tool",
+                        new InputSchemaBuilder().requiredString("msg", "message").build()),
                 request -> MCPProtocol.Content.text((String) request.arguments().raw().get("msg")));
         session = new MCPSession("test-session-id", toolHandler, new MCPResourceHandler(), new MCPPromptHandler(), null);
     }

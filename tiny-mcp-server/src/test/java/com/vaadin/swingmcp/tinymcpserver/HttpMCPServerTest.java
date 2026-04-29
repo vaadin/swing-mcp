@@ -91,7 +91,8 @@ class HttpMCPServerTest {
         assertDoesNotThrow(() -> client.ping());
     }
 
-    // ===== addTool() guard (validation tests are in MCPToolHandlerTest) =====
+    // ===== addTool() guard (descriptor validation: ToolDescriptorTest;
+    // registration validation: MCPToolHandlerTest) =====
 
     @Test
     void addToolAfterStartThrows() throws Exception {

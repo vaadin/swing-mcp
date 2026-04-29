@@ -1,10 +1,13 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
+import com.vaadin.swingmcp.ToolDescriptor;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -26,14 +29,13 @@ class MCPToolHandler {
         final ToolFunction function;
         final MCPProtocol.Tool descriptor;
 
-        RegisteredTool(String name, String description, MCPProtocol.InputSchema inputSchema,
-                ToolFunction function) {
-            this.parser = new MCPParameterParser(name, inputSchema);
+        RegisteredTool(ToolDescriptor descriptor, ToolFunction function) {
+            this.parser = new MCPParameterParser(descriptor.name(), descriptor.inputSchema());
             this.function = function;
             this.descriptor = new MCPProtocol.Tool();
-            this.descriptor.setName(name);
-            this.descriptor.setDescription(description);
-            this.descriptor.setInputSchema(inputSchema);
+            this.descriptor.setName(descriptor.name());
+            this.descriptor.setDescription(descriptor.description());
+            this.descriptor.setInputSchema(descriptor.inputSchema());
         }
     }
 
@@ -41,35 +43,22 @@ class MCPToolHandler {
 
     /**
      * Registers a tool. Must be called before the server is started.
+     * Field-level validation (null, blank, name pattern) is performed by
+     * {@link ToolDescriptor}'s constructor; this method only enforces
+     * registration-level invariants.
      *
-     * @param name        the tool name; not null, not blank
-     * @param description human-readable description of the tool; not null, not blank
-     * @param inputSchema the parameter schema; not null
-     * @param function    the handler to invoke when the tool is called; not null
-     * @throws IllegalArgumentException if any argument is null or blank
-     * @throws IllegalStateException    if a tool with the same name is already registered
+     * @param descriptor the tool descriptor; not null
+     * @param function   the handler to invoke when the tool is called; not null
+     * @throws NullPointerException  if {@code descriptor} or {@code function} is null
+     * @throws IllegalStateException if a tool with the same name is already registered
      */
-    void addTool(String name, String description, MCPProtocol.InputSchema inputSchema,
-            ToolFunction function) {
-        if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Tool name must not be null or blank");
+    void addTool(ToolDescriptor descriptor, ToolFunction function) {
+        Objects.requireNonNull(descriptor, "descriptor");
+        Objects.requireNonNull(function, "function");
+        if (tools.containsKey(descriptor.name())) {
+            throw new IllegalStateException("A tool with name '" + descriptor.name() + "' is already registered");
         }
-        if (!name.matches("[a-zA-Z_][a-zA-Z0-9_]*")) {
-            throw new IllegalArgumentException("Tool name must start with a letter or underscore and contain only alphanumeric characters and underscores: " + name);
-        }
-        if (description == null || description.isBlank()) {
-            throw new IllegalArgumentException("Tool description must not be null or blank");
-        }
-        if (inputSchema == null) {
-            throw new IllegalArgumentException("InputSchema must not be null");
-        }
-        if (function == null) {
-            throw new IllegalArgumentException("ToolFunction must not be null");
-        }
-        if (tools.containsKey(name)) {
-            throw new IllegalStateException("A tool with name '" + name + "' is already registered");
-        }
-        tools.put(name, new RegisteredTool(name, description, inputSchema, function));
+        tools.put(descriptor.name(), new RegisteredTool(descriptor, function));
     }
 
     MCPProtocol.ListToolsResult handleToolsList() {

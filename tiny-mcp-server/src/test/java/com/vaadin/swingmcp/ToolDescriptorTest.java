@@ -23,6 +23,35 @@ class ToolDescriptorTest {
     }
 
     @Test
+    void recordRejectsBlankName() {
+        MCPProtocol.InputSchema schema = new InputSchemaBuilder().build();
+        assertThrows(IllegalArgumentException.class,
+                () -> new ToolDescriptor("", "desc", schema));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ToolDescriptor("  ", "desc", schema));
+    }
+
+    @Test
+    void recordRejectsInvalidName() {
+        MCPProtocol.InputSchema schema = new InputSchemaBuilder().build();
+        assertThrows(IllegalArgumentException.class,
+                () -> new ToolDescriptor("1tool", "desc", schema));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ToolDescriptor("my-tool", "desc", schema));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ToolDescriptor("my tool", "desc", schema));
+    }
+
+    @Test
+    void recordRejectsBlankDescription() {
+        MCPProtocol.InputSchema schema = new InputSchemaBuilder().build();
+        assertThrows(IllegalArgumentException.class,
+                () -> new ToolDescriptor("my_tool", "", schema));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ToolDescriptor("my_tool", "  ", schema));
+    }
+
+    @Test
     void equalDescriptorsCompareEqual() {
         // Same logical content, built independently (different schema
         // instances, possibly different `properties` map iteration

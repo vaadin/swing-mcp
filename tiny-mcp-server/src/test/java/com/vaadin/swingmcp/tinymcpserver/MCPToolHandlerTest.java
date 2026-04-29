@@ -1,72 +1,41 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
+import com.vaadin.swingmcp.ToolDescriptor;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Unit tests for {@link MCPToolHandler} tool registration validation.
+ * Unit tests for {@link MCPToolHandler} tool registration.
+ * Field-level descriptor validation lives in
+ * {@link com.vaadin.swingmcp.ToolDescriptorTest}; this class only covers
+ * registration-level invariants.
  */
 class MCPToolHandlerTest {
 
-    @Test
-    void addToolRejectsNullName() {
-        MCPToolHandler handler = new MCPToolHandler();
-        assertThrows(IllegalArgumentException.class, () ->
-                handler.addTool(null, "desc", new InputSchemaBuilder().build(), request -> null));
+    private static ToolDescriptor descriptor(String name) {
+        return new ToolDescriptor(name, "desc", new InputSchemaBuilder().build());
     }
 
     @Test
-    void addToolRejectsBlankName() {
+    void addToolRejectsNullDescriptor() {
         MCPToolHandler handler = new MCPToolHandler();
-        assertThrows(IllegalArgumentException.class, () ->
-                handler.addTool("  ", "desc", new InputSchemaBuilder().build(), request -> null));
-    }
-
-    @Test
-    void addToolRejectsInvalidName() {
-        MCPToolHandler handler = new MCPToolHandler();
-        assertThrows(IllegalArgumentException.class, () ->
-                handler.addTool("1tool", "desc", new InputSchemaBuilder().build(), request -> null));
-        assertThrows(IllegalArgumentException.class, () ->
-                handler.addTool("my-tool", "desc", new InputSchemaBuilder().build(), request -> null));
-        assertThrows(IllegalArgumentException.class, () ->
-                handler.addTool("my tool", "desc", new InputSchemaBuilder().build(), request -> null));
-    }
-
-    @Test
-    void addToolRejectsNullDescription() {
-        MCPToolHandler handler = new MCPToolHandler();
-        assertThrows(IllegalArgumentException.class, () ->
-                handler.addTool("my_tool", null, new InputSchemaBuilder().build(), request -> null));
-    }
-
-    @Test
-    void addToolRejectsBlankDescription() {
-        MCPToolHandler handler = new MCPToolHandler();
-        assertThrows(IllegalArgumentException.class, () ->
-                handler.addTool("my_tool", "  ", new InputSchemaBuilder().build(), request -> null));
-    }
-
-    @Test
-    void addToolRejectsNullInputSchema() {
-        MCPToolHandler handler = new MCPToolHandler();
-        assertThrows(IllegalArgumentException.class, () ->
-                handler.addTool("my_tool", "desc", null, request -> null));
+        assertThrows(NullPointerException.class, () ->
+                handler.addTool(null, request -> null));
     }
 
     @Test
     void addToolRejectsNullFunction() {
         MCPToolHandler handler = new MCPToolHandler();
-        assertThrows(IllegalArgumentException.class, () ->
-                handler.addTool("my_tool", "desc", new InputSchemaBuilder().build(), null));
+        assertThrows(NullPointerException.class, () ->
+                handler.addTool(descriptor("my_tool"), null));
     }
 
     @Test
     void addToolDuplicateNameThrows() {
         MCPToolHandler handler = new MCPToolHandler();
-        handler.addTool("my_tool", "desc", new InputSchemaBuilder().build(), request -> null);
+        handler.addTool(descriptor("my_tool"), request -> null);
         assertThrows(IllegalStateException.class, () ->
-                handler.addTool("my_tool", "other desc", new InputSchemaBuilder().build(), request -> null));
+                handler.addTool(descriptor("my_tool"), request -> null));
     }
 }

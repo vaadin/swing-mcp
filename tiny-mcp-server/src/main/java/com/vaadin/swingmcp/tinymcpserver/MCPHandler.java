@@ -221,28 +221,25 @@ public class MCPHandler {
      */
     public void addTool(String name, String description, MCPProtocol.InputSchema inputSchema,
             ToolFunction function) {
-        if (started) {
-            throw new IllegalStateException("Cannot add tools after server has been started");
-        }
-        toolHandler.addTool(name, description, inputSchema, function);
+        addTool(new ToolDescriptor(name, description, inputSchema), function);
     }
 
     /**
-     * Convenience overload registering a tool from a {@link ToolDescriptor}
-     * (DR-013). Delegates to the four-arg form. Lets callers that already
-     * hold a descriptor — e.g. {@code MCPProxy.newHandler}, swing-mcp's
-     * {@code AbstractSwingTool} — register without unpacking the record.
+     * Registers a tool from a {@link ToolDescriptor} (DR-013). This is the
+     * primary registration form; the four-arg overload constructs a
+     * descriptor and delegates here.
      *
      * @param descriptor the tool descriptor; not null
      * @param function   the handler to invoke when the tool is called; not null
-     * @throws IllegalArgumentException if {@code function} is null, or if
-     *                                  any descriptor field is null/blank
-     * @throws IllegalStateException    if the handler has already been started
-     * @throws IllegalStateException    if a tool with the same name is already registered
+     * @throws NullPointerException  if {@code descriptor} or {@code function} is null
+     * @throws IllegalStateException if the handler has already been started, or
+     *                               if a tool with the same name is already registered
      */
     public void addTool(ToolDescriptor descriptor, ToolFunction function) {
-        Objects.requireNonNull(descriptor, "descriptor");
-        addTool(descriptor.name(), descriptor.description(), descriptor.inputSchema(), function);
+        if (started) {
+            throw new IllegalStateException("Cannot add tools after server has been started");
+        }
+        toolHandler.addTool(descriptor, function);
     }
 
     /**

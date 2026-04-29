@@ -3,6 +3,7 @@ package com.vaadin.swingmcp;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 /**
  * In-memory contract type for an MCP tool: name, description, and input
@@ -26,7 +27,7 @@ import java.util.Objects;
  * {@code tinymcpserver} (which is the transport implementation).
  *
  * @param name        tool name; must match {@code [a-zA-Z_][a-zA-Z0-9_]*}
- * @param description human-readable description
+ * @param description human-readable description; not blank
  * @param inputSchema input parameter schema; usually built via
  *                    {@link com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder}
  */
@@ -35,9 +36,20 @@ public record ToolDescriptor(
         String description,
         MCPProtocol.InputSchema inputSchema) {
 
+    private static final Pattern NAME_PATTERN = Pattern.compile("[a-zA-Z_][a-zA-Z0-9_]*");
+
     public ToolDescriptor {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(description, "description");
         Objects.requireNonNull(inputSchema, "inputSchema");
+        if (name.isBlank()) {
+            throw new IllegalArgumentException("Tool name must not be blank");
+        }
+        if (!NAME_PATTERN.matcher(name).matches()) {
+            throw new IllegalArgumentException("Tool name must start with a letter or underscore and contain only alphanumeric characters and underscores: " + name);
+        }
+        if (description.isBlank()) {
+            throw new IllegalArgumentException("Tool description must not be blank");
+        }
     }
 }
