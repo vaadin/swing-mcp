@@ -37,7 +37,7 @@ public final class TinyMCPClient implements MCPClient {
 
     private static final Logger LOG = Logger.getLogger(TinyMCPClient.class.getName());
 
-    private static final String PROTOCOL_VERSION = "2024-11-05";
+    private static final String PROTOCOL_VERSION = "2025-11-25";
     private static final String CLIENT_NAME = "tiny-mcp-client";
     private static final String CLIENT_VERSION = "1.0";
 
@@ -50,6 +50,15 @@ public final class TinyMCPClient implements MCPClient {
      * {@link #initialize()}. Sent on every subsequent request.
      */
     private volatile String sessionId;
+
+    /**
+     * The protocol version the server picked in its {@code initialize}
+     * response, captured so we can echo it back via the
+     * {@code MCP-Protocol-Version} HTTP header on every subsequent
+     * request (required by the MCP spec from 2025-06-18 onward).
+     */
+    private volatile String negotiatedProtocolVersion;
+
     private volatile boolean closed;
 
     public TinyMCPClient(URI serverUrl) {
@@ -73,12 +82,15 @@ public final class TinyMCPClient implements MCPClient {
         params.setClientInfo(clientInfo);
 
         // Reset before sending; the new session id arrives in the response
-        // header and is captured by sendRequest().
+        // header and is captured by sendRequest(). The negotiated protocol
+        // version is captured here once the server replies.
         sessionId = null;
+        negotiatedProtocolVersion = null;
 
         JsonElement resultEl = sendRequest("initialize", params, null);
         MCPProtocol.InitializeResult result = MCPProtocol.fromJson(resultEl.toString(),
                 MCPProtocol.InitializeResult.class);
+        negotiatedProtocolVersion = result.getProtocolVersion();
 
         // Per the MCP spec, the client must follow up with the
         // notifications/initialized notification.
@@ -120,9 +132,8 @@ public final class TinyMCPClient implements MCPClient {
         if (sessionId == null) {
             return;
         }
-        HttpRequest.Builder builder = HttpRequest.newBuilder(serverUrl)
-                .DELETE()
-                .header("Mcp-Session-Id", sessionId);
+        HttpRequest.Builder builder = HttpRequest.newBuilder(serverUrl).DELETE();
+        addSessionHeaders(builder);
         try {
             HttpResponse<Void> response = http.send(builder.build(), BodyHandlers.discarding());
             int status = response.statusCode();
@@ -147,6 +158,23 @@ public final class TinyMCPClient implements MCPClient {
     }
 
     /**
+     * Adds the session-scoped HTTP headers to {@code builder}: the
+     * {@code Mcp-Session-Id} from the server's {@code initialize} response
+     * (so the server can route the request) and the
+     * {@code MCP-Protocol-Version} header naming the negotiated version
+     * (required by the MCP spec from 2025-06-18 onward, ignored by older
+     * servers). Both are no-ops before {@code initialize} succeeds.
+     */
+    private void addSessionHeaders(HttpRequest.Builder builder) {
+        if (sessionId != null) {
+            builder.header("Mcp-Session-Id", sessionId);
+        }
+        if (negotiatedProtocolVersion != null) {
+            builder.header("MCP-Protocol-Version", negotiatedProtocolVersion);
+        }
+    }
+
+    /**
      * Sends a JSON-RPC notification (no {@code id}, no expected response
      * body). Used for {@code notifications/initialized}. Server replies
      * with HTTP 202 Accepted; any other 2xx is also tolerated.
@@ -157,10 +185,8 @@ public final class TinyMCPClient implements MCPClient {
         HttpRequest.Builder builder = HttpRequest.newBuilder(serverUrl)
                 .POST(BodyPublishers.ofString(notif.toJson()))
                 .header("Content-Type", "application/json")
-                .header("Accept", "application/json");
-        if (sessionId != null) {
-            builder.header("Mcp-Session-Id", sessionId);
-        }
+                .header("Accept", "application/json, text/event-stream");
+        addSessionHeaders(builder);
         HttpResponse<String> response;
         try {
             response = http.send(builder.build(), BodyHandlers.ofString());
@@ -210,10 +236,8 @@ public final class TinyMCPClient implements MCPClient {
         HttpRequest.Builder builder = HttpRequest.newBuilder(serverUrl)
                 .POST(BodyPublishers.ofString(request.toJson()))
                 .header("Content-Type", "application/json")
-                .header("Accept", "application/json");
-        if (sessionId != null) {
-            builder.header("Mcp-Session-Id", sessionId);
-        }
+                .header("Accept", "application/json, text/event-stream");
+        addSessionHeaders(builder);
 
         HttpResponse<String> response;
         try {
@@ -224,7 +248,14 @@ public final class TinyMCPClient implements MCPClient {
         }
 
         int status = response.statusCode();
-        String body = response.body();
+        // Streamable HTTP transport allows the server to reply with either
+        // application/json (a single JSON-RPC envelope) or text/event-stream
+        // (one or more SSE events whose data: payload is the JSON-RPC
+        // envelope). For our minimal request/response surface there is
+        // always exactly one response event, so it is safe to extract the
+        // first event's data and treat it as plain JSON.
+        String body = unframeSse(response.body(),
+                response.headers().firstValue("Content-Type").orElse(null));
 
         // 404 from a non-initialize call → session lost.
         // initialize itself never carries a session id, so the server
@@ -275,6 +306,40 @@ public final class TinyMCPClient implements MCPClient {
                     "Response has neither 'result' nor 'error': " + body);
         }
         return resultEl;
+    }
+
+    /**
+     * If {@code contentType} indicates SSE framing, returns the data
+     * payload of the first complete event in {@code body}. Multiple
+     * {@code data:} lines for one event are joined with {@code \n} as
+     * the SSE spec requires. Otherwise returns {@code body} unchanged.
+     *
+     * <p>This is intentionally minimal: our client surface
+     * (initialize / listTools / callTool) does not request progress
+     * notifications, so the server replies with a single response event;
+     * if a future caller does request progress, this code will need to
+     * evolve to scan for the event whose payload matches the request id.
+     */
+    private static String unframeSse(String body, String contentType) {
+        if (body == null || contentType == null
+                || !contentType.toLowerCase().contains("text/event-stream")) {
+            return body;
+        }
+        StringBuilder data = new StringBuilder();
+        for (String rawLine : body.split("\n", -1)) {
+            String line = rawLine.endsWith("\r") ? rawLine.substring(0, rawLine.length() - 1) : rawLine;
+            if (line.startsWith("data:")) {
+                String value = line.substring("data:".length());
+                if (value.startsWith(" ")) value = value.substring(1);
+                if (data.length() > 0) data.append('\n');
+                data.append(value);
+            } else if (line.isEmpty() && data.length() > 0) {
+                return data.toString();
+            }
+            // Other SSE fields (id:, event:, comments starting with :) are
+            // not load-bearing for our request/response surface.
+        }
+        return data.toString();
     }
 
     private static MCPProtocol.ErrorObject tryParseErrorBody(String body) {

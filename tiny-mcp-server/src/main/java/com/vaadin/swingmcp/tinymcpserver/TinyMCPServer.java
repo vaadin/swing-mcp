@@ -30,7 +30,21 @@ public class TinyMCPServer {
 
     public static final int DEFAULT_PORT = 18088;
     public static final String DEFAULT_CONTEXT_PATH = "/mcp";
-    private static final String PROTOCOL_VERSION = "2024-11-05";
+
+    /**
+     * Protocol versions this server speaks. Order does not matter for
+     * negotiation: {@link #handleInitialize} echoes the client's
+     * requested version back if it appears here, otherwise it picks
+     * {@link #LATEST_PROTOCOL_VERSION}.
+     */
+    private static final java.util.Set<String> SUPPORTED_PROTOCOL_VERSIONS = java.util.Set.of(
+            "2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25");
+
+    /**
+     * Returned by {@code initialize} when the client requests a version
+     * we don't speak. Per the MCP spec the client may then disconnect.
+     */
+    private static final String LATEST_PROTOCOL_VERSION = "2025-11-25";
 
     /**
      * A tool handler function that receives a {@link ToolRequest} and returns content.
@@ -420,7 +434,7 @@ public class TinyMCPServer {
 
         // Server-level methods (no session required)
         if ("initialize".equals(rpcMethod)) {
-            handleInitialize(rpc);
+            handleInitialize(rpc, request);
             return;
         }
         if ("ping".equals(rpcMethod)) {
@@ -446,7 +460,7 @@ public class TinyMCPServer {
         session.handlePost(rpc, request);
     }
 
-    private void handleInitialize(JsonRpcExchange rpc) {
+    private void handleInitialize(JsonRpcExchange rpc, MCPProtocol.JsonRpcRequest request) {
         MCPSession session;
         synchronized (sessionGuardLock) {
             if (!acceptNewSession()) {
@@ -461,7 +475,7 @@ public class TinyMCPServer {
         rpc.setSessionId(session.getId());
 
         MCPProtocol.InitializeResult result = new MCPProtocol.InitializeResult();
-        result.setProtocolVersion(PROTOCOL_VERSION);
+        result.setProtocolVersion(negotiateProtocolVersion(request));
 
         result.setServerInfo(this.serverInfo);
         result.setInstructions(this.instructions);
@@ -477,6 +491,27 @@ public class TinyMCPServer {
 
     private void handlePing(JsonRpcExchange rpc) {
         rpc.sendResponseRaw("{}");
+    }
+
+    /**
+     * Picks the protocol version to advertise back to the client.
+     * Per the MCP spec ({@code initialize} lifecycle): if the client's
+     * requested version is supported, echo it back; otherwise reply with
+     * a version we do support (here, {@link #LATEST_PROTOCOL_VERSION})
+     * and let the client decide whether to proceed.
+     */
+    private static String negotiateProtocolVersion(MCPProtocol.JsonRpcRequest request) {
+        try {
+            MCPProtocol.InitializeParams params = request.getParamsAs(MCPProtocol.InitializeParams.class);
+            String requested = params != null ? params.getProtocolVersion() : null;
+            if (requested != null && SUPPORTED_PROTOCOL_VERSIONS.contains(requested)) {
+                return requested;
+            }
+        } catch (RuntimeException e) {
+            // Malformed initialize params — fall back to the latest version.
+            LOG.log(Level.FINE, "Could not parse initialize params", e);
+        }
+        return LATEST_PROTOCOL_VERSION;
     }
 
     private void handleDelete(JsonRpcExchange rpc) {
