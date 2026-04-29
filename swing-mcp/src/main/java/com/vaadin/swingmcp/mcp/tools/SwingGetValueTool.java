@@ -1,9 +1,9 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
-import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tools.SwingTools;
 
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleValue;
@@ -20,22 +20,8 @@ import java.util.Map;
  */
 public class SwingGetValueTool extends AbstractSwingTool {
 
-    @Override
-    public String getName() {
-        return TOOL_SWING_GET_VALUE;
-    }
-
-    @Override
-    public String getDescription() {
-        return "Read the numeric value of a UI component by ref. Returns JSON with current, min, max. "
-                + "Missing min/max means unbounded. Requires a ref obtained from swing_snapshot or swing_get_cells.";
-    }
-
-    @Override
-    public MCPProtocol.InputSchema getInputSchema() {
-        return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
-                .build();
+    public SwingGetValueTool() {
+        super(SwingTools.SWING_GET_VALUE);
     }
 
     @Override

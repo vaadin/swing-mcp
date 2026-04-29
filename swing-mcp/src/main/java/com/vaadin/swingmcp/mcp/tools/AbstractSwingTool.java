@@ -1,5 +1,6 @@
 package com.vaadin.swingmcp.mcp.tools;
 
+import com.vaadin.swingmcp.ToolDescriptor;
 import com.vaadin.swingmcp.mcp.SwingUtils;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
@@ -7,6 +8,7 @@ import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import javax.accessibility.Accessible;
 import javax.swing.JTable;
 import java.util.Iterator;
+import java.util.Objects;
 
 /**
  * Base class for all Swing MCP tools. Subclasses implement
@@ -47,19 +49,52 @@ public abstract class AbstractSwingTool {
     public static final String TOOL_SWING_DRAG = "swing_drag";
 
     /**
+     * Manifest descriptor (name, description, schema) supplied by the
+     * subclass at construction time — typically one of the
+     * {@code SwingTools.SWING_*} constants from {@code swing-mcp-tool-defs}.
+     * Sourced from {@code swing-mcp-tool-defs} so the in-process server
+     * and {@code swing-mcp-proxy} cannot drift on the contract.
+     */
+    private final ToolDescriptor descriptor;
+
+    /**
+     * Subclasses pass their matching {@code SwingTools.SWING_*} constant.
+     * Storing the descriptor on the base class makes
+     * {@link #getName()}/{@link #getDescription()}/{@link #getInputSchema()}
+     * delegators that no subclass can override — drift between manifest
+     * and registration becomes a compile-time impossibility.
+     *
+     * @param descriptor the canonical descriptor for this tool; not null
+     */
+    protected AbstractSwingTool(ToolDescriptor descriptor) {
+        this.descriptor = Objects.requireNonNull(descriptor, "descriptor");
+    }
+
+    /** Returns the descriptor this tool is bound to. */
+    public final ToolDescriptor getDescriptor() {
+        return descriptor;
+    }
+
+    /**
      * @return the MCP tool name (e.g. {@code "swing_snapshot"})
      */
-    public abstract String getName();
+    public final String getName() {
+        return descriptor.name();
+    }
 
     /**
      * @return a human-readable description of what the tool does
      */
-    public abstract String getDescription();
+    public final String getDescription() {
+        return descriptor.description();
+    }
 
     /**
      * @return the JSON-schema describing accepted parameters
      */
-    public abstract MCPProtocol.InputSchema getInputSchema();
+    public final MCPProtocol.InputSchema getInputSchema() {
+        return descriptor.inputSchema();
+    }
 
     /**
      * Executes the tool. Callers guarantee this runs on the EDT (or the

@@ -1,8 +1,8 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
-import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tools.SwingTools;
 
 import javax.accessibility.Accessible;
 
@@ -22,24 +22,8 @@ public class SwingGetDescriptionTool extends AbstractSwingTool {
 
     static final int MAX_DESCRIPTION_LENGTH = 1000;
 
-    @Override
-    public String getName() {
-        return TOOL_SWING_GET_DESCRIPTION;
-    }
-
-    @Override
-    public String getDescription() {
-        return "Read the full description of a UI component by ref. Returns the complete text that was "
-                + "truncated in the snapshot's description slot. The description is resolved from the "
-                + "accessibility API (accessibleDescription, or tooltip fallback). "
-                + "Requires a ref obtained from swing_snapshot.";
-    }
-
-    @Override
-    public MCPProtocol.InputSchema getInputSchema() {
-        return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot")
-                .build();
+    public SwingGetDescriptionTool() {
+        super(SwingTools.SWING_GET_DESCRIPTION);
     }
 
     @Override

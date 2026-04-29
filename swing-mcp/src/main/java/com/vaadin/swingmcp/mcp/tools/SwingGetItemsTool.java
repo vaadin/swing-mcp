@@ -1,9 +1,9 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
-import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tools.SwingTools;
 
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
@@ -30,34 +30,8 @@ import java.util.Map;
  */
 public class SwingGetItemsTool extends AbstractSwingTool {
 
-    @Override
-    public String getName() {
-        return TOOL_SWING_GET_ITEMS;
-    }
-
-    @Override
-    public String getDescription() {
-        return "List items of a UI component by ref. Supported components: JList, "
-                + "JComboBox, JTable. Returns a paged JSON array of items (0-based index + name). "
-                + "Indices are in the selection item index space \u2014 pass them directly to "
-                + "swing_set_selection. For JTable, this is the canonical way to page through rows "
-                + "regardless of selection mode: index is the row index and name is a pipe-separated "
-                + "summary of cell values (use this instead of swing_get_cells, which does not "
-                + "support JTable). For JTabbedPane, use the swing_snapshot tool \u2014 each tab already "
-                + "renders as `- (page_tab) N \"title\"` with its 0-based index and [disabled] / "
-                + "[selected] state; pass the index straight to swing_set_selection as [N]. "
-                + "Requires offset and length parameters for paging. If offset+length is bigger "
-                + "than the amount of data available, fewer items than requested may be returned. "
-                + "Requires a ref obtained from swing_snapshot or swing_get_cells.";
-    }
-
-    @Override
-    public MCPProtocol.InputSchema getInputSchema() {
-        return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
-                .requiredInteger("offset", "0-based start index for paging").withMinimum(0)
-                .requiredInteger("length", "Number of items to return").withMinimum(0)
-                .build();
+    public SwingGetItemsTool() {
+        super(SwingTools.SWING_GET_ITEMS);
     }
 
     @Override

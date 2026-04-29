@@ -1,9 +1,9 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
-import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tools.SwingTools;
 
 import javax.accessibility.Accessible;
 import javax.swing.JInternalFrame;
@@ -25,23 +25,8 @@ import java.awt.event.WindowEvent;
  */
 public class SwingCloseTool extends AbstractSwingTool {
 
-    @Override
-    public String getName() {
-        return TOOL_SWING_CLOSE;
-    }
-
-    @Override
-    public String getDescription() {
-        return "Close a window, dialog, internal frame, or desktop icon (iconified internal frame) by ref. Requires a ref obtained from swing_snapshot or swing_get_cells.\n" +
-                "  Note: Closing a window may terminate the app; since Swing-MCP runs as a part of that app it will be killed too, and\n" +
-                "  the client will see a dropped HTTP connection. If this happens, the only way to recover is to re-run the Swing app";
-    }
-
-    @Override
-    public MCPProtocol.InputSchema getInputSchema() {
-        return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
-                .build();
+    public SwingCloseTool() {
+        super(SwingTools.SWING_CLOSE);
     }
 
     @Override

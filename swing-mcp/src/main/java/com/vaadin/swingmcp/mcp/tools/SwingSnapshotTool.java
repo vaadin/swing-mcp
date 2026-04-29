@@ -1,8 +1,8 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
-import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tools.SwingTools;
 
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
@@ -25,30 +25,8 @@ import java.util.List;
  */
 public class SwingSnapshotTool extends AbstractSwingTool {
 
-    @Override
-    public String getName() {
-        return TOOL_SWING_SNAPSHOT;
-    }
-
-    @Override
-    public String getDescription() {
-        return "Returns an accessibility tree snapshot of the Swing application. "
-                + "Use this to understand the current UI structure and identify "
-                + "components for interaction via their numeric refs. "
-                + "Mutation actions prefixed with ! are unavailable because "
-                + "the component is disabled or read-only.";
-    }
-
-    @Override
-    public MCPProtocol.InputSchema getInputSchema() {
-        return new InputSchemaBuilder()
-                .optionalString("filter_substring",
-                        "If provided, returns a pruned tree: nodes whose text "
-                        + "contains the substring (case-insensitive) are included "
-                        + "together with their ancestors (for context) and all "
-                        + "descendants (e.g. table rows, list items). Non-matching "
-                        + "sibling branches are dropped.")
-                .build();
+    public SwingSnapshotTool() {
+        super(SwingTools.SWING_SNAPSHOT);
     }
 
     @Override

@@ -1,8 +1,8 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
-import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tools.SwingTools;
 
 import javax.accessibility.Accessible;
 
@@ -17,29 +17,8 @@ import javax.accessibility.Accessible;
  */
 public class SwingGetItemCountTool extends AbstractSwingTool {
 
-    @Override
-    public String getName() {
-        return TOOL_SWING_GET_ITEM_COUNT;
-    }
-
-    @Override
-    public String getDescription() {
-        return "Get the total number of items of a UI component by ref. "
-                + "Supported components: JList, JComboBox, JTable. Returns the count as a "
-                + "plain integer. For JTable, this is the canonical way to get the row count "
-                + "regardless of selection mode (use this instead of swing_get_cell_count, "
-                + "which does not support JTable). Note: swing_set_selection still requires "
-                + "the table to be in row-selection mode. For JTabbedPane, count the tabs "
-                + "directly from the snapshot \u2014 each tab renders as `- (page_tab) N "
-                + "\"title\"` with its 0-based index. Requires a ref obtained from "
-                + "swing_snapshot or swing_get_cells.";
-    }
-
-    @Override
-    public MCPProtocol.InputSchema getInputSchema() {
-        return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
-                .build();
+    public SwingGetItemCountTool() {
+        super(SwingTools.SWING_GET_ITEM_COUNT);
     }
 
     @Override

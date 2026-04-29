@@ -4,6 +4,7 @@ import com.vaadin.swingmcp.tinymcpserver.HttpMCPServer;
 import com.vaadin.swingmcp.tinymcpserver.MCPHandler;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPSession;
+import com.vaadin.swingmcp.tools.SwingTools;
 import javax.swing.SwingUtilities;
 import com.vaadin.swingmcp.mcp.tools.AbstractSwingTool;
 import com.vaadin.swingmcp.mcp.tools.Parameters;
@@ -37,29 +38,6 @@ public class SwingMCP {
 
     private static final Logger LOG = Logger.getLogger(SwingMCP.class.getName());
 
-    private static final String SERVER_NAME = "Swing MCP";
-    private static final String SERVER_VERSION = "0.0.1";
-    private static final String INSTRUCTIONS =
-            "This server provides tools to inspect and interact with a running Java Swing application.\n" +
-            "The MCP server runs in-process with the Swing application: if the application exits, this\n" +
-            "server becomes unreachable. To restore the connection, ask the human operator to restart\n" +
-            "the Swing application.\n" +
-            "\n" +
-            "## Workflow\n" +
-            "\n" +
-            "1. Call `swing_snapshot` first to get the current UI state as an accessibility tree. Each component has a `ref` ID used by all interaction tools.\n" +
-            "2. Use the `ref` values from the snapshot to target specific components for interaction (click, set_text, etc.).\n" +
-            "3. After each interaction, call `swing_snapshot` again to verify the UI has updated as expected.\n" +
-            "4. Use `swing_screenshot` only when the accessibility tree alone is ambiguous — it returns a PNG image that may consume many tokens.\n" +
-            "\n" +
-            "## Key behaviors\n" +
-            "\n" +
-            "- `swing_snapshot` and `swing_screenshot` return the current state immediately.\n" +
-            "- Interaction tools (`swing_click`, `swing_set_text`, etc.) dispatch the action to the Swing event thread asynchronously and return a one-line echo of the form `Dispatched <action> on ref=N [to <value>] — call swing_snapshot to verify the outcome`. The echo does NOT mean the UI changed — listeners can veto, revert, or open a dialog.\n" +
-            "- `ref` values may change after UI transitions (dialogs opening/closing, navigation). Re-snapshot after significant state changes before using stale refs.\n" +
-            "- Do not call mutation tools in parallel — each successful mutation clears the ref map, so the second call will fail with a stale-ref error. Issue tool calls sequentially.\n" +
-            "- `swing_close` on a window with unsaved changes may trigger a confirmation dialog — snapshot afterward to detect it.";
-
     private final MCPHandler handler;
     private final HttpMCPServer server;
     private volatile Thread shutdownHook;
@@ -68,11 +46,11 @@ public class SwingMCP {
 
     public SwingMCP(int port, String contextPath) {
         MCPProtocol.Implementation serverInfo = new MCPProtocol.Implementation();
-        serverInfo.setName(SERVER_NAME);
-        serverInfo.setVersion(SERVER_VERSION);
+        serverInfo.setName(SwingTools.SERVER_NAME);
+        serverInfo.setVersion(SwingTools.SERVER_VERSION);
         // Single-session policy: reject any initialize that would create a
         // second concurrent session.
-        this.handler = new MCPHandler(serverInfo, INSTRUCTIONS)
+        this.handler = new MCPHandler(serverInfo, SwingTools.INSTRUCTIONS)
                 .setAcceptNewSession(count -> count == 0);
         this.server = new HttpMCPServer(port, contextPath, handler);
         registerTools();

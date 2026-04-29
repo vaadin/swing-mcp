@@ -1,8 +1,8 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
-import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tools.SwingTools;
 
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
@@ -31,24 +31,8 @@ public class SwingGetSelectionTool extends AbstractSwingTool {
     /** Maximum number of selected items returned before truncation (BR-09). */
     static final int MAX_SELECTION_ITEMS = 100;
 
-    @Override
-    public String getName() {
-        return TOOL_SWING_GET_SELECTION;
-    }
-
-    @Override
-    public String getDescription() {
-        return "Read the current selection of a UI component by ref. Returns JSON with "
-                + "selectedCount and selected items (0-based index + name). For JTable, index "
-                + "is the row index (not cell index) and name is a pipe-separated summary of "
-                + "cell values. Requires a ref obtained from swing_snapshot or swing_get_cells.";
-    }
-
-    @Override
-    public MCPProtocol.InputSchema getInputSchema() {
-        return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
-                .build();
+    public SwingGetSelectionTool() {
+        super(SwingTools.SWING_GET_SELECTION);
     }
 
     @Override

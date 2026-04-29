@@ -1,7 +1,7 @@
 package com.vaadin.swingmcp.mcp.tools;
 
-import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tools.SwingTools;
 
 import java.util.Collections;
 import java.util.Map;
@@ -14,27 +14,11 @@ import java.util.Map;
  */
 public class SwingClearSelectionTool extends AbstractSwingTool {
 
+    public SwingClearSelectionTool() {
+        super(SwingTools.SWING_CLEAR_SELECTION);
+    }
+
     private final SwingSetSelectionTool delegate = new SwingSetSelectionTool();
-
-    @Override
-    public String getName() {
-        return TOOL_SWING_CLEAR_SELECTION;
-    }
-
-    @Override
-    public String getDescription() {
-        return "Clear the selection of a UI component by ref. "
-                + "Works with multi-select components (JList, JTable) and some single-select "
-                + "components (JComboBox). JTabbedPane does not allow an empty "
-                + "selection. Requires a ref obtained from swing_snapshot or swing_get_cells.";
-    }
-
-    @Override
-    public MCPProtocol.InputSchema getInputSchema() {
-        return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
-                .build();
-    }
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {

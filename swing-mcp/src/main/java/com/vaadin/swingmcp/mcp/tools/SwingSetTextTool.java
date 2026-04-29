@@ -1,9 +1,9 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
-import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tools.SwingTools;
 
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
@@ -22,22 +22,8 @@ import javax.swing.SwingUtilities;
  */
 public class SwingSetTextTool extends AbstractSwingTool {
 
-    @Override
-    public String getName() {
-        return TOOL_SWING_SET_TEXT;
-    }
-
-    @Override
-    public String getDescription() {
-        return "Set the text content of a UI component by ref. Requires a ref obtained from swing_snapshot or swing_get_cells.";
-    }
-
-    @Override
-    public MCPProtocol.InputSchema getInputSchema() {
-        return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
-                .requiredString("text", "The text to set")
-                .build();
+    public SwingSetTextTool() {
+        super(SwingTools.SWING_SET_TEXT);
     }
 
     @Override

@@ -1,7 +1,7 @@
 package com.vaadin.swingmcp.mcp.tools;
 
-import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tools.SwingTools;
 
 import javax.accessibility.Accessible;
 
@@ -17,27 +17,8 @@ import javax.accessibility.Accessible;
  */
 public class SwingGetCellCountTool extends AbstractSwingTool {
 
-    @Override
-    public String getName() {
-        return TOOL_SWING_GET_CELL_COUNT;
-    }
-
-    @Override
-    public String getDescription() {
-        return "Get the total number of accessible children (cells) of a large data component "
-                + "(JList, JTree) by ref. Returns the count as a plain integer in the same "
-                + "index space as swing_get_cells. For JList, this is the item count. For "
-                + "JTree, this is the top-level visible node count. For JTable, use "
-                + "swing_get_item_count instead \u2014 table cells are plain text "
-                + "labels with no actionable children. Requires a ref obtained from "
-                + "swing_snapshot or swing_get_cells.";
-    }
-
-    @Override
-    public MCPProtocol.InputSchema getInputSchema() {
-        return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
-                .build();
+    public SwingGetCellCountTool() {
+        super(SwingTools.SWING_GET_CELL_COUNT);
     }
 
     @Override

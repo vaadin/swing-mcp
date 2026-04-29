@@ -1,8 +1,8 @@
 package com.vaadin.swingmcp.mcp.tools;
 
-import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tools.SwingTools;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -23,20 +23,8 @@ public class SwingScreenshotTool extends AbstractSwingTool {
 
     public static final int WINDOW_GAP = 4;
 
-    @Override
-    public String getName() {
-        return TOOL_SWING_SCREENSHOT;
-    }
-
-    @Override
-    public String getDescription() {
-        return "Captures a screenshot of the Swing application and returns it as a PNG image. "
-                + "Use this to visually inspect the current state of the UI.";
-    }
-
-    @Override
-    public MCPProtocol.InputSchema getInputSchema() {
-        return new InputSchemaBuilder().build();
+    public SwingScreenshotTool() {
+        super(SwingTools.SWING_SCREENSHOT);
     }
 
     @Override

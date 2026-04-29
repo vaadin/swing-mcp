@@ -1,10 +1,10 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
-import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
+import com.vaadin.swingmcp.tools.SwingTools;
 
 import javax.accessibility.Accessible;
 import javax.swing.SwingUtilities;
@@ -34,59 +34,8 @@ public class SwingDragTool extends AbstractSwingTool {
 
     private static final Logger LOG = Logger.getLogger(SwingDragTool.class.getName());
 
-    @Override
-    public String getName() {
-        return TOOL_SWING_DRAG;
-    }
-
-    @Override
-    public String getDescription() {
-        return "Drag a UI component to another location. Dispatches mouse drag events "
-                + "(PRESSED \u2192 DRAGGED \u2192 RELEASED). "
-                + "Source: source_ref identifies the component; by default drags from its center. "
-                + "Provide optional source_x/source_y (component-relative pixel offsets) to start "
-                + "from a specific point within the component (e.g. a painted node on a canvas). "
-                + "Target: target_ref identifies the drop component; by default drops at its center. "
-                + "Provide optional target_x/target_y (component-relative pixel offsets) to drop "
-                + "at a specific point within the target component. "
-                + "Optional via: flat array of [ref, x, y, ...] triplets defining intermediate "
-                + "waypoints the drag passes through (e.g. for self-edges that must exit and "
-                + "re-enter a node). "
-                + "Refs are obtained from swing_snapshot or swing_get_cells.";
-    }
-
-    @Override
-    public MCPProtocol.InputSchema getInputSchema() {
-        return new InputSchemaBuilder()
-                .requiredInteger("source_ref",
-                        "The element reference number of the component to drag from. "
-                                + "By default drags from the component's center.")
-                .optionalInteger("source_x",
-                        "Component-relative X pixel offset for the drag start position within "
-                                + "the source component. Defaults to the component's center X. "
-                                + "Must be provided together with source_y.")
-                .optionalInteger("source_y",
-                        "Component-relative Y pixel offset for the drag start position within "
-                                + "the source component. Defaults to the component's center Y. "
-                                + "Must be provided together with source_x.")
-                .requiredInteger("target_ref",
-                        "The element reference number of the component to drop onto. "
-                                + "By default drops at the component's center.")
-                .optionalInteger("target_x",
-                        "Component-relative X pixel offset for the drop position within "
-                                + "the target component. Defaults to the component's center X. "
-                                + "Must be provided together with target_y.")
-                .optionalInteger("target_y",
-                        "Component-relative Y pixel offset for the drop position within "
-                                + "the target component. Defaults to the component's center Y. "
-                                + "Must be provided together with target_x.")
-                .optionalArray("via",
-                        "Flat array of [ref, x, y, ...] triplets defining intermediate waypoints "
-                                + "the drag passes through before reaching the target. Each triplet: "
-                                + "ref identifies the component, x/y are component-relative pixel offsets. "
-                                + "Length must be divisible by 3. Example for a self-edge: "
-                                + "[canvasRef, 200, 100] to route the drag outside a node and back.")
-                .build();
+    public SwingDragTool() {
+        super(SwingTools.SWING_DRAG);
     }
 
     @Override

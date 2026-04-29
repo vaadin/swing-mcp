@@ -1,9 +1,9 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
-import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tools.SwingTools;
 
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
@@ -20,22 +20,8 @@ public class SwingGetTextTool extends AbstractSwingTool {
 
     static final int MAX_TEXT_LENGTH = 1000;
 
-    @Override
-    public String getName() {
-        return TOOL_SWING_GET_TEXT;
-    }
-
-    @Override
-    public String getDescription() {
-        return "Read the text content of a UI component by ref. Requires a ref obtained from swing_snapshot or swing_get_cells. "
-                + "JPasswordField contents are not readable — use swing_set_text if you need to write a known value.";
-    }
-
-    @Override
-    public MCPProtocol.InputSchema getInputSchema() {
-        return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
-                .build();
+    public SwingGetTextTool() {
+        super(SwingTools.SWING_GET_TEXT);
     }
 
     @Override

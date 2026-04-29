@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    api(project(":swing-mcp-tool-defs"))
     implementation(project(":tiny-mcp-server"))
 
     testImplementation(libs.mcp.client)

@@ -1,9 +1,9 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
-import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tools.SwingTools;
 
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
@@ -26,25 +26,8 @@ import java.util.Set;
  */
 public class SwingSetSelectionTool extends AbstractSwingTool {
 
-    @Override
-    public String getName() {
-        return TOOL_SWING_SET_SELECTION;
-    }
-
-    @Override
-    public String getDescription() {
-        return "Set the selection of a UI component by ref. Pass 0-based item indices "
-                + "(as returned by swing_get_selection). For single-selection components, "
-                + "pass at most one index. For JTable, pass row indices \u2014 the tool translates "
-                + "to cell indices internally. Requires a ref obtained from swing_snapshot or swing_get_cells.";
-    }
-
-    @Override
-    public MCPProtocol.InputSchema getInputSchema() {
-        return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
-                .requiredArray("indices", "Array of 0-based item indices to select (empty array clears selection)")
-                .build();
+    public SwingSetSelectionTool() {
+        super(SwingTools.SWING_SET_SELECTION);
     }
 
     @Override

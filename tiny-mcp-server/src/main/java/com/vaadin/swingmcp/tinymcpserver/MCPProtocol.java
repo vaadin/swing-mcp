@@ -467,8 +467,9 @@ public class MCPProtocol {
         public void setMaximum(Number maximum) { this.maximum = maximum; }
 
         // DR-014: structural equals/hashCode. enum is an ordered list per
-        // JSON Schema semantics; numeric bounds compare via Objects.equals
-        // (mostly null in practice — InputSchemaBuilder doesn't set them).
+        // JSON Schema semantics; numeric bounds compare semantically (so
+        // Integer(0) and Long(0) — same JSON value, different boxed types
+        // after a GSON round-trip — compare equal).
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
@@ -477,13 +478,27 @@ public class MCPProtocol {
             return Objects.equals(type, other.type)
                 && Objects.equals(description, other.description)
                 && Objects.equals(enumValues, other.enumValues)
-                && Objects.equals(minimum, other.minimum)
-                && Objects.equals(maximum, other.maximum);
+                && numberEquals(minimum, other.minimum)
+                && numberEquals(maximum, other.maximum);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(type, description, enumValues, minimum, maximum);
+            return Objects.hash(type, description, enumValues,
+                    numberHash(minimum), numberHash(maximum));
+        }
+
+        private static boolean numberEquals(Number a, Number b) {
+            if (a == null && b == null) return true;
+            if (a == null || b == null) return false;
+            // Compare as doubles — sufficient for JSON-Schema numeric
+            // bounds (no risk of precision loss outside the int53 range
+            // we'd ever put in a tool schema).
+            return Double.compare(a.doubleValue(), b.doubleValue()) == 0;
+        }
+
+        private static int numberHash(Number n) {
+            return n == null ? 0 : Double.hashCode(n.doubleValue());
         }
     }
 

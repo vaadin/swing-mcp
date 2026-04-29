@@ -1,9 +1,9 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
-import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tools.SwingTools;
 
 import javax.accessibility.Accessible;
 import javax.swing.JInternalFrame;
@@ -25,23 +25,8 @@ import java.beans.PropertyVetoException;
  */
 public class SwingIconifyTool extends AbstractSwingTool {
 
-    @Override
-    public String getName() {
-        return TOOL_SWING_ICONIFY;
-    }
-
-    @Override
-    public String getDescription() {
-        return "Iconify (minimize) a Frame (including JFrame) or JInternalFrame by ref. " +
-                "Frame is minimized to the OS taskbar; JInternalFrame is replaced by a JDesktopIcon on its JDesktopPane. " +
-                "Requires a ref obtained from swing_snapshot or swing_get_cells.";
-    }
-
-    @Override
-    public MCPProtocol.InputSchema getInputSchema() {
-        return new InputSchemaBuilder()
-                .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
-                .build();
+    public SwingIconifyTool() {
+        super(SwingTools.SWING_ICONIFY);
     }
 
     @Override
