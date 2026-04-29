@@ -1,0 +1,274 @@
+package com.vaadin.swingmcp.tinymcpserver;
+
+import com.google.gson.JsonObject;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Tests for {@link StdioMCPServer}: drives {@code runStdio} on a worker
+ * thread with piped streams (per DR-007 testing notes) and verifies the
+ * newline-delimited framing, dispatch, and error mapping.
+ */
+class StdioMCPServerTest {
+
+    private StdioMCPServer server;
+    private Thread worker;
+    /** Test → server stdin. Closed by tests to signal EOF. */
+    private PipedOutputStream clientOut;
+    /** Test ← server stdout. Read line-by-line. */
+    private BufferedReader clientIn;
+    /** Set if the worker thread aborts unexpectedly. */
+    private final AtomicReference<Throwable> workerError = new AtomicReference<>();
+
+    @BeforeEach
+    void setUp() throws IOException {
+        MCPProtocol.Implementation info = new MCPProtocol.Implementation();
+        info.setName("Test Stdio Server");
+        info.setVersion("1.0");
+        server = new StdioMCPServer(info, "be polite");
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        if (clientOut != null) {
+            try {
+                clientOut.close();
+            } catch (IOException ignored) { /* already closed */ }
+        }
+        if (worker != null) {
+            worker.join(5_000);
+            assertFalse(worker.isAlive(), "runStdio did not return after EOF");
+        }
+        if (workerError.get() != null) {
+            throw new AssertionError("runStdio worker failed", workerError.get());
+        }
+    }
+
+    /**
+     * Wires up piped streams and launches {@code runStdio} on a daemon
+     * worker. The test side gets a writer pointing at the server's stdin
+     * and a reader pointing at the server's stdout.
+     */
+    private BufferedWriter startWorker() throws IOException {
+        PipedInputStream serverIn = new PipedInputStream(64 * 1024);
+        clientOut = new PipedOutputStream(serverIn);
+        PipedOutputStream serverOut = new PipedOutputStream();
+        PipedInputStream clientInPipe = new PipedInputStream(serverOut, 64 * 1024);
+        clientIn = new BufferedReader(new InputStreamReader(clientInPipe, StandardCharsets.UTF_8));
+
+        worker = new Thread(() -> {
+            try {
+                server.runStdio(serverIn, serverOut);
+            } catch (Throwable t) {
+                workerError.set(t);
+            }
+        }, "stdio-server-test");
+        worker.setDaemon(true);
+        worker.start();
+        return new BufferedWriter(new OutputStreamWriter(clientOut, StandardCharsets.UTF_8));
+    }
+
+    private static void send(BufferedWriter w, String json) throws IOException {
+        w.write(json);
+        w.write('\n');
+        w.flush();
+    }
+
+    private JsonObject readResponse() throws IOException {
+        String line = clientIn.readLine();
+        assertNotNull(line, "expected response line, got EOF");
+        return MCPProtocol.fromJson(line, JsonObject.class);
+    }
+
+    private static String initRequest(int id) {
+        return "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"method\":\"initialize\","
+                + "\"params\":{\"protocolVersion\":\"2025-11-25\","
+                + "\"capabilities\":{},\"clientInfo\":{\"name\":\"t\",\"version\":\"1\"}}}";
+    }
+
+    // ===== Core happy paths =====
+
+    @Test
+    void initializeReturnsServerInfoAndCapabilities() throws Exception {
+        BufferedWriter w = startWorker();
+        send(w, initRequest(1));
+
+        JsonObject resp = readResponse();
+        assertEquals("2.0", resp.get("jsonrpc").getAsString());
+        assertEquals(1, resp.get("id").getAsInt());
+        JsonObject result = resp.getAsJsonObject("result");
+        assertEquals("2025-11-25", result.get("protocolVersion").getAsString());
+        assertEquals("Test Stdio Server", result.getAsJsonObject("serverInfo").get("name").getAsString());
+        assertEquals("be polite", result.get("instructions").getAsString());
+        assertNotNull(result.getAsJsonObject("capabilities").getAsJsonObject("tools"));
+    }
+
+    @Test
+    void pingBeforeInitializeSucceeds() throws Exception {
+        BufferedWriter w = startWorker();
+        send(w, "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}");
+
+        JsonObject resp = readResponse();
+        assertEquals(1, resp.get("id").getAsInt());
+        assertEquals(0, resp.getAsJsonObject("result").size());
+    }
+
+    @Test
+    void toolsCallExecutesRegisteredTool() throws Exception {
+        server.addTool("echo", "Echoes its argument",
+                new InputSchemaBuilder().requiredString("text", "the text").build(),
+                request -> MCPProtocol.Content.text((String) request.arguments().get("text")));
+        BufferedWriter w = startWorker();
+        send(w, initRequest(1));
+        readResponse();
+
+        send(w, "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\","
+                + "\"params\":{\"name\":\"echo\",\"arguments\":{\"text\":\"hi\"}}}");
+        JsonObject resp = readResponse();
+        assertEquals(2, resp.get("id").getAsInt());
+        JsonObject result = resp.getAsJsonObject("result");
+        assertEquals("hi", result.getAsJsonArray("content").get(0)
+                .getAsJsonObject().get("text").getAsString());
+    }
+
+    @Test
+    void toolsListReportsRegisteredTools() throws Exception {
+        server.addTool("noop", "Does nothing",
+                new InputSchemaBuilder().build(),
+                request -> null);
+        BufferedWriter w = startWorker();
+        send(w, initRequest(1));
+        readResponse();
+
+        send(w, "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}");
+        JsonObject result = readResponse().getAsJsonObject("result");
+        assertEquals(1, result.getAsJsonArray("tools").size());
+        assertEquals("noop", result.getAsJsonArray("tools").get(0)
+                .getAsJsonObject().get("name").getAsString());
+    }
+
+    // ===== Error cases =====
+
+    @Test
+    void sessionScopedMethodBeforeInitializeReturnsError() throws Exception {
+        BufferedWriter w = startWorker();
+        send(w, "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}");
+
+        JsonObject resp = readResponse();
+        assertEquals(1, resp.get("id").getAsInt());
+        JsonObject error = resp.getAsJsonObject("error");
+        assertEquals(MCPServerException.SERVER_NOT_INITIALIZED, error.get("code").getAsInt());
+    }
+
+    @Test
+    void malformedJsonReturnsParseError() throws Exception {
+        BufferedWriter w = startWorker();
+        send(w, "{not valid json");
+
+        JsonObject resp = readResponse();
+        assertTrue(resp.get("id").isJsonNull(), "id must be null when parsing fails");
+        assertEquals(MCPServerException.PARSE_ERROR,
+                resp.getAsJsonObject("error").get("code").getAsInt());
+    }
+
+    @Test
+    void batchRequestReturnsInvalidRequest() throws Exception {
+        BufferedWriter w = startWorker();
+        send(w, "[{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}]");
+
+        JsonObject resp = readResponse();
+        assertTrue(resp.get("id").isJsonNull());
+        assertEquals(MCPServerException.INVALID_REQUEST,
+                resp.getAsJsonObject("error").get("code").getAsInt());
+    }
+
+    @Test
+    void unknownMethodReturnsMethodNotFound() throws Exception {
+        BufferedWriter w = startWorker();
+        send(w, initRequest(1));
+        readResponse();
+
+        send(w, "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"does/not/exist\"}");
+        JsonObject resp = readResponse();
+        assertEquals(MCPServerException.METHOD_NOT_FOUND,
+                resp.getAsJsonObject("error").get("code").getAsInt());
+    }
+
+    // ===== Notifications & framing =====
+
+    @Test
+    void notificationProducesNoResponse() throws Exception {
+        BufferedWriter w = startWorker();
+        // Send a notification (no id), then a real request — the only response
+        // the test should see is for the second message.
+        send(w, "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}");
+        send(w, initRequest(42));
+
+        JsonObject resp = readResponse();
+        assertEquals(42, resp.get("id").getAsInt());
+        // No second line buffered — the stream should be empty until we send more.
+        assertFalse(clientIn.ready(), "unexpected extra response after notification + initialize");
+    }
+
+    @Test
+    void blankLinesAreIgnored() throws Exception {
+        BufferedWriter w = startWorker();
+        send(w, "");
+        send(w, "   ");
+        send(w, initRequest(1));
+
+        JsonObject resp = readResponse();
+        assertEquals(1, resp.get("id").getAsInt());
+    }
+
+    @Test
+    void eofClosesRunStdio() throws Exception {
+        BufferedWriter w = startWorker();
+        send(w, initRequest(1));
+        readResponse();
+
+        // Closing client stdin should propagate EOF to the server reader and
+        // cause runStdio to return — verified in tearDown via worker.join.
+        clientOut.close();
+        clientOut = null;
+        worker.join(5_000);
+        assertFalse(worker.isAlive(), "runStdio must return when stdin reaches EOF");
+    }
+
+    // ===== Reinitialization (single-session) =====
+
+    @Test
+    void reinitializeReplacesSession() throws Exception {
+        // First init creates a session; second init replaces it. The handler's
+        // session map should hold exactly one session at a time.
+        BufferedWriter w = startWorker();
+        send(w, initRequest(1));
+        readResponse();
+        send(w, initRequest(2));
+        readResponse();
+        // No way to peek the handler from the public surface, but if the old
+        // session were still in the map and routing were broken, a follow-up
+        // call would fail. The smoke check: ping still works after re-init.
+        send(w, "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"ping\"}");
+        JsonObject resp = readResponse();
+        assertEquals(3, resp.get("id").getAsInt());
+        assertNull(resp.get("error"));
+    }
+}
