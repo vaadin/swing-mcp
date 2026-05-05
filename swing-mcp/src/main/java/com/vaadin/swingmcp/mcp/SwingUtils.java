@@ -912,6 +912,24 @@ public final class SwingUtils {
     }
 
     /**
+     * Returns a human-readable class name for the given component, suitable
+     * for inclusion in error messages and log lines.
+     *
+     * <p>{@link Class#getSimpleName()} returns the empty string for anonymous
+     * classes (e.g. {@code new JButton() { ... }}) — emitting that in an
+     * error message yields {@code "No ref assigned to ."}, which is what
+     * triggered this helper. For anonymous classes the fully-qualified name
+     * (e.g. {@code com.example.LoginForm$1}) is returned instead — the
+     * enclosing-class prefix and {@code $N} index let a developer jump
+     * straight to the offending site, which a superclass walk
+     * (just {@code "JButton"}) would obscure. The result is always non-empty.
+     */
+    public static String getComponentClassName(Component component) {
+        String name = component.getClass().getSimpleName();
+        return name.isEmpty() ? component.getClass().getName() : name;
+    }
+
+    /**
      * Returns {@code true} if the window is a heavyweight popup container
      * whose content is already exposed in the accessibility tree of the
      * invoking component — including it as a separate snapshot root would

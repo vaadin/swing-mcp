@@ -1,5 +1,6 @@
 package com.vaadin.swingmcp.mcp.tools;
 
+import com.vaadin.swingmcp.mcp.SwingUtils;
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 
 import javax.accessibility.Accessible;
@@ -113,7 +114,7 @@ public class SwingToolContext {
                 return entry.getKey();
             }
         }
-        throw new IllegalStateException("No ref assigned to " + component.getClass().getSimpleName()
+        throw new IllegalStateException("No ref assigned to " + SwingUtils.getComponentClassName(component)
                 + ". Was swing_snapshot called? Does the component have actions?");
     }
 }

@@ -208,7 +208,7 @@ public class SwingDragTool extends AbstractSwingTool {
         }
 
         LOG.fine(() -> String.format("Synthetic drag on %s: (%d,%d) \u2192 %d waypoints \u2192 (%d,%d)",
-                source.component.getClass().getSimpleName(),
+                SwingUtils.getComponentClassName(source.component),
                 source.x, source.y, waypoints.size(), localTargetX, localTargetY));
 
         Runnable dragAction = SwingUtils.createDragAction(
