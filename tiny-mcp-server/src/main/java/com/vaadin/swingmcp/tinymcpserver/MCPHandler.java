@@ -388,6 +388,27 @@ public class MCPHandler {
         }
     }
 
+    /**
+     * Removes every active session and invokes {@code onSessionClosed}
+     * on each. Idempotent — a subsequent call sees an empty session map
+     * and is a no-op. A listener that throws is logged at WARNING and
+     * does not abort the iteration.
+     *
+     * <p>Intended for transport-driven shutdown paths (stdio EOF, JVM
+     * shutdown hook) where the process is about to exit and live
+     * sessions need their close listeners run to release per-session
+     * resources (e.g. {@code MCPProxy}'s upstream {@code TinyMCPClient}).
+     */
+    public void closeAllSessions() {
+        for (MCPSession s : removeAllSessions()) {
+            try {
+                notifySessionClosed(s);
+            } catch (Exception e) {
+                LOG.log(Level.WARNING, "onSessionClosed threw for " + s.getId(), e);
+            }
+        }
+    }
+
     void notifySessionClosed(MCPSession session) {
         // Wrap in runListenerHook so the listener can safely read
         // attributes populated by onSessionStarted (DR-013).

@@ -68,6 +68,12 @@ public final class Main {
         // MCPProxy.newHandler.
         StdioMCPServer stdio = new StdioMCPServer(handler);
 
+        // SIGTERM/kill: close the upstream client cascading through
+        // onSessionClosed. Idempotent against the EOF path, which already
+        // calls closeAllSessions inside StdioMCPServer.runStdio's finally.
+        Runtime.getRuntime().addShutdownHook(new Thread(
+                handler::closeAllSessions, "swing-mcp-proxy-shutdown"));
+
         LOG.info("swing-mcp-proxy starting; upstream URL = " + upstreamUrl);
         stdio.runStdio(System.in, System.out);
         LOG.info("swing-mcp-proxy stdin closed; exiting cleanly");

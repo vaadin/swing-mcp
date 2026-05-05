@@ -146,9 +146,9 @@ wording.
 ### Logging
 
 - JDK `java.util.logging` (JUL). No third-party log framework.
-- Default level **WARNING** (Q16). No log-level config knob in
-  v1. Adjustable via standard JUL configuration if a developer
-  needs more detail.
+  Per-logger level is the code's call — the spec does not pin a
+  default. Adjustable via standard JUL configuration if a
+  developer needs more detail.
 - Sink: **stderr only.** JUL's default `ConsoleHandler` already
   targets stderr, and `StdioMCPServer` re-points `System.out` to
   `System.err` defensively (DR-007), so accidental
