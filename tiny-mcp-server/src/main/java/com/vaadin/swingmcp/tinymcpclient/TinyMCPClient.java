@@ -196,11 +196,35 @@ public final class TinyMCPClient implements MCPClient {
         }
         int status = response.statusCode();
         if (status == 404) {
-            throw new MCPSessionLostException("Session not found while sending notification " + method);
+            throw new MCPSessionLostException(extractErrorMessage(response.body(),
+                    "Session not found while sending notification " + method));
         }
         if (status / 100 != 2) {
             throw new MCPClientException(MCPServerException.INTERNAL_ERROR,
                     "Notification " + method + " failed: HTTP " + status + ": " + response.body());
+        }
+    }
+
+    /**
+     * Parses a JSON-RPC error envelope and returns its {@code error.message}
+     * field; falls back to {@code fallback} on any parse failure or if the
+     * field is missing/empty. Used to surface server-side 404 reasons (e.g.
+     * the supersede tombstone message — see DR-015) instead of a generic
+     * client-side string.
+     */
+    private static String extractErrorMessage(String body, String fallback) {
+        if (body == null || body.isEmpty()) return fallback;
+        try {
+            JsonElement el = MCPProtocol.fromJson(body, JsonElement.class);
+            if (el == null || !el.isJsonObject()) return fallback;
+            JsonElement err = el.getAsJsonObject().get("error");
+            if (err == null || !err.isJsonObject()) return fallback;
+            JsonElement msg = err.getAsJsonObject().get("message");
+            if (msg == null || !msg.isJsonPrimitive()) return fallback;
+            String s = msg.getAsString();
+            return (s == null || s.isEmpty()) ? fallback : s;
+        } catch (RuntimeException e) {
+            return fallback;
         }
     }
 
@@ -261,7 +285,8 @@ public final class TinyMCPClient implements MCPClient {
         // initialize itself never carries a session id, so the server
         // would not send 404 there; treat it as a generic protocol error.
         if (status == 404 && !"initialize".equals(method)) {
-            throw new MCPSessionLostException("Session not found (HTTP 404) on " + method);
+            throw new MCPSessionLostException(extractErrorMessage(body,
+                    "Session not found (HTTP 404) on " + method));
         }
 
         // Capture session id from the response header. The server emits it

@@ -1,0 +1,106 @@
+package com.vaadin.swingmcp.tinymcpserver;
+
+import org.junit.jupiter.api.Test;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+class BoundedLRUMapTest {
+
+    @Test
+    void rejectsNonPositiveCap() {
+        assertThrows(IllegalArgumentException.class, () -> new BoundedLRUMap<>(0));
+        assertThrows(IllegalArgumentException.class, () -> new BoundedLRUMap<>(-1));
+    }
+
+    @Test
+    void putGet() {
+        BoundedLRUMap<String, String> m = new BoundedLRUMap<>(4);
+        m.put("a", "A");
+        m.put("b", "B");
+        assertEquals("A", m.get("a"));
+        assertEquals("B", m.get("b"));
+        assertNull(m.get("missing"));
+        assertEquals(2, m.size());
+        assertEquals(4, m.cap());
+    }
+
+    @Test
+    void evictsLeastRecentlyUsedAtCap() {
+        BoundedLRUMap<Integer, Integer> m = new BoundedLRUMap<>(3);
+        m.put(1, 10);
+        m.put(2, 20);
+        m.put(3, 30);
+        // Touch 1 → it's now most recently used; 2 is now LRU.
+        assertEquals(10, m.get(1));
+        // Insert 4 → must evict 2 (LRU after the touch above).
+        m.put(4, 40);
+
+        assertEquals(10, m.get(1));
+        assertNull(m.get(2), "least-recently-used entry should have been evicted");
+        assertEquals(30, m.get(3));
+        assertEquals(40, m.get(4));
+        assertEquals(3, m.size());
+    }
+
+    @Test
+    void overflowingByMultipleDropsOldest() {
+        BoundedLRUMap<Integer, Integer> m = new BoundedLRUMap<>(2);
+        for (int i = 0; i < 100; i++) {
+            m.put(i, i);
+        }
+        assertEquals(2, m.size());
+        assertNotNull(m.get(99));
+        assertNotNull(m.get(98));
+        assertNull(m.get(0));
+        assertNull(m.get(50));
+    }
+
+    @Test
+    void concurrentPutsRespectCap() throws Exception {
+        // Sanity: hammer the map from many threads and verify size never
+        // exceeds the cap. We don't assert which entries survive — only
+        // that the synchronized methods don't corrupt the size invariant.
+        int cap = 8;
+        BoundedLRUMap<Integer, Integer> m = new BoundedLRUMap<>(cap);
+        int threads = 16;
+        int writesPerThread = 5_000;
+        CountDownLatch start = new CountDownLatch(1);
+        AtomicInteger maxObservedSize = new AtomicInteger();
+        Thread[] workers = new Thread[threads];
+        for (int t = 0; t < threads; t++) {
+            final int tid = t;
+            workers[t] = new Thread(() -> {
+                try {
+                    start.await();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+                for (int i = 0; i < writesPerThread; i++) {
+                    m.put(tid * writesPerThread + i, i);
+                    int s = m.size();
+                    int prev;
+                    do {
+                        prev = maxObservedSize.get();
+                        if (s <= prev) break;
+                    } while (!maxObservedSize.compareAndSet(prev, s));
+                }
+            }, "lru-w-" + t);
+            workers[t].start();
+        }
+        start.countDown();
+        for (Thread w : workers) w.join();
+        assertEquals(cap, m.size(), "size should settle at cap");
+        // size() observation may catch the map mid-insert (size==cap+1)
+        // before removeEldestEntry trims; the synchronized contract still
+        // bounds it tightly.
+        org.junit.jupiter.api.Assertions.assertTrue(maxObservedSize.get() <= cap + 1,
+                "size should never substantially exceed cap; observed " + maxObservedSize.get());
+    }
+}

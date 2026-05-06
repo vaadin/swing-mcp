@@ -189,7 +189,8 @@ public class HttpMCPServer {
         if (incomingSessionId != null && handler.getSession(incomingSessionId) == null) {
             LOG.warning("Rejecting request: unknown Mcp-Session-Id " + incomingSessionId);
             throw new MCPServerException(404,
-                    MCPServerException.SERVER_NOT_INITIALIZED, "Session not found.");
+                    MCPServerException.SERVER_NOT_INITIALIZED,
+                    handler.tombstoneOrDefault(incomingSessionId));
         }
 
         MCPProtocol.JsonRpcRequest request = rpc.parsePost();
@@ -220,7 +221,8 @@ public class HttpMCPServer {
         if (session == null) {
             // Race: session removed between header check and lookup
             throw new MCPServerException(404,
-                    MCPServerException.SERVER_NOT_INITIALIZED, "Session not found.");
+                    MCPServerException.SERVER_NOT_INITIALIZED,
+                    handler.tombstoneOrDefault(incomingSessionId));
         }
 
         rpc.setSessionId(session.getId());

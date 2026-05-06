@@ -4,6 +4,7 @@ import com.vaadin.swingmcp.tinymcpserver.HttpMCPServer;
 import com.vaadin.swingmcp.tinymcpserver.MCPHandler;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPSession;
+import com.vaadin.swingmcp.tinymcpserver.SessionDecision;
 import com.vaadin.swingmcp.tools.SwingTools;
 import javax.swing.SwingUtilities;
 import com.vaadin.swingmcp.mcp.tools.AbstractSwingTool;
@@ -47,10 +48,12 @@ public class SwingMCP {
         MCPProtocol.Implementation serverInfo = new MCPProtocol.Implementation();
         serverInfo.setName(SwingTools.SERVER_NAME);
         serverInfo.setVersion(SwingTools.SERVER_VERSION);
-        // Single-session policy: reject any initialize that would create a
-        // second concurrent session.
+        // Single-session policy with new-wins supersede (DR-015): a new
+        // initialize evicts any existing session, so a stale client that
+        // exited without closing its session can be replaced immediately
+        // by a fresh one.
         this.handler = new MCPHandler(serverInfo, SwingTools.INSTRUCTIONS)
-                .setAcceptNewSession(count -> count == 0);
+                .setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(existing));
         this.server = new HttpMCPServer(port, contextPath, handler);
         registerTools();
     }

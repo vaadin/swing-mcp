@@ -49,9 +49,10 @@ the natural seams in the protocol:
   `MCPSession`. Knows nothing about HTTP or stdio framing; both
   transports drive the same handler instance. Constructor is
   0-arg; per DR-013, the session-lifecycle listeners
-  (`acceptNewSession` — `IntPredicate` over the current session
-  count, `onSessionStarted` and `onSessionClosed` —
-  `Consumer<MCPSession>`) are configured via fluent setters
+  (`acceptNewSession` — `Function<List<MCPSession>, SessionDecision>`
+  returning `Reject` / `Accept` / `AcceptAndEvict` (DR-015),
+  `onSessionStarted` and `onSessionClosed` — `Consumer<MCPSession>`)
+  are configured via fluent setters
   (`setAcceptNewSession`, `setOnSessionStarted`,
   `setOnSessionClosed`) with sensible no-op defaults
   (always-accept, no-op on start/close). Setters are settable
@@ -220,13 +221,19 @@ lazy-init + drift-probe path again. Consistent with the
 "no hidden state across sessions" rule from DR-008.
 
 By default the handler accepts multiple concurrent sessions. Callers
-that need a single-session policy (as swing-mcp does) call
-`handler.setAcceptNewSession(count -> count == 0)` before the first
-session opens — when the predicate returns `false`, `initialize` is
-rejected with HTTP 409 and JSON-RPC code `-32002`. Sessions idle for
-30 minutes are evicted by a background cleanup tick, which invokes
-the (optional) listener registered via `setOnSessionClosed` the same
-way an explicit DELETE does. `setOnSessionStarted` (DR-013) is the
+that need a single-session policy can either reject (the
+"strict" form, `existing -> existing.isEmpty() ? new Accept() : new Reject()`,
+which surfaces as HTTP 409 + JSON-RPC `-32002`) or supersede
+(`existing -> new AcceptAndEvict(existing)`, where a fresh
+`initialize` evicts the prior session and the displaced client gets
+a tombstone-backed 404 with reason "Session superseded by a new
+client" on its next call — see DR-015). `swing-mcp` and `MCPProxy`
+both pick supersede so a stale client process can be replaced
+immediately. Sessions idle for 30 minutes are evicted by a
+background cleanup tick, which writes an
+"idle timeout" tombstone and invokes the (optional) listener
+registered via `setOnSessionClosed` the same way an explicit DELETE
+does. `setOnSessionStarted` (DR-013) is the
 symmetric per-session-init hook — `MCPProxy.newHandler` uses it to
 allocate per-session upstream-client state. All three setters lock
 once the first session is accepted; later calls throw

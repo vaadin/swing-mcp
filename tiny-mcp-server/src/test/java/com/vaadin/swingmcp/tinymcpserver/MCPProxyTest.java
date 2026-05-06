@@ -3,6 +3,7 @@ package com.vaadin.swingmcp.tinymcpserver;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.vaadin.swingmcp.ToolDescriptor;
+import com.vaadin.swingmcp.tinymcpclient.MCPSessionLostException;
 import com.vaadin.swingmcp.tinymcpclient.TinyMCPClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -336,7 +337,7 @@ class MCPProxyTest {
         assertEquals(2, upstreamCallToolCount.get());
     }
 
-    // ===== Single-session policy by default =====
+    // ===== Single-session policy by default (supersede on conflict, DR-015) =====
 
     @Test
     void proxyIsSingleSessionByDefault() throws IOException {
@@ -347,17 +348,17 @@ class MCPProxyTest {
 
         // First client: succeeds.
         TinyMCPClient first = new TinyMCPClient(URI.create(proxy.getUrl()));
-        try {
-            first.initialize();
-        } finally {
-            // Don't close yet — single-session means the second initialize
-            // should fail while the first session is open.
-        }
+        first.initialize();
 
-        // Second client: must be rejected by acceptNewSession.
+        // Second client: also succeeds, evicting the first (DR-015 supersede).
         try (TinyMCPClient second = new TinyMCPClient(URI.create(proxy.getUrl()))) {
-            assertThrows(RuntimeException.class, second::initialize,
-                    "second initialize must fail under single-session policy");
+            second.initialize();
+            // The first client's next call is rejected with the supersede tombstone.
+            MCPSessionLostException ex = assertThrows(MCPSessionLostException.class,
+                    () -> first.callTool("echo", Map.of("text", "anything")),
+                    "first session must be superseded once the second initializes");
+            assertTrue(ex.getMessage().toLowerCase().contains("supersed"),
+                    "tombstone message should explain the eviction; got: " + ex.getMessage());
         }
 
         first.close();

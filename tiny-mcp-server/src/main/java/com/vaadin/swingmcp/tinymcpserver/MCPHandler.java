@@ -14,7 +14,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
-import java.util.function.IntPredicate;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -35,9 +35,9 @@ import java.util.logging.Logger;
  * <p>
  * Per DR-007, stdio is single-session by definition; HTTP is multi-session
  * with sessions keyed by {@code Mcp-Session-Id} (DR-005). The handler
- * itself is multi-session capable; the {@code acceptNewSession} predicate
- * lets a caller (e.g. swing-mcp's {@code SwingMCP}) clamp the
- * session count.
+ * itself is multi-session capable; the {@code acceptNewSession} policy
+ * (DR-015) lets a caller (e.g. swing-mcp's {@code SwingMCP}) clamp the
+ * session count and decide whether to reject or supersede on conflict.
  * <p>
  * Per DR-013, the three session-lifecycle listeners are settable until
  * the first session is accepted, then locked — calling any setter
@@ -81,7 +81,8 @@ public class MCPHandler {
      * first session is accepted, then locked (DR-013). Defaults are no-op
      * (always accept, do nothing on start/close).
      */
-    private volatile IntPredicate acceptNewSession = count -> true;
+    private volatile Function<List<MCPSession>, SessionDecision> acceptNewSession =
+            existing -> new SessionDecision.Accept();
     private volatile Consumer<MCPSession> onSessionStarted = session -> {};
     private volatile Consumer<MCPSession> onSessionClosed = session -> {};
     /**
@@ -98,6 +99,18 @@ public class MCPHandler {
     private final ConcurrentHashMap<String, MCPSession> sessions = new ConcurrentHashMap<>();
     /** Guards all session-map mutations (put, remove, clear) to prevent races. */
     private final Object sessionGuardLock = new Object();
+
+    /**
+     * Reason strings for sessions that have been removed from the map.
+     * Looked up by {@link HttpMCPServer} when an incoming request carries
+     * an unknown {@code Mcp-Session-Id}, so the displaced client gets a
+     * specific 404 message ("superseded", "idle timeout") instead of the
+     * generic "Session not found." Bounded LRU — entries roll off when
+     * the cap is exceeded. (DR-015)
+     */
+    static final String SUPERSEDE_REASON = "Session superseded by a new client";
+    static final String IDLE_REASON = "Session expired (idle timeout)";
+    private final BoundedLRUMap<String, String> tombstones = new BoundedLRUMap<>(64);
 
     private volatile boolean started = false;
     /**
@@ -126,19 +139,29 @@ public class MCPHandler {
     // ===== Session-lifecycle listener setters (DR-013) =====
 
     /**
-     * Sets the predicate consulted on every {@code initialize} to decide
-     * whether to accept a new session. Called under the session guard
-     * lock with the current session count; return {@code true} to accept,
-     * {@code false} to reject with HTTP 409 + JSON-RPC
-     * {@code SERVER_NOT_INITIALIZED}.
-     * <p>
-     * Default: {@code count -> true} (always accept). Pass
-     * {@code count -> count == 0} to enforce single-session.
+     * Sets the policy consulted on every {@code initialize} to decide
+     * whether to accept a new session and, if so, whether to evict any
+     * existing sessions. Called under the session-guard lock with a
+     * snapshot of the currently active sessions (excluding the one being
+     * created); returns a {@link SessionDecision}:
+     * <ul>
+     *   <li>{@link SessionDecision.Reject} → HTTP 409 + JSON-RPC
+     *       {@code SERVER_NOT_INITIALIZED}.</li>
+     *   <li>{@link SessionDecision.Accept} → accept without eviction.</li>
+     *   <li>{@link SessionDecision.AcceptAndEvict} → tombstone and evict
+     *       the listed sessions (blocking until each one's in-flight
+     *       request finishes), then accept the new session. The displaced
+     *       client gets a 404 with the supersede message on its next call.</li>
+     * </ul>
+     *
+     * <p>Default: {@code existing -> new Accept()} (always accept, no
+     * eviction). For supersede-on-conflict (single-session, new-wins),
+     * use {@code existing -> new AcceptAndEvict(existing)}.
      *
      * @throws NullPointerException if {@code accept} is null
      * @throws IllegalStateException if a session has already been accepted
      */
-    public MCPHandler setAcceptNewSession(IntPredicate accept) {
+    public MCPHandler setAcceptNewSession(Function<List<MCPSession>, SessionDecision> accept) {
         Objects.requireNonNull(accept, "acceptNewSession");
         checkListenersUnlocked();
         this.acceptNewSession = accept;
@@ -365,6 +388,32 @@ public class MCPHandler {
     }
 
     /**
+     * Returns the tombstone reason for a session id that has been
+     * removed from the session map (via supersede or idle eviction), or
+     * {@code null} if no tombstone exists. Used by {@link HttpMCPServer}
+     * to produce a specific 404 message instead of the generic "Session
+     * not found." Tombstones are kept in a bounded LRU; older entries
+     * roll off and revert to the generic message. (DR-015)
+     */
+    String getTombstoneReason(String id) {
+        if (id == null) return null;
+        return tombstones.get(id);
+    }
+
+    /** Generic 404 message used when no tombstone is recorded for the id. */
+    static final String SESSION_NOT_FOUND_MESSAGE = "Session not found.";
+
+    /**
+     * Resolves the message for a 404 on the given session id: the
+     * tombstone reason if one exists, otherwise the generic
+     * {@link #SESSION_NOT_FOUND_MESSAGE}.
+     */
+    String tombstoneOrDefault(String id) {
+        String reason = getTombstoneReason(id);
+        return reason != null ? reason : SESSION_NOT_FOUND_MESSAGE;
+    }
+
+    /**
      * Removes the session with the given id. Returns the removed session
      * (or {@code null}) without invoking {@code onSessionClosed} — the
      * caller is responsible for calling it after any external state has
@@ -427,16 +476,36 @@ public class MCPHandler {
 
     /**
      * Creates a new session and builds the corresponding {@code initialize}
-     * result. Throws {@link MCPServerException} with HTTP 409 +
-     * {@code SERVER_NOT_INITIALIZED} if {@code acceptNewSession} rejects.
+     * result. Consults the {@link #setAcceptNewSession} policy with a
+     * snapshot of currently active sessions:
+     * <ul>
+     *   <li>{@link SessionDecision.Reject} → HTTP 409 +
+     *       {@code SERVER_NOT_INITIALIZED}.</li>
+     *   <li>{@link SessionDecision.Accept} → new session is created,
+     *       no eviction.</li>
+     *   <li>{@link SessionDecision.AcceptAndEvict} → tombstones are
+     *       written under the session-guard lock, the new session is
+     *       inserted, then the lock is released and each evicted session
+     *       is closed (blocking on its in-flight request) and reported
+     *       via {@code onSessionClosed}, before the new session's
+     *       {@code onSessionStarted} fires.</li>
+     * </ul>
      */
     InitializeOutcome dispatchInitialize(MCPProtocol.JsonRpcRequest request) {
         MCPSession session;
+        List<MCPSession> toEvict;
         synchronized (sessionGuardLock) {
-            if (!acceptNewSession.test(sessions.size())) {
-                LOG.warning("Rejecting initialization: acceptNewSession() returned false");
+            List<MCPSession> existingSnapshot = List.copyOf(sessions.values());
+            SessionDecision decision = acceptNewSession.apply(existingSnapshot);
+            if (decision instanceof SessionDecision.Reject) {
+                LOG.warning("Rejecting initialization: acceptNewSession returned Reject");
                 throw new MCPServerException(409,
                         MCPServerException.SERVER_NOT_INITIALIZED, "Another session is already active");
+            }
+            toEvict = (decision instanceof SessionDecision.AcceptAndEvict ae)
+                    ? ae.sessions() : List.of();
+            for (MCPSession e : toEvict) {
+                tombstones.put(e.getId(), SUPERSEDE_REASON);
             }
             String sessionId = UUID.randomUUID().toString();
             session = new MCPSession(sessionId, toolHandler, resourceHandler, promptHandler, this);
@@ -444,6 +513,20 @@ public class MCPHandler {
             // DR-013: lock listener setters now that a session has been
             // placed in the map. Any subsequent setter call fails fast.
             firstSessionAccepted = true;
+        }
+
+        // Evict outside the session-guard lock — close() blocks on the
+        // session's lock, waiting for any in-flight request to finish.
+        for (MCPSession e : toEvict) {
+            try {
+                e.close();
+                if (sessions.remove(e.getId(), e)) {
+                    LOG.info("Session superseded: " + e.getId());
+                    notifySessionClosed(e);
+                }
+            } catch (RuntimeException ex) {
+                LOG.log(Level.WARNING, "Failed to evict session " + e.getId(), ex);
+            }
         }
 
         try {
@@ -531,7 +614,9 @@ public class MCPHandler {
                 continue;
             }
             synchronized (sessionGuardLock) {
-                sessions.remove(s.getId(), s);
+                if (sessions.remove(s.getId(), s)) {
+                    tombstones.put(s.getId(), IDLE_REASON);
+                }
             }
             closed.add(s);
         }

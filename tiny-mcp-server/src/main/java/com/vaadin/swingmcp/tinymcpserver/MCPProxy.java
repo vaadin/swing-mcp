@@ -64,13 +64,14 @@ import java.util.logging.Logger;
  *   <li>{@code onSessionClosed}: best-effort {@code upstream.close()}.</li>
  * </ul>
  *
- * <p>Single-session by default ({@code count -> count == 0}) — the
- * intended consumer is a stdio process spawned by an MCP client like
- * Claude Code. Callers that need a different policy can override it
- * via {@link MCPHandler#setAcceptNewSession} <em>before</em> the first
- * session is accepted (the factory has not yet been wired into a
- * transport at that point — the listener-lockdown rule from DR-013
- * lets caller customize then).
+ * <p>Single-session by default with new-wins supersede on conflict
+ * (DR-015) — the intended consumer is a stdio process spawned by an
+ * MCP client like Claude Code, where a stale session left behind by a
+ * crashed client must be replaceable immediately. Callers that need a
+ * different policy can override it via {@link MCPHandler#setAcceptNewSession}
+ * <em>before</em> the first session is accepted (the factory has not
+ * yet been wired into a transport at that point — the listener-lockdown
+ * rule from DR-013 lets caller customize then).
  */
 public final class MCPProxy {
 
@@ -134,7 +135,8 @@ public final class MCPProxy {
         List<ToolDescriptor> manifest = List.copyOf(tools);
 
         MCPHandler handler = new MCPHandler(serverInfo, instructions);
-        handler.setAcceptNewSession(count -> count == 0);
+        // DR-015: supersede on conflict — a fresh client replaces a stale one.
+        handler.setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(existing));
         handler.setOnSessionStarted(session -> {
             ProxySessionState state = new ProxySessionState(new TinyMCPClient(upstreamUrl));
             session.setAttribute(STATE_KEY, state);

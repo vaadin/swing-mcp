@@ -69,7 +69,7 @@ requires a servlet container — both are large dependency subtrees.
 
 ## DR-003 — Single-session policy as a constructor-injected predicate
 
-**Status:** Accepted (mechanism revised by DR-011)
+**Status:** Accepted (mechanism revised by DR-011; conflict-resolution superseded by DR-015)
 **Applies to:** MCPHandler session handling, swing-mcp `SwingMCP`
 
 **Decision.** `MCPHandler` itself is multi-session capable: it keeps a
@@ -1284,3 +1284,101 @@ property order."
   `EqualsBuilder.reflectionEquals`).** Rejected — pulls a
   dependency for one method, and reflection silently treats
   `required` as a list rather than a set.
+
+---
+
+## DR-015 — Session conflict resolution: supersede + tombstones
+
+**Status:** Accepted
+**Applies to:** `MCPHandler`, `MCPSession`, `HttpMCPServer`,
+`TinyMCPClient`, `swing-mcp` `SwingMCP`, `MCPProxy`
+**Refines:** DR-003 (single-session policy mechanism), DR-006
+(idle session eviction)
+
+**Decision.** A new `initialize` may evict existing sessions
+("supersede"); the displaced client gets a 404 with a tombstone
+reason instead of a generic "session not found" message.
+Concretely:
+
+- `MCPHandler.setAcceptNewSession` takes a
+  `Function<List<MCPSession>, SessionDecision>` (replacing the
+  prior `IntPredicate`). The policy receives a snapshot of
+  currently active sessions and returns one of:
+  - `SessionDecision.Reject` → HTTP 409 (unchanged from DR-003).
+  - `SessionDecision.Accept` → accept without eviction.
+  - `SessionDecision.AcceptAndEvict(sessions)` → tombstone and
+    evict the listed sessions (blocking on each one's in-flight
+    request via the new `MCPSession.close()`), then accept.
+- `MCPHandler` keeps a 64-entry `BoundedLRUMap<String, String>` of
+  recently-removed session ids → reason. Both supersede and idle
+  eviction (DR-006) write a tombstone. `HttpMCPServer`'s 404 sites
+  consult the tombstone to populate the JSON-RPC `error.message`
+  field.
+- `TinyMCPClient` parses the 404 body's `error.message` and
+  surfaces it via `MCPSessionLostException.getMessage()`, so
+  callers see *why* their session is gone.
+- `swing-mcp`'s `SwingMCP` and `MCPProxy.newHandler` flip from the
+  prior reject-on-conflict policy to
+  `existing -> new AcceptAndEvict(existing)`.
+
+The supersede message intentionally **does not include the new
+session id** — surfacing it would tempt the displaced client into
+reattaching, ending up with two clients sharing one session, which
+in an LLM-driven setup produces silently corrupted state and
+hours of debugging the wrong layer.
+
+Eviction always runs **outside** the handler's `sessionGuardLock`:
+under the lock we snapshot the existing sessions, run the policy,
+write tombstones, and put the new session; we then drop the lock
+and call `close()` on each evicted session in turn. This ordering
+keeps the global lock short and lets `close()` block on the
+session's own lock (waiting for any in-flight request to quiesce)
+without pinning the handler.
+
+**Why.** The prior policy ("reject second initialize until the
+first session times out") was correct under clean shutdown but
+brittle in practice: when a stale client process exits without
+sending DELETE, the next legitimate client cannot connect for up
+to 30 minutes (the idle timeout). The dev workflow this server
+exists to support — one developer, one IDE, occasional crashes
+— is the worst case for that policy. Supersede ("new wins") fits
+the actual usage: there is at most one *intended* client at a
+time, so a fresh `initialize` is always the new ground truth.
+
+The tombstone+message mechanism exists because the surfacing
+layer matters: a client that sees `"Session not found"` cannot
+distinguish "I'm talking to a stale id" from "the server
+restarted" from "I was kicked." Each calls for a different
+recovery, and only the server knows which one happened.
+
+The `BoundedLRUMap` cap is 64 — generous for the dev case, where
+churn is low (a handful of supersedes per day at most), but
+robust against pathological churn (e.g. an idle-cleanup storm
+during a flaky network) without unbounded memory growth.
+
+**Alternatives considered.**
+- **Keep reject; rely on shorter idle timeout.** Rejected — even
+  a 1-minute timeout is jarring, and shorter still risks evicting
+  legitimate idle sessions during long tool calls. Treats the
+  symptom, not the cause.
+- **Carry the new session id in the supersede message so the old
+  client can reattach.** Rejected — produces two clients sharing
+  one session, with arbitrary interleaving of state mutations.
+  In an LLM-driven setup this manifests as randomly missing or
+  duplicated tool calls. The cure is worse than the disease.
+- **Imperative policy: predicate calls `evict()` itself.**
+  Rejected — couples the policy to handler internals (session-map
+  removal, listener firing, tombstone writing), and forces the
+  predicate to run with side effects under the global lock.
+  Declarative `SessionDecision` keeps the policy pure and the
+  eviction machinery in one place.
+- **Fixed supersede mode flag (single boolean) instead of a rich
+  return type.** Rejected — collapses the multi-session case
+  (e.g. "evict the LRU one when adding the Nth"). The
+  `Function<List<MCPSession>, SessionDecision>` form expresses
+  reject, accept, and any subset eviction in a single signature.
+- **Tombstone reason carried in a custom HTTP header instead of
+  the JSON-RPC body.** Rejected — JSON-RPC `error.message` is the
+  natural channel and already round-trips through every existing
+  client's error path. A custom header would need parallel
+  plumbing on both ends.

@@ -124,6 +124,24 @@ public class MCPSession {
     }
 
     /**
+     * Closes this session, blocking until any in-flight request has
+     * completed. Used by the supersede-on-conflict path
+     * ({@link SessionDecision.AcceptAndEvict}) where we must let the
+     * displaced client's current call finish cleanly before
+     * {@code onSessionClosed} fires and per-session resources are
+     * released. Sets the {@code closed} flag so any later dispatch on
+     * this session fails with a 404.
+     */
+    void close() {
+        sessionLock.lock();
+        try {
+            closed = true;
+        } finally {
+            sessionLock.unlock();
+        }
+    }
+
+    /**
      * Returns the {@link MCPHandler} that owns this session, giving tool
      * handlers access to the shared scheduled executor (see
      * {@link MCPHandler#getExecutor()}) and other handler-level services.
@@ -287,7 +305,9 @@ public class MCPSession {
         try {
             if (closed) {
                 throw new MCPServerException(404,
-                        MCPServerException.SERVER_NOT_INITIALIZED, "Session not found.");
+                        MCPServerException.SERVER_NOT_INITIALIZED,
+                        handler != null ? handler.tombstoneOrDefault(id)
+                                : MCPHandler.SESSION_NOT_FOUND_MESSAGE);
             }
             lastAccessNanos = System.nanoTime();
             instance.set(this);

@@ -55,7 +55,7 @@ class MCPHandlerListenerTest {
         initOnce(handler);
 
         IllegalStateException accept = assertThrows(IllegalStateException.class,
-                () -> handler.setAcceptNewSession(c -> true));
+                () -> handler.setAcceptNewSession(existing -> new SessionDecision.Accept()));
         assertTrue(accept.getMessage().toLowerCase().contains("lock"));
 
         assertThrows(IllegalStateException.class,
@@ -69,10 +69,10 @@ class MCPHandlerListenerTest {
         // The lock fires the moment a session is *accepted* — a rejected
         // initialize attempt does not lock the listeners.
         MCPHandler handler = new MCPHandler()
-                .setAcceptNewSession(count -> false);
+                .setAcceptNewSession(existing -> new SessionDecision.Reject());
         assertThrows(MCPServerException.class, () -> initOnce(handler));
         // Still settable — no session was accepted.
-        handler.setAcceptNewSession(count -> true);
+        handler.setAcceptNewSession(existing -> new SessionDecision.Accept());
         initOnce(handler);
         // Now locked.
         assertThrows(IllegalStateException.class,
@@ -91,7 +91,7 @@ class MCPHandlerListenerTest {
     void fluentChainReturnsSameInstance() {
         MCPHandler handler = new MCPHandler();
         MCPHandler chained = handler
-                .setAcceptNewSession(c -> true)
+                .setAcceptNewSession(existing -> new SessionDecision.Accept())
                 .setOnSessionStarted(s -> {})
                 .setOnSessionClosed(s -> {});
         assertSame(handler, chained);
