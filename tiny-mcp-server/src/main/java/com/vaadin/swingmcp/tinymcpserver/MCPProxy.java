@@ -83,6 +83,22 @@ public final class MCPProxy {
      */
     public static final String STATE_KEY = "com.vaadin.swingmcp.tinymcpserver.MCPProxy.state";
 
+    /**
+     * Tombstone reason returned to a displaced client when a fresh
+     * {@code initialize} supersedes an existing session (DR-015). The
+     * proxy is single-session: a typical cause is the upstream MCP
+     * client (e.g. Claude Code) reconnecting after a crash without
+     * having sent a clean DELETE for its previous session. The text
+     * surfaces verbatim in the displaced client's 404, so it names the
+     * scenario directly.
+     */
+    static final String EVICTION_REASON =
+            "MCP proxy session was superseded by a new client connecting to the same proxy. "
+                    + "This proxy serves one client at a time; a fresh initialize replaces "
+                    + "any previous session (typical after the previous client crashed without "
+                    + "closing its session, or when a second client points at the same proxy "
+                    + "process). To resume, reconnect from the surviving client.";
+
     private MCPProxy() {}
 
     /**
@@ -136,7 +152,7 @@ public final class MCPProxy {
 
         MCPHandler handler = new MCPHandler(serverInfo, instructions);
         // DR-015: supersede on conflict — a fresh client replaces a stale one.
-        handler.setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(existing));
+        handler.setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(existing, EVICTION_REASON));
         handler.setOnSessionStarted(session -> {
             ProxySessionState state = new ProxySessionState(new TinyMCPClient(upstreamUrl));
             session.setAttribute(STATE_KEY, state);

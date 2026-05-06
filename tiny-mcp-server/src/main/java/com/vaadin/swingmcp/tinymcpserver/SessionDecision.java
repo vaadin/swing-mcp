@@ -1,6 +1,7 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Outcome of {@link MCPHandler#setAcceptNewSession}'s policy callback.
@@ -13,10 +14,11 @@ import java.util.List;
  *       (only valid if the cap permits it; otherwise the policy should
  *       use {@link AcceptAndEvict} or {@link Reject}).</li>
  *   <li>{@link AcceptAndEvict} — accept the new session and evict the
- *       listed existing sessions. Eviction inserts a tombstone for each
- *       evicted id (so the displaced client gets a clean error on its
- *       next call) and runs {@code onSessionClosed}. An empty list is a
- *       no-op equivalent to {@link Accept}.</li>
+ *       listed existing sessions. Eviction inserts a tombstone (carrying
+ *       the decision's {@code evictionReason}) for each evicted id, so
+ *       the displaced client gets a clean error on its next call, and
+ *       runs {@code onSessionClosed}. An empty list is a no-op
+ *       equivalent to {@link Accept}.</li>
  * </ul>
  *
  * <p>Eviction always happens <em>outside</em> the handler's session-guard
@@ -36,11 +38,19 @@ public sealed interface SessionDecision
     /**
      * Accept the new session and evict the listed sessions. The list is
      * defensively copied; an empty list is permitted and behaves like
-     * {@link Accept}.
+     * {@link Accept}. The {@code evictionReason} is written to the
+     * tombstone for each evicted session and surfaces verbatim in the
+     * 404 error the displaced client receives on its next call — so it
+     * should describe, in the calling application's terms, why the old
+     * session was closed and what the user should do about it.
      */
-    record AcceptAndEvict(List<MCPSession> sessions) implements SessionDecision {
+    record AcceptAndEvict(List<MCPSession> sessions, String evictionReason) implements SessionDecision {
         public AcceptAndEvict {
             sessions = List.copyOf(sessions);
+            Objects.requireNonNull(evictionReason, "evictionReason");
+            if (evictionReason.isBlank()) {
+                throw new IllegalArgumentException("evictionReason must not be blank");
+            }
         }
     }
 }

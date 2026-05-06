@@ -104,11 +104,12 @@ public class MCPHandler {
      * Reason strings for sessions that have been removed from the map.
      * Looked up by {@link HttpMCPServer} when an incoming request carries
      * an unknown {@code Mcp-Session-Id}, so the displaced client gets a
-     * specific 404 message ("superseded", "idle timeout") instead of the
-     * generic "Session not found." Bounded LRU — entries roll off when
-     * the cap is exceeded. (DR-015)
+     * specific 404 message (eviction reason, "idle timeout") instead of
+     * the generic "Session not found." Bounded LRU — entries roll off
+     * when the cap is exceeded. Supersede tombstones carry the
+     * {@link SessionDecision.AcceptAndEvict#evictionReason()} from the
+     * decision that evicted them. (DR-015)
      */
-    static final String SUPERSEDE_REASON = "Session superseded by a new client";
     static final String IDLE_REASON = "Session expired (idle timeout)";
     private final BoundedLRUMap<String, String> tombstones = new BoundedLRUMap<>(64);
 
@@ -156,7 +157,9 @@ public class MCPHandler {
      *
      * <p>Default: {@code existing -> new Accept()} (always accept, no
      * eviction). For supersede-on-conflict (single-session, new-wins),
-     * use {@code existing -> new AcceptAndEvict(existing)}.
+     * use {@code existing -> new AcceptAndEvict(existing, reason)} where
+     * {@code reason} is an application-specific message that will reach
+     * the displaced client verbatim in its next-call 404.
      *
      * @throws NullPointerException if {@code accept} is null
      * @throws IllegalStateException if a session has already been accepted
@@ -502,10 +505,16 @@ public class MCPHandler {
                 throw new MCPServerException(409,
                         MCPServerException.SERVER_NOT_INITIALIZED, "Another session is already active");
             }
-            toEvict = (decision instanceof SessionDecision.AcceptAndEvict ae)
-                    ? ae.sessions() : List.of();
+            String evictionReason;
+            if (decision instanceof SessionDecision.AcceptAndEvict ae) {
+                toEvict = ae.sessions();
+                evictionReason = ae.evictionReason();
+            } else {
+                toEvict = List.of();
+                evictionReason = null;
+            }
             for (MCPSession e : toEvict) {
-                tombstones.put(e.getId(), SUPERSEDE_REASON);
+                tombstones.put(e.getId(), evictionReason);
             }
             String sessionId = UUID.randomUUID().toString();
             session = new MCPSession(sessionId, toolHandler, resourceHandler, promptHandler, this);

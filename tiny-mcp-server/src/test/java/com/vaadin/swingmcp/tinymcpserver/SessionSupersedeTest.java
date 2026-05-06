@@ -31,6 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class SessionSupersedeTest {
 
+    private static final String TEST_REASON = "test-supersede-reason";
+
     private HttpMCPServer server;
     private final List<String> closedIds = new CopyOnWriteArrayList<>();
     private final List<String> startedIds = new CopyOnWriteArrayList<>();
@@ -62,7 +64,7 @@ class SessionSupersedeTest {
     @Test
     void supersedeEvictsOldSessionAndReturnsTombstoneOnNextCall() throws IOException {
         MCPHandler handler = newHandlerWithEcho()
-                .setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(existing));
+                .setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(existing, TEST_REASON));
         start(handler);
 
         try (TinyMCPClient first = new TinyMCPClient(uri());
@@ -76,7 +78,7 @@ class SessionSupersedeTest {
 
             MCPSessionLostException ex = assertThrows(MCPSessionLostException.class,
                     () -> first.callTool("echo", java.util.Map.of("msg", "anything")));
-            assertEquals(MCPHandler.SUPERSEDE_REASON, ex.getMessage(),
+            assertEquals(TEST_REASON, ex.getMessage(),
                     "the supersede tombstone reason must reach the displaced client verbatim");
 
             assertEquals(1, closedIds.size(), "exactly one session was evicted");
@@ -89,7 +91,7 @@ class SessionSupersedeTest {
     @Test
     void supersedeFiresOnSessionClosedExactlyOncePerEvictedSession() throws IOException {
         MCPHandler handler = newHandlerWithEcho()
-                .setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(existing));
+                .setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(existing, TEST_REASON));
         start(handler);
 
         TinyMCPClient a = new TinyMCPClient(uri());
@@ -114,7 +116,7 @@ class SessionSupersedeTest {
     @Test
     void acceptAndEvictWithEmptyListIsNoop() throws IOException {
         MCPHandler handler = newHandlerWithEcho()
-                .setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(List.of()));
+                .setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(List.of(), TEST_REASON));
         start(handler);
 
         try (TinyMCPClient first = new TinyMCPClient(uri());
@@ -228,7 +230,7 @@ class SessionSupersedeTest {
     @Test
     void inFlightRequestCompletesBeforeSupersede() throws Exception {
         MCPHandler handler = newHandlerWithEcho()
-                .setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(existing));
+                .setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(existing, TEST_REASON));
         start(handler);
 
         try (TinyMCPClient first = new TinyMCPClient(uri());
@@ -286,7 +288,7 @@ class SessionSupersedeTest {
             assertEquals(List.of(firstId), closedIds);
             MCPSessionLostException ex = assertThrows(MCPSessionLostException.class,
                     () -> first.callTool("echo", java.util.Map.of("msg", "x")));
-            assertEquals(MCPHandler.SUPERSEDE_REASON, ex.getMessage());
+            assertEquals(TEST_REASON, ex.getMessage());
         }
     }
 }

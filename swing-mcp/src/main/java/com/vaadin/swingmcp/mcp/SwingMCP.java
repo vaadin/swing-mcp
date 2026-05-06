@@ -38,6 +38,24 @@ public class SwingMCP {
 
     private static final Logger LOG = Logger.getLogger(SwingMCP.class.getName());
 
+    /**
+     * Tombstone reason returned to a displaced MCP client when a fresh
+     * one connects (DR-015). The Swing MCP server only serves one
+     * client at a time, so a new {@code initialize} always supersedes
+     * the previous session. The text below is what the displaced client
+     * sees verbatim in the 404 body of its next call, so it explains
+     * the situation and suggests user-actionable next steps.
+     */
+    static final String EVICTION_REASON =
+            "This Swing application's MCP server only accepts one client at a time, "
+                    + "and a new client just connected — so this session was closed. "
+                    + "If you did not expect this, make sure only one MCP client (e.g. a "
+                    + "single Claude Code instance) is configured to connect to this app. "
+                    + "Multiple clients, or several terminals each launching their own "
+                    + "client, will repeatedly evict each other. To resume work here, "
+                    + "reconnect from the surviving client; the previous session cannot "
+                    + "be recovered.";
+
     private final MCPHandler handler;
     private final HttpMCPServer server;
     private volatile Thread shutdownHook;
@@ -53,7 +71,7 @@ public class SwingMCP {
         // exited without closing its session can be replaced immediately
         // by a fresh one.
         this.handler = new MCPHandler(serverInfo, SwingTools.INSTRUCTIONS)
-                .setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(existing));
+                .setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(existing, EVICTION_REASON));
         this.server = new HttpMCPServer(port, contextPath, handler);
         registerTools();
     }
