@@ -198,8 +198,10 @@ public final class SwingTools {
 
     public static final ToolDescriptor SWING_SCREENSHOT = new ToolDescriptor(
             "swing_screenshot",
-            "Captures a screenshot of the Swing application and returns it as a PNG image. Use this to visually inspect the current state of the UI.",
+            "Captures a screenshot of the Swing application. By default returns it as an inline PNG image. If save_to is provided, writes the PNG to that absolute path on the MCP server's filesystem and returns a text confirmation (path + dimensions + format) instead of the inline image — useful for retaining a reference image across follow-up turns or sessions without spending tokens on multimodal context each time.",
             new InputSchemaBuilder()
+                    .optionalString("save_to",
+                            "Absolute file path to write the PNG to. Relative paths are rejected — the MCP server's working directory is not visible to the caller, so the agent cannot reliably guess where you mean. Pass an absolute path under your project root. The parent directory must already exist (it is not auto-created). When this parameter is set, the inline image is not returned.")
                     .build());
 
     public static final ToolDescriptor SWING_SELECT_ALL = new ToolDescriptor(

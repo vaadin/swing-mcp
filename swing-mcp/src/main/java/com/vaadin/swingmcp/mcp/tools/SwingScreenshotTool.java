@@ -5,8 +5,12 @@ import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tools.SwingTools;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,7 +58,32 @@ public class SwingScreenshotTool extends AbstractSwingTool {
                 ? renderComponent(renderables.get(0))
                 : renderComposite(renderables);
 
+        String savePath = params.getStringOrNull("save_to");
+        if (savePath != null) {
+            return saveToDisk(result, savePath);
+        }
         return MCPProtocol.Content.image(result);
+    }
+
+    private MCPProtocol.Content saveToDisk(BufferedImage image, String savePath)
+            throws MCPErrorResponseException {
+        Path path = Path.of(savePath);
+        if (!path.isAbsolute()) {
+            throw new MCPErrorResponseException(
+                    "save_to must be an absolute path; got: " + savePath);
+        }
+        File file = path.toFile();
+        try {
+            if (!ImageIO.write(image, "png", file)) {
+                throw new MCPErrorResponseException(
+                        "Failed to write screenshot to " + path + ": no PNG writer available");
+            }
+        } catch (IOException e) {
+            throw new MCPErrorResponseException(
+                    "Failed to write screenshot to " + path + ": " + e.getMessage());
+        }
+        return MCPProtocol.Content.text("Saved PNG screenshot ("
+                + image.getWidth() + "x" + image.getHeight() + ") to " + path);
     }
 
     private BufferedImage renderComponent(Component c) {

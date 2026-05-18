@@ -1,17 +1,21 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
+import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
@@ -116,6 +120,60 @@ class SwingScreenshotTest extends AbstractHeadlessTest {
 
         assertEquals(300, image.getWidth());
         assertEquals(200, image.getHeight());
+    }
+
+    // ── save_to mode ───────────────────────────────────────────────────────────
+
+    private MCPProtocol.Content screenshotTo(Path savePath, Component... roots) throws Exception {
+        context.setConsideredComponents(Arrays.asList(roots));
+        return tool.execute(new Parameters(Map.of("save_to", savePath.toString())), context);
+    }
+
+    @Test
+    void saveToWritesPngAndReturnsTextConfirmation(@TempDir Path tmp) throws Exception {
+        JPanel panel = new JPanel();
+        panel.setSize(120, 80);
+        panel.doLayout();
+        Path target = tmp.resolve("shot.png");
+
+        MCPProtocol.Content content = screenshotTo(target, panel);
+
+        assertEquals("text", content.getType());
+        assertEquals(
+                "Saved PNG screenshot (120x80) to " + target,
+                content.getText());
+
+        assertTrue(Files.exists(target), "PNG file should exist at " + target);
+        BufferedImage written = ImageIO.read(target.toFile());
+        assertNotNull(written, "Written file should be a decodable PNG");
+        assertEquals(120, written.getWidth());
+        assertEquals(80, written.getHeight());
+    }
+
+    @Test
+    void saveToRejectsRelativePath() {
+        JPanel panel = new JPanel();
+        panel.setSize(100, 100);
+        panel.doLayout();
+        context.setConsideredComponents(List.of(panel));
+
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> tool.execute(new Parameters(Map.of("save_to", "screenshots/shot.png")), context));
+        assertEquals("save_to must be an absolute path; got: screenshots/shot.png", ex.getMessage());
+    }
+
+    @Test
+    void saveToMissingParentDirectoryFailsCleanly(@TempDir Path tmp) {
+        JPanel panel = new JPanel();
+        panel.setSize(100, 100);
+        panel.doLayout();
+        context.setConsideredComponents(List.of(panel));
+        Path target = tmp.resolve("does-not-exist/shot.png");
+
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> tool.execute(new Parameters(Map.of("save_to", target.toString())), context));
+        assertTrue(ex.getMessage().startsWith("Failed to write screenshot to " + target + ":"),
+                "Unexpected message: " + ex.getMessage());
     }
 
     @Test

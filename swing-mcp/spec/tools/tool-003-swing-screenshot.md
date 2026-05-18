@@ -1,9 +1,9 @@
 # T-003: swing_screenshot
 
 **Status:** Implemented
-**Date:** 2026-03-26
+**Date:** 2026-05-18
 
-Captures a PNG of what the user currently sees — lets the AI visually verify app state when the accessibility tree alone is ambiguous.
+Captures a PNG of what the user currently sees — lets the AI visually verify app state when the accessibility tree alone is ambiguous. Supports an optional `save_to` mode so the PNG can be persisted to disk and referenced across follow-up turns or sessions (e.g. as a fixed visual target while iterating on a Swing→Vaadin port) without re-paying multimodal token cost on each turn.
 
 ---
 
@@ -14,12 +14,15 @@ Captures a PNG of what the user currently sees — lets the AI visually verify a
 | BR-01 | Use `SwingToolContext.getConsideredComponents()` to determine which components to capture (modal-vs-all selection is handled upstream by `SwingMCP`). |
 | BR-02 | Multiple windows are arranged vertically in a single PNG: composite width is the max of all window widths; composite height is the sum of all window heights plus gaps between them; a 4 px gap (defined as a `static final int` field) is inserted between consecutive windows; narrower windows are horizontally centered. |
 | BR-03 | If `getConsideredComponents()` returns an empty list, return an MCP error (`isError: true`) with a message indicating there are no visible windows and suggesting the caller retry. |
-| BR-04 | The result is always a single PNG image returned as MCP image content (`type=image`, `mimeType=image/png`, base64-encoded). |
+| BR-04 | When `save_to` is absent, the result is a single PNG image returned as MCP image content (`type=image`, `mimeType=image/png`, base64-encoded). |
 | BR-05 | All Swing component access happens on the EDT (via `SwingMCP.runInEDT()`). |
 | BR-06 | Each component is rendered via `component.printAll(g)`. `SwingUtilities.paintComponent()` is not used because it reparents the component via `CellRendererPane`, which is unsafe for top-level windows (`JFrame`/`JDialog`). `printAll` disables `RepaintManager` double buffering before delegating to `paint()` and restores it afterwards, producing the same on-screen visual output without side effects. |
 | BR-07 | `BufferedImage` instances are created with type `TYPE_INT_RGB` (windows are assumed opaque). |
 | BR-08 | Components with zero width or zero height are silently skipped (they are effectively invisible). If all components are skipped, BR-03 applies. |
 | BR-09 | `swing_screenshot` is a read-only tool: `isMutation()` returns `false` and the ref map is not cleared after invocation. |
+| BR-10 | When `save_to` is provided, the PNG is written to that file via `ImageIO.write(image, "png", file)` and the response is a single text content item of the form `Saved PNG screenshot (WxH) to <path>`. The inline image is **not** returned in this mode. |
+| BR-11 | `save_to` must be an absolute path. Relative paths are rejected with an `MCPErrorResponseException` carrying the message `save_to must be an absolute path; got: <value>`. The MCP server's working directory is not visible to the caller, so resolving relative paths server-side would be unreliable. |
+| BR-12 | The parent directory of `save_to` is not auto-created. If the parent does not exist (or the write otherwise fails), surface the underlying `IOException` message via an `MCPErrorResponseException` prefixed with `Failed to write screenshot to <path>:`. |
 
 ---
 
@@ -40,6 +43,9 @@ sized via `panel.setSize(w, h)` + `panel.doLayout()` (never shown on screen).
 - [x] With an empty component list, `swing_screenshot` returns an MCP error response (`isError: true`).
 - [x] A zero-size `JPanel` mixed with a normal-sized `JPanel` produces a PNG matching only the normal panel's dimensions.
 - [x] Two sized `JPanel`s produce a single PNG with composite width = max of the two widths and composite height = sum of heights + 4 px gap.
+- [x] When `save_to` points at an absolute path under a `@TempDir`, the PNG is written to that path with the expected dimensions and the response is a text content item matching `Saved PNG screenshot (WxH) to <path>` — no inline image is returned.
+- [x] A relative `save_to` value is rejected with an MCP error message starting with `save_to must be an absolute path; got:`.
+- [x] An absolute `save_to` whose parent directory does not exist is rejected with an MCP error message starting with `Failed to write screenshot to`.
 
 #### Component matrix (headless)
 
