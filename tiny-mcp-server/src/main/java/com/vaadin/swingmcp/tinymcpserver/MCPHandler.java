@@ -66,8 +66,12 @@ public class MCPHandler {
     private static final String LATEST_PROTOCOL_VERSION = "2025-11-25";
 
     /**
-     * Sessions idle for at least this long are evicted by the cleanup tick.
-     * Package-private so tests can substitute a short value via reflection.
+     * Sessions idle for at least this long are evicted, on transports that
+     * schedule the tick ({@link #scheduleIdleCleanup()}).
+     * <p>
+     * Package-private, as is {@link #cleanupIdleSessions()}: tests drive the
+     * tick directly against a backdated
+     * {@link MCPSession#setLastAccessNanos(long)} rather than waiting.
      */
     static final long IDLE_TIMEOUT_NANOS = TimeUnit.MINUTES.toNanos(30);
     /** Interval between cleanup ticks. */
@@ -116,8 +120,9 @@ public class MCPHandler {
     private volatile boolean started = false;
     /**
      * Shared scheduled executor. Created in {@link #start()}, shut down in
-     * {@link #stop()}. Runs the session-idle-cleanup tick and is exposed
-     * via {@link #getExecutor()} for tool handlers that need background work.
+     * {@link #stop()}. Runs the session-idle-cleanup tick, where one was
+     * scheduled ({@link #scheduleIdleCleanup()}), and is exposed via
+     * {@link #getExecutor()} for tool handlers that need background work.
      */
     private ScheduledExecutorService executor;
 
@@ -325,10 +330,13 @@ public class MCPHandler {
     // ===== Lifecycle =====
 
     /**
-     * Creates the shared executor and schedules the idle-cleanup tick.
-     * Called by the transport on {@code start()}; not intended for callers.
-     * Idempotent only against itself; calling twice will overwrite the
-     * executor reference (callers must {@link #stop()} first).
+     * Creates the shared executor. Called by the transport on
+     * {@code start()}; not intended for callers. Idempotent only against
+     * itself; calling twice will overwrite the executor reference (callers
+     * must {@link #stop()} first).
+     *
+     * <p>Does <em>not</em> schedule idle-session cleanup; a transport that
+     * wants it calls {@link #scheduleIdleCleanup()} as well.
      */
     void start() {
         started = true;
@@ -338,6 +346,22 @@ public class MCPHandler {
             t.setDaemon(true);
             return t;
         });
+    }
+
+    /**
+     * Schedules the once-per-minute idle-cleanup tick on the shared executor.
+     * <p>
+     * Only a transport that cannot observe its client's death needs this —
+     * HTTP, where a vanished client would otherwise hold its session slot
+     * forever. A process-scoped session must not be evicted at all; see
+     * {@link StdioMCPServer} (DR-016).
+     *
+     * @throws IllegalStateException if {@link #start()} has not run
+     */
+    void scheduleIdleCleanup() {
+        if (executor == null) {
+            throw new IllegalStateException("start() must be called before scheduleIdleCleanup()");
+        }
         executor.scheduleAtFixedRate(this::cleanupIdleSessionsSafe,
                 CLEANUP_TICK_SECONDS, CLEANUP_TICK_SECONDS, TimeUnit.SECONDS);
     }
@@ -358,8 +382,8 @@ public class MCPHandler {
      * <p>
      * Available to tool handlers for background work (debouncing, deferred
      * cleanup, periodic polling). Do not submit long-blocking I/O that
-     * could starve session idle-cleanup — for heavy work, create your own
-     * executor.
+     * could starve session idle-cleanup on an HTTP server — for heavy work,
+     * create your own executor.
      *
      * @throws IllegalStateException if the handler is not started
      */

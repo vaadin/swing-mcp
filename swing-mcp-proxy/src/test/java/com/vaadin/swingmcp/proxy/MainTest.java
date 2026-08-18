@@ -157,7 +157,16 @@ class MainTest {
      * trip.
      */
     private URI startUpstream() {
-        upstream = new HttpMCPServer(0, "/mcp");
+        return startUpstream(0);
+    }
+
+    /**
+     * @param port the port to bind, or {@code 0} for an ephemeral one.
+     *             Passing a previously-bound port restarts "the same" app
+     *             at the same URL, which is what the proxy is pointed at.
+     */
+    private URI startUpstream(int port) {
+        upstream = new HttpMCPServer(port, "/mcp");
         for (var descriptor : SwingTools.ALL) {
             upstream.getHandler().addTool(descriptor, request -> {
                 lastUpstreamCall.set(request.name());
@@ -285,5 +294,50 @@ class MainTest {
         assertEquals("upstream:swing_snapshot", result.getContent().get(0).getText());
         assertEquals("swing_snapshot", lastUpstreamCall.get(),
                 "upstream must have observed the forwarded call");
+    }
+
+    // ===== Swing-app restart under a live proxy =====
+
+    /**
+     * The README's promise that "a Swing-app restart needs no
+     * re-registration", end to end: one proxy outliving the app it first
+     * talked to. The call across the restart reports the session lost; the
+     * next one recovers with no operator action.
+     */
+    @Test
+    void upstreamRestartIsRecoveredOnTheFollowingCall() throws Exception {
+        URI upstreamUrl = startUpstream();
+        int port = upstream.getPort();
+        BufferedWriter w = startProxy(upstreamUrl);
+        send(w, initRequest(1));
+        readResponse();
+        send(w, callSnapshot(2));
+        assertEquals("upstream:swing_snapshot",
+                readResponse().getResultAs(MCPProtocol.CallToolResult.class)
+                        .getContent().get(0).getText());
+
+        // Same port, fresh session map — a user restarting the app.
+        upstream.stop();
+        startUpstream(port);
+
+        send(w, callSnapshot(3));
+        MCPProtocol.CallToolResult lost = readResponse()
+                .getResultAs(MCPProtocol.CallToolResult.class);
+        assertTrue(lost.getIsError(), "the call across the restart must be an error result");
+        assertEquals(SwingTools.SESSION_LOST_MESSAGE, lost.getContent().get(0).getText(),
+                "the client must get the recoverable session-lost wording, never a "
+                        + "server-side tombstone it cannot act on");
+
+        send(w, callSnapshot(4));
+        MCPProtocol.CallToolResult recovered = readResponse()
+                .getResultAs(MCPProtocol.CallToolResult.class);
+        assertEquals("upstream:swing_snapshot",
+                recovered.getContent().get(0).getText(),
+                "the proxy must re-initialize against the restarted app by itself");
+    }
+
+    private static String callSnapshot(int id) {
+        return "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"method\":\"tools/call\","
+                + "\"params\":{\"name\":\"swing_snapshot\",\"arguments\":{}}}";
     }
 }

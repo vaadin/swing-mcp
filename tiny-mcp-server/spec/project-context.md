@@ -109,10 +109,13 @@ session is already active"`); there is no queuing or retry.
 If an AI agent crashes or disconnects without sending a DELETE, the
 session is evicted by the idle-cleanup tick after 30 minutes of no
 activity, freeing the single-session slot without restarting the
-Swing app.
+Swing app. This applies to the HTTP transport only — over stdio the
+client's death is observable directly (EOF on stdin), so there is no
+timer and a session lives as long as its process (DR-016).
 
-See DR-003, DR-005, and DR-006 for the full session lifecycle, the
-per-method routing matrix, and the idle-eviction policy.
+See DR-003, DR-005, DR-006, and DR-016 for the full session
+lifecycle, the per-method routing matrix, and the idle-eviction
+policy.
 
 ### Error handling model
 

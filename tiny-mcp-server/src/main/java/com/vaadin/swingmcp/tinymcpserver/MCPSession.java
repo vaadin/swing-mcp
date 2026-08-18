@@ -86,6 +86,17 @@ public class MCPSession {
     }
 
     /**
+     * Whether this session has been closed.
+     *
+     * @return {@code true} once closed; read without the session lock, so
+     *         {@code false} is a hint, not a guarantee — the authoritative
+     *         check is the one {@link #runLocked} makes while holding it
+     */
+    boolean isClosed() {
+        return closed;
+    }
+
+    /**
      * Returns the monotonic {@link System#nanoTime()} value recorded at the
      * start of the most recently dispatched request, or at session creation
      * if no request has yet been dispatched. Read without the session lock;

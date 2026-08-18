@@ -44,9 +44,9 @@ the natural seams in the protocol:
   map (keyed by `Mcp-Session-Id`), the shared
   `ScheduledExecutorService` (daemon threads named
   `tiny-mcp-server-N`) created in `start()` and shut down in
-  `stop()`, the once-per-minute idle-session cleanup tick, and the
-  JSON-RPC dispatch for `initialize` / `ping` / routing to
-  `MCPSession`. Knows nothing about HTTP or stdio framing; both
+  `stop()`, the idle-session cleanup tick (scheduled only by the HTTP
+  transport — DR-016), and the JSON-RPC dispatch for `initialize` /
+  `ping` / routing to `MCPSession`. Knows nothing about HTTP or stdio framing; both
   transports drive the same handler instance. Constructor is
   0-arg; per DR-013, the session-lifecycle listeners
   (`acceptNewSession` — `Function<List<MCPSession>, SessionDecision>`
@@ -233,7 +233,8 @@ immediately. Sessions idle for 30 minutes are evicted by a
 background cleanup tick, which writes an
 "idle timeout" tombstone and invokes the (optional) listener
 registered via `setOnSessionClosed` the same way an explicit DELETE
-does. `setOnSessionStarted` (DR-013) is the
+does. That tick runs for HTTP only: a stdio session is scoped to its
+process and is never evicted (DR-016). `setOnSessionStarted` (DR-013) is the
 symmetric per-session-init hook — `MCPProxy.newHandler` uses it to
 allocate per-session upstream-client state. All three setters lock
 once the first session is accepted; later calls throw

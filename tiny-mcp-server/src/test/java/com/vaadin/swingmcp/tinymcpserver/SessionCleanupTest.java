@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
@@ -258,6 +259,26 @@ class SessionCleanupTest {
             assertTrue(t.isDaemon(), "executor threads must be daemon");
             assertTrue(Pattern.matches("tiny-mcp-server-\\d+", t.getName()),
                     "expected tiny-mcp-server-N, got: " + t.getName());
+        } finally {
+            server.stop();
+        }
+    }
+
+    /**
+     * The other half of DR-016: eviction is HTTP's job, so moving the tick
+     * off {@code MCPHandler.start()} must not have dropped it. Paired with
+     * {@code StdioMCPServerTest.idleCleanupTickIsNotScheduledForStdio}.
+     */
+    @Test
+    void httpSchedulesTheIdleCleanupTick() {
+        HttpMCPServer server = new HttpMCPServer(0, "/mcp");
+        server.start();
+        try {
+            ScheduledThreadPoolExecutor exec =
+                    (ScheduledThreadPoolExecutor) server.getHandler().getExecutor();
+            assertEquals(1, exec.getQueue().size(),
+                    "HTTP must schedule the idle-cleanup tick — without it an "
+                            + "abandoned session holds the single-session slot forever");
         } finally {
             server.stop();
         }

@@ -303,16 +303,21 @@ distinguish `initialize`/`ping` from regular tool calls.
 
 ## DR-006 — Idle session eviction via a shared scheduled executor
 
-**Status:** Accepted (executor ownership moved to `MCPHandler` by DR-010)
+**Status:** Accepted (executor ownership moved to `MCPHandler` by DR-010;
+scope narrowed to the HTTP transport by DR-016)
 **Applies to:** `MCPHandler`, `HttpMCPServer`, `MCPSession`
 **Supersedes the "Idle timeout" deferral in:** DR-003
+**Amended by:** DR-016 — the tick is scheduled by `HttpMCPServer.start()`,
+not by `MCPHandler.start()`; stdio never schedules it
 
 **Decision.** `MCPHandler` owns a single `ScheduledExecutorService`
 (one daemon thread, named `tiny-mcp-server-N`) created in its
 `start()` and shut down in `stop()`. `HttpMCPServer.start()` /
 `stop()` (and `StdioMCPServer.runStdio()` start/finish) delegate the
 lifecycle calls. Once per minute the executor runs a cleanup tick
-that evicts every session whose last access is older than 30 minutes.
+that evicts every session whose last access is older than 30 minutes
+— but only where a transport asked for one, which per DR-016 means
+HTTP only, via `MCPHandler.scheduleIdleCleanup()`.
 The executor is exposed via `MCPHandler.getExecutor()` for tool
 handlers that need background work (debouncing, deferred cleanup,
 short periodic polling) — reachable from tool code via
@@ -339,9 +344,11 @@ chokepoint in `MCPSession.runLocked`:
    hook invoked by explicit DELETE.
 
 Constants `IDLE_TIMEOUT_NANOS` (30 minutes) and `CLEANUP_TICK_SECONDS`
-(60) are package-private so tests can substitute short values via
-reflection and drive the tick synchronously through the
-package-private `cleanupIdleSessions()` entry point.
+(60) are package-private, as are `cleanupIdleSessions()` and
+`MCPSession.setLastAccessNanos(long)`. Tests never wait and never
+shorten the timeout: they backdate a session's last-access stamp and
+drive the tick synchronously, so the 30-minute path runs in
+milliseconds (`SessionCleanupTest`).
 
 **Why.**
 
@@ -436,8 +443,10 @@ relies on `readLine` rather than a fixed-buffer read.
 **Lifecycle.** `runStdio` returns when `in` reaches EOF. The shared
 `ScheduledExecutorService` (DR-006) is started and stopped around the
 read loop the same way `start()` / `stop()` do for HTTP. Idle eviction
-is effectively unused (one session, never idle until the process exits)
-but the machinery still runs — keeping one code path simplifies things.
+is **not** scheduled: a stdio session is process-scoped, and evicting
+one is unrecoverable rather than merely useless. See DR-016, which
+corrects the original "the machinery still runs, keeping one code path
+simplifies things" reasoning recorded here.
 
 **Why.** A new use case has emerged: a **proxy** MCP server that Claude
 Code spawns at startup, which forwards `tools/call` to a separately
@@ -1382,3 +1391,83 @@ during a flaky network) without unbounded memory growth.
   natural channel and already round-trips through every existing
   client's error path. A custom header would need parallel
   plumbing on both ends.
+
+---
+
+## DR-016 — Idle eviction is an HTTP-transport policy; stdio sessions are process-scoped
+
+**Status:** Accepted
+**Applies to:** `MCPHandler`, `HttpMCPServer`, `StdioMCPServer`, `MCPSession`
+**Amends:** DR-006 (idle session eviction), DR-007 (stdio transport)
+
+**Decision.** `MCPHandler.start()` creates the shared executor and
+nothing else. Scheduling the once-per-minute idle-cleanup tick is a
+separate package-private call, `MCPHandler.scheduleIdleCleanup()`,
+made only by `HttpMCPServer.start()`. `StdioMCPServer` never calls it,
+so a stdio session lives exactly as long as its process.
+
+`StdioMCPServer.dispatch` asserts that invariant: if `currentSession`
+is non-null but closed, it throws `IllegalStateException` rather than
+letting `MCPSession.runLocked` surface a tombstone-backed 404. The
+throw is an `IllegalStateException`, not an `AssertionError` — `-da`
+would disable a bare `assert`, and an `Error` escapes
+`handleMessage`'s `catch (RuntimeException)` and kills the read loop
+instead of producing one internal-error reply.
+
+**Why.**
+
+- **Eviction exists for a failure mode stdio does not have.** DR-006
+  added the tick so a crashed HTTP client could not wedge the
+  single-session slot until the Swing app restarted: the server cannot
+  tell "client died" from "client went quiet", so it times out. Over
+  stdio the transport answers that question — the client *is* the
+  parent process holding the pipe, and stdin EOF is a definitive
+  death notice, handled by `runStdio`'s `finally`. There is nothing to
+  reclaim, so the timer can only destroy a live conversation.
+- **The failure was unrecoverable, not merely wasteful.** Field
+  incident (2026-08-18, recorded in `PROXY-SESSION-BUG.md`): a
+  `swing-mcp-proxy` process sat idle ~32 minutes, its own downstream
+  handler evicted its own stdio session, and every subsequent
+  `tools/call` returned `MCPHandler.IDLE_REASON` — "Session expired
+  (idle timeout)" — without any traffic ever reaching the Swing app.
+  Nothing recovered it short of restarting the MCP client, because the
+  MCP stdio transport has no session concept: there is no session id on
+  the wire, no 404 for a client to interpret, and therefore no reason
+  for any client to re-initialize. `StdioMCPServer` also pins the
+  session in its `currentSession` field, so the process stays bricked.
+  This is also why the proxy's own session-loss machinery (DR-012) did
+  not help — that handles the *upstream* session dying, and the dead
+  session here was the downstream one.
+- **Structural beats configurable.** A `setIdleTimeout(Duration)` /
+  `setIdleEviction(false)` knob would work, but leaves a reachable
+  configuration in which a stdio session gets evicted, and a
+  "disabled" state for every future reader to reason about. Moving the
+  schedule call to the transport that needs it makes the invariant
+  hold by construction, which is what lets `dispatch` assert on it.
+- **Pings would not have saved it.** `StdioMCPServer.dispatch` answers
+  `ping` from `handler.dispatchPing()` without touching
+  `currentSession`, so keep-alive pings never refresh
+  `lastAccessNanos`. Worth knowing before anyone proposes "just have
+  the client ping" as the fix.
+
+**Alternatives considered.**
+- **Configurable/injectable idle timeout on `MCPHandler`.** Rejected
+  as the primary fix, for the "structural beats configurable" reason
+  above. Also rejected as a *test* seam: `SessionCleanupTest` already
+  drives the 30-minute path in milliseconds by backdating
+  `setLastAccessNanos` and calling `cleanupIdleSessions()` directly.
+- **Make stdio recover instead: re-initialize and replay on a closed
+  session.** Rejected as the fix, though it was the obvious defensive
+  move. It papers over an eviction that should not happen, and would
+  silently discard session-scoped state (DR-012's per-session upstream
+  client) mid-conversation. The `IllegalStateException` guard is the
+  same insight expressed as a loud invariant rather than quiet repair.
+- **Refresh `lastAccessNanos` on `ping`.** Rejected — it makes the
+  brick depend on client keep-alive behaviour we do not control, and
+  leaves the 30-minute timer pointed at a session that should never
+  expire at all.
+- **Distinguish the three 404 wordings (unknown / idle-evicted /
+  superseded).** Deferred, not rejected. The incident's message was
+  accurate; it simply named a server nobody suspected. Splitting the
+  wording is worthwhile diagnostics (see `PROXY-SESSION-BUG.md` §6),
+  but it is a separate change and no longer load-bearing for this bug.

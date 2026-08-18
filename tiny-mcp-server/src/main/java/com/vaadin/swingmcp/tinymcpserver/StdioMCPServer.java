@@ -31,6 +31,11 @@ import java.util.logging.Logger;
  * the JVM writing to stdout, and exactly one session for the lifetime of
  * the process. See DR-007.
  * <p>
+ * The session lives as long as the process and is never evicted: stdio
+ * schedules no idle-cleanup tick, because the transport carries no session
+ * id for a client to notice going stale, so a client would never
+ * re-initialize and the process would be wedged for good (DR-016).
+ * <p>
  * Lifecycle:
  * <ol>
  *   <li>Build and configure an {@link MCPHandler} (tools/resources/prompts)</li>
@@ -213,6 +218,16 @@ public class StdioMCPServer {
         if (currentSession == null) {
             throw new MCPServerException(MCPServerException.SERVER_NOT_INITIALIZED,
                     "Server not initialized. Send 'initialize' first.");
+        }
+        if (currentSession.isClosed()) {
+            // Unreachable but for a shutdown-hook race at JVM teardown. Not
+            // an assert (-da disables it) and not an Error (escapes the
+            // RuntimeException catch below, killing the read loop): both
+            // would let the session's 404 tombstone reach a client that
+            // cannot act on it.
+            throw new IllegalStateException("Stdio session " + currentSession.getId()
+                    + " is closed but the read loop is still dispatching. A stdio session must"
+                    + " live as long as its process; see DR-016.");
         }
         return currentSession.handlePost(request, Collections.emptyMap());
     }

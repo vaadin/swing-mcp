@@ -13,6 +13,8 @@ import java.io.OutputStreamWriter;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -273,5 +275,53 @@ class StdioMCPServerTest {
         JsonObject resp = readResponse();
         assertEquals(3, resp.get("id").getAsInt());
         assertNull(resp.get("error"));
+    }
+
+    // ===== Session lifetime (DR-016) =====
+
+    /**
+     * Regression test for DR-016: a scheduled tick here evicts the session
+     * after 30 idle minutes and wedges the process for good, since no stdio
+     * client ever re-initializes.
+     */
+    @Test
+    void idleCleanupTickIsNotScheduledForStdio() throws Exception {
+        BufferedWriter w = startWorker();
+        send(w, initRequest(1));
+        readResponse();
+
+        ScheduledThreadPoolExecutor exec =
+                (ScheduledThreadPoolExecutor) handler.getExecutor();
+        assertEquals(0, exec.getQueue().size(),
+                "stdio must schedule no periodic work — a queued task here is the "
+                        + "idle-cleanup tick");
+    }
+
+    /**
+     * The same invariant one level down: should a session ever close anyway,
+     * the client must not be handed a tombstone describing an eviction it
+     * has no way to undo.
+     */
+    @Test
+    void dispatchOnAClosedSessionIsAnInternalErrorNotATombstone() throws Exception {
+        AtomicReference<MCPSession> started = new AtomicReference<>();
+        handler.setOnSessionStarted(started::set);
+
+        BufferedWriter w = startWorker();
+        send(w, initRequest(1));
+        readResponse();
+
+        // Force the state that must never occur, by hand.
+        started.get().setLastAccessNanos(System.nanoTime() - TimeUnit.HOURS.toNanos(1));
+        handler.cleanupIdleSessions();
+
+        send(w, "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}");
+        JsonObject resp = readResponse();
+        JsonObject error = resp.getAsJsonObject("error");
+        assertNotNull(error, "a closed session must produce an error, not a result");
+        assertEquals(MCPServerException.INTERNAL_ERROR, error.get("code").getAsInt());
+        assertFalse(error.get("message").getAsString().contains("idle timeout"),
+                "the idle tombstone must never reach a stdio client: it describes a "
+                        + "server-side eviction the client has no way to recover from");
     }
 }
