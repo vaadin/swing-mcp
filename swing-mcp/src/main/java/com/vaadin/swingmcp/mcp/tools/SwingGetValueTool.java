@@ -41,7 +41,7 @@ public class SwingGetValueTool extends AbstractSwingTool {
         }
 
         // BR-04: all access happens on EDT (guaranteed by SwingMCP.registerTool)
-        // Step 4: read current value via the shared helper (BR-12 / DR-013
+        // Step 4: read current value via the shared helper (BR-12 / DR-inline-value-preview
         // shared-read with snapshot inline preview). supportsGetValue already
         // verified getCurrentAccessibleValue() is non-null so readValue
         // succeeds here; the IllegalStateException branch is a gate-violation

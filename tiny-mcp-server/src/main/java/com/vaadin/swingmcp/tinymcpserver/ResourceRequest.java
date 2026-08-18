@@ -14,7 +14,7 @@ import java.util.Map;
  * {@code params._meta} GSON {@link JsonObject} if present, or {@code null}
  * otherwise. {@code transportHeaders} is unmodifiable.
  *
- * <p>See DR-009 for the rationale.
+ * <p>See DR-request-records for the rationale.
  */
 public record ResourceRequest(
         String uri,

@@ -68,7 +68,7 @@ diagnostics** the human operator might face:
   today, and the proxy does not synthesize any.
 - **No tool implementation.** The proxy ships zero
   `ToolFunction` logic of its own; every call goes through the
-  generic `MCPProxy` machinery (DR-012) to upstream.
+  generic `MCPProxy` machinery (DR-forwarding-proxy) to upstream.
 - **No CLI parser.** Configuration is read from one system
   property and one environment variable. See `architecture.md`.
 - **No telemetry / metrics hook in v1** (Sub-item 4). JUL on
@@ -86,7 +86,7 @@ via `java -jar swing-mcp-proxy.jar` or through Claude Code's
 
 The proxy and `swing-mcp` ship as a **versioned pair**. Drift
 between them (Q4 / Q8) is a hard error at the first `tools/call`
-of each session — see DR-012's drift policy. The user-facing
+of each session — see DR-forwarding-proxy's drift policy. The user-facing
 remediation tells the operator to restart the MCP server or the
 Swing application so versions match.
 
@@ -97,20 +97,20 @@ Swing application so versions match.
   if the Swing app isn't running yet, otherwise Claude drops the
   MCP server entirely. Mitigated by `MCPProxy` answering
   `tools/list` from the static `swing-mcp-tool-defs` manifest
-  (Q29 / DR-012). The first `tools/call` then returns a clear
+  (Q29 / DR-forwarding-proxy). The first `tools/call` then returns a clear
   `isError` body explaining the situation.
 - **Drift between proxy and upstream.** Mitigated by the
-  symmetric drift probe at the first `tools/call` of each fresh
-  upstream session (DR-012; equality semantics from DR-014).
-  Detected drift caches a permanent `isError` for the session
-  with a "do not retry" remediation.
+  symmetric drift probe at the first `tools/call` of each fresh upstream
+  session (DR-forwarding-proxy; equality semantics from
+  DR-structural-schema-equality). Detected drift caches a permanent
+  `isError` for the session with a "do not retry" remediation.
 - **Stale sessions / mid-call upstream death.** Mitigated by
   surfacing `MCPSessionLostException` and mid-call `IOException`
-  to the LLM verbatim (DR-008's "no auto-retry" rule). The
+  to the LLM verbatim (DR-embedded-mcp-client's "no auto-retry" rule). The
   shared `SESSION_LOST_MESSAGE` constant ensures both transports
   emit identical wording.
 - **Stdout collisions.** Stdio framing owns `System.out`
-  (DR-007). The proxy's own logging goes to stderr via JUL.
+  (DR-stdio-transport). The proxy's own logging goes to stderr via JUL.
   Tools the proxy forwards to never run in this JVM, so
   application-side prints can't reach this process's stdout.
 
@@ -128,5 +128,5 @@ Swing application so versions match.
 # Related Documents
 
 - [Architecture](architecture.md) — Main class, port/env config, fat-jar packaging, logging, shutdown hook
-- [`tiny-mcp-server/spec/decisions.md`](../../tiny-mcp-server/spec/decisions.md) — DR-007 (stdio), DR-008 (client), DR-012 (`MCPProxy`), DR-013 (handler / descriptor / `_meta`), DR-014 (schema equality)
+- [`tiny-mcp-server/spec/decisions.md`](../../tiny-mcp-server/spec/decisions.md) — DR-stdio-transport (stdio), DR-embedded-mcp-client (client), DR-forwarding-proxy (`MCPProxy`), DR-settable-listeners (handler / descriptor / `_meta`), DR-structural-schema-equality (schema equality)
 - [`swing-mcp-tool-defs/spec/project-context.md`](../../swing-mcp-tool-defs/spec/project-context.md) — shared server identity + tool manifest

@@ -33,7 +33,7 @@ public class SwingGetTextTool extends AbstractSwingTool {
         // BR-02: look up the accessible by ref (throws MCPServerException if not found)
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // BR-06 (DR-011): password-role accessibles are not readable.
+        // BR-06 (DR-password-not-readable): password-role accessibles are not readable.
         // This check runs before BR-04 so the AI gets the specific rule rather than
         // the generic "does not support swing_get_text".
         if (SwingUtils.hasPasswordRole(accessible)) {
@@ -59,7 +59,7 @@ public class SwingGetTextTool extends AbstractSwingTool {
             return MCPProtocol.Content.text("");
         }
 
-        // Shared read path with snapshot inline preview (BR-12 / DR-013):
+        // Shared read path with snapshot inline preview (BR-12 / DR-inline-value-preview):
         // SwingUtils.readText caps at MAX_TEXT_LENGTH and handles both the
         // primary AccessibleEditableText.getTextRange path and the
         // AccessibleText.getAtIndex fallback.

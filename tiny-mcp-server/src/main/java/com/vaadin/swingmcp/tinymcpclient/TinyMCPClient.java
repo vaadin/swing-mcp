@@ -21,7 +21,7 @@ import java.util.logging.Logger;
 
 /**
  * No-retry HTTP MCP client. Drives the server's HTTP transport via
- * {@link HttpClient} (JDK built-in, zero new runtime deps per DR-002).
+ * {@link HttpClient} (JDK built-in, zero new runtime deps per DR-gson-only).
  *
  * <p>HTTP 404 from a non-{@code initialize} call is mapped to
  * {@link MCPSessionLostException}; other 4xx/5xx responses become
@@ -31,7 +31,7 @@ import java.util.logging.Logger;
  *
  * <p>This implementation does <em>not</em> retry. Stateless callers can
  * opt into transparent recovery via {@link MCPClient#autoRetry()}; see
- * DR-008.
+ * DR-embedded-mcp-client.
  */
 public final class TinyMCPClient implements MCPClient {
 
@@ -209,7 +209,7 @@ public final class TinyMCPClient implements MCPClient {
      * Parses a JSON-RPC error envelope and returns its {@code error.message}
      * field; falls back to {@code fallback} on any parse failure or if the
      * field is missing/empty. Used to surface server-side 404 reasons (e.g.
-     * the supersede tombstone message — see DR-015) instead of a generic
+     * the supersede tombstone message — see DR-supersede-sessions) instead of a generic
      * client-side string.
      */
     private static String extractErrorMessage(String body, String fallback) {

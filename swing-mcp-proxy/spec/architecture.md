@@ -1,11 +1,11 @@
 # Architecture
 
-`swing-mcp-proxy` is a thin wire-up around the generic `MCPProxy`
-machinery in `tiny-mcp-server`. It contains essentially one class
-(`Main`) plus a small set of message constants. All of the
-interesting behaviour — tool forwarding, drift detection, error
-taxonomy, per-session state — lives in `tiny-mcp-server`. See
-DR-012 / DR-013 / DR-014 in `tiny-mcp-server/spec/decisions.md`.
+`swing-mcp-proxy` is a thin wire-up around the generic `MCPProxy` machinery
+in `tiny-mcp-server`. It contains essentially one class (`Main`) plus a
+small set of message constants. All of the interesting behaviour — tool
+forwarding, drift detection, error taxonomy, per-session state — lives in
+`tiny-mcp-server`. See DR-forwarding-proxy / DR-settable-listeners /
+DR-structural-schema-equality in `tiny-mcp-server/spec/decisions.md`.
 
 ---
 
@@ -69,7 +69,7 @@ public static void main(String[] args) {
 
 (Names of the `setServerInfo` / `setInstructions` accessors are
 illustrative — they may already exist on `MCPHandler` or be added
-incidentally with DR-013's setter family.)
+incidentally with the DR-settable-listeners setter family.)
 
 1. **Port resolution** (Q13). Read system property
    `swing.mcp.port`; if absent, read env var `SWING_MCP_PORT`; if
@@ -79,7 +79,7 @@ incidentally with DR-013's setter family.)
    Claude Code observes a broken pipe and surfaces a clear
    "MCP server failed to start" diagnostic to the user.
 2. **Upstream URL.** Hardcoded `http://127.0.0.1:<port>/mcp` —
-   loopback only (DR-001), context path matches
+   loopback only (DR-localhost-http-no-auth), context path matches
    `HttpMCPServer.DEFAULT_CONTEXT_PATH`. URL construction fails
    fast at startup if the resolved port is malformed.
 3. **`ProxyMessages` construction.** All four strings are
@@ -111,7 +111,7 @@ so a single `-Dswing.mcp.port=…` flag configures both the agent
 it that way). They live in different JVMs, so there is no clash
 even though the property name is identical.
 
-Host is hardcoded to `127.0.0.1` (DR-001). Context path is
+Host is hardcoded to `127.0.0.1` (DR-localhost-http-no-auth). Context path is
 hardcoded to `/mcp`. There is no CLI parser (Q13).
 
 ### Error messages
@@ -138,7 +138,7 @@ Note that the **session-lost slot is the only string shared
 between transports.** The connectivity-flavoured strings live in
 this module because they only make sense from the proxy side
 (the in-process `SwingMCP` cannot get an `IOException` talking
-to itself). Per grilling Sub-item 1 / DR-008 update, the
+to itself). Per grilling Sub-item 1 / DR-embedded-mcp-client update, the
 in-process `SwingMCP` server adopts `SESSION_LOST_MESSAGE` for
 its own session-lost path so both transports emit identical
 wording.
@@ -151,7 +151,7 @@ wording.
   developer needs more detail.
 - Sink: **stderr only.** JUL's default `ConsoleHandler` already
   targets stderr, and `StdioMCPServer` re-points `System.out` to
-  `System.err` defensively (DR-007), so accidental
+  `System.err` defensively (DR-stdio-transport), so accidental
   `System.out.println` calls cannot corrupt the wire either.
 - **Diagnostic data goes here, not into the LLM-facing
   messages** (Sub-item 1). On drift, log full `ToolDescriptor`
@@ -215,8 +215,9 @@ that live **in this module** focus on the wire-up:
   manifest), exercising at least one successful `tools/call`.
   Catches packaging-level breakage that unit tests would miss.
 
-Per Q33c, this module has **no `decisions.md`** — every
-cross-cutting decision affecting the proxy is generic and lives
-in `tiny-mcp-server/spec/decisions.md` (DR-007, DR-008, DR-012,
-DR-013, DR-014). And per Q33d, no `tools/` directory — the proxy
-implements zero tools.
+Per Q33c, this module has **no `decisions.md`** — every cross-cutting
+decision affecting the proxy is generic and lives in
+`tiny-mcp-server/spec/decisions.md` (DR-stdio-transport,
+DR-embedded-mcp-client, DR-forwarding-proxy, DR-settable-listeners,
+DR-structural-schema-equality). And per Q33d, no `tools/` directory — the
+proxy implements zero tools.

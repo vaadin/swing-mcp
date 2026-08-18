@@ -15,13 +15,13 @@ Restores (de-iconifies) an iconified Frame (including JFrame) or JDesktopIcon (i
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | **Frame (including JFrame):** the restore is performed by calling `frame.setExtendedState(frame.getExtendedState() & ~Frame.ICONIFIED)` via `SwingUtilities.invokeLater()` (fire-and-forget — see **architecture.md § 2 — Fire-and-Forget Mutation Dispatch**). This clears only the ICONIFIED bit and preserves existing extended-state bits (e.g. `MAXIMIZED_BOTH`), so an iconified-maximized frame is restored to maximized rather than normal (see DR-009). **JDesktopIcon:** the underlying JInternalFrame is resolved via `desktopIcon.getInternalFrame()`, then `iframe.setIcon(false)` is called via `SwingUtilities.invokeLater()`. `PropertyVetoException` is silently caught — a `VetoableChangeListener` may reject the restore; the client calls `swing_snapshot` to check the outcome. |
+| BR-03 | **Frame (including JFrame):** the restore is performed by calling `frame.setExtendedState(frame.getExtendedState() & ~Frame.ICONIFIED)` via `SwingUtilities.invokeLater()` (fire-and-forget — see **architecture.md § 2 — Fire-and-Forget Mutation Dispatch**). This clears only the ICONIFIED bit and preserves existing extended-state bits (e.g. `MAXIMIZED_BOTH`), so an iconified-maximized frame is restored to maximized rather than normal (see DR-synthetic-iconified-state). **JDesktopIcon:** the underlying JInternalFrame is resolved via `desktopIcon.getInternalFrame()`, then `iframe.setIcon(false)` is called via `SwingUtilities.invokeLater()`. `PropertyVetoException` is silently caught — a `VetoableChangeListener` may reject the restore; the client calls `swing_snapshot` to check the outcome. |
 | BR-04 | All validation runs on the EDT inside `runInEDT()`. The restore dispatch is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
 | BR-05 | If `supportsRestore()` returns false, the tool returns an MCP-level error (`isError: true`). The error message is derived by inspecting the component to pick the most specific explanation: **Frame — not iconified:** "Frame is not iconified. Call swing_snapshot to verify the current state". **Fallback:** "<ClassName> does not support swing_restore. Call swing_snapshot or swing_get_cells to verify the list of actions". |
 | BR-06 | `isEffectivelyEnabled()` is **not** checked. Restoring is a window-level action; it does not depend on the component's enabled state. |
 | BR-07 | `swing_restore` is a **mutation tool** — it clears the ref map after successful execution (see **architecture.md §3 rule 3**). A pre-dispatch validation error (`MCPErrorResponseException`) does **not** clear the ref map. |
 | BR-08 | **Snapshot action:** `restore` is listed in the actions of a Frame or JDesktopIcon when `supportsRestore()` returns true. |
-| BR-09 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched restore on ref=<N> — call swing_snapshot to verify the outcome` (see **DR-010**). |
+| BR-09 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched restore on ref=<N> — call swing_snapshot to verify the outcome` (see **DR-dispatched-echo**). |
 
 ### Algorithm: detecting restore support
 
@@ -33,7 +33,7 @@ See **architecture.md § 6 — Action Detection Summary** for the authoritative 
 - **Frame (including JFrame):** delegates to `isIconified()`, which returns `true` when all of:
   1. `isShowing()` is true
   2. `(getExtendedState() & Frame.ICONIFIED) != 0` (currently iconified)
-- **JInternalFrame:** delegates to `isIconified()`, which returns `true` when `isShowing() && isIcon()`. In practice this is always `false` — when a JInternalFrame is iconified, it is removed from the component and accessibility trees and replaced by a JDesktopIcon (DR-008). The AI targets the JDesktopIcon, not the hidden JInternalFrame.
+- **JInternalFrame:** delegates to `isIconified()`, which returns `true` when `isShowing() && isIcon()`. In practice this is always `false` — when a JInternalFrame is iconified, it is removed from the component and accessibility trees and replaced by a JDesktopIcon (DR-desktop-icon-as-itself). The AI targets the JDesktopIcon, not the hidden JInternalFrame.
 - **All other types** (JDialog, Window, other components): returns `false`.
 
 ### Execution order
@@ -65,6 +65,6 @@ The client calls `swing_snapshot` after to determine whether the window was rest
   - [x] Restoring an iconified-maximized JFrame clears the ICONIFIED bit; snapshot shows the frame without `[iconified]` (verified after EDT drains). Note: MAXIMIZED_BOTH preservation is platform/WM-dependent — the tool passes `getExtendedState() & ~ICONIFIED` but the WM may drop MAXIMIZED bits (observed on Xvfb).
   - [x] Calling `swing_restore` on a JDesktopIcon restores the underlying JInternalFrame; the snapshot shows the JInternalFrame in place of the JDesktopIcon (verified after EDT drains).
   - [x] Snapshot of a JDesktopIcon shows `restore` in its actions.
-  - [x] Calling `swing_restore` on a JDesktopIcon whose `VetoableChangeListener` rejects the restore returns the DR-010 echo `Dispatched restore on ref=N — call swing_snapshot to verify the outcome`; the JDesktopIcon is still present in the snapshot — verifies we call `setIcon(false)` which respects vetoes.
+  - [x] Calling `swing_restore` on a JDesktopIcon whose `VetoableChangeListener` rejects the restore returns the DR-dispatched-echo echo `Dispatched restore on ref=N — call swing_snapshot to verify the outcome`; the JDesktopIcon is still present in the snapshot — verifies we call `setIcon(false)` which respects vetoes.
   - [x] JInternalFrame (non-iconified) does not show `restore` in its actions.
   - [x] `JDesktopPane` component matrix: `swing_restore` returns an MCP error with `isError: true`.

@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * DR-013: ToolDescriptor structural equality.
+ * DR-settable-listeners: ToolDescriptor structural equality.
  */
 class ToolDescriptorTest {
 

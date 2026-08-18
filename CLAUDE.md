@@ -43,7 +43,7 @@ In every subproject there is a folder called `spec`. In it, there are files:
 |------|---------|--------------|
 | `project-context.md` | Vision, problem, users, scope, risks | First — before anything else |
 | `architecture.md` | Technology stack and application structure | After project context is filled in |
-| `decisions.md` | Cross-cutting design decisions (what/why/alternatives considered) that span multiple tools | When a spec references `DR-NNN`, or when revisiting a cross-cutting choice |
+| `decisions.md` | Cross-cutting design decisions (what/why/alternatives considered) that span multiple tools | When a spec references a `DR-<slug>`, or when revisiting a cross-cutting choice |
 | `tools/tool-NNN-*.md` | One file per tool; see the workflow below for how to start a new one | Per tool |
 | `verification.md` | Verification checklists | During and after implementation |
 

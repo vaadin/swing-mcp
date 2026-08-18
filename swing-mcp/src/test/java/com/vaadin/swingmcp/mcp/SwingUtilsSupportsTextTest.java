@@ -37,7 +37,7 @@ class SwingUtilsSupportsTextTest {
 
     @Test
     void jPasswordField_doesNotSupportGetText() {
-        // DR-011: password-role accessibles return echo chars (garbage), not real
+        // DR-password-not-readable: password-role accessibles return echo chars (garbage), not real
         // content. supportsGetText reflects the domain answer "can I surface real
         // content?" — for passwords, no.
         assertFalse(SwingUtils.supportsGetText(new JPasswordField("secret")));
@@ -119,20 +119,20 @@ class SwingUtilsSupportsTextTest {
 
     @Test
     void htmlJLabel_doesNotSupportGetText_dr015() {
-        // DR-015: LABEL-role accessibles are excluded from get_text
+        // DR-label-not-readable: LABEL-role accessibles are excluded from get_text
         // regardless of whether AccessibleText is exposed. An HTML-wrapped
         // JLabel exposes AccessibleText via the JDK's HTML rendering
-        // plumbing (AccessibleHTMLTextSupport) — before DR-015 this
+        // plumbing (AccessibleHTMLTextSupport) — before DR-label-not-readable this
         // accidentally flipped the gate to true. The role-based exclusion
         // makes plain and HTML JLabels behave identically.
         JLabel html = new JLabel("<html>Hello <b>world</b></html>");
         assertFalse(SwingUtils.supportsGetText(html),
-                "HTML JLabel must not support get_text (DR-015)");
+                "HTML JLabel must not support get_text (DR-label-not-readable)");
     }
 
     @Test
     void customLabelRoleComponent_doesNotSupportGetText_dr015() {
-        // DR-015: role-based gate covers any component whose role is LABEL,
+        // DR-label-not-readable: role-based gate covers any component whose role is LABEL,
         // not just javax.swing.JLabel.
         JLabel custom = new JLabel("x") {
             @Override
@@ -169,7 +169,7 @@ class SwingUtilsSupportsTextTest {
             }
         };
         assertFalse(SwingUtils.supportsGetText(custom),
-                "Custom LABEL-role component must not support get_text (DR-015)");
+                "Custom LABEL-role component must not support get_text (DR-label-not-readable)");
     }
 
     @Test
@@ -358,7 +358,7 @@ class SwingUtilsSupportsTextTest {
     //
     // Historically AccessibleEditableText extends AccessibleText would make
     // "supportsSetText implies supportsGetText" look like an invariant, but
-    // DR-011 formally decouples them: JPasswordField supports set_text without
+    // DR-password-not-readable formally decouples them: JPasswordField supports set_text without
     // supportsGetText returning true. The per-component checks below are
     // descriptive observations about specific components, not a universal rule.
 
@@ -378,14 +378,14 @@ class SwingUtilsSupportsTextTest {
 
     @Test
     void jPasswordField_supportsSetTextWithoutSupportsGetText() {
-        // DR-011: the canonical write-only-from-the-AI's-perspective case.
+        // DR-password-not-readable: the canonical write-only-from-the-AI's-perspective case.
         // A password field accepts set_text (needed for login-form filling)
         // but supportsGetText returns false (reading yields echo chars).
         JPasswordField field = new JPasswordField("secret");
         assertTrue(SwingUtils.supportsSetText(field),
                 "Password field must remain writable for login-form filling");
         assertFalse(SwingUtils.supportsGetText(field),
-                "Password field must not be readable (DR-011)");
+                "Password field must not be readable (DR-password-not-readable)");
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -411,7 +411,7 @@ class SwingUtilsSupportsTextTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // hasPasswordRole (DR-011)
+    // hasPasswordRole (DR-password-not-readable)
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -436,7 +436,7 @@ class SwingUtilsSupportsTextTest {
 
     @Test
     void customComponentWithPasswordRole_hasPasswordRole() {
-        // DR-011 gate is role-based, not class-based. A component that is not a
+        // DR-password-not-readable gate is role-based, not class-based. A component that is not a
         // JPasswordField but claims AccessibleRole.PASSWORD_TEXT still trips the gate.
         JTextField fake = new JTextField("secret") {
             @Override
@@ -456,7 +456,7 @@ class SwingUtilsSupportsTextTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // BR-12 / DR-013 — readText helper contract
+    // BR-12 / DR-inline-value-preview — readText helper contract
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test

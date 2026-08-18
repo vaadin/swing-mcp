@@ -60,7 +60,7 @@ public final class SwingTools {
      * Session-lost error message — emitted by both the in-process server
      * and the proxy whenever upstream evicted the active session. Sourced
      * from one place so both transports speak with one voice (grilling
-     * Sub-item 1 / DR-008 update).
+     * Sub-item 1 / DR-embedded-mcp-client update).
      */
     public static final String SESSION_LOST_MESSAGE =
             "Swing application session was lost — call swing_snapshot to re-orient and retry.";

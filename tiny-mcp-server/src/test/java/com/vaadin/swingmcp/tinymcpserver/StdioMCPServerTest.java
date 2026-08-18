@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for {@link StdioMCPServer}: drives {@code runStdio} on a worker
- * thread with piped streams (per DR-007 testing notes) and verifies the
+ * thread with piped streams (per DR-stdio-transport testing notes) and verifies the
  * newline-delimited framing, dispatch, and error mapping.
  */
 class StdioMCPServerTest {
@@ -277,10 +277,10 @@ class StdioMCPServerTest {
         assertNull(resp.get("error"));
     }
 
-    // ===== Session lifetime (DR-016) =====
+    // ===== Session lifetime (DR-stdio-never-evicts) =====
 
     /**
-     * Regression test for DR-016: a scheduled tick here evicts the session
+     * Regression test for DR-stdio-never-evicts: a scheduled tick here evicts the session
      * after 30 idle minutes and wedges the process for good, since no stdio
      * client ever re-initializes.
      */

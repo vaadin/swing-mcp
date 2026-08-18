@@ -48,7 +48,7 @@ public class SwingClickTool extends AbstractSwingTool {
 
         // BR-03: fire the click action asynchronously (fire-and-forget)
         SwingUtilities.invokeLater(click);
-        // BR-07: DR-010 success echo
+        // BR-07: DR-dispatched-echo success echo
         return echo(ref);
     }
 

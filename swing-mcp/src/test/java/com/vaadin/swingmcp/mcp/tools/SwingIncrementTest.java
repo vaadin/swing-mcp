@@ -102,13 +102,13 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     void incrementSpinnerAtMaximumIsNoOp() throws Exception {
         // Spinner already at max: the EDT action is a silent no-op
         // (SpinnerNumberModel.getNextValue() returns null at max).
-        // The tool still returns the DR-010 echo because it only confirms dispatch.
+        // The tool still returns the DR-dispatched-echo echo because it only confirms dispatch.
         JSpinner spinner = new JSpinner(new SpinnerNumberModel(10, 0, 10, 1));
         snapshot(spinner);
         int ref = context.getRefOf(spinner);
         MCPProtocol.Content result = increment(ref);
         assertEquals("Dispatched increment on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText(),
-                "Tool returns DR-010 echo on dispatch; the EDT action's no-op outcome is not reflected");
+                "Tool returns DR-dispatched-echo echo on dispatch; the EDT action's no-op outcome is not reflected");
         assertEquals(10, spinner.getValue(), "Value should stay at max");
     }
 
@@ -314,7 +314,7 @@ class SwingIncrementTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenuBar() throws Exception {
-        // DR-012: JMenu has no ref; register under a test ref to exercise the tool error path.
+        // DR-jmenu-not-clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);

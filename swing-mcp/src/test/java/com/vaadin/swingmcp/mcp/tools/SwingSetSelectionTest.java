@@ -573,7 +573,7 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenu() throws Exception {
-        // DR-012: JMenu has no ref; register under a test ref to exercise the tool error path.
+        // DR-jmenu-not-clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
@@ -656,7 +656,7 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
                         Map.of("ref", 1, "indices", List.of(0, 2))));
 
         assertNotEquals(Boolean.TRUE, result.isError(), "set_selection should succeed");
-        // DR-010: mutation tools echo "Dispatched <action> on ref=<N> [to <value>]"
+        // DR-dispatched-echo: mutation tools echo "Dispatched <action> on ref=<N> [to <value>]"
         assertEquals(1, result.content().size(), "Mutation tools return a one-item echo");
         assertEquals("Dispatched set-selection on ref=1 to [0, 2] — call swing_snapshot to verify the outcome",
                 ((McpSchema.TextContent) result.content().get(0)).text());

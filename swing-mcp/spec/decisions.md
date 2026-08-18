@@ -1,21 +1,64 @@
 # Decisions
 
-Cross-cutting design decisions for `swing-mcp`. Each record captures **what** was
-chosen, **why**, and the **alternatives** that were considered and rejected.
+Cross-cutting design decisions for `swing-mcp` — **what** was chosen, **why**,
+and the **alternatives** that were considered and rejected. The rejected roads
+are the most valuable thing in here: a tool spec tells you how the tool behaves
+today, and only this file tells you which cheaper-looking design was tried and
+why it lost.
 
-> **When to read this file:** when a tool spec or implementation note references
-> `DR-NNN`, or when you're revisiting a choice that spans multiple tools.
-> If a decision is local to one tool, it lives in a sibling
-> `tool-NNN-decisions.md` file instead.
->
-> **When to update:** whenever a cross-cutting choice is made, revised, or
-> rejected. Keep entries short — the full narrative belongs in the session that
-> produced the decision; this file is the durable summary. Status lifecycle:
-> **Proposed** → **Accepted** → **Superseded** (link forward to the replacement).
+**When to read.** When a tool spec or an implementation note cites a
+`DR-<slug>`, or when you are about to revisit a choice that spans multiple
+tools. Never read the file wholesale — `grep '^## DR-' decisions.md` is the
+index, and there is deliberately no table of contents to drift out of sync
+with it.
+
+**Scope boundaries.**
+
+- A decision local to one tool stays in that tool's spec (or a sibling
+  `tool-NNN-decisions.md` file). This file is for choices that span tools.
+- Decisions about the MCP core — transports, sessions, JSON-RPC, the proxy —
+  live in [`tiny-mcp-server/spec/decisions.md`](../../tiny-mcp-server/spec/decisions.md).
+  Slugs are unique across both files, so a `swing-mcp` doc can cite a
+  tiny-mcp-server slug (e.g. `DR-supersede-sessions`) without ambiguity.
+
+**Format.** One entry per decision, headed
+`## DR-<slug> — <headline> (<decided date>)`. The ID is a slug — `DR-` plus a
+1–4-word kebab hint at the subject (`DR-fire-and-forget-dispatch`) — so a
+citation carries meaning on its own; there are no `DR-NNN` numbers to look up.
+The date is *decided* provenance, not a log position: git owns the edit
+history, so never narrate how an entry used to read. Each entry carries a
+`**Status:**` line — **Proposed** → **Accepted** → **Implemented**, plus
+**Deferred** for a design explored and shelved and **Superseded by
+DR-\<slug\>** for a tombstone — and an `**Applies to:**` line naming the specs
+and code the decision binds.
+
+**No entry without a real fork.** If nothing was seriously considered and
+rejected, it is not a decision — it is how the thing works, and that belongs in
+`architecture.md` or the tool spec. This is the guard against a diary.
+
+**Entries are mutable — edit in place, never append addendums.** Each entry is
+the single coherent home for one *live* decision; keep it current as the
+decision is refined or extended instead of bolting a dated amendment onto the
+end. Two things this does **not** license:
+
+- **The roads not taken stay.** "We chose X, rejected Y because Z" is live
+  content of the current decision, not stale history — never edit it away.
+- **A reversed *shipped* decision forks a tombstone; it is not overwritten.**
+  When a design was specified, built, and then thrown out, leave the old entry
+  as the scar, set its `**Status:**` to **Superseded by DR-\<slug\>**, and write
+  the replacement fresh — worked example: `DR-close-with-post-verification` →
+  `DR-fire-and-forget-dispatch`. The line: *refined or extended* → edit in
+  place; *reversed after shipping* → tombstone plus a new entry.
+
+**Ordering is chronological, oldest first**, so the refines / supersedes chains
+read forward.
+
+**Grep tripwire.** Every `DR-<slug>` cited anywhere in the repo must exist as a
+`^## DR-` heading here or in `tiny-mcp-server/spec/decisions.md`.
 
 ---
 
-## DR-001 — Snapshot uses role parenthetical; everywhere else uses class names
+## DR-role-in-snapshot-only — Snapshot uses role parenthetical; everywhere else uses class names (2026-04-13)
 
 **Status:** Accepted
 **Applies to:** T-002, tool descriptions, error messages
@@ -63,7 +106,7 @@ via `ComponentClassResolver.resolveClassName(accessible)`.
 
 ---
 
-## DR-002 — `Parameters` accepts string-encoded numbers
+## DR-coerce-string-numbers — `Parameters` accepts string-encoded numbers (2026-04-13)
 
 **Status:** Accepted
 **Applies to:** `Parameters.getInt`, `getIntOrNull`, `getNumber`, `getIntArray`
@@ -86,7 +129,7 @@ is widespread — we cannot rely on clients to respect JSON schema types.
 
 ---
 
-## DR-003 — MCP mirrors Swing semantics, including the weird ones
+## DR-mirror-swing-semantics — MCP mirrors Swing semantics, including the weird ones (2026-04-13)
 
 **Status:** Accepted
 **Applies to:** all mutation tools, `SwingUtils.isEffectivelyEnabled`, T-002
@@ -128,7 +171,7 @@ one.
 
 ---
 
-## DR-004 — JTable does not advertise `get_cells` / `get_cell_count`
+## DR-no-jtable-cells — JTable does not advertise `get_cells` / `get_cell_count` (2026-04-13)
 
 **Status:** Accepted
 **Applies to:** T-002 BR-06 step 6b, T-020, T-021
@@ -166,23 +209,22 @@ row-dumping tools — do not resurrect cell-indexed access.
 
 ---
 
-## DR-005 — `swing_close` dispatches WM events then verifies out-of-band
+## DR-close-with-post-verification — `swing_close` dispatches WM events then verifies out-of-band (2026-04-01)
 
-**Status:** Superseded by DR-006 on 2026-04-15
+**Status:** Superseded by DR-fire-and-forget-dispatch on 2026-04-15
 **Applies to:** T-011
-**Decided:** 2026-04-01
-**Superseded:** 2026-04-15
 
 Originally specified an `invokeAndWait` + `PostVerification` polling model
-(delay schedule `{100, 200, 700}` ms) for `swing_close` to detect whether the
-window had actually closed and return either `""` or an informational message
-to the client. Replaced when DR-006 made fire-and-forget the **universal**
-dispatch model for mutations: `swing_close` now posts `WINDOW_CLOSING` (or
-`doDefaultCloseAction()` for JInternalFrame) via `SwingUtilities.invokeLater()`
-and returns `null` immediately, with no synchronous outcome check. The client
-verifies outcome by calling `swing_snapshot` (T-011 BR-03/BR-04). The
-HIDE_ON_CLOSE and DO_NOTHING_ON_CLOSE branches collapse into the same
-fire-and-forget path; the snapshot is the source of truth.
+(delay schedule `{100, 200, 700}` ms) for `swing_close` to detect whether
+the window had actually closed and return either `""` or an informational
+message to the client. Replaced when DR-fire-and-forget-dispatch made
+fire-and-forget the **universal** dispatch model for mutations:
+`swing_close` now posts `WINDOW_CLOSING` (or `doDefaultCloseAction()` for
+JInternalFrame) via `SwingUtilities.invokeLater()` and returns `null`
+immediately, with no synchronous outcome check. The client verifies outcome
+by calling `swing_snapshot` (T-011 BR-03/BR-04). The HIDE_ON_CLOSE and
+DO_NOTHING_ON_CLOSE branches collapse into the same fire-and-forget path;
+the snapshot is the source of truth.
 
 **Carryovers still in force** (now documented directly in T-011, not here):
 - Undecorated windows are refused via `supportsClose() == false` (T-011 BR-05).
@@ -193,7 +235,7 @@ fire-and-forget path; the snapshot is the source of truth.
 
 ---
 
-## DR-006 — Mutation tools use fire-and-forget dispatch
+## DR-fire-and-forget-dispatch — Mutation tools use fire-and-forget dispatch (2026-04-13)
 
 **Status:** Accepted
 **Applies to:** `AbstractSwingTool`, every mutation tool
@@ -248,7 +290,7 @@ until paint completes.
 
 ---
 
-## DR-007 — Wrapper-level `toolLock` spans the whole tool call
+## DR-tool-call-wide-lock — Wrapper-level `toolLock` spans the whole tool call (2026-04-13)
 
 **Status:** Accepted
 **Applies to:** `MCPServer.registerTool` wrapper, every Swing tool
@@ -260,7 +302,7 @@ subsequent `invokeLater()` dispatch. Not just around the EDT turn itself. The
 lock is a `ReentrantLock`, not a `synchronized` block.
 
 **Why.** The EDT is already serialised, so a first instinct is "just run on
-the EDT, that's the lock." Under fire-and-forget dispatch (DR-006),
+the EDT, that's the lock." Under fire-and-forget dispatch (DR-fire-and-forget-dispatch),
 `runInEDT()` returns as soon as validation completes and `invokeLater(action)`
 has been posted — **before the action has actually run**. Between that
 `runInEDT()` return and the HTTP response being sent, a second HTTP thread
@@ -282,11 +324,10 @@ wrapper-level lock closes that HTTP-thread gap.
 
 ---
 
-## DR-008 — JDesktopPane and JDesktopIcon snapshot strategy
+## DR-desktop-icon-as-itself — JDesktopIcon is rendered as itself, never resolved back to its JInternalFrame (2026-04-14)
 
 **Status:** Accepted
 **Applies to:** T-002 (snapshot), T-011 (close), future minimize/restore UCs
-**Decided:** 2026-04-14
 
 **Decision bundle:**
 
@@ -383,11 +424,10 @@ evolving years ago — no risk of refactoring or removal.
 
 ---
 
-## DR-009 — Synthetic `ICONIFIED` state for JFrame
+## DR-synthetic-iconified-state — Synthetic `ICONIFIED` state for JFrame (2026-04-14)
 
 **Status:** Accepted
 **Applies to:** T-002 (snapshot states), T-023 (swing_restore)
-**Decided:** 2026-04-14
 
 **Decision.** `ICONIFIED` becomes a **synthetic state** in the snapshot,
 derived from `frame.getExtendedState() & Frame.ICONIFIED` for JFrame.
@@ -396,7 +436,7 @@ It is emitted alongside the existing synthetic states (`DISABLED`,
 — it never contains `ICONIFIED` (see "Why" below).
 
 This does **not** apply to JInternalFrame — iconified internal frames
-are replaced by `JDesktopIcon` in the accessibility tree (DR-008), so
+are replaced by `JDesktopIcon` in the accessibility tree (DR-desktop-icon-as-itself), so
 the AI sees them as a different component type. There is no frame node
 to annotate.
 
@@ -430,18 +470,17 @@ never be fixed. Synthesizing the state follows the same pattern as
   is minimized, especially for a future `swing_restore` tool.
 - **Synthesize `ICONIFIED` for JInternalFrame too (via `isIcon()`).**
   Not needed — iconified internal frames are represented as
-  `JDesktopIcon` nodes in the tree (DR-008). No JInternalFrame node
+  `JDesktopIcon` nodes in the tree (DR-desktop-icon-as-itself). No JInternalFrame node
   exists to annotate.
 
 ---
 
-## DR-010 — Mutation tools echo `Dispatched <action> on ref=N — call swing_snapshot to verify the outcome`
+## DR-dispatched-echo — Mutation tools echo `Dispatched <action> on ref=N — call swing_snapshot to verify the outcome` (2026-04-15)
 
 **Status:** Accepted
 **Applies to:** every mutation tool (`isMutation() == true`); the dispatch
 wrapper in `AbstractSwingTool` / `MCPServer.registerTool`;
 `architecture.md § Fire-and-Forget Mutation Dispatch`
-**Decided:** 2026-04-15
 
 **Decision.** Mutation tools no longer return `null` (which the MCP layer
 renders as `{"content":[]}`). Each successful mutation returns a single
@@ -468,8 +507,8 @@ Examples:
 **Format conventions.**
 
 - **Verb:** always `Dispatched`. The tool dispatches on the EDT and returns
-  before the action runs (DR-006). The verb describes what the *tool* did,
-  not what the *UI became*.
+  before the action runs (DR-fire-and-forget-dispatch). The verb describes
+  what the *tool* did, not what the *UI became*.
 - **Verification suffix:** every echo ends with
   `— call swing_snapshot to verify the outcome`. This nudges LLM clients
   to take a follow-up snapshot rather than treating the echo as a success
@@ -497,7 +536,7 @@ Examples:
   content" as a stronger positive signal than "no content", and the
   empty path tempts redundant `swing_snapshot` calls just to confirm
   the tool ran.
-- **`Dispatched` is honest about the contract.** Under DR-006 no mutation
+- **`Dispatched` is honest about the contract.** Under DR-fire-and-forget-dispatch no mutation
   runs synchronously from the tool's perspective — `execute()` posts
   via `invokeLater()` and returns before the action runs. Past-tense
   verbs like `Clicked ref=4` or `Closed ref=4` would imply the action
@@ -548,9 +587,9 @@ descriptions.
 **Trade-offs accepted.**
 
 - The echo names *what the tool did*, not *what happened in the app*.
-  Clients must call `swing_snapshot` to verify outcome — same as today
-  under DR-006, but now made explicit by the verb choice and the tool
-  description language.
+  Clients must call `swing_snapshot` to verify outcome — same as today under
+  DR-fire-and-forget-dispatch, but now made explicit by the verb choice and
+  the tool description language.
 - Marginally more verbose than `Clicked ref=4` would be. Chosen for
   honesty + uniformity over brevity.
 
@@ -560,13 +599,13 @@ descriptions.
 - **`OK` for every mutation.** Rejected — generic, indistinguishable
   from noise, doesn't echo input parameters, useless in logs.
 - **Past-tense action verb (`Clicked ref=4`, `Closed ref=4`).**
-  Rejected — under DR-006's universal fire-and-forget every mutation
-  is `invokeLater`'d, so no past-tense verb accurately describes the
-  tool's actual work at return time. Past tense would also imply
-  outcome verification the MCP cannot provide.
+  Rejected — under DR-fire-and-forget-dispatch's universal fire-and-forget
+  every mutation is `invokeLater`'d, so no past-tense verb accurately
+  describes the tool's actual work at return time. Past tense would also
+  imply outcome verification the MCP cannot provide.
 - **Two echo shapes — past-tense for direct-API mutations (e.g.
   `setText`), `Dispatched X` for event dispatches (e.g. `WINDOW_CLOSING`).**
-  Rejected — under DR-006 all mutations are equally dispatched, not
+  Rejected — under DR-fire-and-forget-dispatch all mutations are equally dispatched, not
   executed, by the time `execute()` returns. The category split has
   no referent in the implementation.
 - **Bundle a snapshot into every mutation response.** Rejected —
@@ -585,11 +624,10 @@ descriptions.
 
 ---
 
-## DR-011 — Password fields are not readable
+## DR-password-not-readable — Password fields are not readable (2026-04-15)
 
 **Status:** Accepted
 **Applies to:** T-002 (snapshot action list), T-005 (`swing_get_text`)
-**Decided:** 2026-04-15
 
 **Decision.** Any accessible whose role is `AccessibleRole.PASSWORD_TEXT`
 (canonically `JPasswordField` and its subclasses, plus any third-party
@@ -602,10 +640,11 @@ MCP layer:
    `!set_text` (non-editable, per BR-08).
 2. `swing_get_text` called on a password-role accessible returns an
    MCP-level error (`isError: true`) with the dedicated message:
-   `"JPasswordField content is not readable. Use swing_set_text if you
-   need to write a known value."`. This error is distinct from the
-   generic `<ClassName> does not support swing_get_text` (per DR-001) so the AI
-   can learn the rule rather than assume the capability is simply absent.
+   `"JPasswordField content is not readable. Use swing_set_text if you need
+   to write a known value."`. This error is distinct from the generic
+   `<ClassName> does not support swing_get_text` (per
+   DR-role-in-snapshot-only) so the AI can learn the rule rather than assume
+   the capability is simply absent.
 
 **Why.** T-006 BR-12 already declares the asymmetric posture: the AI may
 *write* a known credential into a password field (necessary for
@@ -625,12 +664,11 @@ Aligning the snapshot (no `get_text` advertised) with the tool
 snapshot directly: `set_text` present, `get_text` absent.
 
 **Role-based gate, not class-based.** The rule is keyed on
-`AccessibleRole.PASSWORD_TEXT`, not on `instanceof JPasswordField`. This
-is free coverage for third-party or custom subclasses that adopt the
-password role (e.g. a company-internal `SecretField` whose
-`AccessibleContext` returns `PASSWORD_TEXT`). Consistent with DR-003's
-"mirror Swing semantics exactly" principle — the role is Swing's own
-marker for "this content is secret", and we honor it.
+`AccessibleRole.PASSWORD_TEXT`, not on `instanceof JPasswordField`. This is
+free coverage for third-party or custom subclasses that adopt the password
+role (e.g. a company-internal `SecretField` whose `AccessibleContext`
+returns `PASSWORD_TEXT`). Consistent with DR-mirror-swing-semantics — the
+role is Swing's own marker for "this content is secret", and we honor it.
 
 **Pathological case — non-editable password field.** A `JPasswordField`
 with `setEditable(false)` gets `actions: !set_text` — a ref that
@@ -640,7 +678,7 @@ the node retains its ref and remains visible in the snapshot so the AI
 can see that a password field exists and is currently not writable. No
 special-casing in the ref-assignment gate.
 
-**Error message uses class name, gate uses role.** Per DR-001,
+**Error message uses class name, gate uses role.** Per DR-role-in-snapshot-only,
 user-facing strings (tool descriptions, error messages) name components
 by Swing class. The error says `JPasswordField` because that's the
 canonical case; for a rare third-party password-role component the
@@ -672,12 +710,11 @@ class-name lookup needed.
 
 ---
 
-## DR-012 — `JMenu` does not expose `click`
+## DR-jmenu-not-clickable — `JMenu` does not expose `click` (2026-04-15)
 
 **Status:** Accepted
 **Applies to:** T-002 (snapshot action list), T-004 (`swing_click`),
 `SwingUtils.supportsClick`
-**Decided:** 2026-04-15
 
 **Decision.** `JMenu` is treated as a **structural container**, not an
 interactive target:
@@ -688,8 +725,9 @@ interactive target:
    does).
 2. `swing_click` invoked on a `JMenu` ref (possible only from a stale
    ref obtained before this change, or from a race) returns the generic
-   `"JMenu does not support swing_click"` error (per DR-001) — no dedicated
-   message, since a well-behaved client never sees this.
+   `"JMenu does not support swing_click"` error (per
+   DR-role-in-snapshot-only) — no dedicated message, since a well-behaved
+   client never sees this.
 3. When the menu's popup is open (any origin — the user tabbed in, a
    keyboard accelerator fired, the app opened it programmatically), the
    resulting `JPopupMenu` node is pruned from the snapshot whenever its
@@ -720,15 +758,16 @@ The items themselves (`JMenuItem`, `JCheckBoxMenuItem`,
 `JRadioButtonMenuItem`) retain `click` as usual — they are the real
 interactive targets.
 
-**Tension with DR-003 ("mirror Swing semantics exactly").** DR-003 says
+**Tension with DR-mirror-swing-semantics.** DR-mirror-swing-semantics says
 we must expose what Swing allows. Humans can click `JMenu` titles, so
-technically this is a carveout. Justification: the user-visible *effect*
-of clicking a menu title (revealing its items) is already delivered by
-the snapshot. Mirroring the human click path would give the LLM strictly
-less capable behaviour than it already has. DR-003's intent is to keep
-the LLM at least as capable as a human; this carveout preserves that
-intent. `JMenu` is closer to an HTML `<details>` element (UI plumbing
-for progressive disclosure) than to a button.
+technically this is a carveout. Justification: the user-visible *effect* of
+clicking a menu title (revealing its items) is already delivered by the
+snapshot. Mirroring the human click path would give the LLM strictly less
+capable behaviour than it already has. The intent behind
+DR-mirror-swing-semantics is to keep the LLM at least as capable as a
+human; this carveout preserves that intent. `JMenu` is closer to an HTML
+`<details>` element (UI plumbing for progressive disclosure) than to a
+button.
 
 **Dynamically populated menus — deferred.** Some apps add items only in
 a `PopupMenuListener.popupMenuWillBecomeVisible` handler; with `click`
@@ -753,12 +792,11 @@ pattern shows up in real apps.
 
 ---
 
-## DR-013 — Snapshot includes inline text/value previews
+## DR-inline-value-preview — Snapshot includes inline text/value previews (2026-04-15)
 
 **Status:** Accepted
 **Applies to:** T-002 (BR-03 line format), T-005 (`swing_get_text`),
 T-012 (`swing_get_value`)
-**Decided:** 2026-04-15
 **Supersedes:** the "field values are not shown" clause of T-002 BR-03
 as originally written (pre-amendment). BR-03's own "Revisit if the AI
 needs field values in future" was the designed escalation point; this
@@ -777,14 +815,14 @@ action list (BR-06 steps 4 and 5):
   Null content is normalised to `""` (matches what the user sees for a
   JTextField whose document is empty). Newlines and runs of whitespace
   are **collapsed to a single space** before truncation (consistent with
-  BR-10's HTML cleanup). The result is then capped per the DR-010
+  BR-10's HTML cleanup). The result is then capped per the DR-dispatched-echo
   string-truncation convention: `≤15 chars → full; else first 14 + …`.
   Wrapped in double quotes.
 - **`value=<number>`** — emitted when
   `SwingUtils.supportsGetValue(accessible)` returns `true`. Content
   source: `SwingUtils.readValue(accessible)` (i.e. `current` from
   `AccessibleValue.getCurrentAccessibleValue()`). Serialised bare per
-  DR-010's number convention (whole numbers as integers, fractional as
+  DR-dispatched-echo's number convention (whole numbers as integers, fractional as
   floats). Not truncated.
   - **Progress bar exception:** when the role is `PROGRESS_BAR` **and**
     `getMaximumAccessibleValue()` is non-null, render as
@@ -808,7 +846,7 @@ neither text nor value). Examples:
 ```
 
 **Password carveout is free.** `SwingUtils.supportsGetText()` already
-returns `false` for `AccessibleRole.PASSWORD_TEXT` (DR-011). Keying
+returns `false` for `AccessibleRole.PASSWORD_TEXT` (DR-password-not-readable). Keying
 inline `text="..."` off the same gate means password fields never emit
 an inline preview — no new code, no new spec carveout. A password
 field retains its `set_text` action (or `!set_text` when non-editable)
@@ -837,7 +875,7 @@ exposes both `AccessibleText` with content and `AccessibleValue` — the
 families are disjoint (text vs. slider/spinner/progress/scroll/split).
 A hypothetical custom widget that gates true on both is permitted to
 emit both annotations (`text="..." value=42`); no engineered tie-break
-is needed. DR-003 ("mirror Swing semantics exactly") covers this — if
+is needed. DR-mirror-swing-semantics covers this — if
 the framework reports both, we report both.
 
 **Why.**
@@ -851,7 +889,7 @@ the framework reports both, we report both.
   alternatives) requires the AI to *choose* verbose mode; inline
   preview means the AI *sees* the current value the moment it reads
   the snapshot, without deciding anything.
-- **Bounded cost.** A 15-char string cap matches DR-010's existing
+- **Bounded cost.** A 15-char string cap matches DR-dispatched-echo's existing
   truncation convention. Worst-case overhead for a 50-field form is
   ~750 chars (\~200 tokens) — well within the noise floor of a
   normal snapshot.
@@ -879,7 +917,7 @@ the framework reports both, we report both.
   Accepted: (a) the AI could already call `swing_get_text` and obtain
   the full value; the inline preview does not widen the exfiltration
   surface, only reduces its cost; (b) the role-based password gate
-  (DR-011) covers the one case Swing itself marks as secret; custom
+  (DR-password-not-readable) covers the one case Swing itself marks as secret; custom
   secret fields that fail to adopt `PASSWORD_TEXT` were already
   leaking via `swing_get_text` and are out of scope here.
 
@@ -924,13 +962,12 @@ the framework reports both, we report both.
 
 ---
 
-## DR-014 — Quoted-slot rendering: name uncapped, description capped, always sanitized
+## DR-quoted-slot-sanitizing — Quoted-slot rendering: name uncapped, description capped, always sanitized (2026-04-15)
 
 **Status:** Accepted
 **Applies to:** T-002 (BR-03 line format, BR-10 description, BR-12 inline
 preview), `SnapshotNode.calculateSelfLine`, `SnapshotNode.computeInlinePreview`,
 `SwingUtils.sanitizeForQuotedSlot`
-**Decided:** 2026-04-15
 
 **Decision.** Every quoted slot in a snapshot line — `"name"`,
 `"description"`, and the BR-12 `text="..."` preview — passes through a
@@ -963,15 +1000,15 @@ locked in independently:
    in full. Sanitize and emit verbatim.
 
 3. **Description slot — capped at 120 characters per BR-10.** No
-   change from the existing BR-10 behaviour; DR-014 formalises it as a
-   deliberate asymmetry rather than an incidental implementation
-   choice. Descriptions are supplementary context (tooltips,
-   `accessibleDescription`); bounding them keeps a
-   pathological-tooltip component from bloating the snapshot. Cap
-   order: sanitize first, then apply `capDescription` (truncate + `…`).
+   change from the existing BR-10 behaviour; DR-quoted-slot-sanitizing
+   formalises it as a deliberate asymmetry rather than an incidental
+   implementation choice. Descriptions are supplementary context (tooltips,
+   `accessibleDescription`); bounding them keeps a pathological-tooltip
+   component from bloating the snapshot. Cap order: sanitize first, then
+   apply `capDescription` (truncate + `…`).
 
-4. **Inline `text="..."` preview — capped at 15 chars per DR-013.**
-   No change to the existing BR-12 cap. DR-014 adds the missing
+4. **Inline `text="..."` preview — capped at 15 chars per DR-inline-value-preview.**
+   No change to the existing BR-12 cap. DR-quoted-slot-sanitizing adds the missing
    quote-escape step: previously the preview collapsed whitespace but
    did not escape `"`, so a `JTextField` whose document contained
    `say "hi"` rendered as `text="say "hi""` — unparseable. The
@@ -1015,7 +1052,7 @@ receives a ref (even if `get_description` is its sole action).
 (up to 1000 chars). See T-024 for full specification.
 
 **Interaction with other rules.** The sanitizer runs *before* the
-DR-010 15-char truncation convention and *before* the 120-char
+DR-dispatched-echo 15-char truncation convention and *before* the 120-char
 description cap. Truncation is always applied to sanitized content,
 so the `…` suffix always follows a printable prefix (never a
 trailing escaped quote, never a trailing collapsed-whitespace
@@ -1065,12 +1102,11 @@ non-HTML description containing `\n` or `"` passes through
 
 ---
 
-## DR-015 — `AccessibleRole.LABEL` never advertises `get_text`
+## DR-label-not-readable — `AccessibleRole.LABEL` never advertises `get_text` (2026-04-15)
 
 **Status:** Accepted
 **Applies to:** T-002 (BR-06 action-list algorithm, BR-12 inline
 preview gate), T-005 (`swing_get_text`), `SwingUtils.supportsGetText`
-**Decided:** 2026-04-15
 
 **Decision.** Any accessible whose role is `AccessibleRole.LABEL` is
 excluded from `get_text` unconditionally. `SwingUtils.supportsGetText`
@@ -1086,7 +1122,7 @@ single gate:
    `supportsGetText`; the gate change propagates for free).
 4. `swing_get_text` called on a LABEL-role accessible returns the
    generic "Component does not support swing_get_text" error. A dedicated
-   error (parallel to DR-011's password message) would reveal more
+   error (parallel to DR-password-not-readable's password message) would reveal more
    than it teaches — the rule is "labels are read from the snapshot
    name slot, not via a tool", which the AI already learns by
    observing absence of the action.
@@ -1103,33 +1139,33 @@ different tool capabilities based on whether the developer typed
 `<html>` at the start of the string. That's the wart this DR
 workarounds.
 
-After DR-015:
+After DR-label-not-readable:
 
 - Every `JLabel` behaves identically regardless of HTML-ness.
 - The label's content remains fully readable from the snapshot name
-  slot (uncapped per DR-014), so no information is lost.
+  slot (uncapped per DR-quoted-slot-sanitizing), so no information is lost.
 - The AI's rule is simple: "LABEL-role nodes have no `get_text`;
   read them from the name slot."
 
 **Role-based gate, not class-based.** The check is
 `AccessibleRole.LABEL`, not `instanceof JLabel`. This matches
-DR-011's pattern and gives free coverage to other LABEL-role
+DR-password-not-readable's pattern and gives free coverage to other LABEL-role
 accessibles:
 
 - **`JList.AccessibleJListChild`** — role `LABEL`, content in name
   slot, ref already assigned via `click`. No behavioural change:
-  before DR-015, list cells only got `get_text` in the rare case
+  before DR-label-not-readable, list cells only got `get_text` in the rare case
   where the renderer component exposed `AccessibleText`; after
-  DR-015, they never do. The cell label is in the name slot.
+  DR-label-not-readable, they never do. The cell label is in the name slot.
 - **`JTree.AccessibleJTreeNode`** — role varies but `LABEL` is
   common. Same analysis: ref from `click`/`toggle_expand`, content
   in name slot.
 - **Custom components adopting `AccessibleRole.LABEL`** — follow the
   same rule for free.
 
-**Relationship to DR-011.** Both DRs add role-based exclusions to
-`SwingUtils.supportsGetText`. DR-011 (PASSWORD_TEXT) excludes because
-the surfaced content is **misleading garbage** (echo chars); DR-015
+**Relationship to DR-password-not-readable.** Both DRs add role-based exclusions to
+`SwingUtils.supportsGetText`. DR-password-not-readable (PASSWORD_TEXT) excludes because
+the surfaced content is **misleading garbage** (echo chars); DR-label-not-readable
 (LABEL) excludes because the surfaced content is **redundant** with
 the name slot. Same mechanism, different motivation. Implementation
 is a two-line addition to the existing method:
@@ -1139,17 +1175,17 @@ public static boolean supportsGetText(Accessible a) {
     AccessibleContext ac = a.getAccessibleContext();
     if (ac == null) return false;
     AccessibleRole role = ac.getAccessibleRole();
-    if (AccessibleRole.PASSWORD_TEXT.equals(role)) return false;  // DR-011
-    if (AccessibleRole.LABEL.equals(role)) return false;          // DR-015
+    if (AccessibleRole.PASSWORD_TEXT.equals(role)) return false;  // DR-password-not-readable
+    if (AccessibleRole.LABEL.equals(role)) return false;          // DR-label-not-readable
     return ac.getAccessibleText() != null;
 }
 ```
 
-**Tension with DR-003 ("mirror Swing semantics exactly").** DR-003
+**Tension with DR-mirror-swing-semantics.** DR-mirror-swing-semantics
 says expose what Swing allows. Swing (via the HTML accessibility
 plumbing) does allow reading `AccessibleText` on an HTML `JLabel`.
 Justification for the carveout: the label's *content* is already
-exposed via the name slot, so DR-015 is not withdrawing a
+exposed via the name slot, so DR-label-not-readable is not withdrawing a
 capability — it is eliminating a duplicate channel that exists only
 because of a JDK implementation detail. The AI's effective
 capability is unchanged: it can read every `JLabel`'s text, just
@@ -1172,24 +1208,24 @@ other components" (LABEL role), not "labels are editable text"
   decorative labels like `"Name:"`, `"Password:"`) would receive a
   ref, inflating the ref sequence for interactive components
   elsewhere. The name slot already carries the content in full
-  (DR-014); a tool is redundant. Changes a lot of code to produce
+  (DR-quoted-slot-sanitizing); a tool is redundant. Changes a lot of code to produce
   worse snapshots.
 - **Class-based gate (`instanceof JLabel`) instead of role-based.**
   Rejected — misses custom LABEL-role components, splits the rule
-  inconsistently with DR-011's role-based pattern, adds a Swing-
+  inconsistently with DR-password-not-readable's role-based pattern, adds a Swing-
   class-name coupling that role-based gating avoids.
 - **Expose a dedicated `swing_get_description`-style tool for labels
   when the name would otherwise need to be long.** Deferred. The
-  name slot is uncapped per DR-014, so a tool is not needed today.
+  name slot is uncapped per DR-quoted-slot-sanitizing, so a tool is not needed today.
   If profiling ever surfaces real cases where a label's content
   itself (not description) bloats snapshots and a truncation-plus-
   tool escape-valve becomes attractive, revisit under its own DR.
   Keyed off the same truncation trigger the deferred
   `swing_get_description` uses.
 - **Dedicated error message on `swing_get_text` for LABEL role
-  (parallel to DR-011's `"JPasswordField content is not readable"`).**
-  Rejected. DR-011's dedicated message exists because the rule is
-  non-obvious (why would reading a password field fail?). DR-015's
+  (parallel to DR-password-not-readable's `"JPasswordField content is not readable"`).**
+  Rejected. DR-password-not-readable's dedicated message exists because the rule is
+  non-obvious (why would reading a password field fail?). DR-label-not-readable's
   rule — "read labels from the snapshot" — is obvious from the
   snapshot itself: the action isn't advertised, so the AI never
   calls the tool in well-behaved sequences. A generic error is
@@ -1197,12 +1233,11 @@ other components" (LABEL role), not "labels are editable text"
 
 ---
 
-## DR-016 — Modal-stack annotation on snapshot roots
+## DR-modal-stack-header — Modal-stack annotation on snapshot roots (2026-04-15)
 
 **Status:** Accepted
 **Applies to:** T-002 (BR-03 line format, Main Flow, BR-14),
 `SnapshotNode` / `SwingSnapshotTool` render path, `SwingUtils`
-**Decided:** 2026-04-15
 
 **Decision.** When a root in the snapshot is a **modal** `Dialog`
 whose `getOwner()` chain contains at least one **visible** window,
@@ -1233,11 +1268,11 @@ line:
   `Concrete -> JClass` custom-subclass form, and reusing arrow glyphs
   in the same format invites miscategorisation.
 - **Per-root.** The header is emitted independently for each
-  considered component that satisfies the modal-plus-live-owner
-  predicate. Per DR-017 the current implementation returns only the
-  topmost modal, so in practice exactly one header appears when a
-  modal is up; the per-root design generalises cleanly if DR-017 is
-  ever revisited.
+  considered component that satisfies the modal-plus-live-owner predicate.
+  Per DR-interactable-windows-only the current implementation returns only
+  the topmost modal, so in practice exactly one header appears when a modal
+  is up; the per-root design generalises cleanly if
+  DR-interactable-windows-only is ever revisited.
 
 **Scope: modal-only.**
 
@@ -1275,7 +1310,7 @@ matches), revisit; the current default is "strip".
 
 - **Zero ref pressure.** Including owner windows as sibling roots
   would either assign refs to components the AI cannot currently
-  interact with (per DR-017 — blocked by the modal) or require a
+  interact with (per DR-interactable-windows-only — blocked by the modal) or require a
   new "hidden" ref state. Header-as-metadata sidesteps both.
 - **Unambiguous about liveness.** The rendered root is the only
   tree the AI can act on right now. A single annotated line
@@ -1291,17 +1326,18 @@ matches), revisit; the current default is "strip".
 at once in independent owner hierarchies (e.g. a multi-document
 editor with two JFrames, each showing its own modal). A global
 header cannot represent two chains; a per-root header generalises
-cleanly. Under today's DR-017 scope only one modal is ever a root,
+cleanly. Under today's DR-interactable-windows-only scope only one modal is ever a root,
 so per-root reduces to "header appears above the single root" —
 future-compatible at zero present cost.
 
-**Relationship to DR-017.** DR-017 fixes the contract: tools see
-only windows the user can interact with, which means the owner
-chain behind a modal is never reachable as refs. DR-016 restores
-the *planning* signal — "what state do I return to" — as pure
-metadata, without reopening DR-017's decision. The division is
-strict: DR-017 owns the ref surface; DR-016 owns the informational
-surface.
+**Relationship to DR-interactable-windows-only.**
+DR-interactable-windows-only fixes the contract: tools see only windows the
+user can interact with, which means the owner chain behind a modal is never
+reachable as refs. DR-modal-stack-header restores the *planning* signal —
+"what state do I return to" — as pure metadata, without reopening
+DR-interactable-windows-only's decision. The division is strict:
+DR-interactable-windows-only owns the ref surface; DR-modal-stack-header
+owns the informational surface.
 
 **Alternatives considered.**
 
@@ -1314,11 +1350,11 @@ surface.
   children replaced by a "[hidden beneath modal]" stub.** Rejected
   — see "zero ref pressure" above. Doubles the visible surface in
   the common single-modal case for a marginal gain, and undermines
-  DR-017's ref-surface contract.
+  DR-interactable-windows-only's ref-surface contract.
 - **Single global header spanning all roots.** Rejected — cannot
   represent multi-hierarchy document-modal cases; also misleading
   when a snapshot contains non-modal frames alongside one modal
-  dialog (today impossible under DR-017, but the per-root rule is
+  dialog (today impossible under DR-interactable-windows-only, but the per-root rule is
   forward-compatible).
 - **Render the header after the root subtree (footer).** Rejected
   — the AI reads top-to-bottom; header is orientation information
@@ -1349,15 +1385,14 @@ surface.
 
 ---
 
-## DR-017 — Tools consider only user-interactable windows
+## DR-interactable-windows-only — Tools consider only user-interactable windows (2026-04-15)
 
-**Status:** Accepted
+**Status:** Accepted — formalises a pre-existing decision that
+project-context.md §5 had documented only as mechanism
 **Applies to:** `MCPServer.getConsideredComponents()`, T-002
 (snapshot), T-003 (screenshot), all future read and mutation tools
 that operate against
 `SwingToolContext.getConsideredComponents()`
-**Decided:** 2026-04-15 (formalising a pre-existing decision
-documented as mechanism in project-context.md §5)
 
 **Decision.** `MCPServer.getConsideredComponents()` returns the
 windows a human user can interact with *right now*, and nothing
@@ -1374,7 +1409,7 @@ load-bearing contract every tool operates under: a ref can only
 address a component the user could click. There is no
 `include_blocked_windows` flag, no "return all modals across owner
 hierarchies", no exposure of hidden parents as additional roots.
-The owner chain of a modal is surfaced as **metadata** (DR-016
+The owner chain of a modal is surfaced as **metadata** (DR-modal-stack-header
 modal-stack header), not as interactable roots.
 
 **Why.**
@@ -1401,19 +1436,18 @@ modal-stack header), not as interactable roots.
   modal) or arrange windows vertically in a way that does not
   match any real screen state.
 
-**Interaction with DR-016.** DR-016 exposes the owner chain of a
-modal root as a `[modal stack ...]` header. This adds
-**informational context** for planning (what state returns when
-this modal closes) without adding interactable roots. The
-separation is deliberate: metadata lives in the header; refs live
-in the body.
+**Interaction with DR-modal-stack-header.** DR-modal-stack-header exposes
+the owner chain of a modal root as a `[modal stack ...]` header. This adds
+**informational context** for planning (what state returns when this modal
+closes) without adding interactable roots. The separation is deliberate:
+metadata lives in the header; refs live in the body.
 
 **Alternatives considered and rejected.**
 
 - **Return every visible modal (support `DOCUMENT_MODAL`
   multi-hierarchy cases).** Rejected — topmost-only matches how
   nearly every Swing app uses modality in practice, and the
-  per-root design of DR-016 means adding this later is a
+  per-root design of DR-modal-stack-header means adding this later is a
   mechanical change in `getConsideredComponents()` alone. Not
   pre-built because speculative generality without a real-world
   case hurts today's clarity for tomorrow's maybe.
@@ -1423,7 +1457,7 @@ in the body.
   silent failures.
 - **Expose an `include_blocked_windows` parameter.** Rejected —
   any flag with two modes where only one is ever correct is
-  bureaucracy. The blocked case is handled by DR-016's metadata
+  bureaucracy. The blocked case is handled by DR-modal-stack-header's metadata
   header; a flag would reintroduce the footgun it was designed to
   avoid.
 - **Return everything always and let the AI figure out what is
@@ -1463,12 +1497,11 @@ this DR must be **superseded explicitly**, not amended silently.
 
 ---
 
-## DR-018 — `swing_fill_form` batch tool deferred
+## DR-no-batch-fill-form — `swing_fill_form` batch tool deferred (2026-04-16)
 
 **Status:** Deferred
-**Applies to:** hypothetical `swing_fill_form` tool, DR-006
+**Applies to:** hypothetical `swing_fill_form` tool, DR-fire-and-forget-dispatch
 (fire-and-forget dispatch)
-**Decided:** 2026-04-16
 
 **Motivation.** UX feedback from AI-client sessions identified
 form-filling as the highest-cost interaction pattern. Filling an
@@ -1492,13 +1525,13 @@ calls: `snapshot → fill_form → snapshot`.
 5. Auto-dispatch `set_text` vs `set_value` based on component type
    (`supportsSetText()` → `set_text`; `supportsSetValue()` →
    `set_value`).
-6. Fire-and-forget (mandatory per DR-006 — synchronous dispatch
+6. Fire-and-forget (mandatory per DR-fire-and-forget-dispatch — synchronous dispatch
    deadlocks on blocking dialogs). Refs invalidated on return.
 
 **Why deferred — three compounding problems.**
 
 **Problem 1: fire-and-forget is architecturally hostile to
-multi-step batch operations.** DR-006's fire-and-forget model is
+multi-step batch operations.** DR-fire-and-forget-dispatch's fire-and-forget model is
 sound for single-step mutations: the window between dispatch and
 completion is one EDT cycle — effectively atomic from the client's
 perspective. For a batch tool, the window spans N × 20ms, during
@@ -1522,7 +1555,7 @@ cleared" from "fill_form is still running." Making `fill_form`
 synchronous (to return a result) is not an option: if a field's
 setter triggers a blocking modal dialog, the EDT blocks, the MCP
 server blocks, and the client blocks — nobody can dismiss the
-dialog (the same deadlock DR-006 was created to prevent).
+dialog (the same deadlock DR-fire-and-forget-dispatch was created to prevent).
 
 **Problem 3: the bootstrap paradox.** The AI cannot determine
 *a priori* whether a form is "simple" (safe for batch filling)
@@ -1567,11 +1600,12 @@ pure fire-and-forget design explored here.
   cannot even detect when the tool failed, let alone recover.
   Documentation helps only when the failure is observable.
 
-## DR-019 — Snapshot suppresses children of iconified Frames
+---
+
+## DR-iconified-children-hidden — Snapshot suppresses children of iconified Frames (2026-04-16)
 
 **Status:** Implemented
 **Applies to:** T-002 (swing_snapshot), SC-8
-**Decided:** 2026-04-16
 
 **Motivation.** UX feedback from an AI-client session: when a
 `JFrame` is iconified (minimized), `swing_screenshot` still renders
@@ -1605,7 +1639,7 @@ costs nothing).
 
 **Scope.** Applies only to top-level `Frame`/`JFrame`. Does not
 apply to `JInternalFrame` — iconified internal frames are already
-handled by SC-5 / DR-008 (replaced by `JDesktopIcon` in the
+handled by SC-5 / DR-desktop-icon-as-itself (replaced by `JDesktopIcon` in the
 accessibility tree).
 
 **`swing_screenshot` is unchanged.** The screenshot tool continues

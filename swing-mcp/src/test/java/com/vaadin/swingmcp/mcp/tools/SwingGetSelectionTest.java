@@ -500,7 +500,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenu() throws Exception {
-        // DR-012: JMenu has no ref; register under a test ref to exercise the tool error path.
+        // DR-jmenu-not-clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);

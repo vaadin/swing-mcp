@@ -59,7 +59,7 @@ class SwingIconifyScreenTest extends AbstractScreenTest {
 
     /**
      * Calls swing_iconify and drains the EDT so the fire-and-forget invokeLater has run.
-     * Returns the tool's success Content (DR-010 echo) so callers can assert on it.
+     * Returns the tool's success Content (DR-dispatched-echo echo) so callers can assert on it.
      */
     private MCPProtocol.Content iconify(int ref) throws Exception {
         MCPProtocol.Content result = executeOnEDT(
@@ -285,7 +285,7 @@ class SwingIconifyScreenTest extends AbstractScreenTest {
         MCPProtocol.Content result = iconify(ref);
 
         assertEquals("Dispatched iconify on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText(),
-                "DR-010: tool returns echo on dispatch even when listener vetoes");
+                "DR-dispatched-echo: tool returns echo on dispatch even when listener vetoes");
         // Frame should still be showing, not iconified
         assertFalse(iframe.isIcon(), "vetoed iconify should leave frame non-iconified");
         assertTrue(iframe.isShowing(), "vetoed iconify should leave frame showing");

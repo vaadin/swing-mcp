@@ -18,7 +18,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Generic forwarding-proxy factory (DR-012). Builds an {@link MCPHandler}
+ * Generic forwarding-proxy factory (DR-forwarding-proxy). Builds an {@link MCPHandler}
  * whose tool functions forward {@code tools/call} requests to an upstream
  * MCP server reachable over HTTP, while {@code tools/list} answers locally
  * from a static descriptor manifest.
@@ -47,7 +47,7 @@ import java.util.logging.Logger;
  *   <li>First {@code tools/call}: lazy {@code initialize}, then a
  *       symmetric drift probe ({@code listTools()} compared against the
  *       supplied {@link ToolDescriptor} list as a set keyed by name,
- *       structural equality on each entry per DR-014). Mismatch → cache
+ *       structural equality on each entry per DR-structural-schema-equality). Mismatch → cache
  *       {@code messages.driftMessage()} as a permanent error for this
  *       session. {@code IOException} → return
  *       {@code messages.upstreamDownMessage()} but <em>do not</em> mark
@@ -65,13 +65,13 @@ import java.util.logging.Logger;
  * </ul>
  *
  * <p>Single-session by default with new-wins supersede on conflict
- * (DR-015) — the intended consumer is a stdio process spawned by an
+ * (DR-supersede-sessions) — the intended consumer is a stdio process spawned by an
  * MCP client like Claude Code, where a stale session left behind by a
  * crashed client must be replaceable immediately. Callers that need a
  * different policy can override it via {@link MCPHandler#setAcceptNewSession}
  * <em>before</em> the first session is accepted (the factory has not
  * yet been wired into a transport at that point — the listener-lockdown
- * rule from DR-013 lets caller customize then).
+ * rule from DR-settable-listeners lets caller customize then).
  */
 public final class MCPProxy {
 
@@ -85,7 +85,7 @@ public final class MCPProxy {
 
     /**
      * Tombstone reason returned to a displaced client when a fresh
-     * {@code initialize} supersedes an existing session (DR-015). The
+     * {@code initialize} supersedes an existing session (DR-supersede-sessions). The
      * proxy is single-session: a typical cause is the upstream MCP
      * client (e.g. Claude Code) reconnecting after a crash without
      * having sent a clean DELETE for its previous session. The text
@@ -112,7 +112,7 @@ public final class MCPProxy {
      *                    tool names.
      * @param upstreamUrl URL of the upstream MCP HTTP server (typically
      *                    {@code http://127.0.0.1:<port>/mcp})
-     * @param messages    the four pre-formatted error strings (DR-012)
+     * @param messages    the four pre-formatted error strings (DR-forwarding-proxy)
      * @return a fully-wired single-session {@code MCPHandler}; the
      *         caller wraps it in a transport (typically
      *         {@link StdioMCPServer}) and runs it
@@ -151,7 +151,7 @@ public final class MCPProxy {
         List<ToolDescriptor> manifest = List.copyOf(tools);
 
         MCPHandler handler = new MCPHandler(serverInfo, instructions);
-        // DR-015: supersede on conflict — a fresh client replaces a stale one.
+        // DR-supersede-sessions: supersede on conflict — a fresh client replaces a stale one.
         handler.setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(existing, EVICTION_REASON));
         handler.setOnSessionStarted(session -> {
             ProxySessionState state = new ProxySessionState(new TinyMCPClient(upstreamUrl));

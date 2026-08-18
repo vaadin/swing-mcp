@@ -119,7 +119,7 @@ public class SwingDragTool extends AbstractSwingTool {
             dispatchViaSynthetic(source, target, waypoints);
         }
 
-        // BR-10: DR-010 success echo
+        // BR-10: DR-dispatched-echo success echo
         return echo(sourceRef, "ref=" + targetRef);
     }
 

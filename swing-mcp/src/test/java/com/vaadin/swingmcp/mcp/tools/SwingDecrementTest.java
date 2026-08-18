@@ -104,7 +104,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
     void decrementSpinnerNumberModelAtMinimumIsNoOp() throws Exception {
         // Spinner already at min: the EDT action is a silent no-op
         // (SpinnerNumberModel.getPreviousValue() returns null at min).
-        // The tool still returns the DR-010 echo because it only confirms dispatch.
+        // The tool still returns the DR-dispatched-echo echo because it only confirms dispatch.
         JSpinner spinner = new JSpinner(new SpinnerNumberModel(0, 0, 10, 1));
         snapshot(spinner);
         int ref = context.getRefOf(spinner);
@@ -116,7 +116,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
     @Test
     void decrementSpinnerDateModelAtMinimumIsNoOp() throws Exception {
         // SpinnerDateModel with start == value: getPreviousValue() returns null,
-        // EDT action is a no-op. Tool still returns DR-010 echo on dispatch.
+        // EDT action is a no-op. Tool still returns DR-dispatched-echo echo on dispatch.
         Date min = new Date(1_000_000L);
         SpinnerDateModel model = new SpinnerDateModel(min, min, null, Calendar.DAY_OF_MONTH);
         JSpinner spinner = new JSpinner(model);
@@ -329,7 +329,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenuBar() throws Exception {
-        // DR-012: JMenu has no ref; register under a test ref to exercise the tool error path.
+        // DR-jmenu-not-clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);

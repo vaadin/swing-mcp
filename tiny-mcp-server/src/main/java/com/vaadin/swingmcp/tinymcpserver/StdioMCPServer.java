@@ -29,12 +29,12 @@ import java.util.logging.Logger;
  * Use case: a standalone process that an MCP client (e.g. Claude Code)
  * spawns as a subprocess. There is no port to coordinate, no other code in
  * the JVM writing to stdout, and exactly one session for the lifetime of
- * the process. See DR-007.
+ * the process. See DR-stdio-transport.
  * <p>
  * The session lives as long as the process and is never evicted: stdio
  * schedules no idle-cleanup tick, because the transport carries no session
  * id for a client to notice going stale, so a client would never
- * re-initialize and the process would be wedged for good (DR-016).
+ * re-initialize and the process would be wedged for good (DR-stdio-never-evicts).
  * <p>
  * Lifecycle:
  * <ol>
@@ -71,7 +71,7 @@ public class StdioMCPServer {
      * {@link #runStdio}. When {@code out == System.out}, this writer
      * captures the original stdout reference; the global {@code System.out}
      * is then redirected to {@code System.err} so stray prints from tools
-     * or libraries cannot corrupt the wire framing. See DR-007.
+     * or libraries cannot corrupt the wire framing. See DR-stdio-transport.
      */
     private BufferedWriter writer;
 
@@ -111,7 +111,7 @@ public class StdioMCPServer {
      * If {@code out} is the JVM's {@code System.out}, the writer captures
      * the original reference and global {@code System.out} is redirected to
      * {@code System.err} so stray {@code System.out.println} calls from
-     * tools or third-party libraries cannot corrupt the framing. See DR-007.
+     * tools or third-party libraries cannot corrupt the framing. See DR-stdio-transport.
      * <p>
      * Notifications (JSON-RPC requests with no {@code id}) produce no
      * response. Malformed input, unknown methods, and other protocol errors
@@ -125,7 +125,7 @@ public class StdioMCPServer {
         if (out == System.out) {
             // Capture the real stdout for the protocol writer, then divert
             // System.out so accidental println calls hit stderr instead of
-            // the wire. Per DR-007, no auto-restore on shutdown — stdio-mode
+            // the wire. Per DR-stdio-transport, no auto-restore on shutdown — stdio-mode
             // processes exit when stdin closes.
             System.setOut(new PrintStream(System.err, true, StandardCharsets.UTF_8));
         }
@@ -227,7 +227,7 @@ public class StdioMCPServer {
             // cannot act on it.
             throw new IllegalStateException("Stdio session " + currentSession.getId()
                     + " is closed but the read loop is still dispatching. A stdio session must"
-                    + " live as long as its process; see DR-016.");
+                    + " live as long as its process; see DR-stdio-never-evicts.");
         }
         return currentSession.handlePost(request, Collections.emptyMap());
     }

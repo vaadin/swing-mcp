@@ -75,7 +75,7 @@ public class SwingSetValueTool extends AbstractSwingTool {
 
         // BR-04: fire-and-forget dispatch
         SwingUtilities.invokeLater(() -> av.setCurrentAccessibleValue(convertedValue));
-        // BR-09: DR-010 success echo — echo post-conversion value
+        // BR-09: DR-dispatched-echo success echo — echo post-conversion value
         return echo(ref, renderEchoNumber(convertedValue));
     }
 

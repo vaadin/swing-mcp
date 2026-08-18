@@ -40,7 +40,7 @@ public class SwingMCP {
 
     /**
      * Tombstone reason returned to a displaced MCP client when a fresh
-     * one connects (DR-015). The Swing MCP server only serves one
+     * one connects (DR-supersede-sessions). The Swing MCP server only serves one
      * client at a time, so a new {@code initialize} always supersedes
      * the previous session. The text below is what the displaced client
      * sees verbatim in the 404 body of its next call, so it explains
@@ -66,7 +66,7 @@ public class SwingMCP {
         MCPProtocol.Implementation serverInfo = new MCPProtocol.Implementation();
         serverInfo.setName(SwingTools.SERVER_NAME);
         serverInfo.setVersion(SwingTools.SERVER_VERSION);
-        // Single-session policy with new-wins supersede (DR-015): a new
+        // Single-session policy with new-wins supersede (DR-supersede-sessions): a new
         // initialize evicts any existing session, so a stale client that
         // exited without closing its session can be replaced immediately
         // by a fresh one.

@@ -28,7 +28,7 @@ The MCP server supports two transports, picked once per instance:
 The two transports cover two distinct lifecycles. In-process embedding
 (HTTP) cannot use stdio because the host application owns stdout;
 standalone proxies (stdio) prefer stdio because there is no port to
-coordinate. See DR-007 for the full rationale.
+coordinate. See DR-stdio-transport for the full rationale.
 
 There is no port discovery mechanism. Usually there is exactly one Swing app
 running per machine (the one being migrated to Vaadin). Multiple Swing apps
@@ -40,7 +40,7 @@ The tiny-mcp-server subproject also ships a minimal HTTP MCP client in
 a sibling package, `com.vaadin.swingmcp.tinymcpclient`, with just enough
 surface to run a forwarding proxy: `initialize`, `listTools`,
 `callTool` (with an overload that forwards the JSON-RPC `_meta`
-object end-to-end, DR-013), `close`. The `MCPClient` interface is the
+object end-to-end, DR-settable-listeners), `close`. The `MCPClient` interface is the
 public type; `TinyMCPClient` is the no-retry concrete implementation
 that throws `MCPSessionLostException` on HTTP 404 — by default the
 caller is told clearly when the session is gone, because
@@ -49,13 +49,13 @@ swing-mcp's component refs). Stateless callers can opt into
 transparent recovery via the `MCPClient.autoRetry()` default method,
 which wraps the client in an `AutoRetryMCPClient` decorator.
 Resources and prompts are not in the initial client surface — add
-when a use case asks. See DR-008.
+when a use case asks. See DR-embedded-mcp-client.
 
 ### Forwarding-proxy machinery
 
 Forwarding an MCP server over a different transport is a first-class
 capability. `MCPProxy.newHandler(toolDescriptors, upstreamUri,
-proxyMessages)` (DR-012) returns a fully-wired `MCPHandler` that
+proxyMessages)` (DR-forwarding-proxy) returns a fully-wired `MCPHandler` that
 answers `tools/list` from a static `ToolDescriptor` manifest and
 forwards every `tools/call` to an upstream MCP server via the
 embedded HTTP client. The caller wraps the returned handler in any
@@ -78,7 +78,7 @@ Three properties make the proxy usable in practice:
 - **Drift detection at first call.** When the upstream becomes
   reachable, the proxy compares its static manifest against
   upstream's `listTools()` (set-keyed by tool name, structural
-  equality on each entry per DR-014). Hard-fail symmetric on any
+  equality on each entry per DR-structural-schema-equality). Hard-fail symmetric on any
   difference — extra on either side is a deployment-version
   mismatch, and so are field-level differences. Subsequent calls
   in the same session return the cached drift error verbatim.
@@ -111,11 +111,11 @@ session is evicted by the idle-cleanup tick after 30 minutes of no
 activity, freeing the single-session slot without restarting the
 Swing app. This applies to the HTTP transport only — over stdio the
 client's death is observable directly (EOF on stdin), so there is no
-timer and a session lives as long as its process (DR-016).
+timer and a session lives as long as its process (DR-stdio-never-evicts).
 
-See DR-003, DR-005, DR-006, and DR-016 for the full session
-lifecycle, the per-method routing matrix, and the idle-eviction
-policy.
+See DR-injected-session-policy, DR-session-lifecycle-gate,
+DR-idle-session-eviction, and DR-stdio-never-evicts for the full session
+lifecycle, the per-method routing matrix, and the idle-eviction policy.
 
 ### Error handling model
 
@@ -125,7 +125,7 @@ found / invalid params / session state), and tool-layer `isError: true`
 with a recovery hint. All exception-to-response translation happens in
 a single seam in `HttpMCPServer.handleRequest`.
 
-See DR-004 for the full mapping of exception types, JSON-RPC codes,
+See DR-three-error-layers for the full mapping of exception types, JSON-RPC codes,
 and HTTP statuses.
 
 ## 1. Vision

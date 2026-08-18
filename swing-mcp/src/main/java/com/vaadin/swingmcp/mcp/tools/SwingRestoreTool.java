@@ -59,7 +59,7 @@ public class SwingRestoreTool extends AbstractSwingTool {
                 }
             });
         }
-        // BR-09: DR-010 success echo
+        // BR-09: DR-dispatched-echo success echo
         return echo(ref);
     }
 

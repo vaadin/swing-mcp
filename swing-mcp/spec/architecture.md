@@ -49,7 +49,7 @@ message that `SwingMCP` returns when its single session has been
 evicted is also sourced from that module
 (`SwingTools.SESSION_LOST_MESSAGE`), aligning the in-process server's
 wording with the proxy's locked string set (grilling Sub-item 1; the
-DR-008 example wording is updated to match).
+DR-embedded-mcp-client example wording is updated to match).
 
 The SwingMCP has a protected method which calculates which Windows are considered. Since tests can't instantiate Windows in headless mode, they will
 use JPanel instead => the method should return `List<Component>` instead.
@@ -73,11 +73,11 @@ For upcoming Swing Tools, we create an utility class AbstractSwingTool which:
    registered by `SwingMCP.registerTools()` is enforced by a unit
    test that boots `SwingMCP`, calls `listTools`, and deep-equals
    the result against `SwingTools.ALL` (using `ToolDescriptor`
-   structural equality from DR-013 / DR-014). Same test also
+   structural equality from DR-settable-listeners / DR-structural-schema-equality). Same test also
    asserts the `serverInfo` and `INSTRUCTIONS` returned by
    `initialize` match the `swing-mcp-tool-defs` constants.
    Catches manifest-vs-registration drift at developer-test time —
-   so the proxy's runtime drift probe (DR-012) only ever fires on
+   so the proxy's runtime drift probe (DR-forwarding-proxy) only ever fires on
    genuine deployment-version mismatches.
 
 Every Swing tool must extend that class. When swing tool is registered to
@@ -105,11 +105,11 @@ simultaneously would produce unpredictable, interleaved UI state.
 The wrapper function registered by `SwingMCP.registerTool` acquires a `ReentrantLock`
 (`toolLock` field on `SwingMCP`) for the entire duration of the tool call —
 from lock acquisition through the `runInEDT()` call and the `invokeLater()` dispatch (for
-mutations). Both run inside `toolLock.lock()` / `toolLock.unlock()`. Rationale (why the lock spans the whole tool call rather than just the EDT turn, and why `ReentrantLock` rather than `synchronized`) is **DR-007**.
+mutations). Both run inside `toolLock.lock()` / `toolLock.unlock()`. Rationale (why the lock spans the whole tool call rather than just the EDT turn, and why `ReentrantLock` rather than `synchronized`) is **DR-tool-call-wide-lock**.
 
 ### Fire-and-Forget Mutation Dispatch
 
-Mutation tools (those where `isMutation()` returns `true`) use a **fire-and-forget** dispatch model — rationale (modal-dialog deadlock; alternatives rejected) is **DR-006**.
+Mutation tools (those where `isMutation()` returns `true`) use a **fire-and-forget** dispatch model — rationale (modal-dialog deadlock; alternatives rejected) is **DR-fire-and-forget-dispatch**.
 
 **Dispatch model:**
 
@@ -193,7 +193,7 @@ components. The ref system is shared across all tools and follows these rules:
    swing_set_text ref=1 …  → refs invalidated
    swing_snapshot          → get fresh refs
    ```
-   Tool calls must be issued **sequentially**, not in parallel. DR-007's
+   Tool calls must be issued **sequentially**, not in parallel. DR-tool-call-wide-lock's
    `toolLock` serialises concurrent calls on the server side, so state stays
    consistent — but the second of two parallel mutations will always see a
    cleared ref map and fail with a stale-ref error. The `SwingMCP`
@@ -266,7 +266,7 @@ Action display names use lower-case underscore-separated format regardless of th
 | Display name | Components | Source type |
 |---|---|---|
 | `click` | AWT: `Button`, `MenuItem`, `Menu`, `PopupMenu` | Literal |
-| `click` | Swing: all `AbstractButton` subclasses (`JButton`, `JCheckBox`, `JRadioButton`, `JToggleButton`, `JMenuItem`, `JCheckBoxMenuItem`, `JRadioButtonMenuItem`), `JListChild`. **`JMenu` excluded** by `supportsClick` per DR-012. | UIManager |
+| `click` | Swing: all `AbstractButton` subclasses (`JButton`, `JCheckBox`, `JRadioButton`, `JToggleButton`, `JMenuItem`, `JCheckBoxMenuItem`, `JRadioButtonMenuItem`), `JListChild`. **`JMenu` excluded** by `supportsClick` per DR-jmenu-not-clickable. | UIManager |
 | `toggle_popup` | `JComboBox` | UIManager |
 | `increment`, `decrement` | `JSlider`, `JSpinner` | Static field |
 | `toggle_expand` | `JTree` non-leaf nodes | Static field |
@@ -299,7 +299,7 @@ whether to add the `click` action; `swing_click` calls `run()` inside `invokeLat
 
 Implemented in `SwingUtils.supportsClick(Accessible)`. `INTERACTIVE_ROLES` (referenced by Tier 2 below) is a constant in the same class.
 
-**Special case — `JMenu` (DR-012).** Before Tier 1 runs, `supportsClick()`
+**Special case — `JMenu` (DR-jmenu-not-clickable).** Before Tier 1 runs, `supportsClick()`
 returns `null` if the accessible is a `JMenu`. This removes `click` from
 the snapshot for menu titles (the menu's items are already directly
 clickable via their own refs, so the title click is pure duplication).
@@ -381,7 +381,7 @@ it via `SwingUtilities.invokeLater()`. No branching on which tier was used.
 
 ### Effectively Enabled Check
 
-`isEffectivelyEnabled()` does **not** walk the parent chain for real `Component` instances — it trusts each component's own `ENABLED` state-set bit. Rationale (why Swing's non-propagating `setEnabled` must be mirrored rather than "fixed") is **DR-003**.
+`isEffectivelyEnabled()` does **not** walk the parent chain for real `Component` instances — it trusts each component's own `ENABLED` state-set bit. Rationale (why Swing's non-propagating `setEnabled` must be mirrored rather than "fixed") is **DR-mirror-swing-semantics**.
 
 Two Swing quirks need explicit handling:
 
@@ -475,7 +475,7 @@ Implemented in `SwingUtils.supportsClose(Accessible)`:
 Beyond `AccessibleAction`, the accessibility API exposes further interaction capabilities via
 dedicated interfaces on `AccessibleContext`. Each interface returning non-null signals that the
 corresponding actions are available. The snapshot surfaces a capped inline preview (`text="..."` /
-`value=N`) per T-002 BR-12 (DR-013); the `swing_get_text` / `swing_get_value` tools return the
+`value=N`) per T-002 BR-12 (DR-inline-value-preview); the `swing_get_text` / `swing_get_value` tools return the
 full untruncated value when the AI needs content beyond the preview window.
 
 ### Capability → Action Mapping
@@ -495,8 +495,8 @@ Implemented in `SwingUtils`: `supportsGetText`, `supportsSetText`, `supportsGetV
 
 - **JSpinner false-positive:** `AccessibleJSpinner` returns `this` from `getAccessibleValue()` for every model type, so `supportsGetValue` also null-checks `getCurrentAccessibleValue()` — this returns `null` for `SpinnerDateModel` / `SpinnerListModel` and correctly suppresses the action.
 - **`READ_ONLY_VALUE_ROLES` — `PROGRESS_BAR` only.** A user can drag a `JScrollBar`, so it stays writable. `JProgressBar.setCurrentAccessibleValue()` actually mutates the bar at the JDK level (verified by test), but we suppress `set_value` at the tool level because progress is application-controlled, not user-controlled.
-- **`SUPPRESSED_VALUE_ROLES` includes `INTERNAL_FRAME` and `DESKTOP_ICON`.** Both expose `AccessibleValue` for the `JLayeredPane` Z-order layer — a programmatic concept, not a user-controlled value. `set_value` would silently re-layer frames. See DR-008.
-- **`supportsSetText` and `supportsGetText` are independent capabilities.** `AccessibleEditableText extends AccessibleText` makes a structural "setText implies getText" implication tempting, but `supportsGetText` answers the domain question *"does reading yield meaningful content?"* and excludes components where the accessibility API returns garbage — today `AccessibleRole.PASSWORD_TEXT` (DR-011), and in principle any write-only input (e.g. filter combo boxes that clear themselves on apply). Callers must gate `get_text` and `set_text` independently. `hasAnyAction` (ref-assignment gate) combines both via `supportsGetText || hasEditableText` so write-only text components still receive refs.
+- **`SUPPRESSED_VALUE_ROLES` includes `INTERNAL_FRAME` and `DESKTOP_ICON`.** Both expose `AccessibleValue` for the `JLayeredPane` Z-order layer — a programmatic concept, not a user-controlled value. `set_value` would silently re-layer frames. See DR-desktop-icon-as-itself.
+- **`supportsSetText` and `supportsGetText` are independent capabilities.** `AccessibleEditableText extends AccessibleText` makes a structural "setText implies getText" implication tempting, but `supportsGetText` answers the domain question *"does reading yield meaningful content?"* and excludes components where the accessibility API returns garbage — today `AccessibleRole.PASSWORD_TEXT` (DR-password-not-readable), and in principle any write-only input (e.g. filter combo boxes that clear themselves on apply). Callers must gate `get_text` and `set_text` independently. `hasAnyAction` (ref-assignment gate) combines both via `supportsGetText || hasEditableText` so write-only text components still receive refs.
 
 ### AccessibleValue — Component Behaviour
 
@@ -604,7 +604,7 @@ Other specs reference this table instead of duplicating detection logic.
 
 | Spec Action Name | Detection Method | Java Mechanism | MCP Tool | Notes |
 |---|---|---|---|---|
-| `click` | `supportsClick()` returns non-null `Runnable` | **Tier 1:** `AccessibleAction.CLICK` (AWT literal) OR `UIManager.getString("AbstractButton.clickText")` (Swing UIManager). **Tier 2 (fallback):** application-installed `MouseListener` on the underlying `Component` (framework listeners filtered by package prefix). See § 4 "Detecting Click Support" for full algorithm. **`JMenu` is excluded** — `supportsClick()` returns `null` for it per DR-012. | `swing_click` | `supportsClick()` returns a `Runnable` encapsulating the click action (Tier 1: `doAccessibleAction(i)`, Tier 2: synthetic MouseEvent sequence). Callers just check `!= null` and call `run()`. |
+| `click` | `supportsClick()` returns non-null `Runnable` | **Tier 1:** `AccessibleAction.CLICK` (AWT literal) OR `UIManager.getString("AbstractButton.clickText")` (Swing UIManager). **Tier 2 (fallback):** application-installed `MouseListener` on the underlying `Component` (framework listeners filtered by package prefix). See § 4 "Detecting Click Support" for full algorithm. **`JMenu` is excluded** — `supportsClick()` returns `null` for it per DR-jmenu-not-clickable. | `swing_click` | `supportsClick()` returns a `Runnable` encapsulating the click action (Tier 1: `doAccessibleAction(i)`, Tier 2: synthetic MouseEvent sequence). Callers just check `!= null` and call `run()`. |
 | `toggle_popup` | `supportsTogglePopup()` | `AccessibleAction.TOGGLE_POPUP` OR `UIManager.getString("ComboBox.togglePopupText")` | `swing_toggle_popup` | Toggles open/closed; AI can infer current state from snapshot |
 | `increment` | Raw `AccessibleAction` description compare | `AccessibleAction.INCREMENT` static constant | `swing_increment` | Safe to match by raw constant — `JSlider`/`JSpinner` use the static field directly, no UIManager variant exists |
 | `decrement` | Raw `AccessibleAction` description compare | `AccessibleAction.DECREMENT` static constant | `swing_decrement` | Same rationale as `increment` |
@@ -699,7 +699,7 @@ This important distinction must be mentioned in tool description, so that the AI
 
 This avoids action list noise for small lists where all children are already visible in the snapshot.
 
-**`TABLE` is excluded** — rationale is **DR-004**. At runtime, JTable is unconditionally rejected by `swing_get_cells` / `swing_get_cell_count` with an error that redirects the AI to `swing_get_items` / `swing_get_item_count`.
+**`TABLE` is excluded** — rationale is **DR-no-jtable-cells**. At runtime, JTable is unconditionally rejected by `swing_get_cells` / `swing_get_cell_count` with an error that redirects the AI to `swing_get_items` / `swing_get_item_count`.
 
 **`get_items` / `get_item_count`** operate in the **selection item index space** — the same 0-based index that `addAccessibleSelection(i)` expects. They are not listed as snapshot actions; their availability is documented in the tool descriptions and they are callable on `JList`, `JComboBox`, and any `JTable`. For JTable specifically, these are the **canonical row-access tools** (T-017 BR-09) and replace what `get_cells` would otherwise have offered. Their eligibility gate is `SwingUtils.supportsGetItems`, which accepts `JList` / `JComboBox` / `JTable` only. Two deliberate deviations from `supportsSelection`: (a) **JTable is accepted in any selection mode** (row / column / cell / no-selection) — row enumeration is read-only and does not require a working selection model; the write-path selection tools (`swing_set_selection`, `swing_clear_selection`, `swing_select_all`) keep the strict `supportsSelection` gate. (b) **JTabbedPane is rejected** — see caveat below. Discoverability caveat for JTable: a non-row-selection JTable does not carry the `single-selection` / `multi-selection` group label in the snapshot, so the AI relies on the tool description to learn that these two tools still work on it.
 

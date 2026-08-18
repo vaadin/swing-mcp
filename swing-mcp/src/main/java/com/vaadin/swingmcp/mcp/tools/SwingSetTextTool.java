@@ -58,7 +58,7 @@ public class SwingSetTextTool extends AbstractSwingTool {
         // BR-03: fire the text replacement asynchronously (fire-and-forget)
         AccessibleEditableText aet = ac.getAccessibleEditableText();
         SwingUtilities.invokeLater(() -> aet.setTextContents(text));
-        // BR-13: DR-010 success echo — same format for all text components
+        // BR-13: DR-dispatched-echo success echo — same format for all text components
         // including password fields (the agent already supplied the value).
         return echo(ref, renderEchoString(text));
     }

@@ -45,12 +45,12 @@ the natural seams in the protocol:
   `ScheduledExecutorService` (daemon threads named
   `tiny-mcp-server-N`) created in `start()` and shut down in
   `stop()`, the idle-session cleanup tick (scheduled only by the HTTP
-  transport — DR-016), and the JSON-RPC dispatch for `initialize` /
+  transport — DR-stdio-never-evicts), and the JSON-RPC dispatch for `initialize` /
   `ping` / routing to `MCPSession`. Knows nothing about HTTP or stdio framing; both
   transports drive the same handler instance. Constructor is
-  0-arg; per DR-013, the session-lifecycle listeners
+  0-arg; per DR-settable-listeners, the session-lifecycle listeners
   (`acceptNewSession` — `Function<List<MCPSession>, SessionDecision>`
-  returning `Reject` / `Accept` / `AcceptAndEvict` (DR-015),
+  returning `Reject` / `Accept` / `AcceptAndEvict` (DR-supersede-sessions),
   `onSessionStarted` and `onSessionClosed` — `Consumer<MCPSession>`)
   are configured via fluent setters
   (`setAcceptNewSession`, `setOnSessionStarted`,
@@ -58,12 +58,12 @@ the natural seams in the protocol:
   (always-accept, no-op on start/close). Setters are settable
   until the first session opens, then locked — calling any setter
   later throws `IllegalStateException`. `addTool` has an overload
-  taking `ToolDescriptor` (DR-013) for callers that already hold a
+  taking `ToolDescriptor` (DR-settable-listeners) for callers that already hold a
   descriptor (e.g. `MCPProxy`, `AbstractSwingTool`). Methods that
   fail throw `MCPServerException` rather than writing a response;
   the transport translates. The shared executor is exposed via
   `getExecutor()` for tool handlers that need short background
-  work (see DR-006), reachable from tool code via
+  work (see DR-idle-session-eviction), reachable from tool code via
   `MCPSession.getCurrent().getHandler().getExecutor()`.
 
 - **`HttpMCPServer`** — HTTP transport (formerly `TinyMCPServer`).
@@ -79,7 +79,7 @@ the natural seams in the protocol:
   `handler.start()`; `stop()` calls `handler.stop()` and tears down
   the HTTP server.
 
-- **`StdioMCPServer`** — sibling stdio transport (DR-007). Owns the
+- **`StdioMCPServer`** — sibling stdio transport (DR-stdio-transport). Owns the
   newline-delimited JSON-RPC read loop on the caller-supplied
   `InputStream` / `OutputStream`. Constructor takes `(MCPHandler)`.
   `runStdio(in, out)` calls `handler.start()`, blocks the calling
@@ -101,9 +101,9 @@ the natural seams in the protocol:
   Stateless callers opt in; stateful callers (including the swing-mcp
   proxy) deliberately do not. Minimal surface: `initialize`,
   `listTools`, `callTool` (two- and three-arg overloads — the
-  three-arg form takes a JSON-RPC `_meta` object, DR-013), `close`.
-  See DR-008.
-- **`MCPProxy`** — generic forwarding-proxy factory (DR-012).
+  three-arg form takes a JSON-RPC `_meta` object, DR-settable-listeners), `close`.
+  See DR-embedded-mcp-client.
+- **`MCPProxy`** — generic forwarding-proxy factory (DR-forwarding-proxy).
   Static `MCPProxy.newHandler(List<ToolDescriptor>, URI upstreamUrl,
   ProxyMessages)` returns a fully-wired single-session
   `MCPHandler` whose tool functions forward to the upstream MCP
@@ -117,11 +117,11 @@ the natural seams in the protocol:
   cached as a permanent error for the session. `ProxyMessages`
   carries four pre-formatted error strings (upstream-down, drift,
   session-lost, IO-mid-call) which `MCPProxy` emits verbatim — no
-  templating happens inside `tiny-mcp-server`. See DR-012 for the
+  templating happens inside `tiny-mcp-server`. See DR-forwarding-proxy for the
   full lifecycle, drift policy, and error taxonomy.
 - **`ToolDescriptor`** — public record `(name, description,
   InputSchema)` in the parent package `com.vaadin.swingmcp`
-  (currently empty, intentional — see DR-013 / Q23). The in-memory
+  (currently empty, intentional — see DR-settable-listeners / Q23). The in-memory
   contract type for a tool, distinct from the wire-shape POJO
   `MCPProtocol.Tool`. Consumed by `MCPProxy.newHandler` as the
   manifest, by `MCPHandler.addTool(ToolDescriptor, ToolFunction)`
@@ -129,7 +129,7 @@ the natural seams in the protocol:
   shared descriptor list across `swing-mcp` and
   `swing-mcp-proxy`. Equality on `ToolDescriptor` is structural
   via `MCPProtocol.InputSchema`'s structural `equals` / `hashCode`
-  (DR-014).
+  (DR-structural-schema-equality).
 - **`ProxyMessages`** — public record carrying the four
   human-readable error strings emitted by `MCPProxy` when upstream
   is down, drifting, lost the session, or threw an `IOException`
@@ -151,18 +151,18 @@ the natural seams in the protocol:
   three feature handlers. Each owns its registry and implements the
   corresponding `*/list` and `*/call|read|get` methods. Handler
   methods return the result POJO or throw `MCPServerException`; they
-  do not touch the transport (DR-010).
+  do not touch the transport (DR-transport-protocol-seam).
 - **`JsonRpcExchange`** — HTTP-transport-scoped wrapper around
   `HttpExchange` with JSON-RPC parse + response helpers. Used only by
   `HttpMCPServer`.
 - **`MCPProtocol`** — all GSON POJOs plus small JSON utilities. Also
   hosts the request records `ToolRequest`, `PromptRequest`, and
-  `ResourceRequest` (see DR-009) carrying the request key (name or
-  URI), arguments, transport headers, and the JSON-RPC `_meta` object.
-  No hand-rolled JSON anywhere else. `MCPProtocol.InputSchema` (and
-  the property descriptors it references) implements deep
-  structural `equals` / `hashCode` per DR-014 — used by `MCPProxy`'s
-  drift probe and by `ToolDescriptor` equality.
+  `ResourceRequest` (see DR-request-records) carrying the request key (name
+  or URI), arguments, transport headers, and the JSON-RPC `_meta` object. No
+  hand-rolled JSON anywhere else. `MCPProtocol.InputSchema` (and the
+  property descriptors it references) implements deep structural `equals` /
+  `hashCode` per DR-structural-schema-equality — used by `MCPProxy`'s drift
+  probe and by `ToolDescriptor` equality.
 - **`InputSchemaBuilder` / `PromptArgumentsBuilder`** — fluent builders
   for tool input schemas and prompt argument lists.
 - **`MCPParameterParser`** — parses and type-coerces incoming tool
@@ -170,7 +170,7 @@ the natural seams in the protocol:
 - **Exceptions:** `MCPServerException` (JSON-RPC protocol error, carries
   code + HTTP status), `MCPErrorResponseException` (tool-layer
   `isError: true` with a clean message), `TransportIOException` (socket
-  is dead). See DR-004.
+  is dead). See DR-three-error-layers.
 
 ### HttpMCPServer
 
@@ -183,7 +183,7 @@ binds to `127.0.0.1` only; port `0` is accepted and means "let the OS
 pick an ephemeral port" — after `start()`, `getPort()` returns the
 actual bound port.
 
-`StdioMCPServer` is the sibling stdio transport (DR-007) driving its
+`StdioMCPServer` is the sibling stdio transport (DR-stdio-transport) driving its
 own `MCPHandler` instance; HTTP and stdio are mutually exclusive per
 handler.
 
@@ -193,7 +193,7 @@ Intended lifecycle: call
 `MCPProxy.newHandler(toolDescriptors, upstreamUri, proxyMessages)` to
 get a configured `MCPHandler`, wrap it in a transport (typically
 `new StdioMCPServer(handler)`), and run the transport. There is no
-`MCPProxy` instance to hold — see DR-012 for the rationale.
+`MCPProxy` instance to hold — see DR-forwarding-proxy for the rationale.
 
 Behaviourally:
 
@@ -206,7 +206,7 @@ Behaviourally:
 - The drift probe compares the supplied `toolDescriptors` set
   against upstream's `listTools()` set, hard-fail symmetric — any
   difference (extra on either side, or same name with different
-  fields per DR-014's structural equality) caches a permanent
+  fields per DR-structural-schema-equality's structural equality) caches a permanent
   `isError` for the session.
 - Errors emitted to the LLM are the `ProxyMessages` strings,
   verbatim. Diagnostic detail (full descriptor JSONs on drift,
@@ -218,28 +218,28 @@ Behaviourally:
 A re-`initialize` from the MCP client closes the current upstream
 client and opens a new one; the next `tools/call` walks the
 lazy-init + drift-probe path again. Consistent with the
-"no hidden state across sessions" rule from DR-008.
+"no hidden state across sessions" rule from DR-embedded-mcp-client.
 
-By default the handler accepts multiple concurrent sessions. Callers
-that need a single-session policy can either reject (the
-"strict" form, `existing -> existing.isEmpty() ? new Accept() : new Reject()`,
-which surfaces as HTTP 409 + JSON-RPC `-32002`) or supersede
-(`existing -> new AcceptAndEvict(existing)`, where a fresh
-`initialize` evicts the prior session and the displaced client gets
-a tombstone-backed 404 with reason "Session superseded by a new
-client" on its next call — see DR-015). `swing-mcp` and `MCPProxy`
-both pick supersede so a stale client process can be replaced
-immediately. Sessions idle for 30 minutes are evicted by a
-background cleanup tick, which writes an
-"idle timeout" tombstone and invokes the (optional) listener
-registered via `setOnSessionClosed` the same way an explicit DELETE
-does. That tick runs for HTTP only: a stdio session is scoped to its
-process and is never evicted (DR-016). `setOnSessionStarted` (DR-013) is the
-symmetric per-session-init hook — `MCPProxy.newHandler` uses it to
-allocate per-session upstream-client state. All three setters lock
-once the first session is accepted; later calls throw
-`IllegalStateException`. See DR-003 / DR-005 / DR-006 / DR-011 /
-DR-013 for the full session lifecycle, listener API, and
+By default the handler accepts multiple concurrent sessions. Callers that
+need a single-session policy can either reject (the "strict" form, `existing
+-> existing.isEmpty() ? new Accept() : new Reject()`, which surfaces as HTTP
+409 + JSON-RPC `-32002`) or supersede (`existing -> new
+AcceptAndEvict(existing)`, where a fresh `initialize` evicts the prior
+session and the displaced client gets a tombstone-backed 404 with reason
+"Session superseded by a new client" on its next call — see
+DR-supersede-sessions). `swing-mcp` and `MCPProxy` both pick supersede so a
+stale client process can be replaced immediately. Sessions idle for 30
+minutes are evicted by a background cleanup tick, which writes an "idle
+timeout" tombstone and invokes the (optional) listener registered via
+`setOnSessionClosed` the same way an explicit DELETE does. That tick runs
+for HTTP only: a stdio session is scoped to its process and is never evicted
+(DR-stdio-never-evicts). `setOnSessionStarted` (DR-settable-listeners) is
+the symmetric per-session-init hook — `MCPProxy.newHandler` uses it to
+allocate per-session upstream-client state. All three setters lock once the
+first session is accepted; later calls throw `IllegalStateException`. See
+DR-injected-session-policy / DR-session-lifecycle-gate /
+DR-idle-session-eviction / DR-handler-as-configuration /
+DR-settable-listeners for the full session lifecycle, listener API, and
 idle-eviction policy.
 
 #### Tool registration API
@@ -253,7 +253,7 @@ registration API accepts:
 - **description** — human-readable description (string)
 - **inputSchema** — parameter schema built via a fluent builder (see below)
 - **function** — a lambda/callback that receives a `ToolRequest`
-  (DR-009: name, arguments, transport headers, JSON-RPC `_meta`) and
+  (DR-request-records: name, arguments, transport headers, JSON-RPC `_meta`) and
   returns a result
 
 Supported parameter types: `string`, `integer`, `number`, `boolean`, `array`, `object`.
@@ -321,14 +321,14 @@ The builder supports:
     must succeed transparently on the second call. A second 404 in the
     replay must surface to the caller.
 - **Loopback proxy test** stitches the two together: an HTTP
-  `HttpMCPServer` (the "real" server) with a registered tool, and a
-  stdio `HttpMCPServer` (the "proxy") whose single registered
-  forwarding `ToolFunction` uses an `MCPClient` to call upstream by
-  the request's `name`. The test drives the stdio server via piped
-  streams and verifies the round-trip — proving that DR-007 (stdio),
-  DR-008 (client), and DR-009 (request records) compose end-to-end
-  without Swing.
-- **`MCPProxy` integration tests** (DR-012) — drive the factory
+  `HttpMCPServer` (the "real" server) with a registered tool, and a stdio
+  `HttpMCPServer` (the "proxy") whose single registered forwarding
+  `ToolFunction` uses an `MCPClient` to call upstream by the request's
+  `name`. The test drives the stdio server via piped streams and verifies
+  the round-trip — proving that DR-stdio-transport (stdio),
+  DR-embedded-mcp-client (client), and DR-request-records (request records)
+  compose end-to-end without Swing.
+- **`MCPProxy` integration tests** (DR-forwarding-proxy) — drive the factory
   output through a `StdioMCPServer` against a real upstream
   `HttpMCPServer` over loopback. Required scenarios:
   - **Down-then-up.** Start the proxy without the upstream;
@@ -346,7 +346,7 @@ The builder supports:
     deployment-version mismatch is the failure mode regardless of
     which side has more.
   - **Drift on field difference.** Same name on both sides, but
-    description / schema differ. Drift detected via DR-014's
+    description / schema differ. Drift detected via DR-structural-schema-equality's
     structural equality.
   - **Session-lost mid-call.** Upstream evicts the session between
     two `tools/call`s; the second call returns
@@ -357,8 +357,8 @@ The builder supports:
     proxy returns `messages.ioMidCallMessage()`.
   - **`_meta` passthrough.** A `progressToken` set in `_meta` on
     the proxy's incoming `tools/call` reaches the upstream
-    handler's `ToolRequest._meta` unchanged (DR-013's three-arg
-    `callTool` overload).
+    handler's `ToolRequest._meta` unchanged (via the three-arg
+    `callTool` overload from DR-settable-listeners).
   - **First-call round-trip count.** Assert that the first
     `tools/call` of a fresh session triggers exactly three
     upstream HTTP requests (`initialize`, `listTools`, `callTool`)

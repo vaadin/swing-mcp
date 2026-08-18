@@ -33,13 +33,13 @@ import java.util.logging.Logger;
  * a single handler instance is paired with a single transport for one
  * lifecycle cycle.
  * <p>
- * Per DR-007, stdio is single-session by definition; HTTP is multi-session
- * with sessions keyed by {@code Mcp-Session-Id} (DR-005). The handler
+ * Per DR-stdio-transport, stdio is single-session by definition; HTTP is multi-session
+ * with sessions keyed by {@code Mcp-Session-Id} (DR-session-lifecycle-gate). The handler
  * itself is multi-session capable; the {@code acceptNewSession} policy
- * (DR-015) lets a caller (e.g. swing-mcp's {@code SwingMCP}) clamp the
+ * (DR-supersede-sessions) lets a caller (e.g. swing-mcp's {@code SwingMCP}) clamp the
  * session count and decide whether to reject or supersede on conflict.
  * <p>
- * Per DR-013, the three session-lifecycle listeners are settable until
+ * Per DR-settable-listeners, the three session-lifecycle listeners are settable until
  * the first session is accepted, then locked — calling any setter
  * afterwards throws {@link IllegalStateException}. This matches the
  * "one handler, one transport, one lifecycle cycle" rule while letting
@@ -82,7 +82,7 @@ public class MCPHandler {
 
     /**
      * Session-lifecycle listeners. Settable via fluent setters until the
-     * first session is accepted, then locked (DR-013). Defaults are no-op
+     * first session is accepted, then locked (DR-settable-listeners). Defaults are no-op
      * (always accept, do nothing on start/close).
      */
     private volatile Function<List<MCPSession>, SessionDecision> acceptNewSession =
@@ -112,7 +112,7 @@ public class MCPHandler {
      * the generic "Session not found." Bounded LRU — entries roll off
      * when the cap is exceeded. Supersede tombstones carry the
      * {@link SessionDecision.AcceptAndEvict#evictionReason()} from the
-     * decision that evicted them. (DR-015)
+     * decision that evicted them. (DR-supersede-sessions)
      */
     static final String IDLE_REASON = "Session expired (idle timeout)";
     private final BoundedLRUMap<String, String> tombstones = new BoundedLRUMap<>(64);
@@ -142,7 +142,7 @@ public class MCPHandler {
         this.instructions = instructions;
     }
 
-    // ===== Session-lifecycle listener setters (DR-013) =====
+    // ===== Session-lifecycle listener setters (DR-settable-listeners) =====
 
     /**
      * Sets the policy consulted on every {@code initialize} to decide
@@ -256,7 +256,7 @@ public class MCPHandler {
     }
 
     /**
-     * Registers a tool from a {@link ToolDescriptor} (DR-013). This is the
+     * Registers a tool from a {@link ToolDescriptor} (DR-settable-listeners). This is the
      * primary registration form; the four-arg overload constructs a
      * descriptor and delegates here.
      *
@@ -354,7 +354,7 @@ public class MCPHandler {
      * Only a transport that cannot observe its client's death needs this —
      * HTTP, where a vanished client would otherwise hold its session slot
      * forever. A process-scoped session must not be evicted at all; see
-     * {@link StdioMCPServer} (DR-016).
+     * {@link StdioMCPServer} (DR-stdio-never-evicts).
      *
      * @throws IllegalStateException if {@link #start()} has not run
      */
@@ -420,7 +420,7 @@ public class MCPHandler {
      * {@code null} if no tombstone exists. Used by {@link HttpMCPServer}
      * to produce a specific 404 message instead of the generic "Session
      * not found." Tombstones are kept in a bounded LRU; older entries
-     * roll off and revert to the generic message. (DR-015)
+     * roll off and revert to the generic message. (DR-supersede-sessions)
      */
     String getTombstoneReason(String id) {
         if (id == null) return null;
@@ -487,7 +487,7 @@ public class MCPHandler {
 
     void notifySessionClosed(MCPSession session) {
         // Wrap in runListenerHook so the listener can safely read
-        // attributes populated by onSessionStarted (DR-013).
+        // attributes populated by onSessionStarted (DR-settable-listeners).
         session.runListenerHook(() -> onSessionClosed.accept(session));
     }
 
@@ -543,7 +543,7 @@ public class MCPHandler {
             String sessionId = UUID.randomUUID().toString();
             session = new MCPSession(sessionId, toolHandler, resourceHandler, promptHandler, this);
             sessions.put(sessionId, session);
-            // DR-013: lock listener setters now that a session has been
+            // DR-settable-listeners: lock listener setters now that a session has been
             // placed in the map. Any subsequent setter call fails fast.
             firstSessionAccepted = true;
         }

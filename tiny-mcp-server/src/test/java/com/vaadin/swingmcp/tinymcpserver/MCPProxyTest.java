@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Integration tests for {@link MCPProxy} (DR-012). Covers the
+ * Integration tests for {@link MCPProxy} (DR-forwarding-proxy). Covers the
  * scenarios listed in {@code tiny-mcp-server/spec/architecture.md}:
  * upstream-down, drift (symmetric), session-lost, IO mid-call,
  * {@code _meta} passthrough, and the static {@code tools/list}.
@@ -337,7 +337,7 @@ class MCPProxyTest {
         assertEquals(2, upstreamCallToolCount.get());
     }
 
-    // ===== Single-session policy by default (supersede on conflict, DR-015) =====
+    // ===== Single-session policy by default (supersede on conflict, DR-supersede-sessions) =====
 
     @Test
     void proxyIsSingleSessionByDefault() throws IOException {
@@ -350,7 +350,7 @@ class MCPProxyTest {
         TinyMCPClient first = new TinyMCPClient(URI.create(proxy.getUrl()));
         first.initialize();
 
-        // Second client: also succeeds, evicting the first (DR-015 supersede).
+        // Second client: also succeeds, evicting the first (DR-supersede-sessions supersede).
         try (TinyMCPClient second = new TinyMCPClient(URI.create(proxy.getUrl()))) {
             second.initialize();
             // The first client's next call is rejected with the supersede tombstone.

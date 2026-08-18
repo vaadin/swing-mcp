@@ -53,7 +53,7 @@ public final class SwingUtils {
             AccessibleRole.PAGE_TAB,
             // JInternalFrame and JDesktopIcon expose AccessibleValue for the
             // JLayeredPane Z-order layer — a programmatic concept, not a
-            // user-controlled value. See DR-008.
+            // user-controlled value. See DR-desktop-icon-as-itself.
             AccessibleRole.INTERNAL_FRAME,
             AccessibleRole.DESKTOP_ICON
     );
@@ -124,13 +124,13 @@ public final class SwingUtils {
      * @see <a href="architecture.md">architecture.md § 4 — Detecting Click Support</a>
      */
     public static Runnable supportsClick(Accessible a) {
-        // --- DR-012: JMenu is a structural container, not a click target ---
+        // --- DR-jmenu-not-clickable: JMenu is a structural container, not a click target ---
         // The JMenu's JMenuItem children are already directly clickable via
         // their own refs; exposing click on the menu title would only add
         // duplication (open popup surfaces the same items a second time),
         // round-trips (click menu → snapshot → click item), and a broken
         // toggle (doClick opens on the first call but not on subsequent ones).
-        // See decisions.md § DR-012.
+        // See decisions.md § DR-jmenu-not-clickable.
         if (a instanceof JMenu) {
             return null;
         }
@@ -211,16 +211,16 @@ public final class SwingUtils {
      * <p>This is not merely a structural "exposes {@link AccessibleText}" check.
      * Two role-based exclusions apply:
      * <ul>
-     *   <li>{@link AccessibleRole#PASSWORD_TEXT} (DR-011) — the JDK returns
+     *   <li>{@link AccessibleRole#PASSWORD_TEXT} (DR-password-not-readable) — the JDK returns
      *       echo characters rather than the real password. Returning echo
      *       chars to the AI is misleading and leaks password length.</li>
-     *   <li>{@link AccessibleRole#LABEL} (DR-015) — HTML-backed {@code JLabel}s
+     *   <li>{@link AccessibleRole#LABEL} (DR-label-not-readable) — HTML-backed {@code JLabel}s
      *       accidentally expose {@link AccessibleText} via the JDK's HTML
      *       rendering plumbing, while plain JLabels do not. Excluding the
      *       role uniformly gives every LABEL-role accessible (JLabel, JList
      *       cell, JTree node, and custom LABEL-role components) the same
      *       surface: no {@code get_text}, read the content from the snapshot
-     *       name slot. See DR-015 for the full rationale.</li>
+     *       name slot. See DR-label-not-readable for the full rationale.</li>
      * </ul>
      * Other components whose accessibility-API read yields garbage
      * (e.g. filter combo boxes that clear themselves on apply) may be added
@@ -237,9 +237,9 @@ public final class SwingUtils {
         AccessibleContext ac = a.getAccessibleContext();
         if (ac == null) return false;
         AccessibleRole role = ac.getAccessibleRole();
-        // DR-011: password-role accessibles return echo chars, not real content.
+        // DR-password-not-readable: password-role accessibles return echo chars, not real content.
         if (AccessibleRole.PASSWORD_TEXT.equals(role)) return false;
-        // DR-015: LABEL-role content is redundant with the snapshot name slot;
+        // DR-label-not-readable: LABEL-role content is redundant with the snapshot name slot;
         // excluding here uniformises JLabel behaviour across plain and HTML forms.
         if (AccessibleRole.LABEL.equals(role)) return false;
         return ac.getAccessibleText() != null;
@@ -248,7 +248,7 @@ public final class SwingUtils {
     /**
      * Returns {@code true} if the accessible's role is
      * {@link AccessibleRole#PASSWORD_TEXT} — i.e. {@link javax.swing.JPasswordField}
-     * or any component that adopts the password role. Per DR-011, password-role
+     * or any component that adopts the password role. Per DR-password-not-readable, password-role
      * accessibles must not advertise {@code get_text} and {@code swing_get_text}
      * must refuse to read them. Used directly by {@code SwingGetTextTool} to
      * emit the dedicated error message distinct from the generic "does not
@@ -754,7 +754,7 @@ public final class SwingUtils {
     /**
      * Sanitises a string for emission inside a double-quoted snapshot slot —
      * the {@code "name"} slot, the {@code "description"} slot, and the
-     * {@code text="..."} inline preview (BR-13 / DR-014).
+     * {@code text="..."} inline preview (BR-13 / DR-quoted-slot-sanitizing).
      *
      * <p>The helper:
      * <ol>
@@ -773,7 +773,7 @@ public final class SwingUtils {
      * </ol>
      *
      * <p>Backslashes are <strong>not</strong> escaped — a literal {@code \}
-     * passes through unchanged. See DR-014 "Alternatives considered" for
+     * passes through unchanged. See DR-quoted-slot-sanitizing "Alternatives considered" for
      * why full JSON-style escaping was rejected. Consequence: running the
      * sanitiser twice is <em>not</em> a no-op — the second pass would
      * double-escape quotes (so {@code say "hi"} → {@code say \"hi\"} →
@@ -1379,7 +1379,7 @@ public final class SwingUtils {
      * <p>Returns {@code ""} if the accessible exposes no {@link AccessibleText},
      * its content is empty, or the JDK returns {@code null} for any character
      * — matching what the user sees for an empty
-     * {@link javax.swing.JTextField}. Per T-002 BR-12 / DR-013, used both by
+     * {@link javax.swing.JTextField}. Per T-002 BR-12 / DR-inline-value-preview, used both by
      * the snapshot inline preview and by {@code swing_get_text} so the two
      * paths share a single read.
      *
@@ -1433,7 +1433,7 @@ public final class SwingUtils {
      * the raw {@link Number} from the JDK — apply {@link #serializeNumber} to
      * convert to an int/long/double for output formatting.
      *
-     * <p>Per T-002 BR-12 / DR-013, used both by the snapshot inline preview
+     * <p>Per T-002 BR-12 / DR-inline-value-preview, used both by the snapshot inline preview
      * and by {@code swing_get_value} so the two paths share a single read.
      *
      * @throws IllegalStateException if the accessible does not expose a

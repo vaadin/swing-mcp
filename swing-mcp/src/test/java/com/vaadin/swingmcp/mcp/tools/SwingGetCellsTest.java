@@ -486,7 +486,7 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         assertFalse(com.vaadin.swingmcp.mcp.SwingUtils.isGetCellsSupported(mb));
     }
     @Test void componentMatrix_JMenu() throws Exception {
-        // DR-012: JMenu has no ref; register under a test ref to exercise the tool error path.
+        // DR-jmenu-not-clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenu m = new JMenu("File");
         m.add(new JMenuItem("Open"));
         context.putRef(99, (javax.accessibility.Accessible) m);

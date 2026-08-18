@@ -1,22 +1,68 @@
 # Decisions
 
-Cross-cutting design decisions for `tiny-mcp-server`. Each record captures
-**what** was chosen, **why**, and the **alternatives** that were considered
-and rejected.
+Cross-cutting design decisions for `tiny-mcp-server` — **what** was chosen,
+**why**, and the **alternatives** that were considered and rejected. The
+rejected roads are the most valuable thing in here: `architecture.md` describes
+the server as it is, and only this file records the forks — which cheaper-looking
+design was tried, and why it lost.
 
-> **When to read this file:** when a use case or implementation note references
-> `DR-NNN`, or when you're revisiting a choice that spans multiple use cases.
->
-> **When to update:** whenever a cross-cutting choice is made, revised, or
-> rejected. Keep entries short — the full narrative belongs in the session that
-> produced the decision; this file is the durable summary. Status lifecycle:
-> **Proposed** → **Accepted** → **Superseded** (link forward to the replacement).
+**When to read.** When a use case or an implementation note cites a
+`DR-<slug>`, or when you are about to revisit a choice that spans multiple
+use cases. Never read the file wholesale — `grep '^## DR-' decisions.md` is
+the index, and there is deliberately no table of contents to drift out of
+sync with it.
+
+**Scope boundary.** This file owns the MCP core: transports, sessions,
+JSON-RPC, the client, and the forwarding proxy. Swing-specific decisions —
+snapshot shape, tool semantics, EDT dispatch — live in
+[`swing-mcp/spec/decisions.md`](../../swing-mcp/spec/decisions.md). Slugs are
+unique across both files, so either file can cite the other's slug (e.g.
+`DR-fire-and-forget-dispatch`) without ambiguity.
+
+**Format.** One entry per decision, headed
+`## DR-<slug> — <headline> (<decided date>)`. The ID is a slug — `DR-` plus a
+1–4-word kebab hint at the subject (`DR-stdio-never-evicts`) — so a citation
+carries meaning on its own; there are no `DR-NNN` numbers to look up. The date
+is *decided* provenance, not a log position: git owns the edit history, so never
+narrate how an entry used to read. Each entry carries a `**Status:**` line —
+**Proposed** → **Accepted** → **Implemented**, plus **Deferred** for a design
+explored and shelved and **Superseded by DR-\<slug\>** for a tombstone — and an
+`**Applies to:**` line naming the classes and use cases the decision binds.
+Entries that build on, refine, or amend a neighbour say so in a
+`**Refines:**` / `**Amends:**` / `**Builds on:**` line, which is what makes the
+chain greppable.
+
+**No entry without a real fork.** If nothing was seriously considered and
+rejected, it is not a decision — it is how the thing works, and that belongs in
+`architecture.md`. This is the guard against a diary.
+
+**Entries are mutable — edit in place, never append addendums.** Each entry is
+the single coherent home for one *live* decision; keep it current as the
+decision is refined or extended instead of bolting a dated amendment onto the
+end. Two things this does **not** license:
+
+- **The roads not taken stay.** "We chose X, rejected Y because Z" is live
+  content of the current decision, not stale history — never edit it away.
+- **A reversed *shipped* decision forks a tombstone; it is not overwritten.**
+  When a design was built and then thrown out, leave the old entry as the scar,
+  set its `**Status:**` to **Superseded by DR-\<slug\>**, and write the
+  replacement fresh. A decision that is merely *narrowed* is amended in place
+  and says so — worked example: `DR-idle-session-eviction` keeps its entry and
+  points forward at `DR-stdio-never-evicts`, which narrowed it to the HTTP
+  transport. The line: *refined, narrowed, or extended* → edit in place;
+  *reversed after shipping* → tombstone plus a new entry.
+
+**Ordering is chronological, oldest first**, so the refines / amends chains read
+forward.
+
+**Grep tripwire.** Every `DR-<slug>` cited anywhere in the repo must exist as a
+`^## DR-` heading here or in `swing-mcp/spec/decisions.md`.
 
 ---
 
-## DR-001 — HTTP transport, localhost binding, no auth
+## DR-localhost-http-no-auth — HTTP transport, localhost binding, no auth (2026-04-14)
 
-**Status:** Accepted (stdio scope amended by DR-007)
+**Status:** Accepted (stdio scope amended by DR-stdio-transport)
 **Applies to:** HttpMCPServer, all use cases
 
 **Decision.** The HTTP transport supports POST + DELETE (no SSE) bound to
@@ -33,14 +79,14 @@ local security.
   expands to remote use cases.
 
 **History.** Originally also rejected stdio outright, on the grounds that
-the in-process Swing app owns stdout. DR-007 reinstates stdio for a
+the in-process Swing app owns stdout. DR-stdio-transport reinstates stdio for a
 distinct use case — a standalone process spawned by an MCP client where
 no other code writes to stdout. The localhost-HTTP-no-auth decision above
 is unchanged.
 
 ---
 
-## DR-002 — GSON only, no official MCP SDK at runtime
+## DR-gson-only — GSON only, no official MCP SDK at runtime (2026-04-14)
 
 **Status:** Accepted
 **Applies to:** all use cases, MCPProtocol, HttpMCPServer
@@ -67,9 +113,10 @@ requires a servlet container — both are large dependency subtrees.
 
 ---
 
-## DR-003 — Single-session policy as a constructor-injected predicate
+## DR-injected-session-policy — Single-session policy as a constructor-injected predicate (2026-04-14)
 
-**Status:** Accepted (mechanism revised by DR-011; conflict-resolution superseded by DR-015)
+**Status:** Accepted (mechanism revised by DR-handler-as-configuration;
+conflict-resolution superseded by DR-supersede-sessions)
 **Applies to:** MCPHandler session handling, swing-mcp `SwingMCP`
 
 **Decision.** `MCPHandler` itself is multi-session capable: it keeps a
@@ -90,7 +137,7 @@ single-threaded EDT. Pure `MCPHandler` instances (e.g. its own unit
 tests) happily run multiple sessions in parallel.
 
 If an AI agent crashes without sending a DELETE, the session is
-evicted by the idle-cleanup tick (DR-006) after 30 minutes of no
+evicted by the idle-cleanup tick (DR-idle-session-eviction) after 30 minutes of no
 activity. For the single-session caller, that frees the slot
 automatically without restarting the Swing app.
 
@@ -102,10 +149,10 @@ work around them. A pluggable predicate keeps the base class general
 while letting `SwingMCP` express its own constraint in one line.
 
 **History.** Originally implemented as a `protected boolean
-acceptNewSession()` subclass hook on `TinyMCPServer`. DR-011 replaced
-the subclass hook with a constructor-injected `IntPredicate` on
-`MCPHandler`, so callers compose the policy in rather than extending
-the transport class.
+acceptNewSession()` subclass hook on `TinyMCPServer`.
+DR-handler-as-configuration replaced the subclass hook with a
+constructor-injected `IntPredicate` on `MCPHandler`, so callers compose the
+policy in rather than extending the transport class.
 
 **Alternatives considered.**
 - **Bake single-session into `MCPHandler`.** Rejected — forces
@@ -116,16 +163,17 @@ the transport class.
   adds complexity for a scenario that doesn't arise in normal use. The
   blocked agent would hang indefinitely if the first session is stuck.
 - **Idle timeout to auto-release stuck sessions.** Accepted — see
-  DR-006. Sessions idle for 30 minutes are evicted by a background
+  DR-idle-session-eviction. Sessions idle for 30 minutes are evicted by a background
   cleanup tick, so a crashed client no longer blocks the single-session
   slot until the Swing app is restarted.
 
 ---
 
-## DR-004 — Three-layer error handling model
+## DR-three-error-layers — Three-layer error handling model (2026-04-14)
 
 **Status:** Accepted
-**Applies to:** HttpMCPServer, MCPSession, all tool / resource / prompt implementations
+**Applies to:** HttpMCPServer, MCPSession, all tool / resource / prompt
+implementations
 
 **Decision.** Errors surface in one of three layers, chosen by what kind of
 failure it is and which handler caught it. All exception-to-response
@@ -157,7 +205,7 @@ Typical codes and their HTTP status:
 | `METHOD_NOT_FOUND` | -32601 | 200 | `MCPSession` dispatch, handler lookups |
 | `INVALID_PARAMS` | -32602 | 200 | tool/resource/prompt input validation |
 | `INTERNAL_ERROR` | -32603 | 200 | resource/prompt handler wrapped a generic `Exception` |
-| `SERVER_NOT_INITIALIZED` | -32002 | 400 / 404 / 409 | session lifecycle (DR-005), second-session rejection (DR-003) |
+| `SERVER_NOT_INITIALIZED` | -32002 | 400 / 404 / 409 | session lifecycle (DR-session-lifecycle-gate), second-session rejection (DR-injected-session-policy) |
 | `INTERNAL_ERROR` | -32603 | **500** | catch-all for unexpected `RuntimeException` leaked from server internals (see below) |
 
 ### Layer 3 — Tool application error (`isError: true` content, HTTP 200)
@@ -240,7 +288,7 @@ exception becomes bytes on the wire.
 
 ---
 
-## DR-005 — Session lifecycle gate
+## DR-session-lifecycle-gate — Every POST is validated against the session map before dispatch (2026-04-17)
 
 **Status:** Accepted
 **Applies to:** `HttpMCPServer.handlePost`
@@ -264,11 +312,11 @@ server error, -32000..-32099 range), exposed as
 other method is routed to `MCPSession.handlePost` for the matched
 session. `initialize` ignores the incoming `Mcp-Session-Id` header
 entirely — it always tries to create a new session, subject to
-`acceptNewSession()` (DR-003). Full outcome matrix:
+`acceptNewSession()` (DR-injected-session-policy). Full outcome matrix:
 
 | `Mcp-Session-Id` header | Method | Result |
 |---|---|---|
-| absent | `initialize` | Create new session, return 200 + `Mcp-Session-Id` — or HTTP 409 if `acceptNewSession()` returns false (DR-003) |
+| absent | `initialize` | Create new session, return 200 + `Mcp-Session-Id` — or HTTP 409 if `acceptNewSession()` returns false (DR-injected-session-policy) |
 | absent | `ping` | 200 `{}` |
 | absent | anything else | HTTP 400 + JSON-RPC error |
 | present, matches a session | `initialize` | Same as absent + `initialize` — a fresh session is created; the incoming id is ignored |
@@ -301,14 +349,16 @@ distinguish `initialize`/`ping` from regular tool calls.
 
 ---
 
-## DR-006 — Idle session eviction via a shared scheduled executor
+## DR-idle-session-eviction — Idle session eviction via a shared scheduled executor (2026-04-17)
 
-**Status:** Accepted (executor ownership moved to `MCPHandler` by DR-010;
-scope narrowed to the HTTP transport by DR-016)
+**Status:** Accepted (executor ownership moved to `MCPHandler` by
+DR-transport-protocol-seam; scope narrowed to the HTTP transport by
+DR-stdio-never-evicts)
 **Applies to:** `MCPHandler`, `HttpMCPServer`, `MCPSession`
-**Supersedes the "Idle timeout" deferral in:** DR-003
-**Amended by:** DR-016 — the tick is scheduled by `HttpMCPServer.start()`,
-not by `MCPHandler.start()`; stdio never schedules it
+**Supersedes the "Idle timeout" deferral in:** DR-injected-session-policy
+**Amended by:** DR-stdio-never-evicts — the tick is scheduled by
+`HttpMCPServer.start()`, not by `MCPHandler.start()`; stdio never schedules
+it
 
 **Decision.** `MCPHandler` owns a single `ScheduledExecutorService`
 (one daemon thread, named `tiny-mcp-server-N`) created in its
@@ -316,7 +366,7 @@ not by `MCPHandler.start()`; stdio never schedules it
 `stop()` (and `StdioMCPServer.runStdio()` start/finish) delegate the
 lifecycle calls. Once per minute the executor runs a cleanup tick
 that evicts every session whose last access is older than 30 minutes
-— but only where a transport asked for one, which per DR-016 means
+— but only where a transport asked for one, which per DR-stdio-never-evicts means
 HTTP only, via `MCPHandler.scheduleIdleCleanup()`.
 The executor is exposed via `MCPHandler.getExecutor()` for tool
 handlers that need background work (debouncing, deferred cleanup,
@@ -352,7 +402,7 @@ milliseconds (`SessionCleanupTest`).
 
 **Why.**
 
-- **Stuck single-session slot.** DR-003 left the single-session
+- **Stuck single-session slot.** DR-injected-session-policy left the single-session
   subclass wedged if an AI client crashed without sending DELETE; the
   only remedy was restarting the Swing app. 30 minutes matches a
   realistic "agent walked away" window without fighting legitimate
@@ -362,14 +412,14 @@ milliseconds (`SessionCleanupTest`).
   would double the daemon-thread count and still leave tools with
   nowhere to schedule. Sharing the executor keeps the dependency
   surface minimal (a single `ScheduledExecutorService` field, no new
-  runtime libraries per DR-002) and gives tools a predictable,
+  runtime libraries per DR-gson-only) and gives tools a predictable,
   already-managed lifecycle tied to `start()` / `stop()`.
 - **`runLocked` as the chokepoint.** Refreshing the timestamp at every
   lock acquisition — rather than in `handlePost`'s entry path — means
   test-only callers that run through `runLocked` also count as
   activity, and there is a single place where "this session is alive"
   is recorded. Pairing it with the `closed`-flag check keeps the
-  post-eviction 404 consistent with DR-005's "wrong session → 404"
+  post-eviction 404 consistent with DR-session-lifecycle-gate's "wrong session → 404"
   rule without duplicating map lookups.
 - **`tryLock` over `lock`.** A blocking `lock()` in the cleanup thread
   would stall the whole cleanup pass behind any slow request, and
@@ -379,7 +429,7 @@ milliseconds (`SessionCleanupTest`).
   perspective.
 
 **Alternatives considered.**
-- **No idle eviction (DR-003 status quo).** Rejected — a crashed
+- **No idle eviction (DR-injected-session-policy status quo).** Rejected — a crashed
   single-session client requires a full Swing app restart.
 - **Separate executor purely for cleanup.** Rejected — doubles the
   background thread count without giving tools anywhere to schedule
@@ -397,11 +447,11 @@ milliseconds (`SessionCleanupTest`).
 
 ---
 
-## DR-007 — Stdio transport as a second transport mode
+## DR-stdio-transport — Stdio transport as a second transport mode (2026-04-29)
 
 **Status:** Accepted
 **Applies to:** HttpMCPServer
-**Amends:** DR-001 (the "no STDIO" half)
+**Amends:** DR-localhost-http-no-auth — the "no STDIO" half
 
 **Decision.** `HttpMCPServer` gains a second transport mode: stdio
 (newline-delimited JSON-RPC over `System.in` / `System.out`). HTTP and
@@ -416,13 +466,13 @@ in one mode and stays there for its lifetime. API shape:
   streams; production callers pass `System.in` / `System.out`.
 
 Stdio mode is **single-session by definition**. Per the MCP spec, stdio
-transport carries no `Mcp-Session-Id` header — there is exactly one
-implicit session for the lifetime of the process. Internally,
-`runStdio` creates one `MCPSession` up front (after `initialize` is
-received from the client) and routes every subsequent message through
-it. `acceptNewSession()` is consulted exactly once. The DR-005 routing
-matrix collapses: there is no "wrong session id → 404" branch, only
-"`initialize` first, then any other method".
+transport carries no `Mcp-Session-Id` header — there is exactly one implicit
+session for the lifetime of the process. Internally, `runStdio` creates one
+`MCPSession` up front (after `initialize` is received from the client) and
+routes every subsequent message through it. `acceptNewSession()` is
+consulted exactly once. The DR-session-lifecycle-gate routing matrix
+collapses: there is no "wrong session id → 404" branch, only "`initialize`
+first, then any other method".
 
 **Stdout discipline.** The stdio wire protocol owns `stdout` exclusively;
 any `System.out.println` from a tool, library, or accidental debug print
@@ -441,10 +491,10 @@ handled — the reader is `BufferedReader` with the standard size and
 relies on `readLine` rather than a fixed-buffer read.
 
 **Lifecycle.** `runStdio` returns when `in` reaches EOF. The shared
-`ScheduledExecutorService` (DR-006) is started and stopped around the
+`ScheduledExecutorService` (DR-idle-session-eviction) is started and stopped around the
 read loop the same way `start()` / `stop()` do for HTTP. Idle eviction
 is **not** scheduled: a stdio session is process-scoped, and evicting
-one is unrecoverable rather than merely useless. See DR-016, which
+one is unrecoverable rather than merely useless. See DR-stdio-never-evicts, which
 corrects the original "the machinery still runs, keeping one code path
 simplifies things" reasoning recorded here.
 
@@ -475,7 +525,7 @@ subprocess, because there is no port to coordinate.
 
 ---
 
-## DR-008 — Embedded MCP client (HTTP, minimal surface, opt-in retry)
+## DR-embedded-mcp-client — Embedded MCP client (HTTP, minimal surface, opt-in retry) (2026-04-29)
 
 **Status:** Accepted
 **Applies to:** new `com.vaadin.swingmcp.tinymcpclient` package in the
@@ -584,7 +634,7 @@ with future decorators reads left-to-right:
 ### Transport
 
 HTTP only, via `java.net.http.HttpClient` (JDK built-in, zero new
-runtime deps per DR-002). No stdio client in this round — the proxy
+runtime deps per DR-gson-only). No stdio client in this round — the proxy
 use case forwards from stdio (server side) to HTTP (client side), so
 a stdio client would only be useful for testing the stdio server. The
 loopback test instead uses the HTTP client wrapped by a stdio server,
@@ -608,7 +658,7 @@ Three exception classes, all in the new package:
 
 `CallToolResult.isError = true` is **not** an exception — it is
 returned to the caller as a normal result, mirroring the server's
-three-layer model from DR-004. The proxy then wraps it back into a
+three-layer model from DR-three-error-layers. The proxy then wraps it back into a
 tool-layer error on its own server side, preserving the message
 verbatim.
 
@@ -635,7 +685,7 @@ external SDK.
   any `MCPClient` implementation, chains with future decorators, and
   doesn't bind the convenience to one concrete class.
 - **Use the official MCP Java SDK as the client.** Rejected — pulls in
-  Jackson and a servlet container per DR-002. Already used for tests
+  Jackson and a servlet container per DR-gson-only. Already used for tests
   only; making it a runtime dep contradicts the project's whole reason
   for existing.
 - **Build the client in a separate `mcp-client` Gradle subproject.**
@@ -651,7 +701,7 @@ external SDK.
 
 ---
 
-## DR-009 — Request records carrying name, transport headers, and JSON-RPC `_meta`
+## DR-request-records — Request records carrying name, transport headers, and JSON-RPC `_meta` (2026-04-29)
 
 **Status:** Accepted
 **Applies to:** `ToolFunction`, `PromptFunction`, `ResourceFunction`
@@ -743,15 +793,15 @@ swing-mcp and not meant to be used elsewhere").
 
 ---
 
-## DR-010 — Transport-vs-protocol seam: extract `MCPHandler`
+## DR-transport-protocol-seam — Transport-vs-protocol seam: extract `MCPHandler` (2026-04-29)
 
-**Status:** Accepted (final shape set by DR-011)
+**Status:** Accepted (final shape set by DR-handler-as-configuration)
 **Applies to:** `HttpMCPServer`, `MCPHandler`, `MCPSession`,
 `MCPToolHandler`, `MCPResourceHandler`, `MCPPromptHandler`
-**Enables:** DR-007 (stdio transport)
-**Refined by:** DR-011 (`MCPHandler` becomes the public configuration
-API; transport classes drop their delegating registration methods and
-subclass hooks; `TinyMCPServer` renamed to `HttpMCPServer`).
+**Enables:** DR-stdio-transport (stdio transport)
+**Refined by:** DR-handler-as-configuration (`MCPHandler` becomes the public
+configuration API; transport classes drop their delegating registration
+methods and subclass hooks; `TinyMCPServer` renamed to `HttpMCPServer`).
 
 **Decision.** Split `HttpMCPServer` along the HTTP-vs-protocol seam. A
 new `MCPHandler` class owns everything transport-agnostic:
@@ -763,19 +813,19 @@ new `MCPHandler` class owns everything transport-agnostic:
 - the JSON-RPC dispatch for `initialize` / `ping` and routing to
   `MCPSession`.
 
-`HttpMCPServer` keeps only HTTP-specific concerns: the JDK `HttpServer`
-and its executor, request routing (POST / DELETE / 405),
-`Mcp-Session-Id` header validation, and JSON-RPC response framing via
-`JsonRpcExchange`. `HttpMCPServer.handleRequest` remains the single
-HTTP-side seam where `MCPServerException` / `TransportIOException` /
-unexpected `RuntimeException` are translated into HTTP responses
-(DR-004). After DR-011, configuration moved entirely onto `MCPHandler`
-— `HttpMCPServer` keeps only `start` / `stop` / `getPort` / `getUrl` /
-`getContextPath` / `getHandler`; the `addTool` / `addResource` /
-`addPrompt` delegates and the `acceptNewSession` / `onSessionClosed`
-protected hooks are gone, replaced by direct registration on the
-caller-supplied `MCPHandler` and constructor-injected callbacks on
-that handler.
+`HttpMCPServer` keeps only HTTP-specific concerns: the JDK `HttpServer` and
+its executor, request routing (POST / DELETE / 405), `Mcp-Session-Id` header
+validation, and JSON-RPC response framing via `JsonRpcExchange`.
+`HttpMCPServer.handleRequest` remains the single HTTP-side seam where
+`MCPServerException` / `TransportIOException` / unexpected
+`RuntimeException` are translated into HTTP responses
+(DR-three-error-layers). After DR-handler-as-configuration, configuration
+moved entirely onto `MCPHandler` — `HttpMCPServer` keeps only `start` /
+`stop` / `getPort` / `getUrl` / `getContextPath` / `getHandler`; the
+`addTool` / `addResource` / `addPrompt` delegates and the `acceptNewSession`
+/ `onSessionClosed` protected hooks are gone, replaced by direct
+registration on the caller-supplied `MCPHandler` and constructor-injected
+callbacks on that handler.
 
 **Error rendering moves above transport.** Handler methods on
 `MCPToolHandler` / `MCPResourceHandler` / `MCPPromptHandler` and on
@@ -795,7 +845,7 @@ Tool code that previously reached for the executor via
 
 **Why.** Two reasons.
 
-- **DR-007 enablement.** Stdio is single-session, has no
+- **DR-stdio-transport enablement.** Stdio is single-session, has no
   `Mcp-Session-Id` header, no HTTP status to surface, and frames
   messages as newline-delimited JSON instead of an HTTP response. None
   of those concerns belong in the registries, dispatch, or session
@@ -829,25 +879,23 @@ Tool code that previously reached for the executor via
   it would force swing-mcp's single-session subclass to extend
   `MCPHandler` instead of the transport, breaking the existing
   `extends TinyMCPServer` pattern. **Subsequently accepted by
-  DR-011**: swing-mcp's `MCPServer` was renamed to `SwingMCP`
+  DR-handler-as-configuration**: swing-mcp's `MCPServer` was renamed to `SwingMCP`
   and converted from inheritance to composition, removing the
   inheritance constraint that motivated the original rejection.
 
 ---
 
-## DR-011 — `MCPHandler` becomes the public configuration API; transports compose
+## DR-handler-as-configuration — `MCPHandler` becomes the public configuration API; transports compose (2026-04-29)
 
 **Status:** Accepted
 **Applies to:** `MCPHandler`, `HttpMCPServer` (renamed from
-`TinyMCPServer`), `StdioMCPServer`, `SwingMCP` (renamed from
-swing-mcp `MCPServer`), `ToolFunction`, `ResourceFunction`,
-`PromptFunction`
-**Refines:** DR-003 (single-session policy), DR-010 (transport-vs-
-protocol seam)
+`TinyMCPServer`), `StdioMCPServer`, `SwingMCP` (renamed from swing-mcp
+`MCPServer`), `ToolFunction`, `ResourceFunction`, `PromptFunction`
+**Refines:** DR-injected-session-policy, DR-transport-protocol-seam
 
-**Decision.** Finish the split DR-010 started: make `MCPHandler` the
-public configuration surface, and reduce the transports to thin shells
-that take a configured handler. Concretely:
+**Decision.** Finish the split DR-transport-protocol-seam started: make
+`MCPHandler` the public configuration surface, and reduce the transports to
+thin shells that take a configured handler. Concretely:
 
 - `MCPHandler` exposes `addTool` / `addResource` / `addPrompt` and
   takes the `acceptNewSession` (`IntPredicate`) and `onSessionClosed`
@@ -874,20 +922,20 @@ that take a configured handler. Concretely:
   wrapping it, and exposes the same public surface as before
   (`start()` / `stop()` / `startAndAutoStop()` / `getUrl()` etc.).
 
-**Why.** DR-010 left an asymmetry: tool registration and the
+**Why.** DR-transport-protocol-seam left an asymmetry: tool registration and the
 session-policy hooks lived on the transport, while the registries and
 session map already lived on `MCPHandler`. That meant `StdioMCPServer`
 duplicated forwarding methods, and any caller who wanted a custom
 single-session policy had to subclass the HTTP transport — a poor fit
 for stdio, where the transport has no useful surface to override.
-After DR-011, configuration is a single object (`MCPHandler`) and
+After DR-handler-as-configuration, configuration is a single object (`MCPHandler`) and
 transports are interchangeable shells.
 
-This is also what made the `acceptNewSession`/`onSessionClosed`
-constructor parameters originally rejected in DR-010 acceptable: with
-swing-mcp now composing rather than extending, "force the single-
-session caller to extend `MCPHandler`" no longer applies — they
-inject a predicate.
+This is also what made the `acceptNewSession`/`onSessionClosed` constructor
+parameters originally rejected in DR-transport-protocol-seam acceptable:
+with swing-mcp now composing rather than extending, "force the single-
+session caller to extend `MCPHandler`" no longer applies — they inject a
+predicate.
 
 **Alternatives considered.**
 - **Keep `addTool` / `addResource` / `addPrompt` as convenience
@@ -909,14 +957,14 @@ inject a predicate.
 
 ---
 
-## DR-012 — Generic MCP forwarding-proxy machinery (`MCPProxy`)
+## DR-forwarding-proxy — Generic MCP forwarding-proxy machinery (`MCPProxy`) (2026-04-29)
 
 **Status:** Accepted
-**Applies to:** new `MCPProxy` factory in `tiny-mcp-server`,
-`MCPHandler`, `MCPSession`, `MCPClient` / `TinyMCPClient`,
-`ProxyMessages`
-**Builds on:** DR-007 (stdio transport), DR-008 (HTTP client),
-DR-009 (`ToolRequest._meta`), DR-010 / DR-011 (handler is the
+**Applies to:** new `MCPProxy` factory in `tiny-mcp-server`, `MCPHandler`,
+`MCPSession`, `MCPClient` / `TinyMCPClient`, `ProxyMessages`
+**Builds on:** DR-stdio-transport (stdio transport), DR-embedded-mcp-client
+(HTTP client), DR-request-records (`ToolRequest._meta`),
+DR-transport-protocol-seam / DR-handler-as-configuration (handler is the
 configuration object)
 
 **Decision.** `tiny-mcp-server` ships a generic forwarding-proxy
@@ -948,7 +996,7 @@ returned handler as follows:
 - **`acceptNewSession = count -> count == 0`** — single-session by
   default. Stdio is one-client-per-JVM, so concurrent sessions are
   out of scope. Callers needing a non-stdio multi-session proxy can
-  override the predicate via the setter (DR-013).
+  override the predicate via the setter (DR-settable-listeners).
 - **`onSessionStarted`** — creates a per-session state object
   (`upstream = new TinyMCPClient(upstreamUrl)`,
   `initialized = false`, `driftFailure = null`) and stashes it on
@@ -975,7 +1023,7 @@ returned handler as follows:
        `messages.sessionLostMessage()` as `isError`. **Surface,
        don't auto re-initialize.** Reset `state.initialized = false`
        so the next call walks lazy-init again. (Same rationale as
-       DR-008's "no auto-retry by default": session-bound state
+       DR-embedded-mcp-client's "no auto-retry by default": session-bound state
        can't survive a fresh `initialize`.)
      - `IOException` mid-call → return
        `messages.ioMidCallMessage()` as `isError`. Reset
@@ -990,7 +1038,7 @@ returned handler as follows:
 against the supplied `tools` list as a set keyed by tool name.
 Comparison is **symmetric, hard-fail**: a tool present in either
 side but missing from the other is drift; same name with different
-fields (description, schema) is drift. Equality follows DR-014's
+fields (description, schema) is drift. Equality follows DR-structural-schema-equality's
 structural rules. Newer agent tools could mean **subtle changes in
 shared-tool behavior** even if the extra tools never reach Claude;
 treating mismatched versions as drift is the deployment failure
@@ -1005,7 +1053,7 @@ accepted (Q14).
 the *current* session. A re-`initialize` from the MCP client opens
 a fresh session: `onSessionClosed` closes the old upstream client,
 `onSessionStarted` creates a new one, the next `tools/call` walks
-lazy-init + drift probe again. Consistent with DR-008's "no hidden
+lazy-init + drift probe again. Consistent with DR-embedded-mcp-client's "no hidden
 state across sessions."
 
 **`ProxyMessages` shape.** Four pre-formatted strings, no
@@ -1035,7 +1083,7 @@ with an error explaining the situation; tell the user to start the
 upstream." Treat the server description as a first-class artifact,
 not boilerplate. (See Q29.)
 
-**Why.** The new use case (DR-007's stdio rationale) is a proxy
+**Why.** The new use case (DR-stdio-transport's stdio rationale) is a proxy
 spawned by Claude Code as a subprocess that forwards `tools/call`
 to a separately-running in-process MCP server (e.g. `SwingMCP`).
 Claude Code dispatches `tools/list` at startup and drops any MCP
@@ -1062,7 +1110,7 @@ transport.
   sees an empty list, decides the MCP is broken, stops using it.
   Worse than the "lying-list + clear `isError` body" combination.
 - **Auto-retry on `MCPSessionLostException`.** Rejected — silent
-  state loss. Same rationale as DR-008's no-auto-retry default.
+  state loss. Same rationale as DR-embedded-mcp-client's no-auto-retry default.
   The proxy's session-lost message tells the LLM exactly how to
   recover; that's better than fake success on a stale session.
 - **`Supplier<MCPClient>` parameter instead of `URI`.** Rejected
@@ -1084,20 +1132,18 @@ transport.
 
 ---
 
-## DR-013 — Settable `MCPHandler` listeners; `ToolDescriptor`; `_meta` callTool overload
+## DR-settable-listeners — Settable `MCPHandler` listeners; `ToolDescriptor`; `_meta` callTool overload (2026-04-29)
 
 **Status:** Accepted
 **Applies to:** `MCPHandler`, new `ToolDescriptor` record in
-`com.vaadin.swingmcp` (parent package), `MCPClient.callTool`
-overload
-**Refines:** DR-011 (handler-as-configuration)
+`com.vaadin.swingmcp` (parent package), `MCPClient.callTool` overload
+**Refines:** DR-handler-as-configuration
 **Supersedes:** the recent commit tightening `acceptNewSession` /
-`onSessionClosed` to non-null constructor parameters
-(`b128690 — "Require non-null acceptNewSession / onSessionClosed
-in MCPHandler"`)
+`onSessionClosed` to non-null constructor parameters (`b128690 — "Require
+non-null acceptNewSession / onSessionClosed in MCPHandler"`)
 
 **Decision.** Three coupled API extensions to `tiny-mcp-server` so
-`MCPProxy` (DR-012) can wire a handler post-construction without
+`MCPProxy` (DR-forwarding-proxy) can wire a handler post-construction without
 forcing every caller through a fat constructor.
 
 ### 1. `MCPHandler` listener accessors with one-shot lockdown
@@ -1123,13 +1169,13 @@ Setters are **settable until the first session opens**; calling
 any setter after that throws `IllegalStateException` ("listener
 locked once first session has been accepted"). The lockdown
 matches the existing "one handler, one transport, one lifecycle
-cycle" rule (DR-011): listener semantics that change mid-flight
+cycle" rule (DR-handler-as-configuration): listener semantics that change mid-flight
 would be a footgun, but pre-flight reconfiguration is exactly what
 factories like `MCPProxy.newHandler` need.
 
 `MCPHandler`'s constructor returns to its 0-arg form (the original
 shape, before the b128690 tightening). The `(IntPredicate,
-Consumer<MCPSession>)` ctor introduced by DR-011 is removed —
+Consumer<MCPSession>)` ctor introduced by DR-handler-as-configuration is removed —
 callers that previously wrote `new MCPHandler(p, c)` now write
 `new MCPHandler().setAcceptNewSession(p).setOnSessionClosed(c)`.
 
@@ -1141,7 +1187,7 @@ and existing transports invoke it from the same dispatch path.
 ### 2. `ToolDescriptor` record
 
 A new public record in `com.vaadin.swingmcp` (the parent package,
-which is currently empty — see DR-012 / Q23):
+which is currently empty — see DR-forwarding-proxy / Q23):
 
 ```java
 public record ToolDescriptor(
@@ -1168,7 +1214,7 @@ It delegates to the existing 4-arg
 forwarding and direct registration in the in-process server,
 without rewiring all of `SwingMCP.registerTools()` (Q31).
 
-`InputSchema.equals` / `hashCode` are structural per DR-014, so
+`InputSchema.equals` / `hashCode` are structural per DR-structural-schema-equality, so
 two descriptors with the same logical schema compare equal even
 across separate parsings.
 
@@ -1186,15 +1232,15 @@ CallToolResult callTool(
 
 The existing two-arg form delegates to the three-arg form with
 `null`. `MCPProxy`'s forwarding lambda calls the three-arg form
-with `request.jsonRpcMeta()` (DR-009), so cross-cutting envelope
+with `request.jsonRpcMeta()` (DR-request-records), so cross-cutting envelope
 fields like `progressToken` survive a hop through the proxy.
 
-`AutoRetryMCPClient` (DR-008) forwards `_meta` to its inner
+`AutoRetryMCPClient` (DR-embedded-mcp-client) forwards `_meta` to its inner
 client.
 
 **Why.**
 
-- **Setters over ctor params.** DR-011 / b128690 made the listeners
+- **Setters over ctor params.** DR-handler-as-configuration / b128690 made the listeners
   constructor-only. That works for direct callers (which know all
   their callbacks at construction time) but blocks factories that
   build the handler then layer per-session lifecycle on top.
@@ -1213,14 +1259,14 @@ client.
   expose serializer concerns to callers (constructors, default
   values, etc.). A small record in `com.vaadin.swingmcp` is the
   honest type for the contract.
-- **`_meta` overload.** DR-009 added `_meta` to incoming
+- **`_meta` overload.** DR-request-records added `_meta` to incoming
   `ToolRequest`s. A forwarding proxy that drops `_meta` silently
   loses progress tokens, sampling hints, and any future envelope
   fields. The overload restores end-to-end transparency.
 
 **Alternatives considered.**
 - **Keep the b128690 non-null ctor enforcement.** Rejected —
-  blocks factory wiring (DR-012). The defaults are sensible, and
+  blocks factory wiring (DR-forwarding-proxy). The defaults are sensible, and
   a caller that forgets to override a listener will see the
   resulting behaviour (unlimited sessions, no per-session work)
   in their first integration test.
@@ -1240,12 +1286,12 @@ client.
 
 ---
 
-## DR-014 — `MCPProtocol.InputSchema` structural `equals` / `hashCode`
+## DR-structural-schema-equality — `MCPProtocol.InputSchema` structural `equals` / `hashCode` (2026-04-29)
 
 **Status:** Accepted
 **Applies to:** `MCPProtocol.InputSchema`
-**Consumed by:** DR-012 (drift probe), `ToolDescriptor` equality
-(DR-013)
+**Consumed by:** DR-forwarding-proxy (drift probe), `ToolDescriptor`
+equality (DR-settable-listeners)
 
 **Decision.** `MCPProtocol.InputSchema` (and any nested types it
 references — property descriptors, etc.) implements deep
@@ -1266,7 +1312,7 @@ structural `equals` and `hashCode`:
 `hashCode` is consistent with `equals` (same fields, set-hash for
 `required`).
 
-**Why.** DR-012's drift probe compares descriptor lists. Equality
+**Why.** DR-forwarding-proxy's drift probe compares descriptor lists. Equality
 is a property of the type, not a one-off comparator inside
 `MCPProxy`. A bug in the predicate would manifest as silent false
 positives (drift errors that aren't really drift) or — worse —
@@ -1296,13 +1342,13 @@ property order."
 
 ---
 
-## DR-015 — Session conflict resolution: supersede + tombstones
+## DR-supersede-sessions — Session conflict resolution: supersede + tombstones (2026-05-06)
 
 **Status:** Accepted
 **Applies to:** `MCPHandler`, `MCPSession`, `HttpMCPServer`,
 `TinyMCPClient`, `swing-mcp` `SwingMCP`, `MCPProxy`
-**Refines:** DR-003 (single-session policy mechanism), DR-006
-(idle session eviction)
+**Refines:** DR-injected-session-policy (the single-session mechanism),
+DR-idle-session-eviction (idle session eviction)
 
 **Decision.** A new `initialize` may evict existing sessions
 ("supersede"); the displaced client gets a 404 with a tombstone
@@ -1313,14 +1359,14 @@ Concretely:
   `Function<List<MCPSession>, SessionDecision>` (replacing the
   prior `IntPredicate`). The policy receives a snapshot of
   currently active sessions and returns one of:
-  - `SessionDecision.Reject` → HTTP 409 (unchanged from DR-003).
+  - `SessionDecision.Reject` → HTTP 409 (unchanged from DR-injected-session-policy).
   - `SessionDecision.Accept` → accept without eviction.
   - `SessionDecision.AcceptAndEvict(sessions)` → tombstone and
     evict the listed sessions (blocking on each one's in-flight
     request via the new `MCPSession.close()`), then accept.
 - `MCPHandler` keeps a 64-entry `BoundedLRUMap<String, String>` of
   recently-removed session ids → reason. Both supersede and idle
-  eviction (DR-006) write a tombstone. `HttpMCPServer`'s 404 sites
+  eviction (DR-idle-session-eviction) write a tombstone. `HttpMCPServer`'s 404 sites
   consult the tombstone to populate the JSON-RPC `error.message`
   field.
 - `TinyMCPClient` parses the 404 body's `error.message` and
@@ -1394,11 +1440,13 @@ during a flaky network) without unbounded memory growth.
 
 ---
 
-## DR-016 — Idle eviction is an HTTP-transport policy; stdio sessions are process-scoped
+## DR-stdio-never-evicts — Idle eviction is an HTTP-transport policy; stdio sessions are process-scoped (2026-08-18)
 
 **Status:** Accepted
-**Applies to:** `MCPHandler`, `HttpMCPServer`, `StdioMCPServer`, `MCPSession`
-**Amends:** DR-006 (idle session eviction), DR-007 (stdio transport)
+**Applies to:** `MCPHandler`, `HttpMCPServer`, `StdioMCPServer`,
+`MCPSession`
+**Amends:** DR-idle-session-eviction (idle session eviction),
+DR-stdio-transport (stdio transport)
 
 **Decision.** `MCPHandler.start()` creates the shared executor and
 nothing else. Scheduling the once-per-minute idle-cleanup tick is a
@@ -1416,7 +1464,7 @@ instead of producing one internal-error reply.
 
 **Why.**
 
-- **Eviction exists for a failure mode stdio does not have.** DR-006
+- **Eviction exists for a failure mode stdio does not have.** DR-idle-session-eviction
   added the tick so a crashed HTTP client could not wedge the
   single-session slot until the Swing app restarted: the server cannot
   tell "client died" from "client went quiet", so it times out. Over
@@ -1435,7 +1483,7 @@ instead of producing one internal-error reply.
   the wire, no 404 for a client to interpret, and therefore no reason
   for any client to re-initialize. `StdioMCPServer` also pins the
   session in its `currentSession` field, so the process stays bricked.
-  This is also why the proxy's own session-loss machinery (DR-012) did
+  This is also why the proxy's own session-loss machinery (DR-forwarding-proxy) did
   not help — that handles the *upstream* session dying, and the dead
   session here was the downstream one.
 - **Structural beats configurable.** A `setIdleTimeout(Duration)` /
@@ -1459,7 +1507,7 @@ instead of producing one internal-error reply.
 - **Make stdio recover instead: re-initialize and replay on a closed
   session.** Rejected as the fix, though it was the obvious defensive
   move. It papers over an eviction that should not happen, and would
-  silently discard session-scoped state (DR-012's per-session upstream
+  silently discard session-scoped state (DR-forwarding-proxy's per-session upstream
   client) mid-conversation. The `IllegalStateException` guard is the
   same insight expressed as a loud invariant rather than quiet repair.
 - **Refresh `lastAccessNanos` on `ping`.** Rejected — it makes the

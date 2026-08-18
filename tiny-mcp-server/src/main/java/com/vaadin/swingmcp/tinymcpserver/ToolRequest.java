@@ -20,7 +20,7 @@ import java.util.Map;
  * parsed {@code params._meta} GSON {@link JsonObject} if present in the
  * request, or {@code null} otherwise.
  *
- * <p>See DR-009 for the rationale behind preferring a record over
+ * <p>See DR-request-records for the rationale behind preferring a record over
  * positional SAM arguments.
  */
 public record ToolRequest(

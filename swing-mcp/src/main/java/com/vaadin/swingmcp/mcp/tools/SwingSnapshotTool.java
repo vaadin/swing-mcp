@@ -70,7 +70,7 @@ public class SwingSnapshotTool extends AbstractSwingTool {
                 sb.append("---\n");
             }
             SnapshotNode root = roots.get(i);
-            // BR-14 / DR-016: emit a modal-stack header above any modal-dialog
+            // BR-14 / DR-modal-stack-header: emit a modal-stack header above any modal-dialog
             // root whose getOwner() chain contains at least one visible
             // ancestor. Non-modal roots and modals without live owners get
             // nothing. Header is intentionally absent from the filtered branch
@@ -121,11 +121,11 @@ public class SwingSnapshotTool extends AbstractSwingTool {
         return MCPProtocol.Content.text(rendered);
     }
 
-    // ── BR-14 / DR-016: modal-stack header ─────────────────────────────────────
+    // ── BR-14 / DR-modal-stack-header: modal-stack header ──────────────────────
 
     /**
      * Builds the {@code [modal stack (N, topmost first): ...]} header for a
-     * snapshot root per BR-14 / DR-016, or returns {@code null} when the root
+     * snapshot root per BR-14 / DR-modal-stack-header, or returns {@code null} when the root
      * does not qualify for a header.
      *
      * <p>Header applies when:

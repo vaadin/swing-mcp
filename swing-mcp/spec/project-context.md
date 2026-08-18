@@ -112,14 +112,16 @@ Consider only visible windows:
 - For snapshots: all considered windows appear in the tree. When a considered
   window is a modal dialog with a visible owner chain, the snapshot emits a
   `[modal stack ...]` header above it so the AI can reason about what state
-  will be returned to when the modal is dismissed — see T-002 BR-14 / DR-016.
+  will be returned to when the modal is dismissed — see T-002 BR-14 /
+  DR-modal-stack-header.
 - For screenshots: all considered windows are arranged vertically in a single
   PNG with no overlapping.
 
-> **This rule is load-bearing — see DR-017.** The owner chain of a modal and
-> any windows blocked by a modal are **not** surfaced as interactable roots;
-> they are exposed only as metadata (per DR-016 above). Do not "extend"
-> window selection to return blocked windows or owner chains as refs — DR-017
+> **This rule is load-bearing — see DR-interactable-windows-only.** The owner
+> chain of a modal and any windows blocked by a modal are **not** surfaced as
+> interactable roots; they are exposed only as metadata (per
+> DR-modal-stack-header above). Do not "extend" window selection to return
+> blocked windows or owner chains as refs — DR-interactable-windows-only
 > captures the rejected alternatives and the reasons they will not be
 > revisited without explicit supersession.
 

@@ -138,7 +138,7 @@ class TinyMCPClientOfficialServerTest {
         try (MCPClient client = new TinyMCPClient(serverUrl)) {
             client.initialize();
             MCPProtocol.CallToolResult result = client.callTool(FAILING_TOOL_NAME, Map.of());
-            // Per DR-004, isError=true is a normal result, not an exception.
+            // Per DR-three-error-layers, isError=true is a normal result, not an exception.
             assertEquals(Boolean.TRUE, result.getIsError());
             assertEquals("kaboom", result.getContent().get(0).getText());
         }

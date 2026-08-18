@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for {@link SwingUtils#sanitizeForQuotedSlot(String)} — the
- * BR-13 / DR-014 helper that prepares strings for emission inside
+ * BR-13 / DR-quoted-slot-sanitizing helper that prepares strings for emission inside
  * double-quoted snapshot slots (name, description, inline text preview).
  */
 class SwingUtilsSanitizeForQuotedSlotTest {
@@ -77,7 +77,7 @@ class SwingUtilsSanitizeForQuotedSlotTest {
 
     @Test
     void backslashesPassThroughUnescaped() {
-        // DR-014 "Alternatives considered": full JSON-style escaping
+        // DR-quoted-slot-sanitizing "Alternatives considered": full JSON-style escaping
         // rejected. Backslashes stay literal so paths render readably.
         assertEquals("C:\\Users\\foo", SwingUtils.sanitizeForQuotedSlot("C:\\Users\\foo"));
     }
@@ -85,7 +85,7 @@ class SwingUtilsSanitizeForQuotedSlotTest {
     @Test
     void quoteNextToBackslashRendersDoubleBackslashQuote() {
         // A literal `\"` in input produces `\\"` in output: the backslash
-        // is preserved verbatim, the quote is escaped. DR-014 accepts the
+        // is preserved verbatim, the quote is escaped. DR-quoted-slot-sanitizing accepts the
         // ambiguity for the rare case where both characters collide.
         assertEquals("a\\\\\"b", SwingUtils.sanitizeForQuotedSlot("a\\\"b"));
     }

@@ -472,7 +472,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot(root);
 
-        // DR-012: JMenu has no click action and no ref; items are directly reachable.
+        // DR-jmenu-not-clickable: JMenu has no click action and no ref; items are directly reachable.
         assertEquals(
                 "- JPanel (panel)\n"
                 + "  - JMenuBar (menu_bar)\n"
@@ -710,7 +710,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void jPasswordFieldAppearsAsPasswordText() throws Exception {
-        // DR-011: password fields advertise set_text but never get_text.
+        // DR-password-not-readable: password fields advertise set_text but never get_text.
         JPanel panel = new JPanel();
         panel.add(new JPasswordField());
 
@@ -722,7 +722,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void nonEditableJPasswordFieldShowsOnlyPrefixedSetText() throws Exception {
-        // DR-011 pathological case: a non-editable JPasswordField keeps its ref
+        // DR-password-not-readable pathological case: a non-editable JPasswordField keeps its ref
         // and shows only "!set_text" — get_text is suppressed, set_text is prefixed
         // with "!" per BR-08 because the EDITABLE state is absent.
         JPanel panel = new JPanel();
@@ -738,7 +738,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void customComponentWithPasswordRoleSuppressesGetText() throws Exception {
-        // DR-011 role-based gate: a custom JTextField subclass that claims
+        // DR-password-not-readable role-based gate: a custom JTextField subclass that claims
         // AccessibleRole.PASSWORD_TEXT (without extending JPasswordField) also
         // has get_text suppressed.
         JPanel panel = new JPanel();
@@ -765,7 +765,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // BR-12 / DR-013 — inline text="..." / value=N previews
+    // BR-12 / DR-inline-value-preview — inline text="..." / value=N previews
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -781,7 +781,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void br12_jTextFieldLongerThanCap_truncatesTo14CharsPlusEllipsis() throws Exception {
-        // 30 chars — longer than PREVIEW_MAX_LENGTH (15). DR-010 convention:
+        // 30 chars — longer than PREVIEW_MAX_LENGTH (15). DR-dispatched-echo convention:
         // first 14 chars + U+2026.
         JPanel panel = new JPanel();
         panel.add(new JTextField("Lorem ipsum dolor sit amet ipl"));
@@ -837,7 +837,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void br12_editableJPasswordField_doesNotEmitTextPreview() throws Exception {
-        // DR-011 / BR-12 gate parity: supportsGetText() returns false for
+        // DR-password-not-readable / BR-12 gate parity: supportsGetText() returns false for
         // PASSWORD_TEXT, so no text="..." annotation is emitted even though
         // the field has content. set_text is unaffected.
         JPanel panel = new JPanel();
@@ -864,7 +864,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void br12_jSpinnerWithFractionalValue_rendersDecimalValue() throws Exception {
-        // Fractional numbers render with a decimal point per DR-010's number
+        // Fractional numbers render with a decimal point per DR-dispatched-echo's number
         // convention. Double(3.5) → "value=3.5" (not "value=3").
         JPanel panel = new JPanel();
         panel.add(new JSpinner(new SpinnerNumberModel(3.5, 0.0, 10.0, 0.5)));
@@ -1019,11 +1019,11 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // End of BR-12 / DR-013 tests
+    // End of BR-12 / DR-inline-value-preview tests
     // ══════════════════════════════════════════════════════════════════════════
 
     // ══════════════════════════════════════════════════════════════════════════
-    // BR-13 / DR-014 — quoted-slot sanitization
+    // BR-13 / DR-quoted-slot-sanitizing — quoted-slot sanitization
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -1108,7 +1108,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     @Test
     void br13_textPreviewWithEmbeddedQuote_escapesAsBackslashQuote() throws Exception {
         // The BR-12 text="..." preview also passes through the sanitizer,
-        // closing the quote-escape gap that was absent before DR-014.
+        // closing the quote-escape gap that was absent before DR-quoted-slot-sanitizing.
         JPanel panel = new JPanel();
         JTextField field = new JTextField();
         field.setText("say \"hi\"");
@@ -1125,7 +1125,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     @Test
     void br13_textPreviewWithNewline_collapsesToSingleSpace() throws Exception {
         // Newlines in JTextField content were already collapsed in BR-12's
-        // preview whitespace handling. Regression guard that DR-014's
+        // preview whitespace handling. Regression guard that DR-quoted-slot-sanitizing's
         // sanitizer keeps the same behaviour while adding quote escaping.
         JPanel panel = new JPanel();
         JTextField field = new JTextField();
@@ -1142,7 +1142,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void br13_longLabelName_rendersFullNameUncapped() throws Exception {
-        // DR-014 §2: name is identity, rendered in full regardless of length.
+        // DR-quoted-slot-sanitizing §2: name is identity, rendered in full regardless of length.
         // Concrete check: a 300-character JLabel name appears verbatim (minus
         // sanitization) in the name slot — no truncation, no … suffix.
         StringBuilder longName = new StringBuilder(300);
@@ -1162,12 +1162,12 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // DR-015 — LABEL role excluded from get_text
+    // DR-label-not-readable — LABEL role excluded from get_text
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void dr015_plainJLabel_hasNoRefNoGetTextNoPreview() throws Exception {
-        // Plain JLabel: no AccessibleText exposed, so behaviour pre-DR-015
+        // Plain JLabel: no AccessibleText exposed, so behaviour pre-DR-label-not-readable
         // was already "no ref, no get_text". Regression guard.
         JPanel panel = new JPanel();
         panel.add(new JLabel("Status: OK"));
@@ -1182,10 +1182,10 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void dr015_htmlJLabel_hasNoRefNoGetTextNoPreview() throws Exception {
-        // DR-015 behaviour change: a JLabel("<html>...</html>") previously
+        // DR-label-not-readable behaviour change: a JLabel("<html>...</html>") previously
         // received ref=1, "actions: get_text", and a text="..." preview
         // because AccessibleHTMLTextSupport exposed AccessibleText. After
-        // DR-015 the LABEL-role exclusion suppresses all three.
+        // DR-label-not-readable the LABEL-role exclusion suppresses all three.
         JPanel panel = new JPanel();
         panel.add(new JLabel("<html>Hello <b>world</b></html>"));
 
@@ -1199,7 +1199,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void dr015_jListCell_retainsClickRef() throws Exception {
-        // Regression guard for DR-015's role-based gate: JList cells have
+        // Regression guard for DR-label-not-readable's role-based gate: JList cells have
         // role LABEL, so the LABEL exclusion applies to them too — but
         // their ref comes from the `click` action (not get_text), so they
         // still receive a ref. Loss of this ref would break every JList
@@ -1216,11 +1216,11 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         assertTrue(out.contains("- (label) \"alpha\" [ref=2] actions: click"),
                 "JList cell must retain click ref despite LABEL-role get_text exclusion. Got:\n" + out);
         assertFalse(out.contains("get_text"),
-                "JList cell must not advertise get_text after DR-015. Got:\n" + out);
+                "JList cell must not advertise get_text after DR-label-not-readable. Got:\n" + out);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // End of BR-13 / DR-014 / DR-015 tests
+    // End of BR-13 / DR-quoted-slot-sanitizing / DR-label-not-readable tests
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -1444,7 +1444,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void jMenuBarAppearsAsMenuBar() throws Exception {
-        // DR-012: JMenu has no click action, no ref.
+        // DR-jmenu-not-clickable: JMenu has no click action, no ref.
         JPanel panel = new JPanel();
         JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
@@ -1460,7 +1460,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void jMenuAppearsAsMenu() throws Exception {
-        // DR-012: JMenu has no click action, no ref; only the menu item is clickable.
+        // DR-jmenu-not-clickable: JMenu has no click action, no ref; only the menu item is clickable.
         JPanel panel = new JPanel();
         JMenuBar menuBar = new JMenuBar();
         JMenu editMenu = new JMenu("Edit");
@@ -1478,7 +1478,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void jMenuItemAppearsAsMenuItem() throws Exception {
-        // DR-012: JMenu has no click action, no ref; only the menu item is clickable.
+        // DR-jmenu-not-clickable: JMenu has no click action, no ref; only the menu item is clickable.
         JPanel panel = new JPanel();
         JMenuBar menuBar = new JMenuBar();
         JMenu menu = new JMenu("Actions");
@@ -1497,7 +1497,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void contextJPopupMenuWithNonJMenuInvokerIsNotPruned() throws Exception {
-        // Regression guard for DR-012 / HE-5: the JPopupMenu prune is keyed on
+        // Regression guard for DR-jmenu-not-clickable / HE-5: the JPopupMenu prune is keyed on
         // getInvoker() instanceof JMenu. Right-click context menus invoked
         // from a JButton/JTable/etc. must continue to render normally.
         // Headless caveat: we override isVisible() and getInvoker() directly
@@ -1523,7 +1523,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void jPopupMenuWithJMenuInvokerIsPruned() throws Exception {
-        // DR-012 / HE-5 positive case (headless). The prune rule is keyed on
+        // DR-jmenu-not-clickable / HE-5 positive case (headless). The prune rule is keyed on
         // getInvoker() instanceof JMenu. We test the rule in isolation rather
         // than reproduce the full "JMenu's internal popup is showing" scenario,
         // which requires PopupFactory and a real display (covered in the

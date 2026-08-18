@@ -68,9 +68,9 @@ fails with an IllegalStateException - that is not testing the tool error checkin
 
 **Menus:**
 `JMenuBar`, `JMenu`, `JMenuItem`
-(note: `JMenu` is a structural container, not an interactive target — see **DR-012**.
+(note: `JMenu` is a structural container, not an interactive target — see **DR-jmenu-not-clickable**.
 Tools that apply to menu titles in principle — most notably `swing_click` — must
-assert the DR-012 "JMenu does not support swing_click" outcome. `JMenuItem` remains
+assert the DR-jmenu-not-clickable "JMenu does not support swing_click" outcome. `JMenuItem` remains
 interactive as usual.)
 
 **Other:**

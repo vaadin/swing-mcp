@@ -22,7 +22,7 @@ import java.util.logging.Logger;
  *
  * <p>Obtained via the {@link MCPClient#autoRetry()} default method on the
  * interface so it composes with future decorators left-to-right. See
- * DR-008.
+ * DR-embedded-mcp-client.
  */
 public final class AutoRetryMCPClient implements MCPClient {
 

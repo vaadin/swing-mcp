@@ -18,7 +18,7 @@ identity (server name, version, instructions, tool names /
 descriptions / schemas) is structurally impossible. The only
 remaining drift surface is "did both modules get rebuilt and
 shipped together?" — which is the question the proxy's runtime
-drift probe (DR-012) catches.
+drift probe (DR-forwarding-proxy) catches.
 
 ## 1. Vision
 
@@ -42,7 +42,7 @@ and the IDE makes refactors safe.
   plus the shared message constants and server-identity
   constants.
 - `ToolDescriptor` itself lives in the parent package
-  `com.vaadin.swingmcp` inside `tiny-mcp-server` (DR-013) — it's
+  `com.vaadin.swingmcp` inside `tiny-mcp-server` (DR-settable-listeners) — it's
   a generic protocol type and belongs with the rest of the
   protocol POJOs.
 
@@ -100,8 +100,8 @@ developer bug, caught at test time.
 This module has no `architecture.md`, no `decisions.md`, and no
 `tools/` directory. It's a pure data module — the cross-cutting
 decisions that govern its content live in
-`tiny-mcp-server/spec/decisions.md` (DR-013 for `ToolDescriptor`,
-DR-014 for schema equality) and in `swing-mcp/spec/tools/`
+`tiny-mcp-server/spec/decisions.md` (DR-settable-listeners for `ToolDescriptor`,
+DR-structural-schema-equality for schema equality) and in `swing-mcp/spec/tools/`
 (per-tool specs, which generate the descriptor values mechanically
 once their fields are locked).
 
@@ -109,6 +109,6 @@ once their fields are locked).
 
 # Related Documents
 
-- [`tiny-mcp-server/spec/decisions.md`](../../tiny-mcp-server/spec/decisions.md) — DR-013 (`ToolDescriptor`), DR-014 (schema equality)
+- [`tiny-mcp-server/spec/decisions.md`](../../tiny-mcp-server/spec/decisions.md) — DR-settable-listeners (`ToolDescriptor`), DR-structural-schema-equality (schema equality)
 - [`swing-mcp/spec/tools/`](../../swing-mcp/spec/tools/) — per-tool specs (source of truth for each `ToolDescriptor`'s fields)
 - [`swing-mcp-proxy/spec/project-context.md`](../../swing-mcp-proxy/spec/project-context.md) — proxy consumer

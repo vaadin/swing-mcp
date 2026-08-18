@@ -20,7 +20,7 @@ Expands or collapses a `JTree` node so the AI can navigate a hierarchy to find n
 | BR-08 | `swing_toggle_expand` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after successful invocation. A pre-dispatch validation error (`MCPErrorResponseException`) does **not** clear the ref map — the UI state hasn't changed, so existing refs remain valid and the AI can retry without re-snapshotting. |
 | BR-09 | The tool toggles the node regardless of its current expanded/collapsed state. If the node is already expanded, calling this tool collapses it; if collapsed, it expands it. The AI can infer the current state from the `EXPANDED` or `COLLAPSED` state in the snapshot. |
 | BR-10 | **Verified:** Metal, GTK (SynthTreeUI), and Nimbus all return the static `AccessibleAction.TOGGLE_EXPAND` constant directly from `JTree.AccessibleJTreeNode.getAccessibleActionDescription()`. No JDK L&F overrides `AccessibleJTreeNode`. A third-party L&F could theoretically subclass it, but this is an accepted risk. See **architecture.md § 4 — Action Types Summary**. |
-| BR-11 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched toggle-expand on ref=<N> — call swing_snapshot to verify the outcome` (see **DR-010**). |
+| BR-11 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched toggle-expand on ref=<N> — call swing_snapshot to verify the outcome` (see **DR-dispatched-echo**). |
 
 ### Algorithm: detecting and invoking the toggle-expand action
 
@@ -46,7 +46,7 @@ Execution order:
   - [x] Leaf node returns an MCP error with `isError: true`.
   - [x] Component without toggle-expand support (e.g. `JButton`) returns an MCP error with `isError: true`.
   - [x] Disabled `JTree` node returns an MCP error with `isError: true` explaining the component is disabled.
-  - [x] Success returns the DR-010 echo `Dispatched toggle-expand on ref=N — call swing_snapshot to verify the outcome`.
+  - [x] Success returns the DR-dispatched-echo echo `Dispatched toggle-expand on ref=N — call swing_snapshot to verify the outcome`.
   - [x] Ref map is cleared after a successful call.
   - [x] MCP client smoke test.
   - [x] Each component from the component matrix is tested (dedicated test method per component).

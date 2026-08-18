@@ -237,17 +237,17 @@ public abstract class AbstractSwingTool {
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // DR-010: mutation-tool success echo helpers
+    // DR-dispatched-echo: mutation-tool success echo helpers
     // ════════════════════════════════════════════════════════════════════════
 
     private static final String SWING_TOOL_PREFIX = "swing_";
 
     /**
-     * Returns the action name portion of this tool's DR-010 success echo. Derived
+     * Returns the action name portion of this tool's DR-dispatched-echo success echo. Derived
      * from {@link #getName()} by stripping the {@code swing_} prefix and converting
      * underscores to hyphens — e.g. {@code "swing_set_text"} yields {@code "set-text"}.
      *
-     * @return the action name for the DR-010 echo
+     * @return the action name for the DR-dispatched-echo echo
      * @throws IllegalStateException if the tool name does not start with {@code swing_}
      */
     protected final String getEchoAction() {
@@ -260,7 +260,7 @@ public abstract class AbstractSwingTool {
     }
 
     /**
-     * Composes the DR-010 success echo without a value:
+     * Composes the DR-dispatched-echo success echo without a value:
      * {@code Dispatched <action> on ref=<N> — call swing_snapshot to verify the outcome}.
      *
      * @param ref the component ref that was acted on
@@ -272,9 +272,9 @@ public abstract class AbstractSwingTool {
     }
 
     /**
-     * Composes the DR-010 success echo with a value:
+     * Composes the DR-dispatched-echo success echo with a value:
      * {@code Dispatched <action> on ref=<N> to <renderedValue> — call swing_snapshot to verify the outcome}. The caller is
-     * responsible for rendering {@code renderedValue} per DR-010 — strings via
+     * responsible for rendering {@code renderedValue} per DR-dispatched-echo — strings via
      * {@link #renderEchoString}, numbers via {@link #renderEchoNumber}, arrays
      * via {@link #renderEchoIntArray}.
      *
@@ -289,7 +289,7 @@ public abstract class AbstractSwingTool {
     }
 
     /**
-     * Renders a string value per DR-010: double-quoted, truncated at 15 content
+     * Renders a string value per DR-dispatched-echo: double-quoted, truncated at 15 content
      * characters. Strings of 15 or fewer characters are quoted as-is; longer
      * strings are truncated to the first 14 characters with a trailing Unicode
      * ellipsis (U+2026).
@@ -305,7 +305,7 @@ public abstract class AbstractSwingTool {
     }
 
     /**
-     * Renders a number value per DR-010: bare (no quotes), integer-when-whole.
+     * Renders a number value per DR-dispatched-echo: bare (no quotes), integer-when-whole.
      * Delegates to {@link SwingUtils#serializeNumber} for the integer-when-whole
      * normalization.
      *
@@ -317,7 +317,7 @@ public abstract class AbstractSwingTool {
     }
 
     /**
-     * Renders an integer collection per DR-010 as a JSON-style array. If the
+     * Renders an integer collection per DR-dispatched-echo as a JSON-style array. If the
      * rendered form is 15 characters or fewer it is returned in full; otherwise
      * leading elements are retained and a trailing {@code , …]} is appended to
      * keep the total rendered length within 15 characters (with a single-element

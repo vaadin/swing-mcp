@@ -49,7 +49,7 @@ public class SwingDecrementTool extends AbstractSwingTool {
         // BR-03: fire the action asynchronously (fire-and-forget)
         AccessibleAction aa = accessible.getAccessibleContext().getAccessibleAction();
         SwingUtilities.invokeLater(() -> aa.doAccessibleAction(actionIndex));
-        // BR-11: DR-010 success echo
+        // BR-11: DR-dispatched-echo success echo
         return echo(ref);
     }
 

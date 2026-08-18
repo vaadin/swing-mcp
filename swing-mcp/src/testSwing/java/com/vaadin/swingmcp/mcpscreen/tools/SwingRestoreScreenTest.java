@@ -53,7 +53,7 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
 
     /**
      * Calls swing_restore and drains the EDT so the fire-and-forget invokeLater has run.
-     * Returns the tool's success Content (DR-010 echo) so callers can assert on it.
+     * Returns the tool's success Content (DR-dispatched-echo echo) so callers can assert on it.
      */
     private MCPProtocol.Content restore(int ref) throws Exception {
         MCPProtocol.Content result = executeOnEDT(
@@ -353,7 +353,7 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
         MCPProtocol.Content result = restore(ref);
 
         assertEquals("Dispatched restore on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText(),
-                "DR-010: tool returns echo on dispatch even when listener vetoes");
+                "DR-dispatched-echo: tool returns echo on dispatch even when listener vetoes");
         // Frame should still be iconified
         assertTrue(iframe.isIcon(), "vetoed restore should leave frame iconified");
 

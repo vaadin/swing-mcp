@@ -153,7 +153,7 @@ class SwingUtilsIsIconifiedTest extends AbstractScreenTest {
 
     /**
      * An iconified JInternalFrame is removed from the component tree and
-     * replaced by a JDesktopIcon (DR-008), so {@code isShowing()} returns
+     * replaced by a JDesktopIcon (DR-desktop-icon-as-itself), so {@code isShowing()} returns
      * {@code false} — and a hidden frame is not considered iconified.
      * The JDesktopIcon is the showing iconified representation.
      */

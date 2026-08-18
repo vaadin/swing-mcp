@@ -189,7 +189,7 @@ class SwingUtilsSupportsRestoreTest extends AbstractScreenTest {
     }
 
     /**
-     * An iconified JInternalFrame is not showing (DR-008), so it does
+     * An iconified JInternalFrame is not showing (DR-desktop-icon-as-itself), so it does
      * not support restore. The JDesktopIcon is the restorable target.
      */
     @Test
