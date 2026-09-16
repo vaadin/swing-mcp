@@ -42,8 +42,8 @@ Every fact lives in exactly one of these; the others link to it.
 
 ## Conventions
 
-- **Java 11, plain classes, no framework.** GSON for JSON, `java.net.http.HttpClient` for the client side, `com.sun.net.httpserver` for the server side. Tests compile at 17.
-- **Tests: JUnit 6**, driving the server through the official MCP SDK as a client — `testImplementation` only, never a runtime dependency.
+- **Java 11, plain classes, no framework.** GSON for JSON, `java.net.http.HttpClient` for the client side, `com.sun.net.httpserver` for the server side.
+- **Tests: JUnit 5**, and the tool suite runs twice — through `TinyMCPClient` (also on Java 11) and, from `src/testOfficial`, through the official MCP SDK. See `D_conformance_two_clients`.
 - **Diagnostics go to `java.util.logging`**, never to `System.out`; two audiences, two channels — the LLM reads the `isError` body, the operator reads stderr.
 - **Transports compose, never inherit.** A transport takes a configured `MCPHandler`; nothing extends a transport to configure it.
 - **One handler, one transport, one lifecycle cycle.** No restart, no reuse, no sharing.
@@ -52,6 +52,7 @@ Every fact lives in exactly one of these; the others link to it.
 ## Commands
 
 - `./gradlew :tiny-mcp-server:test` — the tests, from the repository root.
+- `./gradlew :tiny-mcp-server:testOfficial` — the same conformance suite through the official SDK; needs a 17+ build JDK.
 - `tiny-mcp-server/design/verify_design_tripwires.sh` — this module's doc layer; runs from anywhere in the repository.
 
 ## Skills this project follows

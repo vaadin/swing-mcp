@@ -653,3 +653,33 @@ sloppiness and invites someone to "fix" it in the wrong direction — by moving 
 
 **The test that keeps this honest.** `git subtree split --prefix=tiny-mcp-server` must yield a
 complete repository, and nothing inside it may point outward.
+
+## D_conformance_two_clients — Why is the tool suite run twice, through two different clients?
+
+`AbstractToolConformanceTest` asserts the whole tool half of the protocol — `tools/list`, argument
+coercion, the three error channels, every content type — and never names a client. Two subclasses
+supply one: `TinyClientToolConformanceTest` uses this module's `TinyMCPClient`,
+`OfficialClientToolConformanceTest` an adapter over the official MCP SDK.
+
+**Why not just the in-tree client.** It is the same codebase reading its own output. A wire format
+both halves agree on but the specification does not — a field name, a content-type tag, an error
+code in the wrong channel — passes forever, and the first real MCP client to connect fails. The
+SDK is an independent reading of the same document, which is the only thing that makes the suite
+an actual conformance check rather than a round-trip.
+
+**Why not just the SDK, which is the stronger authority.** It publishes no Java 11 build — every
+release is class-file 61 — so a suite it drives cannot run on the Java 11 floor this module is
+held to. The in-tree leg is what runs there.
+
+**Why not two separate suites, each written for its client.** That was the shape before, and the
+two drifted: the SDK-driven test asserted only that an unknown tool "throws", so nobody noticed it
+is `-32601` rather than `-32602` until one suite had to state the answer for both. One set of
+assertions is the point; the client is a parameter.
+
+**Why the adapter converts to this module's types.** The suite then reads the same way on both
+sides. Conversion happens only on the way out, after the SDK has parsed the response, so a reply
+this server malformed still fails inside the SDK — the authority is not weakened by the adapter.
+
+**Why the SDK-only tests remain SDK-only.** `listResources`, `listPrompts`, `ping` and
+`isInitialized` have no counterpart on `MCPClient`. Widening that interface to share four more
+assertions would add production API for a test's benefit, so `HttpMCPServerTest` keeps them.

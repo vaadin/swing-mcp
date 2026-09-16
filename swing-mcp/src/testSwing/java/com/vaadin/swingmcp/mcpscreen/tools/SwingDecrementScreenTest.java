@@ -14,6 +14,8 @@ import java.awt.*;
 import java.util.Arrays;
 import java.util.Map;
 
+import static com.vaadin.swingmcp.mcp.JdkCapabilities.SLIDER_HAS_ACCESSIBLE_ACTIONS;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -69,6 +71,8 @@ class SwingDecrementScreenTest extends AbstractScreenTest {
 
     @Test
     void decrementSliderInsideJFrame() throws Exception {
+        assumeTrue(SLIDER_HAS_ACCESSIBLE_ACTIONS,
+                "JSlider exposes decrement only from Java 17 (R_jslider_actions_since_17)");
         JFrame frame = new JFrame("Test");
         JSlider slider = new JSlider(0, 100, 50);
         frame.getContentPane().add(slider);

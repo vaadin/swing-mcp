@@ -910,7 +910,21 @@ compiles against that JDK's API signatures. `targetCompatibility` alone emits ve
 files that happily call a Java 17 method — the build stays green and the failure lands on the
 customer as `NoSuchMethodError`. The old setting was 17 and had therefore never verified anything.
 
-**Why tests stay at 17.** JUnit 6, the official MCP SDK (the test client) and Jetty 12 all
-require it. Splitting the floor costs one line in the build and keeps the three best testing
-tools available; the artifact, which is what a customer loads, is unaffected. Proving the floor
-needs a Java 11 *runtime* leg in CI, which the version matrix does not yet have.
+**Why the tests are held to the floor too, and run on an 11 VM.** `--release 11` proves no
+post-11 API is *called*; it cannot prove the jars load and run on an 11 VM, which a v61 class
+pulled in by shadowJar or an API reached reflectively would break. So `testJava11` re-runs the
+whole headless suite on a real Java 11 launcher, and CI builds on 11 as well as 17/21/24. That
+cost JUnit 6 (17-only) for JUnit 5.14.4, and Gradle 9.5 for 8.14.3 — the last Gradle that runs
+on 11, which in turn means the build no longer runs on Java 25.
+
+The leg paid for itself twice on the first run: `R_jslider_actions_since_17`, and a server bug
+where a rejection path answered without draining the request body, so `com.sun.net.httpserver`
+closed a connection the client had already pooled. Java 11's `HttpClient` does not retry a POST
+that dies that way (JDK 12+ does), so only the 11 leg ever saw it.
+
+**Why the official MCP SDK is confined to one source set.** It has no Java 11 build — every
+release from 0.7.0 to 2.0.1 is class-file 61 — so it cannot be the thing that drives a suite
+which must also run on 11. It stays in `tiny-mcp-server/src/testOfficial`, compiled at 17 and
+skipped entirely on an older build JDK. Everything above that module drives the server through
+this repository's own `TinyMCPClient`, which is the right layer anyway. See
+`D_conformance_two_clients` for why the SDK is still worth keeping at all.
