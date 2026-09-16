@@ -11,7 +11,10 @@ import java.util.Map;
  * MCP tool {@code swing_clear_selection}: clears the selection of a UI component by ref.
  *
  * <p>Delegates to {@link SwingSetSelectionTool} with an empty {@code indices} array.
- * See T-016 / T-015 for full specification.</p>
+ * Every rule that tool enforces applies here too — including the refusal on
+ * {@link javax.swing.JTabbedPane}, which has no empty selection to clear
+ * (R_accessible_selection_writes). The dispatch echo names {@code clear-selection}, not the
+ * {@code set-selection} it delegates to (D_dispatched_echo).</p>
  */
 public class SwingClearSelectionTool extends AbstractSwingTool {
 

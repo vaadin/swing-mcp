@@ -198,7 +198,7 @@ class SwingUtilsSupportsCloseTest extends AbstractScreenTest {
     void nonClosableJInternalFrame_doesNotSupportClose() throws Exception {
         JInternalFrame iframe = showInternalFrame(false, WindowConstants.DISPOSE_ON_CLOSE);
         assertFalse(SwingUtils.supportsClose(iframe),
-                "non-closable JInternalFrame has no close button (BR-10)");
+                "non-closable JInternalFrame has no close button");
     }
 
     @Test
@@ -212,11 +212,11 @@ class SwingUtilsSupportsCloseTest extends AbstractScreenTest {
     void exitOnCloseJInternalFrame_doesNotSupportClose() throws Exception {
         JInternalFrame iframe = showInternalFrame(true, WindowConstants.EXIT_ON_CLOSE);
         assertFalse(SwingUtils.supportsClose(iframe),
-                "EXIT_ON_CLOSE JInternalFrame is refused defensively (BR-09)");
+                "EXIT_ON_CLOSE JInternalFrame is refused defensively");
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JDesktopIcon — positive cases (BR-11)
+    // JDesktopIcon — positive cases
     // ══════════════════════════════════════════════════════════════════════════
 
     private JInternalFrame.JDesktopIcon showIconifiedFrame(boolean closable, int defaultCloseOp) throws Exception {
@@ -240,24 +240,24 @@ class SwingUtilsSupportsCloseTest extends AbstractScreenTest {
     void showingClosableDesktopIcon_supportsClose() throws Exception {
         JInternalFrame.JDesktopIcon icon = showIconifiedFrame(true, WindowConstants.DISPOSE_ON_CLOSE);
         assertTrue(SwingUtils.supportsClose(icon),
-                "showing JDesktopIcon with closable frame should support close (BR-11)");
+                "showing JDesktopIcon with closable frame should support close");
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JDesktopIcon — negative cases (BR-11)
+    // JDesktopIcon — negative cases
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void nonClosableDesktopIcon_doesNotSupportClose() throws Exception {
         JInternalFrame.JDesktopIcon icon = showIconifiedFrame(false, WindowConstants.DISPOSE_ON_CLOSE);
         assertFalse(SwingUtils.supportsClose(icon),
-                "JDesktopIcon with non-closable frame should not support close (BR-11 → BR-10)");
+                "JDesktopIcon with non-closable frame should not support close");
     }
 
     @Test
     void exitOnCloseDesktopIcon_doesNotSupportClose() throws Exception {
         JInternalFrame.JDesktopIcon icon = showIconifiedFrame(true, WindowConstants.EXIT_ON_CLOSE);
         assertFalse(SwingUtils.supportsClose(icon),
-                "JDesktopIcon with EXIT_ON_CLOSE frame should not support close (BR-11 → BR-09)");
+                "JDesktopIcon with EXIT_ON_CLOSE frame should not support close");
     }
 }

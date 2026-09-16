@@ -25,11 +25,10 @@ import java.util.Set;
  * (0-based index + name). For JTable, index is the row index and name is a
  * pipe-separated summary of cell values.</p>
  *
- * @see <a href="tool-014-swing-get-selection.md">T-014</a>
  */
 public class SwingGetSelectionTool extends AbstractSwingTool {
 
-    /** Maximum number of selected items returned before truncation (BR-09). */
+    /** Maximum number of selected items returned before truncation. */
     static final int MAX_SELECTION_ITEMS = 100;
 
     public SwingGetSelectionTool() {
@@ -38,23 +37,23 @@ public class SwingGetSelectionTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // BR-01: ref is required integer
+        // ref is required integer
         int ref = params.getInt("ref");
 
-        // BR-02: ref lookup (fail fast)
+        // ref lookup (fail fast)
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // BR-03: check selection support with JTable-specific error message
+        // check selection support with JTable-specific error message
         requireSelectable(accessible, "swing_get_selection");
 
-        // BR-04: all access on EDT (guaranteed by SwingMCP.registerTool)
+        // all access on EDT (guaranteed by SwingMCP.registerTool)
         AccessibleContext ac = accessible.getAccessibleContext();
         AccessibleSelection as = ac.getAccessibleSelection();
 
         List<Map<String, Object>> selected;
         boolean truncated;
 
-        // Step 4: JTable row aggregation path (BR-11)
+        // Step 4: JTable row aggregation path
         if (accessible instanceof JTable) {
             AccessibleTable at = ac.getAccessibleTable();
             int cols = at.getAccessibleColumnCount();
@@ -113,7 +112,7 @@ public class SwingGetSelectionTool extends AbstractSwingTool {
 
     @Override
     public boolean isMutation() {
-        // BR-05: read-only tool, ref map is NOT cleared
+        // read-only tool, ref map is NOT cleared
         return false;
     }
 }

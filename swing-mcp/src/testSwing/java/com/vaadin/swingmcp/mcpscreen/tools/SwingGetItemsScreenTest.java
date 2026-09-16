@@ -76,7 +76,7 @@ class SwingGetItemsScreenTest extends AbstractScreenTest {
     @Test
     void jTabbedPaneInsideJFrame_isRejected() throws Exception {
         // Regression guard for P-001 Wave A — JTabbedPane dropped as a
-        // supported target; tabs are read inline from the snapshot (T-002 SC-2).
+        // supported target; tabs are read inline from the snapshot (design/snapshot-format.md).
         JFrame frame = new JFrame("Test");
         JTabbedPane tp = new JTabbedPane();
         tp.addTab("Tab1", new JPanel());

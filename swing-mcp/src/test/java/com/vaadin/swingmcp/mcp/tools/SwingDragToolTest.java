@@ -629,7 +629,7 @@ class SwingDragToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // No drag action in snapshot (BR-11)
+    // No drag action in snapshot
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -691,7 +691,7 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         int targetRef = context.getRefOf(target);
         dragToRef(sourceRef, targetRef);
 
-        // Refs must be cleared after a successful mutation (BR-09)
+        // Refs must be cleared after a successful mutation
         MCPServerException ex = assertThrows(MCPServerException.class,
                 () -> dragTool.execute(
                         new Parameters(Map.of("source_ref", sourceRef, "target_ref", targetRef)),
@@ -703,7 +703,7 @@ class SwingDragToolTest extends AbstractHeadlessTest {
     @Test
     void refsPreservedAfterValidationError() throws Exception {
         // A validation rejection (e.g. "disabled source") must NOT clear the ref map —
-        // the UI state hasn't changed, so existing refs remain valid (BR-09).
+        // the UI state hasn't changed, so existing refs remain valid.
         DragRecordingPanel disabled = new DragRecordingPanel();
         disabled.setEnabled(false);
         DragRecordingPanel enabled = new DragRecordingPanel();
@@ -881,7 +881,7 @@ class SwingDragToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Waypoints (via parameter — BR-13)
+    // Waypoints (via parameter)
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test

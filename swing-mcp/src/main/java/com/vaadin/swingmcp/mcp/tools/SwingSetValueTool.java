@@ -19,7 +19,6 @@ import java.math.BigDecimal;
  * enabled, validates the value is within range, preserves the model's numeric type, then
  * delegates to {@link AccessibleValue#setCurrentAccessibleValue(Number)} via fire-and-forget.</p>
  *
- * @see <a href="tool-013-swing-set-value.md">T-013</a>
  */
 public class SwingSetValueTool extends AbstractSwingTool {
 
@@ -29,31 +28,31 @@ public class SwingSetValueTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // BR-01: both params required
+        // both params required
         int ref = params.getInt("ref");
         Number value = params.getNumber("value");
 
-        // BR-02: ref lookup
+        // ref lookup
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // BR-03: set_value support check
+        // set_value support check
         if (!SwingUtils.supportsSetValue(accessible)) {
             throw new MCPErrorResponseException(
                     ComponentClassResolver.resolveClassName(accessible)
                             + " does not support swing_set_value. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
-        // BR-05: effectively enabled check
+        // effectively enabled check
         if (!SwingUtils.isEffectivelyEnabled(accessible)) {
             throw new MCPErrorResponseException(
                     "Component is disabled and cannot be modified");
         }
 
-        // BR-04: all access on EDT (guaranteed by SwingMCP.registerTool)
+        // all access on EDT (guaranteed by SwingMCP.registerTool)
         AccessibleContext ac = accessible.getAccessibleContext();
         AccessibleValue av = ac.getAccessibleValue();
 
-        // BR-07: range validation
+        // range validation
         Number min = av.getMinimumAccessibleValue();
         Number max = av.getMaximumAccessibleValue();
         double dValue = value.doubleValue();
@@ -69,13 +68,13 @@ public class SwingSetValueTool extends AbstractSwingTool {
                             + SwingUtils.serializeNumber(max) + "). Call swing_get_value to check the valid range.");
         }
 
-        // BR-08: type preservation — determine target class from current value
+        // type preservation — determine target class from current value
         Number current = av.getCurrentAccessibleValue();
         Number convertedValue = convertToType(value, current);
 
-        // BR-04: fire-and-forget dispatch
+        // fire-and-forget dispatch
         SwingUtilities.invokeLater(() -> av.setCurrentAccessibleValue(convertedValue));
-        // BR-09: D_dispatched_echo success echo — echo post-conversion value
+        // D_dispatched_echo success echo — echo post-conversion value
         return echo(ref, renderEchoNumber(convertedValue));
     }
 
@@ -83,7 +82,8 @@ public class SwingSetValueTool extends AbstractSwingTool {
      * Converts the incoming value to the same Java numeric type as the current value.
      * This prevents type contamination in models like {@code SpinnerNumberModel}.
      *
-     * @see <a href="tool-013-swing-set-value.md">T-013 BR-08, BR-11</a>
+     * @implNote The current value's class is read at call time, not cached, so a model whose
+     *           type changed since the last read still gets the right one (R_accessible_value_types).
      */
     static Number convertToType(Number value, Number current) {
         if (current == null) {
@@ -93,7 +93,7 @@ public class SwingSetValueTool extends AbstractSwingTool {
         double dValue = value.doubleValue();
 
         if (current instanceof Integer || current instanceof Long) {
-            // BR-11: reject fractional values for integer types
+            // reject fractional values for integer types
             if (dValue % 1 != 0) {
                 throw new MCPErrorResponseException(
                         "Value " + SwingUtils.serializeNumber(value)
@@ -119,7 +119,7 @@ public class SwingSetValueTool extends AbstractSwingTool {
 
     @Override
     public boolean isMutation() {
-        // BR-06: mutation tool, ref map IS cleared
+        // mutation tool, ref map IS cleared
         return true;
     }
 }

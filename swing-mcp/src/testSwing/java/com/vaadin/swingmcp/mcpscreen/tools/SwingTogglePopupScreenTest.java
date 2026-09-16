@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Screen-mode tests for {@code swing_toggle_popup}.
  * Happy-path tests live here because {@code doAccessibleAction} on {@code JComboBox}
- * throws {@code HeadlessException} in headless mode (see T-007 BR-10).
+ * throws {@code HeadlessException} in headless mode (see design/snapshot-format.md).
  */
 class SwingTogglePopupScreenTest extends AbstractScreenTest {
 
@@ -116,7 +116,7 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Editable JComboBox (BR-11)
+    // Editable JComboBox
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -217,7 +217,7 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Combo box popup duplication (HE-6 candidate)
+    // Combo box popup duplication 
     // ══════════════════════════════════════════════════════════════════════════
 
     /**

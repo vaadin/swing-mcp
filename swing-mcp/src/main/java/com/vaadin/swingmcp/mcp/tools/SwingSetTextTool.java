@@ -19,7 +19,6 @@ import javax.swing.SwingUtilities;
  * enabled, and is editable, then delegates to
  * {@link AccessibleEditableText#setTextContents(String)}.</p>
  *
- * @see <a href="tool-006-swing-set-text.md">T-006</a>
  */
 public class SwingSetTextTool extends AbstractSwingTool {
 
@@ -29,36 +28,36 @@ public class SwingSetTextTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // BR-01: both params required
+        // both params required
         int ref = params.getInt("ref");
         String text = params.getString("text");
 
-        // BR-02: ref lookup
+        // ref lookup
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // BR-04: set_text structural support check
+        // set_text structural support check
         if (!SwingUtils.hasEditableText(accessible)) {
             throw new MCPErrorResponseException(
                     ComponentClassResolver.resolveClassName(accessible)
                             + " does not support swing_set_text. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
-        // BR-06: effectively enabled check
+        // effectively enabled check
         if (!SwingUtils.isEffectivelyEnabled(accessible)) {
             throw new MCPErrorResponseException(
                     "Component is disabled and cannot be edited");
         }
 
-        // BR-07: editable state check
+        // editable state check
         AccessibleContext ac = accessible.getAccessibleContext();
         if (!ac.getAccessibleStateSet().contains(AccessibleState.EDITABLE)) {
             throw new MCPErrorResponseException("Component is not editable");
         }
 
-        // BR-03: fire the text replacement asynchronously (fire-and-forget)
+        // fire the text replacement asynchronously (fire-and-forget)
         AccessibleEditableText aet = ac.getAccessibleEditableText();
         SwingUtilities.invokeLater(() -> aet.setTextContents(text));
-        // BR-13: D_dispatched_echo success echo — same format for all text components
+        // D_dispatched_echo success echo — same format for all text components
         // including password fields (the agent already supplied the value).
         return echo(ref, renderEchoString(text));
     }

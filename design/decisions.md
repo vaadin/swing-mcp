@@ -4,12 +4,12 @@ Why this project is the way it is and not otherwise — FAQ-shaped: each entry i
 its current answer. Rewrite the answer when it changes; delete the entry when nobody asks any
 more. An entry is earned by what it would cost to reverse, or by research the next person would
 otherwise redo (cited as its `R_`). **The roads not taken are the most valuable thing in here**:
-a tool's spec says how it behaves today, and only this file says which cheaper-looking design was
+the code says how it behaves today, and only this file says which cheaper-looking design was
 tried and why it lost — so a rejected road keeps every one of its losing reasons, and an entry
 that needs its roads is long and stays long. Not an entry: a message's wording, a constant's
 value, the testing library, a version bump — a comment at the site of the choice, or nothing;
-nothing about `design/` itself. A decision that binds one tool only stays in that tool's file
-under `swing-mcp/spec/tools/`. Cite by slug, `D_<slug>`, never by position;
+nothing about `design/` itself. A rule that binds one tool only is that tool's doc comment.
+Cite by slug, `D_<slug>`, never by position;
 `grep '^## D_' design/decisions.md` is the index. When you have written an entry, re-read it
 against the one above, check it says nothing the doc comments already say, and check that every
 rejected road still carries the whole reason it lost.
@@ -731,6 +731,72 @@ analysing.
 **Scope.** Top-level `Frame` only. `JInternalFrame` is already handled by
 `D_desktop_icon_as_itself`. Pruning still runs over the suppressed children, so the tree is
 structurally ready if the frame is restored — defensive, and free.
+
+## D_tree_filter_over_line_grep — Why does `filter_substring` return a subtree rather than the matching lines?
+
+A match drags in its whole ancestor path and its whole subtree; only sibling branches that
+contain no match are dropped. The output opens with a `[filter active: …]` notice so the agent
+knows it is not looking at the whole tree.
+
+**Why.** The first implementation was the obvious one — render everything, keep the lines whose
+text matched — and it failed in two ways that a snapshot cannot afford.
+
+- **The agent could not orient itself.** Isolated lines say nothing about where a component sits,
+  so the model re-snapshotted with different filters trying to work out the structure, spending
+  more calls than an unfiltered snapshot would have cost.
+- **Filtering a container silently emptied it.** A filter matching a `JTable`, `JList` or
+  `JComboBox` returned the container's own line and dropped every row, item and entry under it —
+  structurally complete-looking output describing a table with no rows.
+
+Ancestors fix the first, descendants the second.
+
+**Why not return matching lines plus a separate path string.** Rejected — it invents a second
+notation for something the indent already expresses, and still leaves matched containers empty.
+
+**Why keep the notice line.** Sibling branches are gone with no other trace, so without it a
+filtered snapshot is indistinguishable from a small application. The notice is what tells the
+agent to re-snapshot unfiltered when it needs the whole picture.
+
+## D_select_all_standalone — Why does `swing_select_all` call select-all directly rather than delegating to `swing_set_selection` with every index?
+
+`swing_clear_selection` is a thin delegate to `swing_set_selection` with an empty array, and the
+symmetric move here would be to delegate with `[0, itemCount)`. It does not: it calls
+`selectAllAccessibleSelection()`, or `JTable.selectAll()` on a table (`R_accessible_selection_writes`).
+
+**Why.** "Everything is selected" is a state a selection model is allowed to represent cheaply,
+rather than as a set holding every identifier. Handing in all the indices takes that option away
+— it forces the model to materialize a selection the size of the data, which on a large table is
+both wasteful and a different outcome from what the component's own select-all would have
+produced.
+
+**Why not delegate anyway, for the code sharing.** Rejected — the shared code is a loop that
+builds a range, which is not worth losing the component's own semantics. The validation the two
+tools genuinely share lives in `AbstractSwingTool`'s `requireSelectable` / `requireMultiSelectable`.
+
+**Why refuse a single-selection component instead of selecting its one item.** Rejected —
+"select all" on a component that can hold one item has no meaning the agent could have intended,
+and the underlying call does not refuse it either: on a `SINGLE_SELECTION` `JList` it silently
+leaves the *last* item selected, which looks like success and is not.
+
+## D_no_jtree_selection — Why do the selection tools refuse a `JTree`?
+
+`JTree` is in `SUPPRESSED_SELECTION_ROLES`, so a tree advertises neither selection group label
+and every selection tool rejects it. `get_cells` still enumerates its visible nodes.
+
+**Why.** A tree's own `AccessibleSelection` is non-functional — it reports a selection count of
+zero no matter what is selected. The real selection is distributed across the node children, each
+reporting which of *its* children are selected (`R_selection_index_spaces`). Every other
+selection-bearing component answers at the component level, so supporting trees means a second
+implementation — walk the whole node hierarchy, collect per-node answers, and invent an index
+space to return them in, since a tree path is not an integer offset into anything.
+
+**Why not advertise selection and let it return empty.** Rejected — the tool would succeed and
+report nothing selected while the user is looking at a highlighted row. A refusal naming the
+component is recoverable; a confident wrong answer is not.
+
+**Why not expose tree selection through a path-shaped API of its own.** Deferred, not refused —
+it is a different index space from the integer offsets every other selection tool speaks, and no
+migration has needed it yet. `get_cells` already reaches the visible nodes for interaction.
 
 ## D_no_jtable_cells — Why doesn't `JTable` advertise `get_cells` / `get_cell_count`?
 

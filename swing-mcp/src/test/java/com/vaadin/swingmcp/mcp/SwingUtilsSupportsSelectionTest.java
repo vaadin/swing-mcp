@@ -160,13 +160,13 @@ class SwingUtilsSupportsSelectionTest {
 
     @Test
     void jTree_doesNotSupportSelection() {
-        // JTree tree-level AccessibleSelection is non-functional (T-014)
+        // JTree tree-level AccessibleSelection is non-functional
         JTree tree = new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root"));
         assertFalse(SwingUtils.supportsSelection(tree));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JTable — row-selection gate (T-014 BR-10)
+    // JTable — row-selection gate
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test

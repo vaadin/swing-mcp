@@ -92,11 +92,11 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
 
     @Test
     void openJMenuPopup_doesNotDuplicateItems_HE5() throws Exception {
-        // D_jmenu_not_clickable / HE-5 end-to-end: open a JMenu's popup via the real Swing
+        // D_jmenu_not_clickable end-to-end: open a JMenu's popup via the real Swing
         // mechanics (doClick on a visible frame) and verify the snapshot
         // contains each JMenuItem exactly once — no duplicate sibling
         // JPopupMenu node. Reproduces the original feedback report verbatim:
-        // before HE-5, "Quit" appeared twice (under JMenu and under a sibling
+        // before the JMenu-popup prune, "Quit" appeared twice (under JMenu and under a sibling
         // JPopupMenu added to the layered pane).
         JFrame frame = new JFrame("Login App");
         try {
@@ -120,7 +120,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
             String output = snapshot(frame);
             int quitCount = output.split("\"Quit\"", -1).length - 1;
             assertEquals(1, quitCount,
-                    "Quit must appear exactly once after HE-5 prune. Snapshot:\n" + output);
+                    "Quit must appear exactly once after the JMenu-popup prune. Snapshot:\n" + output);
             assertFalse(output.contains("JPopupMenu (popup_menu)"),
                     "JMenu's own JPopupMenu must be pruned. Snapshot:\n" + output);
             // JMenu still carries [selected, checked] state — signals the popup is open.
@@ -312,7 +312,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // BR-14 / D_modal_stack_header — modal-stack header
+    // D_modal_stack_header — modal-stack header
     //
     // Modal dialogs that would normally block setVisible() are never actually
     // shown in these tests — the header logic reads Dialog.isModal() and walks
@@ -348,7 +348,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
         // Three-level owner chain: inner modal (not shown, just the rendered
         // root) → middle dialog (shown so the chain-walk includes it) → frame
         // (shown). The middle is non-modal purely because setVisible(true) on
-        // a modal blocks the calling thread. Per BR-14 the chain walk does not
+        // a modal blocks the calling thread. The chain walk does not
         // check ancestor modality, only visibility, so this exercises the same
         // rendering path as a true "modal-over-modal-over-frame" scenario.
         JFrame frame = showFrame("Z", 300, 200);
@@ -415,7 +415,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
         }
     }
 
-    /** Local subclass for BR-14 Case-B / BR-11 strip-rule verification. */
+    /** Local subclass verifying the modal header uses the same strip rules. */
     private static class LoginDialog extends JDialog {
         LoginDialog(Window owner, String title) {
             super(owner, title, ModalityType.APPLICATION_MODAL);
@@ -425,7 +425,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
     @Test
     void dr016_customSubclassModal_usesConcreteSimpleName() throws Exception {
         // Concrete class is preferred — the entry reads "LoginDialog", not
-        // "JDialog". BR-11 strip rules are shared via resolveDisplayClass.
+        // "JDialog". The strip rules are shared via resolveDisplayClass.
         JFrame frame = showFrame("Y", 300, 200);
         try {
             LoginDialog dialog = new LoginDialog(frame, "Sign In");
@@ -440,7 +440,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
 
     @Test
     void dr016_titleWithNewline_collapsedInHeader() throws Exception {
-        // BR-13 shared sanitiser collapses \n to a single space so the
+        // The shared sanitiser collapses \n to a single space so the
         // header stays on one line.
         JFrame frame = showFrame("Y", 300, 200);
         try {
@@ -456,7 +456,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
 
     @Test
     void dr016_titleWithEmbeddedQuote_escaped() throws Exception {
-        // BR-13 escapes embedded " as \" so the quoted slot stays parseable.
+        // The sanitiser escapes embedded " as \" so the quoted slot stays parseable.
         JFrame frame = showFrame("Y", 300, 200);
         try {
             JDialog dialog = new JDialog(frame, "say \"hi\"", true);
@@ -541,7 +541,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // SC-8 / D_iconified_children_hidden — iconified Frame children suppressed
+    // D_iconified_children_hidden — iconified Frame children suppressed
     // ══════════════════════════════════════════════════════════════════════════
 
     /**
@@ -723,12 +723,12 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
 
             String text = snapshot(host);
 
-            // SC-5: JDesktopIcon replaces the JInternalFrame; SC-8 placeholder must not appear
+            // JDesktopIcon replaces the JInternalFrame; the iconified placeholder must not appear
             assertTrue(text.startsWith("- JFrame (frame) \"Host\""), "host frame present");
             assertTrue(text.contains("JDesktopIcon (desktop_icon) \"Doc\""),
-                    "JDesktopIcon appears (SC-5). Got:\n" + text);
+                    "JDesktopIcon appears. Got:\n" + text);
             assertFalse(text.contains("[Contents hidden"),
-                    "SC-8 placeholder must not appear for JInternalFrame");
+                    "the iconified placeholder must not appear for JInternalFrame");
         } finally {
             executeOnEDT(() -> { host.dispose(); return null; });
         }

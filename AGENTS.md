@@ -21,7 +21,7 @@ The primary use case is AI-assisted migration of Swing apps to Vaadin.
 | `design/architecture.md` | how the pieces compose — the tool pipeline, the ref lifecycle, threading, the flows; normative | lazy |
 | `design/decisions.md` | why this and not that — `D_` entries, FAQ-shaped | lazy |
 | `design/research.md` | what `javax.accessibility` and Swing actually do — `R_` entries with provenance | lazy |
-| `swing-mcp/spec/tools/` | one file per tool: its business rules and its test checklist | lazy |
+| `design/snapshot-format.md` | the exact text the snapshot emits — line grammar, pruning, states; normative | lazy |
 | doc comments | what one symbol does and why it is shaped so | at the symbol |
 
 Every fact lives in exactly one of these; the others link to it.

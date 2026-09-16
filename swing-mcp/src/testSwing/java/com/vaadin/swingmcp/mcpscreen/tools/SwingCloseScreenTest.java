@@ -323,7 +323,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JInternalFrame not closable (BR-10)
+    // JInternalFrame not closable
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -386,7 +386,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JDesktopIcon with DISPOSE_ON_CLOSE (BR-11)
+    // JDesktopIcon with DISPOSE_ON_CLOSE
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -418,7 +418,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JDesktopIcon not closable (BR-11 → BR-10)
+    // JDesktopIcon not closable
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -433,7 +433,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JDesktopIcon EXIT_ON_CLOSE (BR-11 → BR-09)
+    // JDesktopIcon EXIT_ON_CLOSE
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test

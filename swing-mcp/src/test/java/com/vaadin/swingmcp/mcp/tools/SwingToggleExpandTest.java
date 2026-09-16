@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Headless tests for {@code swing_toggle_expand}.
  * The happy-path (actually expanding/collapsing a JTree node) runs headless
- * because JTree expansion is a model-level operation (see T-010 BR-03).
+ * because JTree expansion is a model-level operation (see design/snapshot-format.md).
  */
 class SwingToggleExpandTest extends AbstractHeadlessTest {
 

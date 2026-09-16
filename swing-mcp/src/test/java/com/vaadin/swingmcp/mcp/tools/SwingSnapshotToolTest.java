@@ -190,7 +190,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot(panel);
 
-        // The CellRendererPane should be excluded (HE-2); only the real button appears
+        // The CellRendererPane should be excluded; only the real button appears
         assertEquals(
                 "- JPanel (panel)\n"
                 + "  - JButton (push_button) \"Real\" [ref=1] actions: click",
@@ -271,7 +271,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot(root);
 
-        // T-002 step 6b / T-020 BR-03: JTable does NOT advertise
+        // design/snapshot-format.md: JTable does NOT advertise
         // get_cell_count / get_cells — use swing_get_items instead.
         assertEquals(
                 "- JPanel (panel)\n"
@@ -287,7 +287,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void largeJListAdvertisesGetCellsAndGetCellCount() throws Exception {
-        // T-002 step 6b: truncated JList advertises get_cell_count + get_cells.
+        // design/snapshot-format.md: truncated JList advertises get_cell_count + get_cells.
         String[] items = new String[20];
         for (int i = 0; i < 20; i++) items[i] = "Item-" + i;
         JList<String> list = new JList<>(items);
@@ -303,7 +303,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void largeJTreeAdvertisesGetCellsAndGetCellCount() throws Exception {
-        // T-002 step 6b: truncated JTree advertises get_cell_count + get_cells.
+        // design/snapshot-format.md: truncated JTree advertises get_cell_count + get_cells.
         javax.swing.tree.DefaultMutableTreeNode root =
                 new javax.swing.tree.DefaultMutableTreeNode("Root");
         for (int i = 0; i < 20; i++) {
@@ -355,7 +355,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot(root);
 
-        // In JScrollPane → columns: annotation, header suppressed (SC-6/SC-7)
+        // In JScrollPane → columns: annotation, header suppressed
         assertEquals(
                 "- JPanel (panel)\n"
                 + "  - JScrollPane (scroll_pane)\n"
@@ -442,7 +442,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot(root);
 
-        // SC-7: JTableHeader suppressed, columns: annotation present instead
+        // JTableHeader suppressed, columns: annotation present instead
         assertEquals(
                 "- JPanel (panel)\n"
                 + "  - JScrollPane (scroll_pane)\n"
@@ -724,7 +724,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     void nonEditableJPasswordFieldShowsOnlyPrefixedSetText() throws Exception {
         // D_password_not_readable pathological case: a non-editable JPasswordField keeps its ref
         // and shows only "!set_text" — get_text is suppressed, set_text is prefixed
-        // with "!" per BR-08 because the EDITABLE state is absent.
+        // with "!" because the EDITABLE state is absent.
         JPanel panel = new JPanel();
         JPasswordField pw = new JPasswordField();
         pw.setEditable(false);
@@ -765,7 +765,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // BR-12 / D_inline_value_preview — inline text="..." / value=N previews
+    // D_inline_value_preview — inline text="..." / value=N previews
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -808,8 +808,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     @Test
     void br12_emptyJTextField_rendersEmptyStringPreview() throws Exception {
         // Empty JTextField yields text="" — distinct from "no preview" (which
-        // would be the case if supportsGetText were false). Matches T-005
-        // BR-08's "field exists and is empty" semantics.
+        // would be the case if supportsGetText were false). Matches swing_get_text\'s
+        // "field exists and is empty" semantics.
         JPanel panel = new JPanel();
         panel.add(new JTextField());
 
@@ -822,7 +822,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     @Test
     void br12_jTextAreaWithNewlines_collapsesWhitespaceBeforeTruncation() throws Exception {
         // Newlines and whitespace runs are collapsed to single spaces
-        // (matches BR-10's HTML cleanup convention) before the 15-char cap.
+        // (matching the description slot's HTML cleanup) before the 15-char cap.
         // Source: "line one\nline two" (17 chars) → collapsed: "line one line two"
         // (17 chars after collapse — still 17 because the newline replaced by
         // a single space). Cap: first 14 chars + "…".
@@ -837,7 +837,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void br12_editableJPasswordField_doesNotEmitTextPreview() throws Exception {
-        // D_password_not_readable / BR-12 gate parity: supportsGetText() returns false for
+        // D_password_not_readable gate parity: supportsGetText() returns false for
         // PASSWORD_TEXT, so no text="..." annotation is emitted even though
         // the field has content. set_text is unaffected.
         JPanel panel = new JPanel();
@@ -1019,18 +1019,18 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // End of BR-12 / D_inline_value_preview tests
+    // End of D_inline_value_preview tests
     // ══════════════════════════════════════════════════════════════════════════
 
     // ══════════════════════════════════════════════════════════════════════════
-    // BR-13 / D_quoted_slot_sanitizing — quoted-slot sanitization
+    // D_quoted_slot_sanitizing — quoted-slot sanitization
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void br13_buttonNameWithNewline_collapsesToSingleSpace() throws Exception {
         // Without sanitization, JButton("Save\nChanges") rendered as three
         // visible lines — the label bleeded into the snapshot tree structure.
-        // BR-13 collapses any whitespace run (including \n) to a single space
+        // The sanitizer collapses any whitespace run (including \n) to a single space
         // so the one-line-per-node invariant is preserved.
         JPanel panel = new JPanel();
         panel.add(new JButton("Save\nChanges"));
@@ -1046,7 +1046,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     @Test
     void br13_buttonNameWithEmbeddedQuote_escapesAsBackslashQuote() throws Exception {
         // Embedded " was previously emitted verbatim, producing
-        // `"Click "here""` which terminates the quoted slot visually. BR-13
+        // `"Click "here""` which terminates the quoted slot visually. The sanitizer
         // escapes as \" so the slot remains unambiguous.
         JPanel panel = new JPanel();
         panel.add(new JButton("Click \"here\""));
@@ -1076,7 +1076,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     @Test
     void br13_descriptionWithNewline_collapsesToSingleSpace() throws Exception {
         // Non-HTML accessibleDescription bypasses htmlToPlainText's whitespace
-        // collapse. BR-13 ensures the description slot is still sanitized.
+        // collapse. The sanitizer ensures the description slot is still sanitized.
         JPanel panel = new JPanel();
         JButton button = new JButton("OK");
         button.getAccessibleContext().setAccessibleDescription("line1\nline2\nline3");
@@ -1107,7 +1107,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void br13_textPreviewWithEmbeddedQuote_escapesAsBackslashQuote() throws Exception {
-        // The BR-12 text="..." preview also passes through the sanitizer,
+        // The text="..." preview also passes through the sanitizer,
         // closing the quote-escape gap that was absent before D_quoted_slot_sanitizing.
         JPanel panel = new JPanel();
         JTextField field = new JTextField();
@@ -1124,7 +1124,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void br13_textPreviewWithNewline_collapsesToSingleSpace() throws Exception {
-        // Newlines in JTextField content were already collapsed in BR-12's
+        // Newlines in JTextField content were already collapsed in the preview's
         // preview whitespace handling. Regression guard that D_quoted_slot_sanitizing's
         // sanitizer keeps the same behaviour while adding quote escaping.
         JPanel panel = new JPanel();
@@ -1220,7 +1220,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // End of BR-13 / D_quoted_slot_sanitizing / D_label_not_readable tests
+    // End of D_quoted_slot_sanitizing / D_label_not_readable tests
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -1316,7 +1316,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         JPanel panel = new JPanel();
         panel.add(new JSpinner(new SpinnerNumberModel(1, 0, 10, 1)));
 
-        // BR-12: JSpinner's AccessibleJSpinner delegates AccessibleText to the
+        // JSpinner's AccessibleJSpinner delegates AccessibleText to the
         // inner JFormattedTextField so supportsGetText is true — both text=
         // and value= are emitted on the spinner line. The inner editor gets
         // its own text= preview.
@@ -1345,8 +1345,8 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 new JLabel("Left"), new JLabel("Right"));
         panel.add(splitPane);
 
-        // BR-12: unrealized JSplitPane reports -1 from getCurrentAccessibleValue;
-        // value preview mirrors that fidelity (T-012 Component Matrix note).
+        // unrealized JSplitPane reports -1 from getCurrentAccessibleValue;
+        // value preview mirrors that fidelity.
         assertEquals(
                 "- JPanel (panel)\n"
                 + "  - JSplitPane (split_pane) [ref=1, horizontal] value=-1 actions: get_value, set_value\n"
@@ -1497,7 +1497,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void contextJPopupMenuWithNonJMenuInvokerIsNotPruned() throws Exception {
-        // Regression guard for D_jmenu_not_clickable / HE-5: the JPopupMenu prune is keyed on
+        // Regression guard for D_jmenu_not_clickable: the JPopupMenu prune is keyed on
         // getInvoker() instanceof JMenu. Right-click context menus invoked
         // from a JButton/JTable/etc. must continue to render normally.
         // Headless caveat: we override isVisible() and getInvoker() directly
@@ -1516,14 +1516,14 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot(panel);
         assertTrue(output.contains("JPopupMenu (popup_menu)"),
-                "JPopupMenu with JButton invoker must NOT be pruned (HE-5 negative case): " + output);
+                "JPopupMenu with JButton invoker must NOT be pruned (negative case): " + output);
         assertTrue(output.contains("\"Cut\""),
                 "JPopupMenu's items must render when not pruned: " + output);
     }
 
     @Test
     void jPopupMenuWithJMenuInvokerIsPruned() throws Exception {
-        // D_jmenu_not_clickable / HE-5 positive case (headless). The prune rule is keyed on
+        // D_jmenu_not_clickable positive case (headless). The prune rule is keyed on
         // getInvoker() instanceof JMenu. We test the rule in isolation rather
         // than reproduce the full "JMenu's internal popup is showing" scenario,
         // which requires PopupFactory and a real display (covered in the
@@ -1542,7 +1542,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot(panel);
         assertFalse(output.contains("JPopupMenu (popup_menu)"),
-                "JPopupMenu with JMenu invoker must be pruned (HE-5): " + output);
+                "JPopupMenu with JMenu invoker must be pruned: " + output);
         assertFalse(output.contains("\"Quit\""),
                 "Pruned popup's items must not appear: " + output);
     }
@@ -1558,7 +1558,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         String output = snapshot(panel);
         // JTree nodes use AccessibleRole.LABEL (OpenJDK implementation).
-        // The tree itself has no selection (TREE suppressed in T-014) and is
+        // The tree itself has no selection (TREE suppressed, D_no_jtree_selection) and is
         // not truncated, so it has no actions and no ref.
         // The root "Root" is expanded and has toggle_expand + selection actions.
         // Leaf nodes "A" and "B" are kept because they have accessible names,
@@ -1658,7 +1658,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // filter_substring tree-filtering tests (BR-09)
+    // filter_substring tree-filtering tests
     // ══════════════════════════════════════════════════════════════════════════
 
     private static final String FILTER_HEADER_PREFIX =
@@ -1920,7 +1920,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     /**
      * A CellRendererPane that also implements Accessible so it can appear
-     * in the accessibility tree (allowing HE-2 to be tested).
+     * in the accessibility tree (so the CellRendererPane exclusion can be tested).
      */
     // ══════════════════════════════════════════════════════════════════════════
     // Tier 2 — MouseListener fallback in snapshot
@@ -1986,7 +1986,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // BR-10 — description source resolution and 120-char cap
+    // description source resolution and 120-char cap
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -2022,7 +2022,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
     @Test
     void br10_tooltipLongerThan120Chars_isTruncatedWithEllipsis() throws Exception {
-        // 150 'x's → 120 'x's + U+2026; capped description triggers get_description (T-024)
+        // 150 'x's → 120 'x's + U+2026; capped description triggers get_description
         String longTooltip = "x".repeat(150);
         JButton button = new JButton("OK");
         button.setToolTipText(longTooltip);
@@ -2037,7 +2037,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     void br10_descriptionLongerThan120Chars_isTruncatedWithEllipsis_symmetricCap()
             throws Exception {
         // Symmetric cap: real accessibleDescription is also truncated.
-        // Capped description triggers get_description (T-024).
+        // Capped description triggers get_description.
         String longDesc = "y".repeat(150);
         JButton button = new JButton("OK");
         button.getAccessibleContext().setAccessibleDescription(longDesc);
@@ -2114,7 +2114,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     @Test
     void br10_perCellPerRowPerNodePerItemTooltips_notSurfacedInSnapshot()
             throws Exception {
-        // Regression guard (T-002 BR-10): per-cell / per-row / per-node /
+        // Regression guard: per-cell / per-row / per-node /
         // per-item tooltips on JTable, JList, JTree, JTableHeader are
         // delivered via the MouseEvent-aware overload
         // getToolTipText(MouseEvent). The snapshot walker has no
@@ -2183,9 +2183,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // BR-11 — component identity slot (Case A / B / C rendering)
+    // component identity slot (Case A / B / C rendering)
     //
-    // End-to-end snapshot-level assertions that pin the three BR-11 rendering
+    // End-to-end snapshot-level assertions that pin the three identity-slot rendering
     // shapes in the tree output. Unit-level coverage of the resolver lives in
     // ComponentClassResolverTest.
     // ══════════════════════════════════════════════════════════════════════════
@@ -2208,7 +2208,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     @Test
     void br11_caseA_unnamedJScrollPane_hasNoEmptyQuotesAfterIdentitySlot()
             throws Exception {
-        // BR-11: an unnamed component must not emit an empty "" segment after
+        // an unnamed component must not emit an empty "" segment after
         // the identity slot. Regression guard — see spec line 478.
         JScrollPane scrollPane = new JScrollPane(new JPanel(),
                 JScrollPane.VERTICAL_SCROLLBAR_NEVER,
@@ -2233,7 +2233,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     @Test
     void br11_caseB_userSubclassOfAbstractButton_usesArrowToAbstractButton()
             throws Exception {
-        // BR-11: AbstractButton qualifies (abstract Swing classes do). Role is
+        // AbstractButton qualifies (abstract Swing classes do). Role is
         // driven by the subclass's AccessibleContext — BareButtonAccessible
         // reports PUSH_BUTTON so we can assert the full rendered line.
         BareButton btn = new BareButton();
@@ -2334,13 +2334,13 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     // Helpers
     // ══════════════════════════════════════════════════════════════════════════
 
-    /** BR-11 Case B fixture — user subclass of a concrete Swing widget. */
+    /** Case B fixture — user subclass of a concrete Swing widget. */
     public static class FancyButton extends JButton {
         public FancyButton() { super("Fancy"); }
     }
 
     /**
-     * BR-11 Case B fixture — user subclass of an abstract Swing widget.
+     * Case B fixture — user subclass of an abstract Swing widget.
      * AbstractButton does not declare {@code implements Accessible} itself;
      * concrete subclasses like JButton add it. The fixture adds it explicitly
      * and supplies a minimal AccessibleContext so the role renders as
@@ -2395,7 +2395,7 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
         }
     }
 
-    /** BR-11 fixture — user subclass of a javax.swing.plaf.* class. */
+    /** Identity-slot fixture — user subclass of a javax.swing.plaf.* class. */
     public static class MyArrow extends javax.swing.plaf.basic.BasicArrowButton {
         public MyArrow() { super(javax.swing.plaf.basic.BasicArrowButton.NORTH); }
     }

@@ -16,7 +16,6 @@ import javax.swing.SwingUtilities;
  * <p>Looks up the node by ref, verifies it is enabled and supports the toggle-expand
  * action, then invokes the matching {@link AccessibleAction}.</p>
  *
- * @see <a href="tool-010-swing-toggle-expand.md">T-010</a>
  */
 public class SwingToggleExpandTool extends AbstractSwingTool {
 
@@ -26,19 +25,19 @@ public class SwingToggleExpandTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // BR-01: ref is required integer
+        // ref is required integer
         int ref = params.getInt("ref");
 
-        // BR-02: ref lookup
+        // ref lookup
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // BR-06: effectively enabled check (before BR-04: disabled nodes may strip their actions)
+        // effectively enabled check (before the support check: disabled nodes may strip their actions)
         if (!SwingUtils.isEffectivelyEnabled(accessible)) {
             throw new MCPErrorResponseException(
                     "Component is disabled and cannot be interacted with");
         }
 
-        // BR-04: toggle-expand support check
+        // toggle-expand support check
         int actionIndex = SwingUtils.supportsToggleExpand(accessible);
         if (actionIndex < 0) {
             throw new MCPErrorResponseException(
@@ -46,10 +45,10 @@ public class SwingToggleExpandTool extends AbstractSwingTool {
                             + " does not support swing_toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
-        // BR-03: fire the action asynchronously (fire-and-forget)
+        // fire the action asynchronously (fire-and-forget)
         AccessibleAction aa = accessible.getAccessibleContext().getAccessibleAction();
         SwingUtilities.invokeLater(() -> aa.doAccessibleAction(actionIndex));
-        // BR-11: D_dispatched_echo success echo
+        // D_dispatched_echo success echo
         return echo(ref);
     }
 

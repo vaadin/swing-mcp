@@ -23,7 +23,6 @@ import java.util.Set;
  * at most one index is allowed. For JTable, indices are row indices — the tool
  * translates to cell indices internally. An empty array clears the selection.</p>
  *
- * @see <a href="tool-015-swing-set-selection.md">T-015</a>
  */
 public class SwingSetSelectionTool extends AbstractSwingTool {
 
@@ -33,17 +32,17 @@ public class SwingSetSelectionTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // Step 1 (BR-01): parameter validation
+        // parameter validation
         int ref = params.getInt("ref");
         List<Integer> indices = params.getIntArray("indices");
 
-        // Step 2 (BR-02): ref lookup
+        // ref lookup
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // Step 3 (BR-03): selection support check with JTable-specific error
+        // selection support check with JTable-specific error
         requireSelectable(accessible, "swing_set_selection");
 
-        // Step 4 (BR-05): effectively enabled check
+        // effectively enabled check
         if (!SwingUtils.isEffectivelyEnabled(accessible)) {
             throw new MCPErrorResponseException(
                     "Component is disabled and cannot be modified");
@@ -53,21 +52,21 @@ public class SwingSetSelectionTool extends AbstractSwingTool {
         AccessibleContext ac = accessible.getAccessibleContext();
         AccessibleSelection as = ac.getAccessibleSelection();
 
-        // Step 6 (BR-13): deduplicate indices
+        // deduplicate indices
         Set<Integer> deduplicated = new LinkedHashSet<>(indices);
 
-        // Step 7 (BR-07): empty indices = clear path
+        // empty indices = clear path
         if (deduplicated.isEmpty()) {
             if (accessible instanceof JTabbedPane && ((JTabbedPane) accessible).getTabCount() > 0) {
                 throw new MCPErrorResponseException(
                         "This component does not allow the selection to be empty.");
             }
             SwingUtilities.invokeLater(as::clearAccessibleSelection);
-            // BR-09: D_dispatched_echo success echo
+            // D_dispatched_echo success echo
             return echo(ref, renderEchoIntArray(deduplicated));
         }
 
-        // Step 8 (BR-08): single-selection enforcement
+        // single-selection enforcement
         if (SwingUtils.supportsSingleSelection(accessible) && deduplicated.size() > 1) {
             throw new MCPErrorResponseException(
                     "Component is in single-selection mode. Pass exactly one index (or an empty array to clear).");
@@ -76,7 +75,7 @@ public class SwingSetSelectionTool extends AbstractSwingTool {
         // Step 9: determine item count for bounds checking
         int itemCount = SwingUtils.getItemCount(accessible);
 
-        // Step 10 (BR-11/BR-12): bounds validation
+        // Step 10: bounds validation
         for (int index : deduplicated) {
             if (index < 0 || index >= itemCount) {
                 throw new MCPErrorResponseException(
@@ -84,7 +83,7 @@ public class SwingSetSelectionTool extends AbstractSwingTool {
             }
         }
 
-        // Step 11 (BR-14): disabled tab check (JTabbedPane only)
+        // disabled tab check (JTabbedPane only)
         if (accessible instanceof JTabbedPane) {
             JTabbedPane tabbedPane = (JTabbedPane) accessible;
             for (int index : deduplicated) {
@@ -118,13 +117,13 @@ public class SwingSetSelectionTool extends AbstractSwingTool {
             });
         }
 
-        // Step 13 (BR-09): D_dispatched_echo success echo
+        // D_dispatched_echo success echo
         return echo(ref, renderEchoIntArray(deduplicated));
     }
 
     @Override
     public boolean isMutation() {
-        // BR-06: mutation tool, ref map IS cleared
+        // mutation tool, ref map IS cleared
         return true;
     }
 }

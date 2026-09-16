@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Headless tests for {@code swing_decrement}.
  * All happy-path cases can run headless; {@code doAccessibleAction} for decrement
  * works correctly in headless mode for both {@code JSpinner} and {@code JSlider}
- * (see T-009 BR-10).
+ * (see design/snapshot-format.md).
  */
 class SwingDecrementTest extends AbstractHeadlessTest {
 
@@ -97,7 +97,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Boundary — value stays at minimum (T-009 BR-09 — fire-and-forget no-op)
+    // Boundary — value stays at minimum (design/snapshot-format.md — fire-and-forget no-op)
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test

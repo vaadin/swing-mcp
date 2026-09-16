@@ -123,6 +123,7 @@ for f in DECISIONS.md decisions.md NOTES.md RESEARCH.md SOLUTION.md SOLUTION_VER
          REQUIREMENTS.md ARCHITECTURE.md DESIGN.md COMPARISON.md; do
   if [ -e "$f" ]; then err "root $f — doc files live under $DESIGN/, lowercase"; fi
 done
+if [ -e swing-mcp/spec ]; then err "swing-mcp/spec/ is retired — a tool's rules are its doc comment, the emitted text is $DESIGN/snapshot-format.md"; fi
 if [ -e "$DESIGN/requirements.md" ]; then err "$DESIGN/requirements.md is retired — promises are AGENTS.md lines, owner-written"; fi
 if [ -e "$DESIGN/comparison.md" ]; then err "$DESIGN/comparison.md is retired — prior art is research.md"; fi
 for f in "$DESIGN"/solution.md "$DESIGN"/solution-*.md; do

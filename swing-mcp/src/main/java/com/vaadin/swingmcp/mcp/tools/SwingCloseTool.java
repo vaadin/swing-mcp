@@ -22,7 +22,6 @@ import java.awt.event.WindowEvent;
  * icons, calls {@code doDefaultCloseAction()}. The client observes the
  * result via {@code swing_snapshot}.</p>
  *
- * @see <a href="tool-011-swing-close.md">T-011</a>
  */
 public class SwingCloseTool extends AbstractSwingTool {
 
@@ -32,18 +31,18 @@ public class SwingCloseTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // BR-01/BR-02: ref lookup
+        // ref lookup
         int ref = params.getInt("ref");
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // BR-05: check close support
+        // check close support
         if (!SwingUtils.supportsClose(accessible)) {
             throw new MCPErrorResponseException(
                     ComponentClassResolver.resolveClassName(accessible)
                             + " does not support swing_close. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
-        // BR-03: fire the close event asynchronously (fire-and-forget)
+        // fire the close event asynchronously (fire-and-forget)
         if (accessible instanceof Window) {
             Window window = (Window) accessible;
             SwingUtilities.invokeLater(() -> window.dispatchEvent(new WindowEvent(window, WindowEvent.WINDOW_CLOSING)));
@@ -54,7 +53,7 @@ public class SwingCloseTool extends AbstractSwingTool {
                     : (JInternalFrame) accessible;
             SwingUtilities.invokeLater(iframe::doDefaultCloseAction);
         }
-        // BR-13: D_dispatched_echo success echo
+        // D_dispatched_echo success echo
         return echo(ref);
     }
 

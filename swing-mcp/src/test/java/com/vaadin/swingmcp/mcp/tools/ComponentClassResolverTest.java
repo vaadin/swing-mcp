@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for {@link ComponentClassResolver} — the implementation of
- * T-002 BR-11 (component identity slot).
+ * design/snapshot-format.md (component identity slot).
  */
 class ComponentClassResolverTest {
 
@@ -94,7 +94,7 @@ class ComponentClassResolverTest {
 
     @Test
     void abstractButtonSubclass_walksUpToAbstractButton() {
-        // AbstractButton qualifies under BR-11 (abstracts are recognised
+        // AbstractButton qualifies (abstracts are recognised
         // Swing types). Skipping it would land on JComponent and lose the
         // "button-family" signal. Role defaults to "unknown" because the
         // test fixture doesn't populate accessibleContext — the assertion
@@ -200,7 +200,7 @@ class ComponentClassResolverTest {
 
     @Test
     void isQualifying_acceptsAbstractSwingClasses() {
-        // BR-11 — abstract classes qualify.
+        // abstract classes qualify.
         assertTrue(ComponentClassResolver.isQualifying(AbstractButton.class));
         assertTrue(ComponentClassResolver.isQualifying(javax.swing.text.JTextComponent.class));
     }
@@ -272,7 +272,7 @@ class ComponentClassResolverTest {
     }
 
     /**
-     * Custom class extending an abstract Swing base — exercises BR-11
+     * Custom class extending an abstract Swing base — exercises the identity slot
      * "abstract classes qualify." AbstractButton does not itself declare
      * {@code implements Accessible} (only concrete subclasses like JButton
      * do), so this fixture adds it explicitly. {@code accessibleContext}

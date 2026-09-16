@@ -270,7 +270,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Truncation (BR-09)
+    // Truncation
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
