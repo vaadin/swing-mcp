@@ -58,7 +58,7 @@ Execution order:
   - [x] Returned count matches `total` from `swing_get_cells` header for same component.
   - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [x] `SwingGetCellCountScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+- [x] `SwingGetCellCountScreenTest` (`testSwing` — requires display; see `design/architecture.md` § Testing)
   - [x] `JTable` inside `JFrame` returns an MCP error redirecting to `swing_get_item_count`.
   - [x] `JList` inside `JFrame` returns correct count.
   - [x] `JList` inside `JDialog` returns correct count.
@@ -66,7 +66,7 @@ Execution order:
 
 ### Component matrix
 
-Each matrix component from `verification.md` gets a dedicated test method.
+Each matrix component in `design/architecture.md` § Testing gets a dedicated test method.
 
 **Succeed (`get_cell_count` supported):** `JList`, `JTree` — any supported large data component regardless of child count.
 

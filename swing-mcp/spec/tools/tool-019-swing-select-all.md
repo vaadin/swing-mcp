@@ -17,10 +17,10 @@ Selects every item in a multi-selection component — saves the AI from enumerat
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
 | BR-03 | If the target does not support selection (i.e. `SwingUtils.supportsSelection(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`). The error message depends on why selection is unsupported: (a) If the target is a `JTable` that fails the row-selection gate (T-014 BR-10): *"JTable is not in row-selection mode. Only row selection is supported."* (b) Otherwise: *"<ClassName> does not support select_all. Call swing_snapshot or swing_get_cells to verify the list of actions."* Same detection logic as T-014 BR-03. |
 | BR-04 | If the target supports selection but is in **single-selection mode** (`SwingUtils.supportsSingleSelection(accessible)` returns `true`), the tool returns an MCP-level error (`isError: true`) with the message *"Component is in single-selection mode. select_all requires multi-selection."* |
-| BR-05 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. |
+| BR-05 | If the target is not effectively enabled (see **D_mirror_swing_semantics**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. |
 | BR-06 | All validation runs on the EDT inside `runInEDT()`. The selection mutation is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously (fire-and-forget). |
 | BR-07 | `swing_select_all` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after successful invocation. A pre-dispatch validation error (`MCPErrorResponseException`) does **not** clear the ref map — the UI state hasn't changed, so existing refs remain valid and the AI can retry without re-snapshotting. |
-| BR-08 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched select-all on ref=<N> — call swing_snapshot to verify the outcome` (see **DR-dispatched-echo**). |
+| BR-08 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched select-all on ref=<N> — call swing_snapshot to verify the outcome` (see **D_dispatched_echo**). |
 | BR-09 | **JTable select-all.** When the target is a `JTable` in row-selection mode, the tool **must** use `table.selectAll()` directly. `AccessibleSelection.selectAllAccessibleSelection()` is a complete no-op on JTable — it selects nothing (probe-tested 2026-04-08). `table.selectAll()` works correctly: selects all rows, does not flip `columnSelectionAllowed`, and the accessible selection correctly reports all cells (which aggregate back to rows via T-014 BR-11). |
 | BR-10 | **Non-JTable select-all.** For `JList` (and any other multi-selectable component), the tool dispatches `as.selectAllAccessibleSelection()` via `SwingUtilities.invokeLater()` (fire-and-forget). |
 | BR-11 | **Empty component.** If the component has zero items (`SwingUtils.getItemCount(accessible) == 0`), the tool succeeds trivially — dispatch still runs but has no observable effect. This is not an error. No explicit implementation guard is needed — the behavior falls out naturally from `selectAllAccessibleSelection()` / `table.selectAll()` on empty components (probe-tested 2026-04-08). |
@@ -119,7 +119,7 @@ Verified empirically on Java 21 OpenJDK in headless mode (`JTableSelectAllProbeT
   - [x] Round-trip: `swing_select_all` followed by `swing_get_selection` on same `JList` returns all items.
   - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [x] `SwingSelectAllScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+- [x] `SwingSelectAllScreenTest` (`testSwing` — requires display; see `design/architecture.md` § Testing)
   - [x] `JList` (multi-selection) inside `JFrame`: all items selected after `select_all`.
   - [x] `JTable` (row-selection, multi-selection) inside `JFrame`: all rows selected after `select_all`.
   - [x] `JList` (multi-selection) inside `JDialog`: all items selected after `select_all`.
@@ -127,7 +127,7 @@ Verified empirically on Java 21 OpenJDK in headless mode (`JTableSelectAllProbeT
 
 ### Component matrix
 
-Each matrix component from `verification.md` gets a dedicated test method.
+Each matrix component in `design/architecture.md` § Testing gets a dedicated test method.
 
 **Succeed (`select_all` supported):** `JList` (multi-selection), `JTable` (row-selection, multi-selection mode).
 

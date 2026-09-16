@@ -78,7 +78,7 @@ Execution order:
 ### Design notes
 
 - **Relationship to `get_cells`.** `get_cells` / `get_cell_count` operate in the **accessible children index space** and are advertised only when the snapshot truncated a large data component. `get_items` operates in the **selection item index space** and is available on any component with `single-selection` or `multi-selection` (plus any JTable — see BR-03). For JList, the two index spaces are identical. For JComboBox, they diverge (children index has only 1 child — the popup menu). The tools serve different purposes: `get_cells` is for content discovery that *returns actionable refs* (finding a button inside a list cell renderer), `get_items` is for text-only selection browsing (seeing what can be selected). **For JTable, `get_items` is the canonical content-access tool** — `get_cells` does not support JTable (see T-020 BR-03). Table cell renderers are stamp-painted via `CellRendererPane` and surface as plain text `LABEL`s, so `get_cells` can never return an actionable ref for a JTable; the row-based `get_items` output is both more informative and consistent with the snapshot's row-based view (T-002 SC-6).
-- **Not listed in snapshot actions.** Per architecture.md § 6 "Selection Action Groups", `get_items` is not listed as a snapshot action. Its availability is documented in the tool description and is implied by the `single-selection` / `multi-selection` group labels. **Discoverability caveat for JTable.** A JTable in column-selection, cell-selection or no-selection mode does *not* carry the `single-selection` / `multi-selection` group label in the snapshot (because `supportsSelection` is false for those modes), yet `get_items` still works on it (BR-03). The AI learns this from the tool description, which is sent once at session start.
+- **Not listed in snapshot actions.** Per R_selection_index_spaces, `get_items` is not listed as a snapshot action. Its availability is documented in the tool description and is implied by the `single-selection` / `multi-selection` group labels. **Discoverability caveat for JTable.** A JTable in column-selection, cell-selection or no-selection mode does *not* carry the `single-selection` / `multi-selection` group label in the snapshot (because `supportsSelection` is false for those modes), yet `get_items` still works on it (BR-03). The AI learns this from the tool description, which is sent once at session start.
 - **Paging rationale.** `offset`/`length` are required parameters with no upper cap. The AI client is in charge of its own context window — if it wants to request all 10,000 rows at once, that's its choice. The server does not second-guess the client.
 - **`buildTableRowText()` reuse.** The row name construction logic uses `SwingUtils.buildTableRowText()` (pipe-separated), shared by the snapshot tool (SC-6), selection tools (T-014), and `get_items` / `get_item_count`.
 - **Integer overflow.** When computing the iteration end index (`offset + length`), use `long` arithmetic to avoid overflow: `int end = (int) Math.min((long) offset + length, totalCount);`
@@ -126,7 +126,7 @@ Execution order:
 
 ### Component matrix
 
-Each matrix component from `verification.md` gets a dedicated test method.
+Each matrix component in `design/architecture.md` § Testing gets a dedicated test method.
 
 **Succeed (`get_items` supported):** `JList`, `JComboBox`, `JTable` (any selection mode — read path is selection-mode agnostic per BR-03).
 

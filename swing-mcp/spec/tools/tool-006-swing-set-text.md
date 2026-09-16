@@ -13,17 +13,17 @@ Writes text into text fields, text areas, and other editable text components.
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. The `text` parameter is required and must be a string. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | The text is set via `AccessibleEditableText.setTextContents(String)`, posted via `SwingUtilities.invokeLater()` (fire-and-forget — see **architecture.md § 2 — Fire-and-Forget Mutation Dispatch**). The `AccessibleEditableText` reference is captured during the validation phase on the EDT. |
+| BR-03 | The text is set via `AccessibleEditableText.setTextContents(String)`, posted via `SwingUtilities.invokeLater()` (fire-and-forget — see **D_fire_and_forget_dispatch**). The `AccessibleEditableText` reference is captured during the validation phase on the EDT. |
 | BR-04 | If the target does not support `set_text` (i.e. `SwingUtils.supportsSetText(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "<ClassName> does not support swing_set_text. Call swing_snapshot or swing_get_cells to verify the list of actions". |
 | BR-05 | All validation runs on the EDT inside `runInEDT()`. The `setTextContents()` call is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
-| BR-06 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled and cannot be edited. See also **architecture.md § 6** — Tool execution level. The enabled check runs before the editable check (BR-07); a disabled non-editable field always reports "disabled". This ordering is intentional: disabled is a runtime state that takes full precedence. |
+| BR-06 | If the target is not effectively enabled (see **D_mirror_swing_semantics**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled and cannot be edited. See also **`design/architecture.md`** — Tool execution level. The enabled check runs before the editable check (BR-07); a disabled non-editable field always reports "disabled". This ordering is intentional: disabled is a runtime state that takes full precedence. |
 | BR-07 | If the target is not editable (has `AccessibleEditableText` but the `EDITABLE` state is missing from `AccessibleStateSet`), the tool returns an MCP-level error (`isError: true`) with the message "Component is not editable". This covers `JTextComponent.setEditable(false)`. **This check is essential:** `setTextContents()` bypasses the editable flag — it calls `setText()` which operates directly on the `Document` without checking `isEditable()`. Without BR-07, text would be silently set on non-editable fields, violating the architecture principle that the MCP server must only perform actions a real user can perform. **Note:** The snapshot already excludes `set_text` from actions for non-editable text components (see tool-002 BR-06 step 4), so well-behaved clients should never reach this check. It remains as defense-in-depth against stale snapshots or direct tool calls. |
 | BR-08 | `swing_set_text` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after successful invocation. A pre-dispatch validation error (`MCPErrorResponseException`) does **not** clear the ref map — the UI state hasn't changed, so existing refs remain valid and the AI can retry without re-snapshotting. |
 | BR-09 | Setting an empty string (`text = ""`) is valid — it clears the text content. |
 | BR-10 | No length limit on the `text` parameter — the AI is not expected to send very large text, and Swing text components can handle arbitrary lengths. |
 | BR-11 | `setTextContents()` fires `DocumentListener` events but does **not** fire `ActionEvent` (like pressing Enter in a `JTextField` would). This is the default behavior of the accessibility API — we delegate entirely to `setTextContents()` and trust the API to do the right thing. Practically, the underlying `JTextComponent.setText()` implementation fires a `removeUpdate` followed by an `insertUpdate` (two events, not one atomic replacement); consumers with `DocumentListener`s will see both. The AI filling a field will not automatically submit a form — it must follow up with `swing_click` on the submit button. This is the intended workflow. |
-| BR-12 | `JPasswordField` is a supported target for `set_text`. Setting text on a password field updates the actual password (bypassing echo-char masking), which is necessary for AI-driven login-form filling. This is intentionally asymmetric with `swing_get_text`, which **refuses** to read password-role accessibles and returns a dedicated error — see **DR-password-not-readable** and T-005 BR-06. The asymmetry is acceptable: the AI can write a known credential but cannot read back the real value to exfiltrate it. The snapshot reflects this asymmetry directly — password fields advertise `set_text` but not `get_text` (T-002 BR-06 step 4, DR-password-not-readable). |
-| BR-13 | **Return message.** On success, the tool returns a single text-content item. The echo is `Dispatched set-text on ref=<N> to "<text>" — call swing_snapshot to verify the outcome` — `<text>` double-quoted and truncated at 15 characters (≤15 → full; else first 14 + `…`), per **DR-dispatched-echo**. Password fields use the same echo format as regular text fields: the agent already supplied the value in the request, so echoing it back discloses nothing new and provides a strong confirmation signal that the correct value was written. |
+| BR-12 | `JPasswordField` is a supported target for `set_text`. Setting text on a password field updates the actual password (bypassing echo-char masking), which is necessary for AI-driven login-form filling. This is intentionally asymmetric with `swing_get_text`, which **refuses** to read password-role accessibles and returns a dedicated error — see **D_password_not_readable** and T-005 BR-06. The asymmetry is acceptable: the AI can write a known credential but cannot read back the real value to exfiltrate it. The snapshot reflects this asymmetry directly — password fields advertise `set_text` but not `get_text` (T-002 BR-06 step 4, D_password_not_readable). |
+| BR-13 | **Return message.** On success, the tool returns a single text-content item. The echo is `Dispatched set-text on ref=<N> to "<text>" — call swing_snapshot to verify the outcome` — `<text>` double-quoted and truncated at 15 characters (≤15 → full; else first 14 + `…`), per **D_dispatched_echo**. Password fields use the same echo format as regular text fields: the agent already supplied the value in the request, so echoing it back discloses nothing new and provides a strong confirmation signal that the correct value was written. |
 
 ### Algorithm: replacing the text content
 
@@ -35,7 +35,7 @@ Execution order:
 5. **BR-07** — Check `AccessibleStateSet` contains `AccessibleState.EDITABLE` — if not, fail with "not editable" error.
 6. Obtain `AccessibleEditableText aet = ac.getAccessibleEditableText()`.
 7. `SwingUtilities.invokeLater(() -> aet.setTextContents(text))` — fire-and-forget.
-8. Return the DR-dispatched-echo echo (BR-13): `Dispatched set-text on ref=<N> to "<text>" — call swing_snapshot to verify the outcome`.
+8. Return the D_dispatched_echo echo (BR-13): `Dispatched set-text on ref=<N> to "<text>" — call swing_snapshot to verify the outcome`.
 
 **Accessibility API methods used:**
 - `AccessibleContext.getAccessibleEditableText()` — detection (returns `AccessibleEditableText` or `null`)
@@ -64,11 +64,11 @@ Execution order:
   - [x] The ref map is preserved after a failed `swing_set_text` call on a disabled component (refs remain valid for retry).
   - [x] Setting text on a `JTextField` fires a `DocumentListener` event.
   - [x] Each component from the component matrix is tested (dedicated test method per component).
-  - [x] Success on a `JTextField` returns the DR-dispatched-echo echo `Dispatched set-text on ref=<N> to "<text>" — call swing_snapshot to verify the outcome` with the text value double-quoted (BR-13).
-  - [x] Success with a long text (>15 chars) returns a truncated value per DR-dispatched-echo (first 14 chars + `…`).
-  - [x] Success on a `JPasswordField` returns the same DR-dispatched-echo echo as `JTextField`: `Dispatched set-text on ref=<N> to "<text>" — call swing_snapshot to verify the outcome` (BR-13).
+  - [x] Success on a `JTextField` returns the D_dispatched_echo echo `Dispatched set-text on ref=<N> to "<text>" — call swing_snapshot to verify the outcome` with the text value double-quoted (BR-13).
+  - [x] Success with a long text (>15 chars) returns a truncated value per D_dispatched_echo (first 14 chars + `…`).
+  - [x] Success on a `JPasswordField` returns the same D_dispatched_echo echo as `JTextField`: `Dispatched set-text on ref=<N> to "<text>" — call swing_snapshot to verify the outcome` (BR-13).
 
-- [x] `SwingSetTextScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+- [x] `SwingSetTextScreenTest` (`testSwing` — requires display; see `design/architecture.md` § Testing)
   - [x] Setting text on a `JTextField` inside `JFrame` replaces its content.
   - [x] Setting text on a `JPasswordField` inside `JFrame` updates the password.
   - [x] Setting text on a `JTextArea` inside `JFrame` sets multi-line content.
@@ -82,7 +82,7 @@ Execution order:
 
 ### Component matrix
 
-Each matrix component from `verification.md` gets a dedicated test method.
+Each matrix component in `design/architecture.md` § Testing gets a dedicated test method.
 
 **Succeed (`set_text` supported):** `JTextField`, `JPasswordField`, `JTextArea`.
 

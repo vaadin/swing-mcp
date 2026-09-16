@@ -1,9 +1,9 @@
 # T-012: swing_get_value
 
-**Status:** Implemented (amended 2026-04-15 — motivation updated for DR-inline-value-preview inline preview)
+**Status:** Implemented (amended 2026-04-15 — motivation updated for D_inline_value_preview inline preview)
 **Date:** 2026-04-02
 
-Reads the numeric value of sliders, spinners, progress bars, and split-pane dividers, together with its min/max bounds. The snapshot carries an inline `value=N` preview per BR-12 / DR-inline-value-preview (or `value=N/M` for progress bars); `swing_get_value` returns the full `{current, min, max}` shape when the AI needs bounds information. Both paths share `SwingUtils.readValue()` so the preview and the JSON result can never disagree on the current value.
+Reads the numeric value of sliders, spinners, progress bars, and split-pane dividers, together with its min/max bounds. The snapshot carries an inline `value=N` preview per BR-12 / D_inline_value_preview (or `value=N/M` for progress bars); `swing_get_value` returns the full `{current, min, max}` shape when the AI needs bounds information. Both paths share `SwingUtils.readValue()` so the preview and the JSON result can never disagree on the current value.
 
 **Tool description:** "Read the numeric value of a UI component by ref. Returns JSON with current, min, max. Missing min/max means unbounded. Requires a ref obtained from swing_snapshot or swing_get_cells."
 
@@ -73,7 +73,7 @@ Execution order:
   - [x] Whole-number values serialize as JSON integers (e.g. `JSlider` at 42 → `"current":42`, not `"current":42.0`) (BR-10).
   - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [x] `SwingGetValueScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+- [x] `SwingGetValueScreenTest` (`testSwing` — requires display; see `design/architecture.md` § Testing)
   - [x] Reading a `JSlider` inside `JFrame` returns its value.
   - [x] Reading a `JSpinner(SpinnerNumberModel)` inside `JFrame` returns its value.
   - [x] Reading a `JProgressBar` inside `JFrame` returns its value.
@@ -82,11 +82,11 @@ Execution order:
 
 ### Component matrix
 
-Each matrix component from `verification.md` gets a dedicated test method.
+Each matrix component in `design/architecture.md` § Testing gets a dedicated test method.
 
 **Succeed (`get_value` supported):** `JSlider`, `JSpinner(SpinnerNumberModel)`, `JProgressBar`, `JSplitPane`.
 
 **Fail with "<ClassName> does not support swing_get_value":**
-- `JSpinner(SpinnerDateModel)`, `JSpinner(SpinnerListModel)` — non-Number models (see architecture.md § 5).
+- `JSpinner(SpinnerDateModel)`, `JSpinner(SpinnerListModel)` — non-Number models (see R_accessible_value_types).
 - `JTabbedPane` — role `PAGE_TAB_LIST`; `getAccessibleValue()` returns `null` (verified by probe test).
 - All other matrix components.

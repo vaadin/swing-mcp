@@ -13,7 +13,7 @@ Convenience wrapper: `swing_set_selection` with an empty indices array.
 
 This tool is a convenience wrapper around `swing_set_selection` (T-015) with `indices=[]`. All business rules from T-015 apply — in particular BR-06 (mutation tool) and BR-07 (empty indices behavior including JTabbedPane refusal). See T-015 for the full specification.
 
-**Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched clear-selection on ref=<N> — call swing_snapshot to verify the outcome` (see **DR-dispatched-echo**). The echo uses this tool's MCP-exposed name (`clear-selection`), not the underlying `set-selection` it delegates to — DR-dispatched-echo's action name is derived from the public tool name, not from the implementation. T-015 BR-09's echo (`Dispatched set-selection on ref=<N> to [] — call swing_snapshot to verify the outcome`) does not apply here.
+**Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched clear-selection on ref=<N> — call swing_snapshot to verify the outcome` (see **D_dispatched_echo**). The echo uses this tool's MCP-exposed name (`clear-selection`), not the underlying `set-selection` it delegates to — D_dispatched_echo's action name is derived from the public tool name, not from the implementation. T-015 BR-09's echo (`Dispatched set-selection on ref=<N> to [] — call swing_snapshot to verify the outcome`) does not apply here.
 
 ---
 

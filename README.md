@@ -170,12 +170,12 @@ additional classpath entries are needed.
 
 ### Option 2: Programmatic startup
 
-Add `swing-mcp` as a dependency and start the `MCPServer` from your code:
+Add `swing-mcp` as a dependency and start `SwingMCP` from your code:
 
 ```java
 public class Application {
     public static void main(String[] args) {
-        new MCPServer().startAndAutoStop();
+        new SwingMCP().startAndAutoStop();
         SwingUtilities.invokeLater(() -> runApp());
     }
 }

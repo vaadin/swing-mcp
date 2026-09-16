@@ -54,7 +54,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
 
     /**
      * Calls swing_close and drains the EDT so the fire-and-forget invokeLater has run.
-     * Returns the tool's success Content (DR-dispatched-echo echo) so callers can assert on it.
+     * Returns the tool's success Content (D_dispatched_echo echo) so callers can assert on it.
      */
     private MCPProtocol.Content close(int ref) throws Exception {
         MCPProtocol.Content result = executeOnEDT(
@@ -142,7 +142,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         MCPProtocol.Content result = close(ref);
 
         assertEquals("Dispatched close on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText(),
-                "DR-dispatched-echo: tool returns echo on dispatch even when listener vetoes");
+                "D_dispatched_echo: tool returns echo on dispatch even when listener vetoes");
         assertTrue(frame.isShowing(), "frame should still be showing — DO_NOTHING_ON_CLOSE");
     }
 
@@ -159,7 +159,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         MCPProtocol.Content result = close(ref);
 
         assertEquals("Dispatched close on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText(),
-                "DR-dispatched-echo: tool returns echo on dispatch even when listener vetoes");
+                "D_dispatched_echo: tool returns echo on dispatch even when listener vetoes");
         assertTrue(dialog.isShowing(), "dialog should still be showing — DO_NOTHING_ON_CLOSE");
     }
 
@@ -318,7 +318,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         MCPProtocol.Content result = close(ref);
 
         assertEquals("Dispatched close on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText(),
-                "DR-dispatched-echo: tool returns echo on dispatch even when listener vetoes");
+                "D_dispatched_echo: tool returns echo on dispatch even when listener vetoes");
         assertTrue(iframe.isShowing(), "internal frame should still be showing — DO_NOTHING_ON_CLOSE");
     }
 
@@ -413,7 +413,7 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         MCPProtocol.Content result = close(ref);
 
         assertEquals("Dispatched close on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText(),
-                "DR-dispatched-echo: tool returns echo on dispatch even when listener vetoes");
+                "D_dispatched_echo: tool returns echo on dispatch even when listener vetoes");
         assertTrue(icon.isShowing(), "desktop icon should still be showing — DO_NOTHING_ON_CLOSE");
     }
 

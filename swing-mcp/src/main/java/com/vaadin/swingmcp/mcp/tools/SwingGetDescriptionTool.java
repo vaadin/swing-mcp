@@ -11,7 +11,7 @@ import javax.accessibility.Accessible;
  * MCP tool {@code swing_get_description}: reads the full description of a UI
  * component by ref.
  *
- * <p>The snapshot caps descriptions at 120 characters (BR-10 / DR-quoted-slot-sanitizing). When
+ * <p>The snapshot caps descriptions at 120 characters (BR-10 / D_quoted_slot_sanitizing). When
  * the AI needs the full text it calls this tool. The description is resolved
  * using the same logic as the snapshot description slot: accessible description
  * first, tooltip fallback second, HTML cleanup and sanitisation applied —

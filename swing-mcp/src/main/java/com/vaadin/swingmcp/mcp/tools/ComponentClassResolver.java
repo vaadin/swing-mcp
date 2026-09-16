@@ -47,7 +47,7 @@ public final class ComponentClassResolver {
      * JDK-internal nested class.
      *
      * <p>This is the concrete-side identity used by BR-14's modal-stack header
-     * (T-002 BR-14 / DR-modal-stack-header), where only the concrete simple class name is
+     * (T-002 BR-14 / D_modal_stack_header), where only the concrete simple class name is
      * shown (without the {@code -> JClass (role)} qualifying-ancestor
      * decoration). For the full identity slot including the qualifying
      * ancestor, see {@link #resolveIdentitySlot}.</p>
