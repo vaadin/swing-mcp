@@ -5,7 +5,6 @@ import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -186,12 +185,11 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
         mcpServer.setConsideredComponents(List.of(tree));
 
         // After snapshot: JTree has no ref (selection suppressed), root node (toggle_expand) → ref=1
-        mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_toggle_expand", Map.of("ref", 1)));
+        mcpClient.callTool("swing_snapshot", Map.of());
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_toggle_expand", Map.of("ref", 1));
         SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
 
-        assertNotEquals(Boolean.TRUE, result.isError(), "swing_toggle_expand should succeed");
+        assertNotEquals(Boolean.TRUE, result.getIsError(), "swing_toggle_expand should succeed");
         assertTrue(tree.isExpanded(new TreePath(root)), "Root should be expanded via MCP client");
     }
 

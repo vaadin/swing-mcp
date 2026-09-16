@@ -1,10 +1,9 @@
 package testapp;
 
 import com.vaadin.swingmcp.mcp.SwingMCP;
-import io.modelcontextprotocol.client.McpClient;
-import io.modelcontextprotocol.client.McpSyncClient;
-import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
-import io.modelcontextprotocol.spec.McpSchema;
+import com.vaadin.swingmcp.tinymcpclient.MCPClient;
+import com.vaadin.swingmcp.tinymcpclient.TinyMCPClient;
+import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,7 +12,7 @@ import testapp.loginapp.LoginApp;
 
 import javax.swing.*;
 import java.awt.*;
-import java.time.Duration;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -24,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class LoginAppMcpTest {
 
     private SwingMCP mcpServer;
-    private McpSyncClient mcpClient;
+    private MCPClient mcpClient;
 
     @BeforeAll
     static void assertNotHeadless() {
@@ -38,15 +37,7 @@ class LoginAppMcpTest {
         mcpServer = new SwingMCP(0, "/mcp");
         mcpServer.start();
 
-        Duration timeout = Duration.ofSeconds(10);
-        HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport
-                .builder(mcpServer.getUrl())
-                .openConnectionOnStartup(false)
-                .build();
-        mcpClient = McpClient.sync(transport)
-                .requestTimeout(timeout)
-                .initializationTimeout(timeout)
-                .build();
+        mcpClient = new TinyMCPClient(URI.create(mcpServer.getUrl()));
         mcpClient.initialize();
 
         SwingUtilities.invokeLater(() -> new AppLauncher(List.of(new LoginApp())).show());
@@ -97,18 +88,16 @@ class LoginAppMcpTest {
 
     // --- Helpers ---
 
-    private String snapshot() {
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
-        assertNotEquals(Boolean.TRUE, result.isError(), "swing_snapshot failed");
-        return ((McpSchema.TextContent) result.content().get(0)).text();
+    private String snapshot() throws Exception {
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_snapshot", Map.of());
+        assertNotEquals(Boolean.TRUE, result.getIsError(), "swing_snapshot failed");
+        return result.getContent().get(0).getText();
     }
 
-    private void call(String tool, Map<String, Object> args) {
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest(tool, args));
-        assertNotEquals(Boolean.TRUE, result.isError(),
-                tool + " returned an error: " + result.content());
+    private void call(String tool, Map<String, Object> args) throws Exception {
+        MCPProtocol.CallToolResult result = mcpClient.callTool(tool, args);
+        assertNotEquals(Boolean.TRUE, result.getIsError(),
+                tool + " returned an error: " + result.getContent());
     }
 
     private static int findRef(String snapshot, String capturePattern) {
@@ -123,7 +112,8 @@ class LoginAppMcpTest {
         while (System.currentTimeMillis() < deadline) {
             for (Window w : Window.getWindows()) {
                 if (!w.isVisible()) continue;
-                String t = w instanceof Frame f ? f.getTitle() : w instanceof Dialog d ? d.getTitle() : null;
+                String t = w instanceof Frame ? ((Frame) w).getTitle()
+                        : w instanceof Dialog ? ((Dialog) w).getTitle() : null;
                 if (title.equals(t)) return;
             }
             Thread.sleep(50);
@@ -137,7 +127,8 @@ class LoginAppMcpTest {
             boolean visible = false;
             for (Window w : Window.getWindows()) {
                 if (!w.isVisible()) continue;
-                String t = w instanceof Frame f ? f.getTitle() : w instanceof Dialog d ? d.getTitle() : null;
+                String t = w instanceof Frame ? ((Frame) w).getTitle()
+                        : w instanceof Dialog ? ((Dialog) w).getTitle() : null;
                 if (title.equals(t)) {
                     visible = true;
                     break;

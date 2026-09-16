@@ -6,7 +6,6 @@ import com.vaadin.swingmcp.mcp.tools.SwingTogglePopupTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -294,16 +293,15 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
         try {
             mcpServer.setConsideredComponents(List.of(frame));
 
-            McpSchema.CallToolResult snapshotResult = mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
-            String snapshotText = ((McpSchema.TextContent) snapshotResult.content().get(0)).text();
+            MCPProtocol.CallToolResult snapshotResult = mcpClient.callTool("swing_snapshot", Map.of());
+            String snapshotText = snapshotResult.getContent().get(0).getText();
             java.util.regex.Matcher m = java.util.regex.Pattern.compile("ref=(\\d+)[^\\n]*toggle_popup").matcher(snapshotText);
             assertTrue(m.find(), "Snapshot should contain a toggle_popup component");
             int comboRef = Integer.parseInt(m.group(1));
-            McpSchema.CallToolResult result = mcpClient.callTool(
-                    new McpSchema.CallToolRequest("swing_toggle_popup", Map.of("ref", comboRef)));
+            MCPProtocol.CallToolResult result = mcpClient.callTool("swing_toggle_popup", Map.of("ref", comboRef));
             executeOnEDT(() -> null); // drain EDT so fire-and-forget action has run
 
-            assertNotEquals(Boolean.TRUE, result.isError(), "toggle_popup should succeed");
+            assertNotEquals(Boolean.TRUE, result.getIsError(), "toggle_popup should succeed");
             assertTrue(combo.isPopupVisible(), "Popup should be open via MCP client");
         } finally {
             frame.dispose();

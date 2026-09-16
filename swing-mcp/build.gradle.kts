@@ -6,8 +6,6 @@ dependencies {
     api(project(":swing-mcp-tool-defs"))
     implementation(project(":tiny-mcp-server"))
 
-    testImplementation(libs.mcp.client)
-    testImplementation(libs.mcp.json.jackson3)
     testImplementation(libs.junit)
     testImplementation(libs.bytebuddy)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

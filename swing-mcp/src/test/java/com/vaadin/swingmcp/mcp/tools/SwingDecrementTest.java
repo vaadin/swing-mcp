@@ -5,7 +5,6 @@ import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +17,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import static com.vaadin.swingmcp.mcp.JdkCapabilities.SLIDER_HAS_ACCESSIBLE_ACTIONS;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -88,6 +89,8 @@ class SwingDecrementTest extends AbstractHeadlessTest {
 
     @Test
     void decrementSlider() throws Exception {
+        assumeTrue(SLIDER_HAS_ACCESSIBLE_ACTIONS,
+                "JSlider exposes decrement only from Java 17 (R_jslider_actions_since_17)");
         JSlider slider = new JSlider(0, 100, 50);
         snapshot(slider);
         int ref = context.getRefOf(slider);
@@ -194,12 +197,11 @@ class SwingDecrementTest extends AbstractHeadlessTest {
         JSpinner spinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 1));
         mcpServer.setConsideredComponents(List.of(spinner));
 
-        mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_decrement", Map.of("ref", 1)));
+        mcpClient.callTool("swing_snapshot", Map.of());
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_decrement", Map.of("ref", 1));
         SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
 
-        assertNotEquals(Boolean.TRUE, result.isError(), "swing_decrement should succeed");
+        assertNotEquals(Boolean.TRUE, result.getIsError(), "swing_decrement should succeed");
         assertEquals(4, spinner.getValue());
     }
 
@@ -219,6 +221,12 @@ class SwingDecrementTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JSlider() throws Exception {
+        // JSlider gained AccessibleAction in Java 17 (R_jslider_actions_since_17).
+        // Below that the matrix answer is a refusal, and that is the correct result.
+        if (!SLIDER_HAS_ACCESSIBLE_ACTIONS) {
+            assertDecrementNotSupported(new JSlider(0, 100, 50));
+            return;
+        }
         JSlider slider = new JSlider(0, 100, 50);
         snapshot(slider);
         int ref = context.getRefOf(slider);

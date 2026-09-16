@@ -331,10 +331,38 @@ class TinyMCPClientErrorPathTest {
     // ===== Fake server =====
 
     /** One recorded inbound request. */
-    private record Request(String method, String body, String sessionId) {}
+    private static final class Request {
+        private final String method;
+        private final String body;
+        private final String sessionId;
+
+        Request(String method, String body, String sessionId) {
+            this.method = method;
+            this.body = body;
+            this.sessionId = sessionId;
+        }
+
+        String method() { return method; }
+        String body() { return body; }
+        String sessionId() { return sessionId; }
+    }
 
     /** A canned HTTP answer. A {@code null} content type omits the header. */
-    private record Reply(int status, String contentType, String body) {}
+    private static final class Reply {
+        private final int status;
+        private final String contentType;
+        private final String body;
+
+        Reply(int status, String contentType, String body) {
+            this.status = status;
+            this.contentType = contentType;
+            this.body = body;
+        }
+
+        int status() { return status; }
+        String contentType() { return contentType; }
+        String body() { return body; }
+    }
 
     @FunctionalInterface
     private interface Responder {

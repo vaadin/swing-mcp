@@ -57,13 +57,44 @@ subprojects {
         // --release (not source/targetCompatibility) is what actually enforces
         // the API floor: it compiles against that JDK's API signatures, so a
         // post-11 method fails the build instead of failing at the customer.
-        options.release = 17
+        // Tests are held to the same floor so they can run on a Java 11 JVM;
+        // tiny-mcp-server's `testOfficial` set is the one documented exception.
+        options.release = 11
     }
 
-    // Shipped code targets Java 11 — this drops into applications that have not
-    // moved on. Tests stay at 17: JUnit 6, the MCP SDK and Jetty all require it.
-    tasks.named<JavaCompile>("compileJava") {
-        options.release = 11
+    // ── The Java 11 run leg ──────────────────────────────────────────────────
+    // Compiling with --release 11 proves no post-11 API is *called*. It cannot
+    // prove the jars load and run on an 11 VM — a v61 class pulled in by
+    // shadowJar, or a newer API reached reflectively, would still pass. So the
+    // headless suite is re-run on a real Java 11 launcher.
+    //
+    // The toolchain is never auto-provisioned: if no JDK 11 is installed the
+    // task is simply not registered, so a contributor without one still gets a
+    // green build. Point Gradle at yours with -Porg.gradle.java.installations.paths=...
+    // or the JDK11/JAVA_HOME_11_X64 env vars wired up in gradle.properties.
+    val java11Launcher = runCatching {
+        the<JavaToolchainService>().launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(11))
+        }.takeIf { it.isPresent }
+    }.getOrNull()
+
+    if (java11Launcher != null) {
+        plugins.withType<JavaPlugin> {
+            val testSources = extensions.getByType<SourceSetContainer>()["test"]
+            tasks.register<Test>("testJava11") {
+                description = "Re-runs the headless tests on a Java 11 JVM"
+                group = "verification"
+                testClassesDirs = testSources.output.classesDirs
+                classpath = testSources.runtimeClasspath
+                javaLauncher.set(java11Launcher)
+                systemProperty("java.awt.headless", "true")
+                reports.html.outputLocation.set(layout.buildDirectory.dir("reports/testJava11"))
+                reports.junitXml.outputLocation.set(layout.buildDirectory.dir("test-results/testJava11"))
+            }
+            tasks.named("check") {
+                dependsOn(tasks.named("testJava11"))
+            }
+        }
     }
     // creates a reusable function which configures proper deployment to Maven Central
     ext["configureMavenCentral"] = { artifactId: String ->

@@ -578,14 +578,13 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         mcpServer.setConsideredComponents(java.util.List.of(list));
 
-        mcpClient.callTool(new io.modelcontextprotocol.spec.McpSchema.CallToolRequest(
-                "swing_snapshot", Map.of()));
+        mcpClient.callTool(
+                "swing_snapshot", Map.of());
 
-        io.modelcontextprotocol.spec.McpSchema.CallToolResult result = mcpClient.callTool(
-                new io.modelcontextprotocol.spec.McpSchema.CallToolRequest(
-                        "swing_select_all", Map.of("ref", 1)));
+        MCPProtocol.CallToolResult result = mcpClient.callTool(
+                        "swing_select_all", Map.of("ref", 1));
 
-        assertNotEquals(Boolean.TRUE, result.isError(), "select_all should succeed");
+        assertNotEquals(Boolean.TRUE, result.getIsError(), "select_all should succeed");
         SwingUtilities.invokeAndWait(() -> {}); // drain EDT
         assertArrayEquals(new int[]{0, 1, 2}, list.getSelectedIndices());
     }

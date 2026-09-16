@@ -1,12 +1,11 @@
 package com.vaadin.swingmcp.mcp;
 
-import io.modelcontextprotocol.client.McpClient;
-import io.modelcontextprotocol.client.McpSyncClient;
-import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
+import com.vaadin.swingmcp.tinymcpclient.MCPClient;
+import com.vaadin.swingmcp.tinymcpclient.TinyMCPClient;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 
-import java.time.Duration;
+import java.net.URI;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -17,7 +16,7 @@ public abstract class AbstractHeadlessTest {
     }
 
     protected static FakeSwingMCP mcpServer;
-    protected static McpSyncClient mcpClient;
+    protected static MCPClient mcpClient;
 
     @BeforeAll
     static void startMcpServer() throws Exception {
@@ -25,20 +24,12 @@ public abstract class AbstractHeadlessTest {
         mcpServer = new FakeSwingMCP(0, "/mcp", false);
         mcpServer.start();
 
-        Duration timeout = Duration.ofSeconds(5);
-        HttpClientStreamableHttpTransport transport = HttpClientStreamableHttpTransport
-                .builder(mcpServer.getUrl())
-                .openConnectionOnStartup(false)
-                .build();
-        mcpClient = McpClient.sync(transport)
-                .requestTimeout(timeout)
-                .initializationTimeout(timeout)
-                .build();
+        mcpClient = new TinyMCPClient(URI.create(mcpServer.getUrl()));
         mcpClient.initialize();
     }
 
     @AfterAll
-    static void stopMcpServer() {
+    static void stopMcpServer() throws Exception {
         if (mcpClient != null) {
             mcpClient.close();
         }

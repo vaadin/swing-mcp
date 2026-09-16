@@ -1,7 +1,9 @@
 package com.vaadin.swingmcp.mcp;
 
-import io.modelcontextprotocol.spec.McpSchema;
+import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -16,12 +18,11 @@ class SwingMCPTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void pingAndListTools() {
+    void listTools() throws Exception {
         mcpClient.initialize();
-        assertDoesNotThrow(() -> mcpClient.ping());
 
-        McpSchema.ListToolsResult tools = mcpClient.listTools();
+        List<MCPProtocol.Tool> tools = mcpClient.listTools();
         assertNotNull(tools);
-        assertNotNull(tools.tools());
+        assertFalse(tools.isEmpty());
     }
 }

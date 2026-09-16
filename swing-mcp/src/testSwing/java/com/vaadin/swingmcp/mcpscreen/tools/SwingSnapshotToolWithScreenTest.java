@@ -5,7 +5,6 @@ import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -292,23 +291,22 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void swingSnapshotViaMcpClientWithJFrame() {
+    void swingSnapshotViaMcpClientWithJFrame() throws Exception {
         JFrame frame = new JFrame();
         frame.getContentPane().add(new JButton("MCP"));
         mcpServer.setConsideredComponents(List.of(frame));
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_snapshot", Map.of());
 
         assertNotNull(result, "result must not be null");
-        assertNotEquals(Boolean.TRUE, result.isError(), "result must not be an error");
-        assertFalse(result.content().isEmpty(), "content must not be empty");
+        assertNotEquals(Boolean.TRUE, result.getIsError(), "result must not be an error");
+        assertFalse(result.getContent().isEmpty(), "content must not be empty");
 
-        McpSchema.TextContent textContent = (McpSchema.TextContent) result.content().get(0);
+        MCPProtocol.Content textContent = result.getContent().get(0);
         assertEquals(
                 "- JFrame (frame)\n"
                 + "  - JButton (push_button) \"MCP\" [ref=1] actions: click",
-                textContent.text());
+                textContent.getText());
     }
 
     // ══════════════════════════════════════════════════════════════════════════

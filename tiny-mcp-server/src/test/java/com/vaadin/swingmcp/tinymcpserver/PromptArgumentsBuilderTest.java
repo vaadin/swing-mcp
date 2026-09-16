@@ -40,7 +40,8 @@ class PromptArgumentsBuilderTest {
                 .optional("m", "M")
                 .build();
         assertEquals(List.of("z", "a", "m"),
-                args.stream().map(MCPProtocol.PromptArgument::getName).toList());
+                args.stream().map(MCPProtocol.PromptArgument::getName)
+                        .collect(java.util.stream.Collectors.toList()));
     }
 
     @Test

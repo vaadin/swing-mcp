@@ -6,7 +6,6 @@ import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -174,14 +173,13 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         mcpServer.setConsideredComponents(List.of(button));
 
         // First take a snapshot to populate refs
-        mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
+        mcpClient.callTool("swing_snapshot", Map.of());
 
         // Then click ref 1
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_click", Map.of("ref", 1)));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_click", Map.of("ref", 1));
         SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
 
-        assertNotEquals(Boolean.TRUE, result.isError(), "Click should succeed");
+        assertNotEquals(Boolean.TRUE, result.getIsError(), "Click should succeed");
         assertTrue(clicked.get(), "Action listener should have been triggered via MCP client");
     }
 
