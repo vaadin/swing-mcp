@@ -86,7 +86,7 @@ class MCPResourceHandler {
 
     /**
      * Dispatches {@code resources/read}. Resource handlers have no
-     * tool-layer "isError" channel (DR-three-error-layers layer 3 is tools-only), so any
+     * tool-layer "isError" channel (D_three_error_layers layer 3 is tools-only), so any
      * failure becomes a JSON-RPC protocol error.
      *
      * @param request          the parsed JSON-RPC request envelope

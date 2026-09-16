@@ -8,7 +8,7 @@ import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
  * the client was bound to no longer exists (the server was restarted, or
  * the session was evicted by the idle-cleanup tick).
  *
- * <p>Per DR-embedded-mcp-client this is a typed exception rather than a generic protocol
+ * <p>Per D_no_auto_retry this is a typed exception rather than a generic protocol
  * error because session loss is a recoverable condition with a specific
  * meaning: re-initialization is required to continue. Stateless callers
  * that opt in via {@link MCPClient#autoRetry()} let

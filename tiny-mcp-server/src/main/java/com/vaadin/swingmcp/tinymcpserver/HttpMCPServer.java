@@ -96,10 +96,10 @@ public class HttpMCPServer {
         httpServer.createContext(contextPath, this::handleRequest);
         handler.start();
         // A remote client can vanish without sending DELETE, so HTTP — and
-        // only HTTP — evicts on idle (DR-stdio-never-evicts).
+        // only HTTP — evicts on idle (D_stdio_never_evicts).
         handler.scheduleIdleCleanup();
         // Start from a daemon thread so that HTTP-Dispatcher inherits daemon status,
-        // preventing it from keeping the JVM alive after the Swing app closes.
+        // preventing it from keeping the JVM alive after the host application closes.
         Thread starter = new Thread(httpServer::start, "mcp-server-starter");
         starter.setDaemon(true);
         starter.start();

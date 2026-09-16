@@ -11,7 +11,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * DR-structural-schema-equality: InputSchema and PropertySchema implement deep structural equality.
+ * D_structural_schema_equality: InputSchema and PropertySchema implement deep structural equality.
  * Drift detection in MCPProxy compares descriptors via these methods, so this
  * is the contract test for the underlying equality predicate.
  */
@@ -108,7 +108,7 @@ class InputSchemaEqualityTest {
     @Test
     void propertyEnumOrderMatters() {
         // JSON Schema treats enum as an ordered list — same members in
-        // different order are NOT equal (DR-structural-schema-equality).
+        // different order are NOT equal (D_structural_schema_equality).
         PropertySchema a = stringProp("dir");
         a.setEnumValues(List.of("up", "down"));
         PropertySchema b = stringProp("dir");

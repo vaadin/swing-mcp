@@ -275,7 +275,7 @@ public class MCPSession {
      * <p>
      * Only bound on the dispatch thread for the duration of
      * {@link #handlePost}. If a tool marshals its work onto another thread
-     * (e.g. the Swing EDT), resolve the session attribute <em>before</em> crossing the
+     * (e.g. a UI toolkit's event thread), resolve the session attribute <em>before</em> crossing the
      * thread boundary and capture it into the other thread's closure.
      *
      * @return the current session, never {@code null}
