@@ -3,7 +3,8 @@
 #   - every cited D_ / R_ slug has its "## " heading in design/decisions.md / design/research.md
 #   - every "## D_" heading reads "D_<slug> — <the question>?"; decisions.md carries no
 #     "Superseded by" / "Amended by" / strikethrough / line-initial "Status:"
-#   - root AGENTS.md is under 34 KB, a nested one under 10 KB, design/architecture.md under 12 KB
+#   - root AGENTS.md is under 34 KB, a nested one under 10 KB, design/architecture.md and each
+#     design/*-format.md under 12 KB
 #   - every nested AGENTS.md is named in the root AGENTS.md module map
 #   - every CLAUDE.md is a symlink to AGENTS.md, and one sits beside every AGENTS.md
 #   - every line of the root AGENTS.md "What this is" section occurs verbatim in README.md
@@ -91,6 +92,7 @@ while IFS= read -r -d '' f; do
   esac
 done < <(tracked)
 if [ -f "$DESIGN/architecture.md" ]; then cap "$DESIGN/architecture.md" "$ARCH_LIMIT"; fi
+for f in "$DESIGN"/*-format.md; do [ -f "$f" ] && cap "$f" "$ARCH_LIMIT"; done
 
 # --- CLAUDE.md is a symlink to AGENTS.md, both directions ----------------------
 while IFS= read -r -d '' f; do
