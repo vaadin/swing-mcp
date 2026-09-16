@@ -992,5 +992,5 @@ that dies that way (JDK 12+ does), so only the 11 leg ever saw it.
 release from 0.7.0 to 2.0.1 is class-file 61 — so it cannot be the thing that drives a suite
 which must also run on 11. It stays in `tiny-mcp-server/src/testOfficial`, compiled at 17 and
 skipped entirely on an older build JDK. Everything above that module drives the server through
-this repository's own `TinyMCPClient`, which is the right layer anyway. See
-`D_conformance_two_clients` for why the SDK is still worth keeping at all.
+this repository's own `TinyMCPClient`, which is the right layer anyway. Why the SDK is worth
+keeping at all is that module's own decision, in `tiny-mcp-server/design/decisions.md`.
