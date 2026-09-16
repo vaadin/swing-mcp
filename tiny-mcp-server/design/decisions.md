@@ -50,8 +50,7 @@ server class: the registries, session machinery and dispatch are identical and o
 differs, so a second class would either duplicate them or grow a shared base — more churn than
 a second transport shell over the same handler. Why not build stdio in the consuming module
 instead: it would re-implement framing, routing and registries with GSON already on this
-classpath. On entry `runStdio` re-points `System.out` at `System.err` and keeps the real stdout
-in a private writer, so a stray print cannot corrupt the wire.
+classpath.
 
 ## D_handler_transport_split — Why is protocol dispatch split from transport, with the handler as the configuration object?
 
@@ -70,9 +69,7 @@ or throw; rendering is the transport's, which is `D_three_error_layers`.
 
 ## D_settable_listeners — Why are the session listeners setters that lock, rather than constructor parameters?
 
-`setAcceptNewSession`, `setOnSessionStarted` and `setOnSessionClosed` are fluent setters with
-no-op defaults, settable until the first session is accepted and throwing `IllegalStateException`
-after. The shape exists for factories: `MCPProxy.newHandler` builds a handler and then layers
+The shape exists for factories: `MCPProxy.newHandler` builds a handler and then layers
 per-session lifecycle onto it, which a fat constructor cannot express without every caller
 passing nulls. Why not constructor-only, which is what this replaced: it works for a caller
 that knows all its callbacks up front and blocks every caller that does not. Why not leave the
@@ -114,11 +111,11 @@ not malformed input.
 
 `MCPHandler` is multi-session, which is the specification's default, and takes a policy function
 that sees the live sessions and returns reject, accept, or accept-and-evict. A caller that must
-be single-session says so in one line. Why not bake single-session in: this server is meant to
-be reused, and the reason its best-known consumer needs one session at a time — a single-threaded
-UI toolkit that two agents would interleave clicks on — is that consumer's constraint, not the
-protocol's. Baking it in would either push that assumption onto every reuser or make this
-module's own multi-session tests fight their own server. Why not queue a blocked client until
+be single-session says so in one line. Why not bake single-session in: a consumer needs one
+session at a time when the resource behind its tools cannot survive two callers interleaving,
+and that is the consumer's constraint to know, not the protocol's. Baking it in would either
+push that assumption onto every reuser or make this module's own multi-session tests fight their
+own server. Why not queue a blocked client until
 the slot frees: it adds a waiting state for a case that does not arise, and an agent blocked
 behind a wedged session waits forever. What replaced the wedging problem is `D_supersede_sessions`.
 
@@ -209,6 +206,19 @@ Why not hand the callback the session and let it reach in: it couples handlers t
 session state and invites reaching for things that ought to be explicit inputs; a thread-local
 is the same problem plus trouble in tests. Resources use `uri` as the identity slot for symmetry,
 which is worth one extra record.
+
+## D_coerce_string_numbers — Why do numeric parameters accept string-encoded numbers?
+
+Every numeric accessor on `Parameters` takes `"21"` for `21`. This is not defensive programming
+in the abstract: the first tool call an AI client ever made against this server arrived with its
+integer argument quoted, despite the schema declaring `"type": "integer"`. Models emit JSON token
+by token and quote numbers routinely, and a declared schema does not stop them. Why not enforce
+the declared type and return a descriptive error: a cooperative client does recover, but every
+recovery costs a round trip and the tokens with it, for a malformed shape we can read
+unambiguously. Coercion is invisible to a well-formed request and costs a well-behaved client
+nothing. A string that is genuinely not a number still fails with `INVALID_PARAMS`, naming the
+parameter and what it should have been, so this widens the accepted input without widening what
+counts as valid.
 
 ## D_forwarding_proxy — Why does the proxy answer `tools/list` from a static manifest rather than from upstream?
 

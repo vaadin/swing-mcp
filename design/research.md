@@ -130,8 +130,14 @@ trims to its length — which is how long this file gets, so keep it short.
   side effect of how HTML rendering is plumbed into accessibility. **[verified 2026-04-15, Java 21]**
 - The two labels are indistinguishable to a user and carry the same role, so any capability
   keyed on `getAccessibleText() != null` diverges on an invisible authoring choice. **[verified 2026-04-15, Java 21]**
-- `AccessibleJPasswordField.getAccessibleText()` returns the **echo characters**, not the
-  password — a string whose length equals the real one. **[docs]**
+
+## R_password_echo_chars — A password field reads back as echo characters, not as nothing
+
+- `AccessibleJPasswordField.getAccessibleText()` returns the **echo characters** — it neither
+  refuses nor returns the password, so a caller that only null-checks gets a plausible-looking
+  string. **[docs]**
+- That string's length equals the real password's, so it leaks the one property of a credential
+  that is useful to an attacker who has everything else. **[docs]**
 
 ## R_editable_combo_children — An editable `JComboBox` exposes its editor as a child
 

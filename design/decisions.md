@@ -83,23 +83,23 @@ the ref map, and queue a conflicting mutation ahead of the first one's action. T
 exactly that gap. Why `ReentrantLock` and not `synchronized`: inside a Swing lambda it stops
 being obvious which monitor a `synchronized` block holds, while explicit lock/unlock calls show
 the scope at both ends. Why one server-wide lock and not one per tool: concurrent calls to
-*different* tools interleave ref-map writes just as badly, and this server is built for a single
-controller, so cross-tool concurrency buys nothing worth the reasoning.
+*different* tools interleave ref-map writes just as badly, and there is only ever one client
+(`D_single_session`), so cross-tool concurrency buys nothing worth the reasoning.
 
 ## D_dispatched_echo — Why does a successful mutation echo `Dispatched …` rather than returning nothing?
 
-Every mutation returns one line: `Dispatched <action> on ref=<N>[ to <value>] — call
-swing_snapshot to verify the outcome`. Three things are load-bearing. The verb is `Dispatched`
-because under `D_fire_and_forget_dispatch` nothing has run yet — `Clicked ref=4` would claim both
-that the action completed and that the UI changed, and a listener can veto or revert either.
-The suffix exists because `Posted click on ref=4` tested as reading like a success confirmation,
-and clients skipped the verifying snapshot. The shape is uniform across all mutations so a
-missing or differently-shaped echo looks anomalous in a log. Why not empty content, which is what
-this replaced: most models read "no content" as a weaker signal than "some content" and take a
-redundant snapshot just to confirm the call landed. Why not bundle a snapshot into the response:
-snapshots are expensive, the model does not always want one, and it would couple every mutation's
-response size to the tree size. Why not structured JSON: plain text tokenizes cheaper and reads
-in logs. The echo is composed once in the dispatch wrapper, so no tool specifies its own.
+Two words in `AbstractSwingTool.echo` are load-bearing. The verb is `Dispatched` because under
+`D_fire_and_forget_dispatch` nothing has run yet — `Clicked ref=4` would claim both that the
+action completed and that the UI changed, and a listener can veto or revert either. The trailing
+`— call swing_snapshot to verify the outcome` is there because `Posted click on ref=4` tested as
+reading like a success confirmation, and clients then skipped the verifying snapshot. Why not
+empty content, which is what this replaced: most models read "no content" as a weaker signal than
+"some content" and take a redundant snapshot just to confirm the call landed. Why not bundle a
+snapshot into the response: snapshots are expensive, the model does not always want one, and it
+would couple every mutation's response size to the tree size. Why not structured JSON: plain text
+tokenizes cheaper and reads in logs. Why one shape for every mutation rather than a verb per
+tool: a uniform echo makes a missing or malformed one obvious in a log, which is why the helpers
+are `final` on the base class and no tool writes its own string.
 
 ## D_role_in_snapshot_only — Why does the snapshot name an accessibility role but everything else name a Swing class?
 
@@ -150,9 +150,9 @@ omitted if a custom widget throws — one bad component must not take down the w
 A `PASSWORD_TEXT`-role accessible never advertises `get_text`, and `swing_get_text` on one
 returns a dedicated error naming the rule rather than the generic unsupported-action message.
 `set_text` is untouched, because filling a login form with a credential the operator supplied is
-a real use case. Reading is not the mirror image of writing: `AccessibleJPasswordField` returns
-the echo characters (`R_html_label_accessible_text`), which is misleading — a model can
-reasonably read `••••••` as the field's literal contents — and leaks the password's exact length.
+a real use case. Reading is not the mirror image of writing: the JDK hands back echo characters
+rather than nothing (`R_password_echo_chars`), which is misleading — a model can reasonably read
+`••••••` as the field's literal contents — and leaks the password's exact length.
 Why gate on the role rather than `instanceof JPasswordField`: the role is Swing's own marker for
 "this is secret", so a third-party `SecretField` that adopts it is covered for free. Why not just
 document the echo-character behaviour and change nothing: the snapshot would still advertise
@@ -260,18 +260,6 @@ translation surface for a tool that on a table can only ever return non-actionab
 row access beyond the snapshot cap is needed, the answer is row-dumping tools, not resurrected
 cell indexing.
 
-## D_coerce_string_numbers — Why do numeric parameters accept string-encoded numbers?
-
-Every numeric accessor on `Parameters` coerces `"21"` to `21`. This is not defensive
-programming in the abstract: the very first `swing_click` an AI client ever sent arrived with
-`ref = "21"`, despite the schema declaring `"type": "integer"`. Models emit JSON token by token
-and quote numbers routinely, and the schema does not stop them. Why not enforce the declared type
-and return a descriptive error: a cooperative client does recover, but every recovery is a wasted
-round trip and the tokens that go with it, for a malformed shape we can read unambiguously.
-Coercion is invisible to a well-formed request and costs a well-behaved client nothing. A string
-that is genuinely not a number still fails with `INVALID_PARAMS`, so this widens the accepted
-input without widening what counts as valid.
-
 ## D_shared_tool_manifest — Why do both transports source their identity from a third module?
 
 `swing-mcp-tool-defs` holds the server name, version, instructions, the tool descriptors and the
@@ -292,8 +280,10 @@ against the manifest so the probe only ever fires on a genuine version mismatch.
 being refused. The single-session part is forced by the EDT: two agents driving one Swing
 application would interleave clicks and snapshot against each other's half-finished mutations,
 and `toolLock` (`D_tool_call_wide_lock`) only serializes calls — it cannot make two callers agree
-about what the UI currently is. Refs make it worse, since they are handed out per snapshot and
-cleared by anyone's mutation, so a second agent silently invalidates the first one's whole view.
+about what the UI currently is. Refs make it worse rather than better: each session gets its own
+ref map, and a mutation clears only the map of the session that made it, so one agent's click can
+rebuild the panel another agent is holding refs into while that agent's map stays untouched. It
+never gets the stale-ref error that exists to tell it to re-orient.
 Why the newcomer wins rather than being told to wait: the client here is a developer's editor,
 and an editor that crashes without closing its session would otherwise hold the slot until the
 idle timeout, locking the developer out of their own application. There is at most one *intended*

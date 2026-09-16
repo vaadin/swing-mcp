@@ -18,10 +18,11 @@ Register tools on an `MCPHandler`, wrap it in a transport, run the transport.
 
 ```java
 MCPHandler handler = new MCPHandler()
-        .setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(existing));
+        .setAcceptNewSession(existing ->
+                new SessionDecision.AcceptAndEvict(existing, "Superseded by a new client"));
 handler.addTool("greet", "Greet someone by name",
         new InputSchemaBuilder().requiredString("name", "who to greet").build(),
-        req -> MCPProtocol.Content.text("Hello, " + req.arguments().get("name")));
+        req -> MCPProtocol.Content.text("Hello, " + req.arguments().getString("name")));
 
 // in-process, inside a host application:
 new HttpMCPServer(18088, "/mcp", handler).start();

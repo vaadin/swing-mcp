@@ -13,9 +13,11 @@ the `R_`), one symbol's behaviour (its doc comment), one tool's rules
 - Dependencies point one way: `swing-mcp` and `swing-mcp-proxy` → `swing-mcp-tool-defs` →
   `tiny-mcp-server`. Nothing depends on `swing-mcp`, and the proxy must never do so — it runs in
   a JVM with no UI in it.
-- `SwingMCP` owns the `MCPHandler`, the `HttpMCPServer` wrapping it, the ref map, and `toolLock`.
-  It composes the transport rather than extending it, and registers each tool through a wrapper
-  that is the same for every tool.
+- `SwingMCP` owns the `MCPHandler`, the `HttpMCPServer` wrapping it, and `toolLock`. It composes
+  the transport rather than extending it, and registers every tool through one shared wrapper.
+- Per-session state — the ref map above all — lives on a `SwingToolContext` attached to the
+  `MCPSession`, not on `SwingMCP`. It is resolved on the dispatch thread before anything hops to
+  the EDT, because `MCPSession.getCurrent()` is a thread-local and is not bound over there.
 - Every tool extends `AbstractSwingTool` and binds a `ToolDescriptor` from
   `swing-mcp-tool-defs` at construction; `getName` / `getDescription` / `getInputSchema` are
   final and delegate to it (`D_shared_tool_manifest`).
@@ -25,27 +27,29 @@ the `R_`), one symbol's behaviour (its doc comment), one tool's rules
 - `SwingUtils` holds every capability probe — `supportsClick`, `supportsGetText`,
   `supportsSetValue`, `isEffectivelyEnabled`, `sanitizeForQuotedSlot`. The snapshot and the tools
   call the same probe, so what is advertised and what is accepted cannot diverge.
-- `Parameters` wraps the raw argument map; no tool reads the map directly
-  (`D_coerce_string_numbers`).
+- Tool arguments arrive already wrapped in `tiny-mcp-server`'s `Parameters`, which is where
+  type coercion and the `INVALID_PARAMS` messages live; no tool touches a raw map.
 
 ## Flows
 
 **A tool call** (on an HTTP-server thread):
 
-1. The wrapper registered by `SwingMCP.registerTool` acquires `toolLock` and holds it for the
-   whole call, dispatch included (`D_tool_call_wide_lock`).
+1. The wrapper registered by `SwingMCP.registerTool` resolves the session's `SwingToolContext`
+   — still on the dispatch thread, where the session thread-local is bound — then acquires
+   `toolLock` and holds it for the whole call, dispatch included (`D_tool_call_wide_lock`).
 2. It calls `runInEDT`, which posts with `invokeLater` plus a `CountDownLatch` and a 10-second
    timeout; a timeout throws with the EDT's own stack trace, so a hung UI names itself.
-3. On the EDT: resolve the considered components, build `Parameters`, call
-   `AbstractSwingTool.execute`.
+3. On the EDT: resolve the considered components into the context, then call
+   `AbstractSwingTool.execute` with the request's `Parameters`.
 4. A read tool does its whole job here and returns a result. A mutation validates here — ref,
    capability, enabled — then posts the action with `invokeLater` and returns null
    (`D_fire_and_forget_dispatch`).
 5. If the tool was a mutation and `execute` returned normally, the ref map is cleared. A
    validation failure clears nothing: the UI did not change, so the model can retry without
    paying for another snapshot.
-6. The wrapper composes the echo (`D_dispatched_echo`), releases the lock, and the response goes
-   out — still before the action has run.
+6. A mutation returns the echo it composed from `AbstractSwingTool`'s shared helpers
+   (`D_dispatched_echo`); the wrapper releases the lock and the response goes out — still before
+   the action has run.
 
 **The snapshot pipeline**, four passes over the considered components:
 
@@ -85,7 +89,8 @@ the `R_`), one symbol's behaviour (its doc comment), one tool's rules
    `dispatchEvent`, which goes through the real AWT pipeline including any `processMouseEvent`
    override.
 4. Known gap: a component that overrides `processMouseEvent` without registering a listener is
-   undetectable, though the synthesized events would reach it if it were.
+   invisible to tier 2, so no `Runnable` is ever built — even though the events it would have
+   synthesized are exactly what that override is waiting for.
 
 ## Testing
 
@@ -117,9 +122,10 @@ that id. Asserting that `getRefOf` throws tests the harness, not the tool.
 
 ## Where to start reading
 
-`SwingMCP.registerTool` — the wrapper is twenty lines and every invariant in `AGENTS.md` passes
-through it: the lock, the EDT hop, the ref-map clear, the echo. Then `SwingUtils`, which is where
-every question about what a component can do gets answered.
+`SwingMCP.registerTool` — the wrapper is short enough to read in one sitting and nearly every
+invariant in `AGENTS.md` passes through it: the context hand-off, the lock, the EDT hop, the
+ref-map clear. Then `SwingUtils`, which is where every question about what a component can do
+gets answered.
 
 ## What is deliberately absent
 
