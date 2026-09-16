@@ -239,3 +239,11 @@ connects:
 ```bash
 claude mcp add --transport http swing-mcp http://127.0.0.1:18088/mcp
 ```
+
+## License
+
+Copyright 2000-2026 Vaadin Ltd.
+
+Licensed under the [Apache License, Version 2.0](LICENSE). Every source file
+carries the corresponding header; contributions are accepted under the same
+license.
