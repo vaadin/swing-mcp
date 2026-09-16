@@ -7,11 +7,15 @@ import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -19,8 +23,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -106,6 +114,76 @@ class StdioMCPServerTest {
         return "{\"jsonrpc\":\"2.0\",\"id\":" + id + ",\"method\":\"initialize\","
                 + "\"params\":{\"protocolVersion\":\"2025-11-25\","
                 + "\"capabilities\":{},\"clientInfo\":{\"name\":\"t\",\"version\":\"1\"}}}";
+    }
+
+    // ===== Construction & argument validation =====
+
+    @Test
+    void constructorRejectsNullHandler() {
+        assertThrows(IllegalArgumentException.class, () -> new StdioMCPServer(null));
+    }
+
+    @Test
+    void defaultConstructorBuildsItsOwnHandler() {
+        assertNotNull(new StdioMCPServer().getHandler());
+    }
+
+    @Test
+    void getHandlerReturnsTheSuppliedHandler() {
+        assertSame(handler, server.getHandler());
+    }
+
+    @Test
+    void runStdioRejectsNullStreams() {
+        assertThrows(IllegalArgumentException.class,
+                () -> server.runStdio(null, OutputStream.nullOutputStream()));
+        assertThrows(IllegalArgumentException.class,
+                () -> server.runStdio(InputStream.nullInputStream(), null));
+    }
+
+    // ===== stdout protection (DR-stdio-transport) =====
+
+    /**
+     * A stray {@code System.out.println} from a tool or a library would land
+     * mid-frame on the protocol stream and desync the client, so writing to
+     * the real stdout must divert {@code System.out} to stderr.
+     */
+    @Test
+    void runStdioOnRealStdoutDivertsSystemOutToStderr() {
+        PrintStream original = System.out;
+        try {
+            // Empty stdin: runStdio returns at once, writing nothing to stdout.
+            server.runStdio(InputStream.nullInputStream(), original);
+            assertNotSame(original, System.out, "System.out must no longer be the protocol stream");
+        } finally {
+            System.setOut(original);
+        }
+    }
+
+    @Test
+    void runStdioOnAnOtherStreamLeavesSystemOutAlone() {
+        PrintStream original = System.out;
+        server.runStdio(InputStream.nullInputStream(), OutputStream.nullOutputStream());
+        assertSame(original, System.out);
+    }
+
+    // ===== Output transport failure =====
+
+    @Test
+    void aDeadStdoutEndsTheReadLoop() {
+        // Nothing can be reported once the write side is gone — the loop must
+        // give up rather than spin trying to emit an error frame.
+        OutputStream dead = new OutputStream() {
+            @Override public void write(int b) throws IOException {
+                throw new IOException("stdout closed");
+            }
+        };
+        InputStream in = new ByteArrayInputStream(
+                (initRequest(1) + "\n").getBytes(StandardCharsets.UTF_8));
+
+        TransportIOException ex = assertThrows(TransportIOException.class,
+                () -> server.runStdio(in, dead));
+        assertInstanceOf(IOException.class, ex.getCause());
     }
 
     // ===== Core happy paths =====
