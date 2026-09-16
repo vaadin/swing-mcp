@@ -11,9 +11,11 @@ import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.util.*;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Internal tree node used during the four-phase snapshot pipeline.
@@ -179,7 +181,7 @@ class SnapshotNode {
      * virtual nodes that do not correspond to any real accessible (e.g.
      * {@link JTableRowSnapshotNode}).
      */
-    final Accessible accessible;
+    final @Nullable Accessible accessible;
 
     /** Mutable children list; replaced during Phase 2 (prune). */
     List<SnapshotNode> children = new ArrayList<>();
@@ -208,9 +210,9 @@ class SnapshotNode {
      * until {@link #actions()} is first called. Cached so {@link #hasAnyAction()}
      * and {@link #render} share a single walk of the BR-06 pipeline per node.
      */
-    private List<String> actions;
+    private @Nullable List<String> actions;
 
-    SnapshotNode(Accessible accessible) {
+    SnapshotNode(@Nullable Accessible accessible) {
         this.accessible = accessible;
     }
 
@@ -681,7 +683,7 @@ class SnapshotNode {
         renderTruncationSummary(depth, sb);
     }
 
-    private String selfLine = null;
+    private @Nullable String selfLine = null;
 
     /**
      * Renders only this node's own line (no children, no truncation summary).

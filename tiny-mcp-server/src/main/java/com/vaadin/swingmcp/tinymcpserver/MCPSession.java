@@ -1,5 +1,7 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -28,7 +30,7 @@ public class MCPSession {
     private final MCPResourceHandler resourceHandler;
     private final MCPPromptHandler promptHandler;
     private final MCPHandler handler;
-    private final Map<String, Object> attributes = new HashMap<>();
+    private final Map<String, @Nullable Object> attributes = new HashMap<>();
     /**
      * The session lock, prevents concurrent access to the session.
      */
@@ -52,11 +54,11 @@ public class MCPSession {
 
     MCPSession(String id, MCPToolHandler toolHandler, MCPResourceHandler resourceHandler,
             MCPPromptHandler promptHandler, MCPHandler handler) {
-        this.id = id;
-        this.toolHandler = toolHandler;
-        this.resourceHandler = resourceHandler;
-        this.promptHandler = promptHandler;
-        this.handler = handler;
+        this.id = Objects.requireNonNull(id, "id");
+        this.toolHandler = Objects.requireNonNull(toolHandler, "toolHandler");
+        this.resourceHandler = Objects.requireNonNull(resourceHandler, "resourceHandler");
+        this.promptHandler = Objects.requireNonNull(promptHandler, "promptHandler");
+        this.handler = Objects.requireNonNull(handler, "handler");
     }
 
     /**
@@ -207,9 +209,9 @@ public class MCPSession {
      * @param name attribute name; must not be {@code null}
      * @throws NullPointerException if {@code name} is {@code null}
      */
-    public Object getAttribute(String name) {
+    public @Nullable Object getAttribute(String name) {
         checkLocked();
-        Objects.requireNonNull(name);
+        Objects.requireNonNull(name, "name");
         return attributes.get(name);
     }
 
@@ -222,9 +224,9 @@ public class MCPSession {
      * @param value attribute value; may be {@code null}
      * @throws NullPointerException if {@code name} is {@code null}
      */
-    public void setAttribute(String name, Object value) {
+    public void setAttribute(String name, @Nullable Object value) {
         checkLocked();
-        Objects.requireNonNull(name);
+        Objects.requireNonNull(name, "name");
         attributes.put(name, value);
     }
 
@@ -240,7 +242,7 @@ public class MCPSession {
      *                            if the same key was previously set via the
      *                            {@link #setAttribute(String, Object)} overload)
      */
-    public <T> T getAttribute(Class<T> type) {
+    public <T> @Nullable T getAttribute(Class<T> type) {
         checkLocked();
         return type.cast(getAttribute(type.getName()));
     }
@@ -255,7 +257,7 @@ public class MCPSession {
      * @param value attribute value; may be {@code null}
      * @param <T>   the attribute type
      */
-    public <T> void setAttribute(Class<T> type, T value) {
+    public <T> void setAttribute(Class<T> type, @Nullable T value) {
         checkLocked();
         setAttribute(type.getName(), value);
     }
@@ -311,7 +313,7 @@ public class MCPSession {
      * acquisition and {@code closed}/timestamp semantics, but propagates the
      * value produced by {@code block}.
      */
-    <T> T runLocked(Supplier<T> block) {
+    <T extends @Nullable Object> T runLocked(Supplier<T> block) {
         sessionLock.lock();
         try {
             if (closed) {

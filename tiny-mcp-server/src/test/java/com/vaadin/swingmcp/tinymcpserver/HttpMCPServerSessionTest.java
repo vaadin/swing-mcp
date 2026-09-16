@@ -411,7 +411,7 @@ class HttpMCPServerSessionTest {
 
     @Test
     void acceptNewSessionPredicateCanRejectSecondSession() throws Exception {
-        MCPHandler singleSessionHandler = new MCPHandler(null, null)
+        MCPHandler singleSessionHandler = new MCPHandler()
                 .setAcceptNewSession(existing ->
                         existing.isEmpty() ? new SessionDecision.Accept() : new SessionDecision.Reject());
         singleSessionHandler.addTool("echo", "Echo tool",

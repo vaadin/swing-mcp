@@ -249,11 +249,9 @@ class TinyMCPClientTest {
     // ===== callTool overload behaviour =====
 
     @Test
-    void callToolStringMapOverloadAcceptsNullArguments() throws IOException {
-        // The default-method overload normalises null → emptyMap before
-        // delegating to callTool(ToolRequest).
+    void callToolStringMapOverloadAcceptsEmptyArguments() throws IOException {
         try (MCPClient client = newClient()) {
-            MCPProtocol.CallToolResult result = client.callTool("capture", null);
+            MCPProtocol.CallToolResult result = client.callTool("capture", Map.of());
             assertNull(result.getIsError());
             assertTrue(capturedArgs().isEmpty());
         }

@@ -16,6 +16,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -89,10 +90,7 @@ public class StdioMCPServer {
      *                left at default (always-accept).
      */
     public StdioMCPServer(MCPHandler handler) {
-        if (handler == null) {
-            throw new IllegalArgumentException("Parameter handler: must not be null");
-        }
-        this.handler = handler;
+        this.handler = Objects.requireNonNull(handler, "handler");
     }
 
     /**

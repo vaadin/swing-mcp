@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -65,14 +66,12 @@ public class HttpMCPServer {
             throw new IllegalArgumentException("Parameter port: invalid value " + port + ": must be in [0, 65535]");
         }
         this.port = port;
-        if (contextPath == null || !contextPath.startsWith("/")) {
+        Objects.requireNonNull(contextPath, "contextPath");
+        if (!contextPath.startsWith("/")) {
             throw new IllegalArgumentException("Parameter contextPath: invalid value " + contextPath + ": must start with a slash");
         }
         this.contextPath = contextPath;
-        if (handler == null) {
-            throw new IllegalArgumentException("Parameter handler: must not be null");
-        }
-        this.handler = handler;
+        this.handler = Objects.requireNonNull(handler, "handler");
     }
 
     public String getUrl() {

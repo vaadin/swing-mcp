@@ -120,7 +120,7 @@ class StdioMCPServerTest {
 
     @Test
     void constructorRejectsNullHandler() {
-        assertThrows(IllegalArgumentException.class, () -> new StdioMCPServer(null));
+        assertThrows(NullPointerException.class, () -> new StdioMCPServer(null));
     }
 
     @Test

@@ -6,6 +6,7 @@ import com.google.gson.JsonSyntaxException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 import com.vaadin.swingmcp.tinymcpserver.ToolRequest;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
@@ -16,6 +17,7 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 
@@ -49,7 +51,7 @@ public final class TinyMCPClient implements MCPClient {
      * The {@code Mcp-Session-Id} returned by the server during
      * {@link #initialize()}. Sent on every subsequent request.
      */
-    private volatile String sessionId;
+    private volatile @Nullable String sessionId;
 
     /**
      * The protocol version the server picked in its {@code initialize}
@@ -57,15 +59,12 @@ public final class TinyMCPClient implements MCPClient {
      * {@code MCP-Protocol-Version} HTTP header on every subsequent
      * request (required by the MCP spec from 2025-06-18 onward).
      */
-    private volatile String negotiatedProtocolVersion;
+    private volatile @Nullable String negotiatedProtocolVersion;
 
     private volatile boolean closed;
 
     public TinyMCPClient(URI serverUrl) {
-        if (serverUrl == null) {
-            throw new IllegalArgumentException("serverUrl must not be null");
-        }
-        this.serverUrl = serverUrl;
+        this.serverUrl = Objects.requireNonNull(serverUrl, "serverUrl");
         this.http = HttpClient.newHttpClient();
     }
 
@@ -367,7 +366,12 @@ public final class TinyMCPClient implements MCPClient {
         return data.toString();
     }
 
-    private static MCPProtocol.ErrorObject tryParseErrorBody(String body) {
+    /**
+     * @return the JSON-RPC {@code error} object parsed out of an HTTP error
+     * body, or {@code null} if the body is blank, is not JSON, or carries no
+     * {@code error} member — in which case the caller synthesizes one
+     */
+    private static MCPProtocol.@Nullable ErrorObject tryParseErrorBody(@Nullable String body) {
         if (body == null || body.isBlank()) return null;
         try {
             JsonElement el = MCPProtocol.fromJson(body, JsonElement.class);

@@ -5,6 +5,7 @@ import com.vaadin.swingmcp.tinymcpclient.MCPClient;
 import com.vaadin.swingmcp.tinymcpclient.MCPClientException;
 import com.vaadin.swingmcp.tinymcpclient.MCPSessionLostException;
 import com.vaadin.swingmcp.tinymcpclient.TinyMCPClient;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.URI;
@@ -121,7 +122,7 @@ public final class MCPProxy {
             List<ToolDescriptor> tools,
             URI upstreamUrl,
             ProxyMessages messages) {
-        return newHandler(null, null, tools, upstreamUrl, messages);
+        return newHandler(new MCPProtocol.Implementation(), null, tools, upstreamUrl, messages);
     }
 
     /**
@@ -132,13 +133,13 @@ public final class MCPProxy {
      * server would present (sourced from the shared
      * {@code swing-mcp-tool-defs} module).
      *
-     * @param serverInfo   server identity, or {@code null} for the default
-     *                     empty {@link MCPProtocol.Implementation}
+     * @param serverInfo   server identity
      * @param instructions {@code initialize.instructions} block, or {@code null}
+     *                     to advertise none
      */
     public static MCPHandler newHandler(
             MCPProtocol.Implementation serverInfo,
-            String instructions,
+            @Nullable String instructions,
             List<ToolDescriptor> tools,
             URI upstreamUrl,
             ProxyMessages messages) {
@@ -180,10 +181,10 @@ public final class MCPProxy {
         final MCPClient upstream;
         boolean initialized = false;
         /** Cached drift error for this session, or {@code null} if not yet drifted. */
-        String driftFailure = null;
+        @Nullable String driftFailure = null;
 
         ProxySessionState(MCPClient upstream) {
-            this.upstream = upstream;
+            this.upstream = Objects.requireNonNull(upstream, "upstream");
         }
     }
 
@@ -202,7 +203,7 @@ public final class MCPProxy {
         }
 
         @Override
-        public MCPProtocol.Content call(ToolRequest request) throws Exception {
+        public MCPProtocol.@Nullable Content call(ToolRequest request) throws Exception {
             MCPSession session = MCPSession.getCurrent();
             ProxySessionState state = (ProxySessionState) session.getAttribute(STATE_KEY);
             if (state == null) {
@@ -282,12 +283,13 @@ public final class MCPProxy {
 
         /**
          * Compares the static manifest against upstream's {@code listTools()}
-         * response. Returns {@code null} if the two agree, or a short
-         * human-readable description of the first detected divergence
-         * otherwise. Symmetric and order-insensitive (compared as sets
-         * keyed by tool name).
+         * response. Symmetric and order-insensitive (compared as sets keyed by
+         * tool name).
+         *
+         * @return a short human-readable description of the first detected
+         * divergence, or {@code null} if the two agree
          */
-        private String computeDrift(List<MCPProtocol.Tool> upstreamTools) {
+        private @Nullable String computeDrift(List<MCPProtocol.Tool> upstreamTools) {
             Map<String, ToolDescriptor> manifestByName = new HashMap<>(manifest.size() * 2);
             for (ToolDescriptor d : manifest) {
                 manifestByName.put(d.name(), d);
@@ -344,7 +346,7 @@ public final class MCPProxy {
             return new ToolDescriptor(name, description, schema);
         }
 
-        private static String extractErrorText(List<MCPProtocol.Content> content) {
+        private static String extractErrorText(@Nullable List<MCPProtocol.Content> content) {
             if (content == null || content.isEmpty()) {
                 return "(upstream returned an error with no content)";
             }

@@ -1,5 +1,7 @@
 package com.vaadin.swingmcp.mcp;
 
+import org.jspecify.annotations.Nullable;
+
 import javax.accessibility.*;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -123,7 +125,7 @@ public final class SwingUtils {
      * @return a Runnable that performs the click, or null if click is not supported
      * @see <a href="architecture.md">architecture.md § 4 — Detecting Click Support</a>
      */
-    public static Runnable supportsClick(Accessible a) {
+    public static @Nullable Runnable supportsClick(Accessible a) {
         // --- DR-jmenu-not-clickable: JMenu is a structural container, not a click target ---
         // The JMenu's JMenuItem children are already directly clickable via
         // their own refs; exposing click on the menu title would only add
@@ -683,7 +685,7 @@ public final class SwingUtils {
      * computed on the fly by the cell renderer in response to a
      * {@link MouseEvent}, and there is no MouseEvent available here.
      */
-    public static String getTooltipAsText(Accessible a) {
+    public static @Nullable String getTooltipAsText(Accessible a) {
         if (a == null) return null;
         AccessibleContext ctx = a.getAccessibleContext();
 
@@ -733,7 +735,7 @@ public final class SwingUtils {
      * whitespace-only result, returns {@code null} so callers need only a
      * single null check.
      */
-    public static String htmlToPlainText(String raw) {
+    public static @Nullable String htmlToPlainText(@Nullable String raw) {
         if (raw == null) return null;
 
         String text;
@@ -789,7 +791,7 @@ public final class SwingUtils {
      * and corrupt the indent-based tree structure. Embedded {@code "} would
      * similarly terminate a quoted slot visually.
      */
-    public static String sanitizeForQuotedSlot(String raw) {
+    public static @Nullable String sanitizeForQuotedSlot(@Nullable String raw) {
         if (raw == null) return null;
         // Collapse ASCII whitespace + explicit Unicode line separators that
         // Java's default \s does not match (U+0085 / U+2028 / U+2029).
@@ -809,7 +811,7 @@ public final class SwingUtils {
      * @return the resolved, sanitised description, or {@code null} if the
      *         component has no description from either source.
      */
-    public static String resolveDescription(Accessible a) {
+    public static @Nullable String resolveDescription(Accessible a) {
         if (a == null) return null;
         AccessibleContext ctx = a.getAccessibleContext();
         String desc = ctx != null
@@ -973,7 +975,7 @@ public final class SwingUtils {
      *
      * @return the topmost visible modal dialog, or {@code null}
      */
-    public static Dialog getTopmostModalDialog() {
+    public static @Nullable Dialog getTopmostModalDialog() {
         // Primary: KeyboardFocusManager knows the active (topmost) window
         Window active = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
         if (active instanceof Dialog) {
@@ -1214,7 +1216,7 @@ public final class SwingUtils {
      * @return the resolved component and point, or {@code null} if no Component
      *         ancestor can be found
      */
-    public static ComponentAndPoint resolveComponentAndPoint(Accessible a) {
+    public static @Nullable ComponentAndPoint resolveComponentAndPoint(Accessible a) {
         if (a instanceof Component) {
             Component c = (Component) a;
             return new ComponentAndPoint(c, c.getWidth() / 2, c.getHeight() / 2);

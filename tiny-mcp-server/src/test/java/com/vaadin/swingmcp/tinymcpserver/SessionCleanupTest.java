@@ -45,7 +45,7 @@ class SessionCleanupTest {
         final HttpMCPServer server;
 
         RecordingServer() {
-            this.handler = new MCPHandler(null, null)
+            this.handler = new MCPHandler()
                     .setOnSessionClosed(session -> {
                         closedSessionIds.add(session.getId());
                         if (closeThrow != null) {

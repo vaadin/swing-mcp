@@ -6,6 +6,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonSyntaxException;
 import com.sun.net.httpserver.HttpExchange;
+import org.jspecify.annotations.Nullable;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -14,6 +16,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -29,15 +32,15 @@ class JsonRpcExchange {
     private static final Gson GSON_WITH_NULLS = new GsonBuilder().serializeNulls().create();
 
     private final HttpExchange exchange;
-    private String sessionId;
-    private Object requestId;
+    private @Nullable String sessionId;
+    private @Nullable Object requestId;
 
     JsonRpcExchange(HttpExchange exchange) {
-        this.exchange = exchange;
+        this.exchange = Objects.requireNonNull(exchange, "exchange");
     }
 
     HttpExchange getHttpExchange() { return exchange; }
-    void setSessionId(String sessionId) { this.sessionId = sessionId; }
+    void setSessionId(String sessionId) { this.sessionId = Objects.requireNonNull(sessionId, "sessionId"); }
 
     /**
      * Returns the request transport headers as an unmodifiable
@@ -94,17 +97,19 @@ class JsonRpcExchange {
     }
 
     /**
-     * Reads the request body, parses it as a JSON-RPC request, and sets
-     * the request ID. Returns the parsed request on success, or {@code null}
-     * for notifications (in which case a 202 Accepted has already been sent).
-     * Throws {@link MCPServerException} with an appropriate HTTP status for
+     * Reads the request body, parses it as a JSON-RPC request, and sets the
+     * request ID. Session ID validation is handled by {@link HttpMCPServer}
+     * before this method is called.
+     *
+     * @return the parsed request, or {@code null} if the body was a
+     * notification — an id-less request that gets no JSON-RPC response. The
+     * 202 Accepted has already been sent by the time {@code null} comes back,
+     * so the caller must simply return.
+     * @throws MCPServerException with an appropriate HTTP status for
      * parse/shape errors — caught and rendered by
-     * {@link HttpMCPServer#handleRequest}.
-     * <p>
-     * Session ID validation is handled by {@link HttpMCPServer} before
-     * this method is called.
+     * {@link HttpMCPServer#handleRequest}
      */
-    MCPProtocol.JsonRpcRequest parsePost() {
+    MCPProtocol.@Nullable JsonRpcRequest parsePost() {
         String body = readBody();
         LOG.fine("Received POST: " + body);
 
@@ -144,7 +149,7 @@ class JsonRpcExchange {
 
     void sendPlain(int statusCode, String body) {
         try {
-            if (body == null || body.isEmpty()) {
+            if (body.isEmpty()) {
                 exchange.sendResponseHeaders(statusCode, -1);
             } else {
                 byte[] bytes = body.getBytes(StandardCharsets.UTF_8);

@@ -5,6 +5,7 @@ import com.vaadin.swingmcp.tinymcpserver.ToolRequest;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -31,10 +32,7 @@ public final class AutoRetryMCPClient implements MCPClient {
     private final MCPClient inner;
 
     public AutoRetryMCPClient(MCPClient inner) {
-        if (inner == null) {
-            throw new IllegalArgumentException("inner client must not be null");
-        }
-        this.inner = inner;
+        this.inner = Objects.requireNonNull(inner, "inner");
     }
 
     @Override

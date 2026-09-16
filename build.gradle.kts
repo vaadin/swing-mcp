@@ -19,12 +19,26 @@ allprojects {
     }
 }
 
+// The type-safe `libs` accessor is not visible inside `subprojects {}`, so the
+// catalog is resolved through the public VersionCatalogsExtension instead.
+val jspecify = extensions.getByType<VersionCatalogsExtension>()
+    .named("libs").findLibrary("jspecify").get()
+
 subprojects {
 
     apply {
         plugin("maven-publish")
         plugin("java")
         plugin("org.gradle.signing")
+    }
+
+    dependencies {
+        // JSpecify nullness annotations (@NullMarked / @Nullable). Declared
+        // compileOnly on purpose: they are CLASS-retention, so nothing needs
+        // them at runtime, and they stay out of the published POM — consumers
+        // inherit no transitive dependency.
+        "compileOnly"(jspecify)
+        "testCompileOnly"(jspecify)
     }
 
     tasks.withType<Test> {

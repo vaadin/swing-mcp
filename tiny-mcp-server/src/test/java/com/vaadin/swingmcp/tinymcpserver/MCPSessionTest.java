@@ -22,7 +22,8 @@ class MCPSessionTest {
         toolHandler.addTool(new ToolDescriptor("echo", "Echo tool",
                         new InputSchemaBuilder().requiredString("msg", "message").build()),
                 request -> MCPProtocol.Content.text((String) request.arguments().raw().get("msg")));
-        session = new MCPSession("test-session-id", toolHandler, new MCPResourceHandler(), new MCPPromptHandler(), null);
+        session = new MCPSession("test-session-id", toolHandler, new MCPResourceHandler(),
+                new MCPPromptHandler(), new MCPHandler());
     }
 
     // ===== Helpers =====
@@ -100,7 +101,8 @@ class MCPSessionTest {
     // ===== Attributes =====
 
     private static MCPSession freshSession() {
-        return new MCPSession("attr-session", new MCPToolHandler(), new MCPResourceHandler(), new MCPPromptHandler(), null);
+        return new MCPSession("attr-session", new MCPToolHandler(), new MCPResourceHandler(),
+                new MCPPromptHandler(), new MCPHandler());
     }
 
     @Test
@@ -313,7 +315,8 @@ class MCPSessionTest {
                     } catch (NullPointerException expected) {
                         otherSawNpeFirst[0] = true;
                     }
-                    MCPSession other = new MCPSession("other", new MCPToolHandler(), new MCPResourceHandler(), new MCPPromptHandler(), null);
+                    MCPSession other = new MCPSession("other", new MCPToolHandler(),
+                            new MCPResourceHandler(), new MCPPromptHandler(), new MCPHandler());
                     other.runLocked(() -> seenOnOther[0] = MCPSession.getCurrent());
                 } catch (Throwable t2) {
                     err[0] = t2;

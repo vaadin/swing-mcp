@@ -55,12 +55,12 @@ class HttpMCPServerLifecycleTest {
 
     @Test
     void rejectsNullContextPath() {
-        assertThrows(IllegalArgumentException.class, () -> new HttpMCPServer(0, null));
+        assertThrows(NullPointerException.class, () -> new HttpMCPServer(0, null));
     }
 
     @Test
     void rejectsNullHandler() {
-        assertThrows(IllegalArgumentException.class, () -> new HttpMCPServer(0, "/mcp", null));
+        assertThrows(NullPointerException.class, () -> new HttpMCPServer(0, "/mcp", null));
     }
 
     // ===== Defaults and accessors =====
