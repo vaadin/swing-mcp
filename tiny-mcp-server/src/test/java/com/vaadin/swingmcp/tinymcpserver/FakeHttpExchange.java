@@ -7,6 +7,7 @@ import com.sun.net.httpserver.HttpPrincipal;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -26,18 +27,42 @@ class FakeHttpExchange extends HttpExchange {
     private final Headers responseHeaders = new Headers();
     private final ByteArrayOutputStream responseBody = new ByteArrayOutputStream();
     private int responseCode;
+    private IOException ioFailure;
 
     FakeHttpExchange(String requestBody) {
         this.requestBody = requestBody.getBytes(StandardCharsets.UTF_8);
     }
 
+    /**
+     * Makes every read and write on this exchange fail with {@code failure},
+     * standing in for a client that hung up mid-request.
+     *
+     * @return {@code this}, for chaining onto the constructor
+     */
+    FakeHttpExchange failIO(IOException failure) {
+        this.ioFailure = failure;
+        return this;
+    }
+
     // --- Used by JsonRpcExchange ---
 
-    @Override public InputStream getRequestBody() { return new ByteArrayInputStream(requestBody); }
+    @Override public InputStream getRequestBody() {
+        if (ioFailure != null) {
+            return new InputStream() {
+                @Override public int read() throws IOException { throw ioFailure; }
+            };
+        }
+        return new ByteArrayInputStream(requestBody);
+    }
     @Override public Headers getRequestHeaders() { return requestHeaders; }
     @Override public Headers getResponseHeaders() { return responseHeaders; }
     @Override public OutputStream getResponseBody() { return responseBody; }
-    @Override public void sendResponseHeaders(int rCode, long responseLength) { this.responseCode = rCode; }
+    @Override public void sendResponseHeaders(int rCode, long responseLength) throws IOException {
+        if (ioFailure != null) {
+            throw ioFailure;
+        }
+        this.responseCode = rCode;
+    }
     @Override public void close() { }
 
     // --- Assertions ---
