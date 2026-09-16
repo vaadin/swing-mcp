@@ -5,7 +5,6 @@ import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -516,21 +515,20 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void swingGetCellsViaMcpClient() {
+    void swingGetCellsViaMcpClient() throws Exception {
         String[] items = new String[20];
         for (int i = 0; i < 20; i++) items[i] = "Item-" + i;
         JList<String> list = new JList<>(items);
         mcpServer.setConsideredComponents(List.of(list));
 
-        mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
+        mcpClient.callTool("swing_snapshot", Map.of());
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_get_cells",
-                        Map.of("ref", 1, "offset", 0, "length", 3)));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_get_cells",
+                        Map.of("ref", 1, "offset", 0, "length", 3));
 
-        assertNotEquals(Boolean.TRUE, result.isError(), "get_cells should succeed");
-        assertFalse(result.content().isEmpty(), "Result should have content");
-        String text = ((McpSchema.TextContent) result.content().get(0)).text();
+        assertNotEquals(Boolean.TRUE, result.getIsError(), "get_cells should succeed");
+        assertFalse(result.getContent().isEmpty(), "Result should have content");
+        String text = result.getContent().get(0).getText();
         assertTrue(text.contains("Showing 3 children from offset 0 (total 20) for list [ref=1]"),
                 "Should have header, got: " + text);
         assertTrue(text.contains("\"Item-0\""), "Should contain Item-0, got: " + text);

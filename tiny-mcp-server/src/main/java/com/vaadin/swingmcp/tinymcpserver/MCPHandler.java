@@ -505,8 +505,27 @@ public class MCPHandler {
      * negotiated initialize result. Transports use {@link #sessionId()} to
      * surface the session token (HTTP {@code Mcp-Session-Id} header; stdio
      * ignores it) and {@link #result()} as the JSON-RPC body.
+     *
+     * <p>Immutable.
      */
-    public record InitializeOutcome(String sessionId, MCPProtocol.InitializeResult result) {}
+    public static final class InitializeOutcome {
+
+        private final String sessionId;
+        private final MCPProtocol.InitializeResult result;
+
+        public InitializeOutcome(String sessionId, MCPProtocol.InitializeResult result) {
+            this.sessionId = sessionId;
+            this.result = result;
+        }
+
+        public String sessionId() {
+            return sessionId;
+        }
+
+        public MCPProtocol.InitializeResult result() {
+            return result;
+        }
+    }
 
     /**
      * Creates a new session and builds the corresponding {@code initialize}
@@ -537,7 +556,8 @@ public class MCPHandler {
                         MCPServerException.SERVER_NOT_INITIALIZED, "Another session is already active");
             }
             String evictionReason;
-            if (decision instanceof SessionDecision.AcceptAndEvict ae) {
+            if (decision instanceof SessionDecision.AcceptAndEvict) {
+                final SessionDecision.AcceptAndEvict ae = (SessionDecision.AcceptAndEvict) decision;
                 toEvict = ae.sessions();
                 evictionReason = ae.evictionReason();
             } else {

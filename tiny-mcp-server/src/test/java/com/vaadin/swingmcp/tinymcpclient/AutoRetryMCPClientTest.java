@@ -234,8 +234,8 @@ class AutoRetryMCPClientTest {
             if (t == null) {
                 return;
             }
-            if (t instanceof IOException io) {
-                throw io;
+            if (t instanceof IOException) {
+                throw (IOException) t;
             }
             throw (RuntimeException) t;
         }

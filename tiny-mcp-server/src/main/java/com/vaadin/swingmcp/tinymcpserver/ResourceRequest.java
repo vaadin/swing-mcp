@@ -15,9 +15,35 @@ import java.util.Map;
  * otherwise. {@code transportHeaders} is unmodifiable.
  *
  * <p>See D_request_records for the rationale.
+ *
+ * <p>Immutable.
  */
-public record ResourceRequest(
-        String uri,
-        Map<String, String> transportHeaders,
-        JsonObject jsonRpcMeta) {
+public final class ResourceRequest {
+
+    private final String uri;
+    private final Map<String, String> transportHeaders;
+    private final JsonObject jsonRpcMeta;
+
+    /**
+     * @param jsonRpcMeta the request's {@code params._meta}, or {@code null} if absent
+     */
+    public ResourceRequest(String uri,
+                           Map<String, String> transportHeaders,
+                           JsonObject jsonRpcMeta) {
+        this.uri = uri;
+        this.transportHeaders = transportHeaders;
+        this.jsonRpcMeta = jsonRpcMeta;
+    }
+
+    public String uri() {
+        return uri;
+    }
+
+    public Map<String, String> transportHeaders() {
+        return transportHeaders;
+    }
+
+    public JsonObject jsonRpcMeta() {
+        return jsonRpcMeta;
+    }
 }

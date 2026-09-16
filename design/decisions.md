@@ -948,3 +948,49 @@ the failure at all, let alone recover from it.
 **Revisit trigger.** Telemetry showing form-filling as a dominant share of token spend across
 real sessions. Start from the outcome-reporting mechanism above, not from another pass at the
 pure fire-and-forget shape.
+
+## D_java11_floor — Why does the shipped code target Java 11 rather than 17?
+
+`options.release = 11` on `compileJava`; test source sets stay at 17. The published jars are
+class-file version 55, so they load into a Java 11 JVM.
+
+**Why, at all.** This drops into a Swing application built years ago, and those run on old JVMs.
+In a corporate environment the JVM is frequently not the developer's to choose: it is what the
+image ships with, and a newer one may not be installable at all — so "ask them to upgrade" is not
+a workaround, it is the end of the evaluation. The failure is also total rather than partial: a
+class-file version error is a hard load failure at startup, not a degraded feature. The reach of
+the artifact is the whole argument, and a language floor is the cheapest way to buy it.
+
+**Why 11 and not 8.** `java.net.http.HttpClient` is the client side of `MCPProxy` and arrived in
+11; `var`, `List.of`/`List.copyOf` and `String.isBlank` are used throughout. Java 8 would mean
+hand-rolling an HTTP client on `HttpURLConnection` and losing the immutable-collection factories
+— real work, for a JVM generation the migration target no longer justifies.
+
+**Why not 17, keeping records and `sealed`.** Rejected on what it costs to reverse. The nine
+records and one sealed interface were about forty lines of hand-written boilerplate to undo
+(only `ToolDescriptor` carried a real equality contract, and it is now hand-written); an
+application stuck on 11 cannot undo its JVM. The asymmetry decides it.
+
+**Why `--release` rather than `sourceCompatibility` / `targetCompatibility`.** Only `--release`
+compiles against that JDK's API signatures. `targetCompatibility` alone emits version-55 class
+files that happily call a Java 17 method — the build stays green and the failure lands on the
+customer as `NoSuchMethodError`. The old setting was 17 and had therefore never verified anything.
+
+**Why the tests are held to the floor too, and run on an 11 VM.** `--release 11` proves no
+post-11 API is *called*; it cannot prove the jars load and run on an 11 VM, which a v61 class
+pulled in by shadowJar or an API reached reflectively would break. So `testJava11` re-runs the
+whole headless suite on a real Java 11 launcher, and CI builds on 11 as well as 17/21/24. That
+cost JUnit 6 (17-only) for JUnit 5.14.4, and Gradle 9.5 for 8.14.3 — the last Gradle that runs
+on 11, which in turn means the build no longer runs on Java 25.
+
+The leg paid for itself twice on the first run: `R_jslider_actions_since_17`, and a server bug
+where a rejection path answered without draining the request body, so `com.sun.net.httpserver`
+closed a connection the client had already pooled. Java 11's `HttpClient` does not retry a POST
+that dies that way (JDK 12+ does), so only the 11 leg ever saw it.
+
+**Why the official MCP SDK is confined to one source set.** It has no Java 11 build — every
+release from 0.7.0 to 2.0.1 is class-file 61 — so it cannot be the thing that drives a suite
+which must also run on 11. It stays in `tiny-mcp-server/src/testOfficial`, compiled at 17 and
+skipped entirely on an older build JDK. Everything above that module drives the server through
+this repository's own `TinyMCPClient`, which is the right layer anyway. See
+`D_conformance_two_clients` for why the SDK is still worth keeping at all.

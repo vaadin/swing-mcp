@@ -6,7 +6,6 @@ import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -868,15 +867,14 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         mcpServer.setConsideredComponents(List.of(root));
 
         // Take a snapshot to populate refs
-        mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
+        mcpClient.callTool("swing_snapshot", Map.of());
 
         // Drag source to target via MCP
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_drag",
-                        Map.of("source_ref", 1, "target_ref", 2)));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_drag",
+                        Map.of("source_ref", 1, "target_ref", 2));
         SwingUtilities.invokeAndWait(() -> {}); // drain EDT
 
-        assertNotEquals(Boolean.TRUE, result.isError(), "Drag should succeed via MCP client");
+        assertNotEquals(Boolean.TRUE, result.getIsError(), "Drag should succeed via MCP client");
         assertTrue(source.wasDragged(), "Source should have received drag sequence via MCP client");
     }
 

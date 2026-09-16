@@ -185,3 +185,16 @@ trims to its length — which is how long this file gets, so keep it short.
 - With the default `setEditable(false)` the count is 1 — the popup only, no text child. **[verified 2026-04-08, Java 21]**
 - Consequence: a type-to-filter combo box needs no special handling, because its editor is
   already an ordinary text node in the tree. **[verified 2026-04-08, Java 21]**
+
+## R_jslider_actions_since_17 — `JSlider` gained increment/decrement actions after Java 11
+
+- On Java 11 `AccessibleJSlider` is declared `implements Serializable, AccessibleComponent,
+  AccessibleExtendedComponent, AccessibleValue`; `getAccessibleAction()` returns `null`. **[docs]**
+  **[verified 2026-09-16, Temurin 11.0.32]**
+- On Java 17 the same class adds `AccessibleAction`, `ChangeListener` and `EventListener`, and
+  advertises exactly two actions: index 0 `increment`, index 1 `decrement`. **[docs]**
+  **[verified 2026-09-16, JBR 17.0.9 / Temurin 21.0.11 / Temurin 24.0.2]**
+- `AccessibleValue` is present on both, so below 17 a slider still reads and writes its value —
+  it loses only the two step actions, not its whole surface. **[verified 2026-09-16, Temurin 11.0.32]**
+- Consequence: a capability keyed on `getAccessibleAction()` is JDK-dependent for this one
+  component, so a test that hardcodes either answer fails on the other side of the boundary.

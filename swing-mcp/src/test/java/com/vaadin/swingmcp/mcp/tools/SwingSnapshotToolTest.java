@@ -4,7 +4,6 @@ import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
 import com.vaadin.swingmcp.mcp.ClickRecordingPanel;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +16,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import static com.vaadin.swingmcp.mcp.JdkCapabilities.SLIDER_HAS_ACCESSIBLE_ACTIONS;
 import static org.junit.jupiter.api.Assertions.*;
 
 class SwingSnapshotToolTest extends AbstractHeadlessTest {
@@ -624,7 +624,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- JPanel (panel)\n"
-                + "  - JSlider (slider) [ref=1, disabled, horizontal] value=50 actions: !increment, !decrement, get_value, !set_value",
+                + "  - JSlider (slider) [ref=1, disabled, horizontal] value=50 actions: "
+                + (SLIDER_HAS_ACCESSIBLE_ACTIONS ? "!increment, !decrement, " : "")
+                + "get_value, !set_value",
                 output);
     }
 
@@ -858,7 +860,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- JPanel (panel)\n"
-                + "  - JSlider (slider) [ref=1, horizontal] value=42 actions: increment, decrement, get_value, set_value",
+                + "  - JSlider (slider) [ref=1, horizontal] value=42 actions: "
+                + (SLIDER_HAS_ACCESSIBLE_ACTIONS ? "increment, decrement, " : "")
+                + "get_value, set_value",
                 snapshot(panel));
     }
 
@@ -1334,7 +1338,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         assertEquals(
                 "- JPanel (panel)\n"
-                + "  - JSlider (slider) [ref=1, horizontal] value=50 actions: increment, decrement, get_value, set_value",
+                + "  - JSlider (slider) [ref=1, horizontal] value=50 actions: "
+                + (SLIDER_HAS_ACCESSIBLE_ACTIONS ? "increment, decrement, " : "")
+                + "get_value, set_value",
                 snapshot(panel));
     }
 
@@ -1638,23 +1644,22 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void swingSnapshotViaMcpClientReturnsValidTextResponse() {
+    void swingSnapshotViaMcpClientReturnsValidTextResponse() throws Exception {
         JPanel panel = new JPanel();
         panel.add(new JButton("MCP"));
         mcpServer.setConsideredComponents(List.of(panel));
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_snapshot", Map.of());
 
         assertNotNull(result, "result must not be null");
-        assertNotEquals(Boolean.TRUE, result.isError(), "result must not be an error");
-        assertFalse(result.content().isEmpty(), "content must not be empty");
+        assertNotEquals(Boolean.TRUE, result.getIsError(), "result must not be an error");
+        assertFalse(result.getContent().isEmpty(), "content must not be empty");
 
-        McpSchema.TextContent textContent = (McpSchema.TextContent) result.content().get(0);
+        MCPProtocol.Content textContent = result.getContent().get(0);
         assertEquals(
                 "- JPanel (panel)\n"
                 + "  - JButton (push_button) \"MCP\" [ref=1] actions: click",
-                textContent.text());
+                textContent.getText());
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -1981,7 +1986,9 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
 
         // Slider has interactive role — Tier 2 skipped. No click action.
         assertEquals(
-                "- JSlider (slider) [ref=1, horizontal] value=50 actions: increment, decrement, get_value, set_value",
+                "- JSlider (slider) [ref=1, horizontal] value=50 actions: "
+                        + (SLIDER_HAS_ACCESSIBLE_ACTIONS ? "increment, decrement, " : "")
+                        + "get_value, set_value",
                 snapshot(slider));
     }
 

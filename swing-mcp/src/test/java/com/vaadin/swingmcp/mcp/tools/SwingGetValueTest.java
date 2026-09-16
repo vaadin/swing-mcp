@@ -5,7 +5,6 @@ import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -365,18 +364,17 @@ class SwingGetValueTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void swingGetValueViaMcpClient() {
+    void swingGetValueViaMcpClient() throws Exception {
         JSlider slider = new JSlider(0, 100, 42);
         mcpServer.setConsideredComponents(List.of(slider));
 
-        mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
+        mcpClient.callTool("swing_snapshot", Map.of());
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_get_value", Map.of("ref", 1)));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_get_value", Map.of("ref", 1));
 
-        assertNotEquals(Boolean.TRUE, result.isError(), "get_value should succeed");
-        assertFalse(result.content().isEmpty(), "Result should have content");
-        String json = ((McpSchema.TextContent) result.content().get(0)).text();
+        assertNotEquals(Boolean.TRUE, result.getIsError(), "get_value should succeed");
+        assertFalse(result.getContent().isEmpty(), "Result should have content");
+        String json = result.getContent().get(0).getText();
         assertEquals("{\"current\":42,\"min\":0,\"max\":100}", json);
     }
 }

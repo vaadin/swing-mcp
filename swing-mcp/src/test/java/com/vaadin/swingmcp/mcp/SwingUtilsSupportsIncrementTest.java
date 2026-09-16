@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.swing.*;
 
+import static com.vaadin.swingmcp.mcp.JdkCapabilities.SLIDER_HAS_ACCESSIBLE_ACTIONS;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -29,7 +30,10 @@ class SwingUtilsSupportsIncrementTest {
 
     @Test
     void jSlider_supportsIncrement() {
-        assertTrue(SwingUtils.supportsIncrement(new JSlider(0, 100, 50)) >= 0);
+        // JSlider gained AccessibleAction in Java 17 (R_jslider_actions_since_17);
+        // on 11 the correct answer is "not supported".
+        assertEquals(SLIDER_HAS_ACCESSIBLE_ACTIONS,
+                SwingUtils.supportsIncrement(new JSlider(0, 100, 50)) >= 0);
     }
 
     // ══════════════════════════════════════════════════════════════════════════

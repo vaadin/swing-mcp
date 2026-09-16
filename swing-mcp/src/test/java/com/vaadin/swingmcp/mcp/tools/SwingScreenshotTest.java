@@ -4,7 +4,6 @@ import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -80,33 +79,31 @@ class SwingScreenshotTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void swingScreenshotViaMcpClientReturnsImageContentResponse() {
+    void swingScreenshotViaMcpClientReturnsImageContentResponse() throws Exception {
         JPanel panel = new JPanel();
         panel.setSize(100, 100);
         panel.doLayout();
         mcpServer.setConsideredComponents(List.of(panel));
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_screenshot", Map.of()));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_screenshot", Map.of());
 
         assertNotNull(result);
-        assertNotEquals(Boolean.TRUE, result.isError());
-        assertFalse(result.content().isEmpty());
-        McpSchema.ImageContent imageContent = (McpSchema.ImageContent) result.content().get(0);
-        assertEquals("image/png", imageContent.mimeType());
+        assertNotEquals(Boolean.TRUE, result.getIsError());
+        assertFalse(result.getContent().isEmpty());
+        MCPProtocol.Content imageContent = result.getContent().get(0);
+        assertEquals("image/png", imageContent.getMimeType());
     }
 
     @Test
-    void emptyComponentListReturnsError() {
+    void emptyComponentListReturnsError() throws Exception {
         mcpServer.setConsideredComponents(List.of());
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_screenshot", Map.of()));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_screenshot", Map.of());
 
-        assertEquals(Boolean.TRUE, result.isError());
-        McpSchema.TextContent textContent = (McpSchema.TextContent) result.content().get(0);
+        assertEquals(Boolean.TRUE, result.getIsError());
+        MCPProtocol.Content textContent = result.getContent().get(0);
         assertEquals("No visible windows to capture. The application may still be starting up — retry shortly.",
-                textContent.text());
+                textContent.getText());
     }
 
     @Test

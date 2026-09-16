@@ -5,7 +5,6 @@ import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -318,21 +317,20 @@ class SwingGetCellCountTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void swingGetCellCountViaMcpClient() {
+    void swingGetCellCountViaMcpClient() throws Exception {
         String[] items = new String[20];
         for (int i = 0; i < 20; i++) items[i] = "Item-" + i;
         JList<String> list = new JList<>(items);
         mcpServer.setConsideredComponents(List.of(list));
 
-        mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
+        mcpClient.callTool("swing_snapshot", Map.of());
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_get_cell_count",
-                        Map.of("ref", 1)));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_get_cell_count",
+                        Map.of("ref", 1));
 
-        assertNotEquals(Boolean.TRUE, result.isError(), "get_cell_count should succeed");
-        assertFalse(result.content().isEmpty(), "Result should have content");
-        String text = ((McpSchema.TextContent) result.content().get(0)).text();
+        assertNotEquals(Boolean.TRUE, result.getIsError(), "get_cell_count should succeed");
+        assertFalse(result.getContent().isEmpty(), "Result should have content");
+        String text = result.getContent().get(0).getText();
         assertEquals("20", text);
     }
 }

@@ -2,7 +2,7 @@ package com.vaadin.swingmcp.mcpscreen.tools;
 
 import com.vaadin.swingmcp.mcp.tools.SwingScreenshotTool;
 import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
-import io.modelcontextprotocol.spec.McpSchema;
+import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -100,10 +100,10 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         // Timeout — proceed anyway so the assertion surfaces any real breakage.
     }
 
-    private BufferedImage decodeResult(McpSchema.CallToolResult result) throws Exception {
-        assertNotEquals(Boolean.TRUE, result.isError(), "unexpected error result");
-        McpSchema.ImageContent imageContent = (McpSchema.ImageContent) result.content().get(0);
-        byte[] bytes = Base64.getDecoder().decode(imageContent.data());
+    private BufferedImage decodeResult(MCPProtocol.CallToolResult result) throws Exception {
+        assertNotEquals(Boolean.TRUE, result.getIsError(), "unexpected error result");
+        MCPProtocol.Content imageContent = result.getContent().get(0);
+        byte[] bytes = Base64.getDecoder().decode(imageContent.getData());
         return ImageIO.read(new ByteArrayInputStream(bytes));
     }
 
@@ -114,8 +114,7 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         JFrame frame = showFrame(400, 300);
         mcpServer.setConsideredComponents(List.of(frame));
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_screenshot", Map.of()));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_screenshot", Map.of());
         BufferedImage image = decodeResult(result);
 
         // Read dimensions after the call: by this point the OS has applied any window
@@ -138,8 +137,7 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         JFrame frame2 = showUndecoratedFrame(300, 200);
         mcpServer.setConsideredComponents(List.of(frame1, frame2));
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_screenshot", Map.of()));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_screenshot", Map.of());
         BufferedImage image = decodeResult(result);
 
         assertEquals(400, image.getWidth());
@@ -155,8 +153,7 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         // dialog is present: only the dialog is considered.
         mcpServer.setConsideredComponents(List.of(dialog));
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_screenshot", Map.of()));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_screenshot", Map.of());
         BufferedImage image = decodeResult(result);
 
         assertEquals(dialog.getWidth(), image.getWidth());
@@ -171,8 +168,7 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         JFrame frame = showFrame(200, 100);
         mcpServer.setConsideredComponents(List.of(frame));
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_screenshot", Map.of()));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_screenshot", Map.of());
         BufferedImage image = decodeResult(result);
 
         // Read dimensions after the call: by this point the OS has applied any window
@@ -199,8 +195,7 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         });
         mcpServer.setConsideredComponents(List.of(host));
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_screenshot", Map.of()));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_screenshot", Map.of());
         BufferedImage image = decodeResult(result);
         assertTrue(image.getWidth() > 0 && image.getHeight() > 0,
                 "Screenshot of JFrame with JInternalFrame should produce a valid image");
@@ -212,8 +207,7 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         JDialog dialog = showDialog(owner, 200, 100);
         mcpServer.setConsideredComponents(List.of(dialog));
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_screenshot", Map.of()));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_screenshot", Map.of());
         BufferedImage image = decodeResult(result);
 
         // Read dimensions after the call: by this point the OS has applied any window

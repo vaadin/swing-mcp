@@ -5,7 +5,6 @@ import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -484,18 +483,17 @@ class SwingGetTextTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void swingGetTextViaMcpClient() {
+    void swingGetTextViaMcpClient() throws Exception {
         JTextField field = new JTextField("via mcp client");
         mcpServer.setConsideredComponents(List.of(field));
 
-        mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
+        mcpClient.callTool("swing_snapshot", Map.of());
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_get_text", Map.of("ref", 1)));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_get_text", Map.of("ref", 1));
 
-        assertNotEquals(Boolean.TRUE, result.isError(), "get_text should succeed");
-        assertFalse(result.content().isEmpty(), "Result should have content");
-        String text = ((McpSchema.TextContent) result.content().get(0)).text();
+        assertNotEquals(Boolean.TRUE, result.getIsError(), "get_text should succeed");
+        assertFalse(result.getContent().isEmpty(), "Result should have content");
+        String text = result.getContent().get(0).getText();
         assertEquals("via mcp client", text);
     }
 }

@@ -34,6 +34,7 @@ class JsonRpcExchange {
     private final HttpExchange exchange;
     private @Nullable String sessionId;
     private @Nullable Object requestId;
+    private boolean requestBodyConsumed;
 
     JsonRpcExchange(HttpExchange exchange) {
         this.exchange = Objects.requireNonNull(exchange, "exchange");
@@ -90,9 +91,38 @@ class JsonRpcExchange {
 
     String readBody() {
         try (InputStream is = exchange.getRequestBody()) {
+            requestBodyConsumed = true;
             return new String(is.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new TransportIOException(e);
+        }
+    }
+
+    /**
+     * Reads and discards anything left of the request body, so the connection
+     * stays reusable.
+     *
+     * @implNote {@code com.sun.net.httpserver} closes the TCP connection when a
+     * handler responds without consuming the request body. The rejection paths
+     * — an unknown session id, an unsupported method — answer before the body
+     * is ever parsed, and would otherwise poison a keep-alive connection the
+     * client has already pooled. A client that then reuses it sees the request
+     * die with no response; Java 11's {@code HttpClient} does not retry a POST
+     * in that case (JDK 12+ does), so on the Java 11 floor this surfaces as a
+     * flat "header parser received no bytes" rather than a clean error.
+     */
+    private void drainRequestBody() {
+        if (requestBodyConsumed) {
+            return;
+        }
+        requestBodyConsumed = true;
+        try (InputStream is = exchange.getRequestBody()) {
+            final byte[] scratch = new byte[4096];
+            while (is.read(scratch) >= 0) {
+                // discard
+            }
+        } catch (IOException e) {
+            LOG.log(Level.FINE, "Could not drain request body before responding", e);
         }
     }
 
@@ -148,6 +178,7 @@ class JsonRpcExchange {
     }
 
     void sendPlain(int statusCode, String body) {
+        drainRequestBody();
         try {
             if (body.isEmpty()) {
                 exchange.sendResponseHeaders(statusCode, -1);
@@ -165,6 +196,7 @@ class JsonRpcExchange {
     }
 
     private void sendJsonBody(int statusCode, String json) {
+        drainRequestBody();
         byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().set("Content-Type", "application/json");
         if (sessionId != null) {

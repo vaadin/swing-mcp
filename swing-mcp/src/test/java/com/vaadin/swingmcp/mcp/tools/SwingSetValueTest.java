@@ -3,8 +3,8 @@ package com.vaadin.swingmcp.mcp.tools;
 import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
+import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -492,13 +492,12 @@ class SwingSetValueTest extends AbstractHeadlessTest {
         JSlider slider = new JSlider(0, 100, 50);
         mcpServer.setConsideredComponents(List.of(slider));
 
-        mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
+        mcpClient.callTool("swing_snapshot", Map.of());
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_set_value", Map.of("ref", 1, "value", 75)));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_set_value", Map.of("ref", 1, "value", 75));
         SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
 
-        assertNotEquals(Boolean.TRUE, result.isError(), "set_value should succeed");
+        assertNotEquals(Boolean.TRUE, result.getIsError(), "set_value should succeed");
         assertEquals(75, slider.getValue());
     }
 }

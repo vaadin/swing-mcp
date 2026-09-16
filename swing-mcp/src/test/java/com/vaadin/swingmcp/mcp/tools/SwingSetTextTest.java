@@ -5,7 +5,6 @@ import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -434,13 +433,12 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         JTextField field = new JTextField("old");
         mcpServer.setConsideredComponents(List.of(field));
 
-        mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
+        mcpClient.callTool("swing_snapshot", Map.of());
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_set_text", Map.of("ref", 1, "text", "via mcp")));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_set_text", Map.of("ref", 1, "text", "via mcp"));
         SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
 
-        assertNotEquals(Boolean.TRUE, result.isError(), "set_text should succeed");
+        assertNotEquals(Boolean.TRUE, result.getIsError(), "set_text should succeed");
         assertEquals("via mcp", field.getText());
     }
 }

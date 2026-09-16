@@ -10,7 +10,7 @@ The primary use case is AI-assisted migration of Swing apps to Vaadin.
 
 - **An agent drives the app the way a person does.** Everything reachable goes through the real listener tree, and nothing is offered that a user could not do themselves.
 - **Cheap to read.** A text snapshot, not a screenshot: what it costs to look at a screen scales with the number of widgets, not the number of pixels.
-- **Droppable into an app we do not own.** It ships as a jar for a Swing application built years ago, so it adds as few runtime dependencies as it can and never asks that application to change how it starts.
+- **Droppable into an app we do not own.** It ships as a jar for a Swing application built years ago, so it adds as few runtime dependencies as it can, never asks that application to change how it starts, and never asks its owner — often someone who cannot choose — for a newer JVM.
 
 ## Design docs
 
@@ -49,8 +49,8 @@ Every fact lives in exactly one of these; the others link to it.
 
 ## Conventions
 
-- **Java 17 is the floor.** No API introduced later — this drops into applications that have not moved on (`List.getFirst()` is Java 21, and tempting).
-- **Tests: JUnit 6, two source sets.** `src/test` runs headless; `src/testSwing` needs a display and owns anything that must instantiate a real `Window`.
+- **Java 11 is the floor, tests included**; `--release` enforces it, so no records and no `sealed`. The official MCP SDK is 17-only and confined to `tiny-mcp-server/src/testOfficial`. See `D_java11_floor`.
+- **Tests: JUnit 5, two source sets.** `src/test` runs headless; `src/testSwing` needs a display and owns anything that must instantiate a real `Window`.
 - **Every tool test walks the component matrix** — a correct refusal is as much a result as a success; the matrix is in `design/architecture.md` § Testing.
 - **Diagnostics go to `java.util.logging`**, never to `System.out`; the LLM reads the error body, the developer reads stderr.
 - **Assert against the whole string**, not `contains` / `startsWith` — a snapshot diff is the readable failure.
@@ -61,6 +61,9 @@ Every fact lives in exactly one of these; the others link to it.
 ## Commands
 
 - `./gradlew` — clean, build, all tests. The default task, and what CI runs. It includes `testSwing`, so it needs a display: `xvfb-run -a ./gradlew` where there is none.
+- **Build with a JDK between 11 and 24** — Gradle 8.14.3 is the last that runs on 11 and does not run on 25.
+- `./gradlew testJava11` — re-runs the headless tests on a Java 11 JVM; registered only when Gradle finds a JDK 11 (`export JDK11=$(mise where java@temurin-11)`).
+- `./gradlew :tiny-mcp-server:testOfficial` — the conformance suite through the official MCP SDK; needs a 17+ build JDK.
 - `./gradlew test` — every headless test; `./gradlew :swing-mcp:testSwing` — the screen-mode ones (Xvfb in CI).
 - `./gradlew test --tests "com.vaadin.swingmcp.tinymcpserver.TinyMcpServerTest"` — one class; append `.methodName` for one method.
 - `design/verify_design_tripwires.sh` and `tiny-mcp-server/design/verify_design_tripwires.sh` — the two doc layers.

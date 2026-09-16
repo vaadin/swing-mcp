@@ -93,7 +93,8 @@ class LoginAppTest {
         if (type.isInstance(root) && name.equals(root.getName())) {
             return type.cast(root);
         }
-        if (root instanceof Container container) {
+        if (root instanceof Container) {
+            final Container container = (Container) root;
             for (Component child : container.getComponents()) {
                 T found = findByName(child, type, name);
                 if (found != null) return found;
@@ -106,8 +107,11 @@ class LoginAppTest {
         long deadline = System.currentTimeMillis() + timeoutMs;
         while (System.currentTimeMillis() < deadline) {
             for (Window w : Window.getWindows()) {
-                if (w instanceof JDialog d && title.equals(d.getTitle()) && d.isVisible()) {
-                    return d;
+                if (w instanceof JDialog) {
+                    final JDialog d = (JDialog) w;
+                    if (title.equals(d.getTitle()) && d.isVisible()) {
+                        return d;
+                    }
                 }
             }
             Thread.sleep(50);
@@ -119,8 +123,11 @@ class LoginAppTest {
         long deadline = System.currentTimeMillis() + timeoutMs;
         while (System.currentTimeMillis() < deadline) {
             for (Window w : Window.getWindows()) {
-                if (w instanceof JFrame f && title.equals(f.getTitle()) && f.isVisible()) {
-                    return f;
+                if (w instanceof JFrame) {
+                    final JFrame f = (JFrame) w;
+                    if (title.equals(f.getTitle()) && f.isVisible()) {
+                        return f;
+                    }
                 }
             }
             Thread.sleep(50);

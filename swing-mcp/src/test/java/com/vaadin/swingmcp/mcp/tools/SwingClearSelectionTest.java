@@ -3,7 +3,6 @@ package com.vaadin.swingmcp.mcp.tools;
 import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -93,12 +92,11 @@ class SwingClearSelectionTest extends AbstractHeadlessTest {
         list.setSelectedIndex(2);
         mcpServer.setConsideredComponents(List.of(list));
 
-        mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
+        mcpClient.callTool("swing_snapshot", Map.of());
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_clear_selection", Map.of("ref", 1)));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_clear_selection", Map.of("ref", 1));
 
-        assertNotEquals(Boolean.TRUE, result.isError(), "clear_selection should succeed");
+        assertNotEquals(Boolean.TRUE, result.getIsError(), "clear_selection should succeed");
         SwingUtilities.invokeAndWait(() -> {}); // drain EDT
         assertEquals(-1, list.getSelectedIndex());
     }

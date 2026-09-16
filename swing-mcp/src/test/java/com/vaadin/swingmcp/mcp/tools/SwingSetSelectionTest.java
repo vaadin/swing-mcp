@@ -5,7 +5,6 @@ import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
-import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -644,21 +643,20 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void swingSetSelectionViaMcpClient() {
+    void swingSetSelectionViaMcpClient() throws Exception {
         JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma"});
         list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         mcpServer.setConsideredComponents(List.of(list));
 
-        mcpClient.callTool(new McpSchema.CallToolRequest("swing_snapshot", Map.of()));
+        mcpClient.callTool("swing_snapshot", Map.of());
 
-        McpSchema.CallToolResult result = mcpClient.callTool(
-                new McpSchema.CallToolRequest("swing_set_selection",
-                        Map.of("ref", 1, "indices", List.of(0, 2))));
+        MCPProtocol.CallToolResult result = mcpClient.callTool("swing_set_selection",
+                        Map.of("ref", 1, "indices", List.of(0, 2)));
 
-        assertNotEquals(Boolean.TRUE, result.isError(), "set_selection should succeed");
+        assertNotEquals(Boolean.TRUE, result.getIsError(), "set_selection should succeed");
         // D_dispatched_echo: mutation tools echo "Dispatched <action> on ref=<N> [to <value>]"
-        assertEquals(1, result.content().size(), "Mutation tools return a one-item echo");
+        assertEquals(1, result.getContent().size(), "Mutation tools return a one-item echo");
         assertEquals("Dispatched set-selection on ref=1 to [0, 2] — call swing_snapshot to verify the outcome",
-                ((McpSchema.TextContent) result.content().get(0)).text());
+                result.getContent().get(0).getText());
     }
 }
