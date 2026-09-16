@@ -18,30 +18,29 @@ import java.util.Objects;
  * a named remediation, and "do not retry" where appropriate.
  *
  * @param upstreamDownMessage  emitted on the lazy-init {@code IOException}
- *                             path. Example: {@code "Cannot reach Swing
- *                             MCP Agent at http://127.0.0.1:18088/mcp —
- *                             ask the user to start the Swing
- *                             application (the MCP agent runs inside
- *                             it)."}
+ *                             path. Example: {@code "Cannot reach the MCP
+ *                             agent at http://127.0.0.1:18088/mcp — ask
+ *                             the user to start the host application (the
+ *                             MCP agent runs inside it)."}
  * @param driftMessage         emitted when the manifest does not match
  *                             upstream's {@code listTools()} response.
  *                             Permanent for the session — caller should
  *                             tell the LLM "do not retry." Example:
- *                             {@code "Swing-MCP is out of sync with the
- *                             Swing MCP Agent at &lt;URL&gt; — the tool
- *                             manifest doesn't match. Tell the user to
- *                             restart the MCP server or the Swing
- *                             application so versions match. Do not
- *                             retry."}
+ *                             {@code "This proxy is out of sync with the
+ *                             MCP agent at &lt;URL&gt; — the tool manifest
+ *                             doesn't match. Tell the user to restart the
+ *                             proxy or the host application so versions
+ *                             match. Do not retry."}
  * @param sessionLostMessage   emitted on {@code MCPSessionLostException}
- *                             from upstream. Example: {@code "Swing
- *                             application session was lost — call
- *                             swing_snapshot to re-orient and retry."}
+ *                             from upstream. Example: {@code "The host
+ *                             application session was lost — take a fresh
+ *                             snapshot to re-orient and retry."}
  * @param ioMidCallMessage     emitted on {@code IOException} during a
  *                             forwarded call. Example: {@code "Lost
- *                             connection to Swing MCP Agent at &lt;URL&gt;
+ *                             connection to the MCP agent at &lt;URL&gt;
  *                             mid-call — the action may or may not have
- *                             completed; call swing_snapshot to verify."}
+ *                             completed; take a fresh snapshot to
+ *                             verify."}
  */
 public record ProxyMessages(
         String upstreamDownMessage,

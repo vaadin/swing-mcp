@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Exercises the supersede-on-conflict session policy (DR-supersede-sessions): when a
+ * Exercises the supersede-on-conflict session policy (D_supersede_sessions): when a
  * caller registers an {@link SessionDecision.AcceptAndEvict} policy, a
  * new {@code initialize} replaces the existing session(s) and the
  * displaced client gets a tombstone-backed 404 on its next call.

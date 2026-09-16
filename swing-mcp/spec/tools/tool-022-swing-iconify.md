@@ -15,17 +15,17 @@ Iconifies (minimizes) a Frame (including JFrame) or JInternalFrame — needed be
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | **Frame (including JFrame):** the iconify is performed by calling `frame.setExtendedState(frame.getExtendedState() | Frame.ICONIFIED)` via `SwingUtilities.invokeLater()` (fire-and-forget — see **architecture.md § 2 — Fire-and-Forget Mutation Dispatch**). Preserves existing extended-state bits (e.g. `MAXIMIZED_BOTH`). **JInternalFrame:** the iconify is performed by calling `iframe.setIcon(true)` via `SwingUtilities.invokeLater()`. `PropertyVetoException` is silently caught — a `VetoableChangeListener` may reject the iconify; the client calls `swing_snapshot` to check the outcome. |
+| BR-03 | **Frame (including JFrame):** the iconify is performed by calling `frame.setExtendedState(frame.getExtendedState() | Frame.ICONIFIED)` via `SwingUtilities.invokeLater()` (fire-and-forget — see **D_fire_and_forget_dispatch**). Preserves existing extended-state bits (e.g. `MAXIMIZED_BOTH`). **JInternalFrame:** the iconify is performed by calling `iframe.setIcon(true)` via `SwingUtilities.invokeLater()`. `PropertyVetoException` is silently caught — a `VetoableChangeListener` may reject the iconify; the client calls `swing_snapshot` to check the outcome. |
 | BR-04 | All validation runs on the EDT inside `runInEDT()`. The iconify dispatch is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
 | BR-05 | If `supportsIconify()` returns false, the tool returns an MCP-level error (`isError: true`). The error message is derived by inspecting the component to pick the most specific explanation: **Frame — undecorated:** "Frame is undecorated and cannot be iconified. Call swing_snapshot to verify the current state". **Frame — already iconified:** "Frame is already iconified. Call swing_snapshot to verify the current state". **JInternalFrame — not iconifiable:** "JInternalFrame is not iconifiable. Call swing_snapshot to verify the current state". **JInternalFrame — already iconified:** "JInternalFrame is already iconified. Call swing_snapshot to verify the current state". **Fallback:** "<ClassName> does not support swing_iconify. Call swing_snapshot or swing_get_cells to verify the list of actions". |
 | BR-06 | `isEffectivelyEnabled()` is **not** checked. Iconifying is a window-level action; it does not depend on the component's enabled state. |
-| BR-07 | `swing_iconify` is a **mutation tool** — it clears the ref map after successful execution (see **architecture.md §3 rule 3**). A pre-dispatch validation error (`MCPErrorResponseException`) does **not** clear the ref map. |
+| BR-07 | `swing_iconify` is a **mutation tool** — it clears the ref map after successful execution (see **`design/architecture.md` § Flows — the ref lifecycle**). A pre-dispatch validation error (`MCPErrorResponseException`) does **not** clear the ref map. |
 | BR-08 | **Snapshot action:** `iconify` is listed in the actions of a Frame or JInternalFrame when `supportsIconify()` returns true. |
-| BR-09 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched iconify on ref=<N> — call swing_snapshot to verify the outcome` (see **DR-dispatched-echo**). |
+| BR-09 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched iconify on ref=<N> — call swing_snapshot to verify the outcome` (see **D_dispatched_echo**). |
 
 ### Algorithm: detecting iconify support
 
-See **architecture.md § 6 — Action Detection Summary** for the authoritative action-to-tool mapping.
+See **`design/architecture.md`** for the authoritative action-to-tool mapping.
 
 `supportsIconify(Accessible)`:
 
@@ -47,7 +47,7 @@ See **architecture.md § 6 — Action Detection Summary** for the authoritative 
    - **Frame:** `SwingUtilities.invokeLater(() -> frame.setExtendedState(frame.getExtendedState() | Frame.ICONIFIED))` — return `null`.
    - **JInternalFrame:** `SwingUtilities.invokeLater(() -> { try { iframe.setIcon(true); } catch (PropertyVetoException e) { /* silently ignored */ } })` — return `null`.
 
-The client calls `swing_snapshot` after to determine whether the frame was iconified. For Frame, the snapshot shows `[iconified]` (DR-synthetic-iconified-state) and the `iconify` action is no longer listed. For JInternalFrame, the frame is replaced by a `JDesktopIcon` in the snapshot (DR-desktop-icon-as-itself).
+The client calls `swing_snapshot` after to determine whether the frame was iconified. For Frame, the snapshot shows `[iconified]` (D_synthetic_iconified_state) and the `iconify` action is no longer listed. For JInternalFrame, the frame is replaced by a `JDesktopIcon` in the snapshot (D_desktop_icon_as_itself).
 
 ---
 
@@ -59,7 +59,7 @@ The client calls `swing_snapshot` after to determine whether the frame was iconi
   - [x] Each non-Frame/JInternalFrame component from the component matrix returns an MCP error (`isError: true`) when `swing_iconify` is called on it.
   - [x] Calling `swing_iconify` with an invalid ref returns an MCP error with `isError: true` and a recovery message.
 
-- [x] `SwingIconifyScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+- [x] `SwingIconifyScreenTest` (`testSwing` — requires display; see `design/architecture.md` § Testing)
   - [x] Calling `swing_iconify` on a decorated JFrame iconifies the frame; snapshot shows `[iconified]` and no longer lists the `iconify` action (verified after EDT drains).
   - [x] Calling `swing_iconify` on an undecorated JFrame returns an MCP error with `isError: true` and message "Frame is undecorated and cannot be iconified. Call swing_snapshot to verify the current state".
   - [x] An already-iconified JFrame does not show `iconify` in the snapshot actions.
@@ -69,6 +69,6 @@ The client calls `swing_snapshot` after to determine whether the frame was iconi
   - [x] Calling `swing_iconify` on a JInternalFrame with `isIconifiable() == false` returns an MCP error with `isError: true` and message "JInternalFrame is not iconifiable. Call swing_snapshot to verify the current state".
   - [x] Snapshot of a visible iconifiable JInternalFrame shows `iconify` in its actions.
   - [x] Snapshot of a JInternalFrame with `isIconifiable() == false` does not show `iconify` in its actions.
-  - [x] Calling `swing_iconify` on a JInternalFrame whose `VetoableChangeListener` rejects the iconify returns the DR-dispatched-echo echo `Dispatched iconify on ref=N — call swing_snapshot to verify the outcome`; the internal frame is still showing (not replaced by JDesktopIcon) — verifies we call `setIcon(true)` which respects vetoes.
+  - [x] Calling `swing_iconify` on a JInternalFrame whose `VetoableChangeListener` rejects the iconify returns the D_dispatched_echo echo `Dispatched iconify on ref=N — call swing_snapshot to verify the outcome`; the internal frame is still showing (not replaced by JDesktopIcon) — verifies we call `setIcon(true)` which respects vetoes.
   - [x] JDesktopIcon does not show `iconify` in its actions.
   - [x] `JDesktopPane` component matrix: `swing_iconify` returns an MCP error with `isError: true`.

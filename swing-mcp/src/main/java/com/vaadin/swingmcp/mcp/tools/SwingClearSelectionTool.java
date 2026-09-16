@@ -28,7 +28,7 @@ public class SwingClearSelectionTool extends AbstractSwingTool {
                 Map.of("ref", ref, "indices", Collections.emptyList()));
         // Delegate performs validation + fire-and-forget dispatch (or throws on error).
         // Discard the delegate's echo — it says "Dispatched set-selection ..." with the wrong
-        // action name. Per DR-dispatched-echo the echo reflects the MCP-exposed tool name, which here
+        // action name. Per D_dispatched_echo the echo reflects the MCP-exposed tool name, which here
         // is swing_clear_selection.
         delegate.execute(delegateParams, context);
         return echo(ref);

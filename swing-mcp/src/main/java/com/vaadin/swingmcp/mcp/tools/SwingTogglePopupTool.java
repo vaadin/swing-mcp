@@ -49,7 +49,7 @@ public class SwingTogglePopupTool extends AbstractSwingTool {
         // BR-03: fire the action asynchronously (fire-and-forget)
         AccessibleAction aa = accessible.getAccessibleContext().getAccessibleAction();
         SwingUtilities.invokeLater(() -> aa.doAccessibleAction(actionIndex));
-        // BR-12: DR-dispatched-echo success echo
+        // BR-12: D_dispatched_echo success echo
         return echo(ref);
     }
 

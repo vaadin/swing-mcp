@@ -80,7 +80,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
         menuBar.add(menu);
         frame.setJMenuBar(menuBar);
 
-        // DR-jmenu-not-clickable: JMenu has no click action and no ref; only items are clickable.
+        // D_jmenu_not_clickable: JMenu has no click action and no ref; only items are clickable.
         assertEquals(
                 "- JFrame (frame)\n"
                 + "  - JMenuBar (menu_bar)\n"
@@ -92,7 +92,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
 
     @Test
     void openJMenuPopup_doesNotDuplicateItems_HE5() throws Exception {
-        // DR-jmenu-not-clickable / HE-5 end-to-end: open a JMenu's popup via the real Swing
+        // D_jmenu_not_clickable / HE-5 end-to-end: open a JMenu's popup via the real Swing
         // mechanics (doClick on a visible frame) and verify the snapshot
         // contains each JMenuItem exactly once — no duplicate sibling
         // JPopupMenu node. Reproduces the original feedback report verbatim:
@@ -312,7 +312,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // BR-14 / DR-modal-stack-header — modal-stack header
+    // BR-14 / D_modal_stack_header — modal-stack header
     //
     // Modal dialogs that would normally block setVisible() are never actually
     // shown in these tests — the header logic reads Dialog.isModal() and walks
@@ -403,7 +403,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
     @Test
     void dr016_nonModalDialog_emitsNoHeader() throws Exception {
         // Non-modal dialogs fail the isModal() check even with a visible owner —
-        // DR-modal-stack-header is modal-scope by design.
+        // D_modal_stack_header is modal-scope by design.
         JFrame frame = showFrame("Y", 300, 200);
         try {
             JDialog dialog = new JDialog(frame, "X", false);
@@ -541,7 +541,7 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // SC-8 / DR-iconified-children-hidden — iconified Frame children suppressed
+    // SC-8 / D_iconified_children_hidden — iconified Frame children suppressed
     // ══════════════════════════════════════════════════════════════════════════
 
     /**

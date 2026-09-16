@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * DR-settable-listeners: MCPHandler exposes session-lifecycle listeners via fluent
+ * D_settable_listeners: MCPHandler exposes session-lifecycle listeners via fluent
  * setters with sensible no-op defaults. Settable until the first
  * session is accepted, then locked.
  */

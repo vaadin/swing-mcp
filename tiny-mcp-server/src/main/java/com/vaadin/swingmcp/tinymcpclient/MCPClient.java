@@ -19,7 +19,7 @@ import java.util.Map;
  * <p>The surface is intentionally small: {@link #initialize()},
  * {@link #listTools()}, {@link #callTool(ToolRequest)}, and
  * {@link #close()}. Resources and prompts are not in the initial
- * surface; add when a use case asks for them. See DR-embedded-mcp-client.
+ * surface; add when a use case asks for them. See D_embedded_client.
  *
  * <h2>Errors</h2>
  * <ul>
@@ -35,7 +35,7 @@ import java.util.Map;
  *
  * <p>{@link MCPProtocol.CallToolResult#getIsError()} = {@code true} is
  * <em>not</em> an exception — it is returned to the caller as a normal
- * result, mirroring the server's three-layer error model (DR-three-error-layers).
+ * result, mirroring the server's three-layer error model (D_three_error_layers).
  */
 public interface MCPClient extends Closeable {
 
@@ -69,7 +69,7 @@ public interface MCPClient extends Closeable {
      * JSON-RPC {@code _meta} from the supplied {@link ToolRequest} to the
      * server. {@code _meta} (e.g. {@code progressToken}) is embedded into
      * the outgoing request's {@code params._meta}, so cross-cutting fields
-     * survive a hop through a forwarding proxy (see DR-request-records).
+     * survive a hop through a forwarding proxy (see D_request_records).
      *
      * <p>{@link ToolRequest#transportHeaders()} is <em>not</em> forwarded
      * as outbound HTTP headers — they belong to the inbound transport and
@@ -108,7 +108,7 @@ public interface MCPClient extends Closeable {
     /**
      * Convenience overload of {@link #callTool(ToolRequest)} accepting an
      * explicit JSON-RPC {@code _meta} object. Used by forwarding proxies
-     * (DR-forwarding-proxy / DR-settable-listeners) so cross-cutting envelope fields like
+     * (D_forwarding_proxy / D_settable_listeners) so cross-cutting envelope fields like
      * {@code progressToken} survive end-to-end through a proxy hop.
      *
      * @param arguments the tool arguments; pass {@link Map#of()} for none
@@ -153,9 +153,10 @@ public interface MCPClient extends Closeable {
      * future decorators reads left-to-right.
      *
      * <p>Auto-retry is opt-in because re-initialization silently discards
-     * any session-bound state (e.g. swing-mcp's per-session ref map) — for
+     * any session-bound state (e.g. a map of handles a previous call handed
+     * out, whose keys mean nothing to a fresh session) — for
      * stateful callers, failure is information; for stateless callers, the
-     * convenience is worth it. See DR-embedded-mcp-client.
+     * convenience is worth it. See D_no_auto_retry.
      */
     default MCPClient autoRetry() {
         return new AutoRetryMCPClient(this);

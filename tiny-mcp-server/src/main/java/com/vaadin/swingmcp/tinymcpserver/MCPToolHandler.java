@@ -75,7 +75,7 @@ class MCPToolHandler {
      * Dispatches {@code tools/call}. Tool-application errors
      * ({@link MCPErrorResponseException} or any non-{@link MCPServerException}
      * thrown by the tool function) are returned as {@code CallToolResult}
-     * with {@code isError=true} (DR-three-error-layers layer 3). Protocol errors throw
+     * with {@code isError=true} (D_three_error_layers layer 3). Protocol errors throw
      * {@link MCPServerException}.
      *
      * @param request          the parsed JSON-RPC request envelope

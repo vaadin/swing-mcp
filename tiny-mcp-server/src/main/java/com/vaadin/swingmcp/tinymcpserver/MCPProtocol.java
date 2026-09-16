@@ -433,7 +433,7 @@ public class MCPProtocol {
         public List<String> getRequired() { return required; }
         public void setRequired(List<String> required) { this.required = required; }
 
-        // DR-structural-schema-equality: structural equals/hashCode. `properties` is a Map, so its
+        // D_structural_schema_equality: structural equals/hashCode. `properties` is a Map, so its
         // own equals already ignores iteration order (and PropertySchema has
         // its own structural equals below). `required` is compared as a Set
         // — JSON Schema says required is set-valued, but the JSON wire form
@@ -477,7 +477,7 @@ public class MCPProtocol {
         public Number getMaximum() { return maximum; }
         public void setMaximum(Number maximum) { this.maximum = maximum; }
 
-        // DR-structural-schema-equality: structural equals/hashCode. enum is an ordered list per
+        // D_structural_schema_equality: structural equals/hashCode. enum is an ordered list per
         // JSON Schema semantics; numeric bounds compare semantically (so
         // Integer(0) and Long(0) — same JSON value, different boxed types
         // after a GSON round-trip — compare equal).

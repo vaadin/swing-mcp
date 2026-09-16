@@ -74,7 +74,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
     @Test
     void readCustomPasswordRoleComponentReturnsDr011Error() throws Exception {
         // A custom JTextField subclass that claims AccessibleRole.PASSWORD_TEXT without
-        // extending JPasswordField. DR-password-not-readable's gate is role-based, so the refusal applies.
+        // extending JPasswordField. D_password_not_readable's gate is role-based, so the refusal applies.
         JTextField field = new JTextField("secret") {
             @Override
             public javax.accessibility.AccessibleContext getAccessibleContext() {
@@ -192,7 +192,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JPasswordField() throws Exception {
-        // DR-password-not-readable: JPasswordField fails with a dedicated error, distinct from the
+        // D_password_not_readable: JPasswordField fails with a dedicated error, distinct from the
         // generic "does not support swing_get_text".
         JPasswordField field = new JPasswordField("pass");
         snapshot(field);
@@ -321,7 +321,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
     @Test
     void dr015_plainJLabel_returnsGenericGetTextError() throws Exception {
-        // DR-label-not-readable: a plain JLabel has no ref in normal snapshots (no actions),
+        // D_label_not_readable: a plain JLabel has no ref in normal snapshots (no actions),
         // but if a caller holds a stale ref or injects one, swing_get_text
         // must refuse with the generic error — not succeed by reading the
         // underlying AccessibleText (which plain JLabels don't expose anyway).
@@ -330,26 +330,26 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getText(99));
         assertTrue(ex.getMessage().contains("does not support swing_get_text"),
-                "DR-label-not-readable: plain JLabel must fail with generic error, got: " + ex.getMessage());
+                "D_label_not_readable: plain JLabel must fail with generic error, got: " + ex.getMessage());
     }
 
     @Test
     void dr015_htmlJLabel_returnsGenericGetTextError() throws Exception {
-        // DR-label-not-readable behaviour change: before this DR, an HTML JLabel exposed
+        // D_label_not_readable behaviour change: before this DR, an HTML JLabel exposed
         // AccessibleText via the JDK's HTML view, so swing_get_text
-        // succeeded and returned the rendered text. After DR-label-not-readable, the
+        // succeeded and returned the rendered text. After D_label_not_readable, the
         // LABEL-role exclusion fires first and the tool refuses.
         JLabel html = new JLabel("<html>Hello <b>world</b></html>");
         context.putRef(99, (javax.accessibility.Accessible) html);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getText(99));
         assertTrue(ex.getMessage().contains("does not support swing_get_text"),
-                "DR-label-not-readable: HTML JLabel must fail with generic error, got: " + ex.getMessage());
+                "D_label_not_readable: HTML JLabel must fail with generic error, got: " + ex.getMessage());
     }
 
     @Test
     void dr015_jListCell_returnsGenericGetTextError() throws Exception {
-        // DR-label-not-readable role-based gate covers JList.AccessibleJListChild (role LABEL).
+        // D_label_not_readable role-based gate covers JList.AccessibleJListChild (role LABEL).
         // Cell ref is legitimately assigned via `click`, but swing_get_text
         // must refuse — the cell's content is read from the snapshot name slot.
         //
@@ -383,7 +383,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getText(ref));
         assertTrue(ex.getMessage().contains("does not support swing_get_text"),
-                "DR-label-not-readable: JList cell must fail with generic error, got: " + ex.getMessage());
+                "D_label_not_readable: JList cell must fail with generic error, got: " + ex.getMessage());
     }
 
     @Test
@@ -395,7 +395,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenuBar() throws Exception {
-        // DR-jmenu-not-clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
+        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
@@ -407,7 +407,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenu() throws Exception {
-        // DR-jmenu-not-clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
+        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);

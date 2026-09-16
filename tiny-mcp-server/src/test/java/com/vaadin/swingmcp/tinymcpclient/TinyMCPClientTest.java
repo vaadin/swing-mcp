@@ -282,7 +282,7 @@ class TinyMCPClientTest {
 
     @Test
     void callToolThreeArgOverloadForwardsMeta() throws IOException {
-        // DR-settable-listeners: explicit-meta convenience overload used by MCPProxy.
+        // D_settable_listeners: explicit-meta convenience overload used by MCPProxy.
         JsonObject meta = new JsonObject();
         meta.addProperty("progressToken", "tkn-3arg");
         try (MCPClient client = newClient()) {
@@ -302,7 +302,7 @@ class TinyMCPClientTest {
         assertNull(lastRequest.get().jsonRpcMeta());
     }
 
-    // ===== _meta forwarding (DR-request-records) =====
+    // ===== _meta forwarding (D_request_records) =====
 
     @Test
     void metaIsForwardedToServer() throws IOException {

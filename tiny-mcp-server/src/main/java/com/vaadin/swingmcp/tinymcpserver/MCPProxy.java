@@ -19,7 +19,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Generic forwarding-proxy factory (DR-forwarding-proxy). Builds an {@link MCPHandler}
+ * Generic forwarding-proxy factory (D_forwarding_proxy). Builds an {@link MCPHandler}
  * whose tool functions forward {@code tools/call} requests to an upstream
  * MCP server reachable over HTTP, while {@code tools/list} answers locally
  * from a static descriptor manifest.
@@ -27,7 +27,7 @@ import java.util.logging.Logger;
  * <p>Typical usage:
  * <pre>{@code
  *     MCPHandler handler = MCPProxy.newHandler(
- *             SwingTools.ALL,
+ *             MyTools.ALL,
  *             URI.create("http://127.0.0.1:18088/mcp"),
  *             new ProxyMessages(...));
  *     try (StdioMCPServer stdio = new StdioMCPServer(handler)) {
@@ -48,7 +48,7 @@ import java.util.logging.Logger;
  *   <li>First {@code tools/call}: lazy {@code initialize}, then a
  *       symmetric drift probe ({@code listTools()} compared against the
  *       supplied {@link ToolDescriptor} list as a set keyed by name,
- *       structural equality on each entry per DR-structural-schema-equality). Mismatch → cache
+ *       structural equality on each entry per D_structural_schema_equality). Mismatch → cache
  *       {@code messages.driftMessage()} as a permanent error for this
  *       session. {@code IOException} → return
  *       {@code messages.upstreamDownMessage()} but <em>do not</em> mark
@@ -66,13 +66,13 @@ import java.util.logging.Logger;
  * </ul>
  *
  * <p>Single-session by default with new-wins supersede on conflict
- * (DR-supersede-sessions) — the intended consumer is a stdio process spawned by an
+ * (D_supersede_sessions) — the intended consumer is a stdio process spawned by an
  * MCP client like Claude Code, where a stale session left behind by a
  * crashed client must be replaceable immediately. Callers that need a
  * different policy can override it via {@link MCPHandler#setAcceptNewSession}
  * <em>before</em> the first session is accepted (the factory has not
  * yet been wired into a transport at that point — the listener-lockdown
- * rule from DR-settable-listeners lets caller customize then).
+ * rule from D_settable_listeners lets caller customize then).
  */
 public final class MCPProxy {
 
@@ -86,7 +86,7 @@ public final class MCPProxy {
 
     /**
      * Tombstone reason returned to a displaced client when a fresh
-     * {@code initialize} supersedes an existing session (DR-supersede-sessions). The
+     * {@code initialize} supersedes an existing session (D_supersede_sessions). The
      * proxy is single-session: a typical cause is the upstream MCP
      * client (e.g. Claude Code) reconnecting after a crash without
      * having sent a clean DELETE for its previous session. The text
@@ -113,7 +113,7 @@ public final class MCPProxy {
      *                    tool names.
      * @param upstreamUrl URL of the upstream MCP HTTP server (typically
      *                    {@code http://127.0.0.1:<port>/mcp})
-     * @param messages    the four pre-formatted error strings (DR-forwarding-proxy)
+     * @param messages    the four pre-formatted error strings (D_forwarding_proxy)
      * @return a fully-wired single-session {@code MCPHandler}; the
      *         caller wraps it in a transport (typically
      *         {@link StdioMCPServer}) and runs it
@@ -128,10 +128,8 @@ public final class MCPProxy {
     /**
      * Variant of {@link #newHandler(List, URI, ProxyMessages)} that also
      * sets the {@code initialize.serverInfo} and {@code initialize.instructions}
-     * advertised by the proxy. Used by {@code swing-mcp-proxy.Main} so the
-     * proxy presents bit-identical identity to whatever the in-process
-     * server would present (sourced from the shared
-     * {@code swing-mcp-tool-defs} module).
+     * advertised by the proxy, so it can present identity bit-identical to
+     * the upstream server's rather than its own.
      *
      * @param serverInfo   server identity
      * @param instructions {@code initialize.instructions} block, or {@code null}
@@ -152,7 +150,7 @@ public final class MCPProxy {
         List<ToolDescriptor> manifest = List.copyOf(tools);
 
         MCPHandler handler = new MCPHandler(serverInfo, instructions);
-        // DR-supersede-sessions: supersede on conflict — a fresh client replaces a stale one.
+        // D_supersede_sessions: supersede on conflict — a fresh client replaces a stale one.
         handler.setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(existing, EVICTION_REASON));
         handler.setOnSessionStarted(session -> {
             ProxySessionState state = new ProxySessionState(new TinyMCPClient(upstreamUrl));
@@ -268,7 +266,7 @@ public final class MCPProxy {
 
             // Success: forward content. ToolFunction's contract is single
             // Content — multi-content upstream results are a future
-            // concern (no current Swing tool returns multi-content).
+            // concern (no current consumer returns multi-content).
             List<MCPProtocol.Content> content = result.getContent();
             if (content == null || content.isEmpty()) {
                 return null;

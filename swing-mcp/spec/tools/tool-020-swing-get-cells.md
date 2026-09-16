@@ -93,7 +93,7 @@ Execution order:
   - [x] Ref map is replaced even when output is empty (offset beyond end).
   - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [x] `SwingGetCellsScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+- [x] `SwingGetCellsScreenTest` (`testSwing` — requires display; see `design/architecture.md` § Testing)
   - [x] Reading a `JTable` inside `JFrame` returns an MCP error redirecting to `swing_get_items`.
   - [x] Reading a truncated `JList` inside `JFrame` returns children.
   - [x] Reading a truncated `JList` inside `JDialog` returns children.
@@ -101,7 +101,7 @@ Execution order:
 
 ### Component matrix
 
-Each matrix component from `verification.md` gets a dedicated test method.
+Each matrix component in `design/architecture.md` § Testing gets a dedicated test method.
 
 **Succeed (`get_cells` supported):** `JList`, `JTree` — any supported large data component regardless of child count.
 

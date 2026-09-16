@@ -145,7 +145,7 @@ class SwingUtilsSupportsClickTest {
 
     @Test
     void jMenu_doesNotSupportClick() {
-        // DR-jmenu-not-clickable: JMenu is a structural container, not a click target.
+        // D_jmenu_not_clickable: JMenu is a structural container, not a click target.
         // The menu's JMenuItem children are directly clickable via their own refs.
         JMenu menu = new JMenu("File");
         assertNull(SwingUtils.supportsClick(menu));

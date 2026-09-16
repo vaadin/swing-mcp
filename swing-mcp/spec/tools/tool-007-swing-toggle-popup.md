@@ -13,19 +13,19 @@ Opens or closes a combo-box popup so the AI can reveal its items before making a
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | The toggle-popup action is invoked by posting `doAccessibleAction(i)` via `SwingUtilities.invokeLater()`, where `i` is the index returned by `SwingUtils.supportsTogglePopup(accessible)` during validation. See **architecture.md § 4 — Detecting Toggle-Popup Support** and **architecture.md § 2 — Fire-and-Forget Mutation Dispatch**. |
+| BR-03 | The toggle-popup action is invoked by posting `doAccessibleAction(i)` via `SwingUtilities.invokeLater()`, where `i` is the index returned by `SwingUtils.supportsTogglePopup(accessible)` during validation. See **`SwingUtils.supportsTogglePopup`** and **D_fire_and_forget_dispatch**. |
 | BR-04 | If the target does not support toggle-popup (i.e. `SwingUtils.supportsTogglePopup(accessible)` returns `-1`), the tool returns an MCP-level error (`isError: true`) with the message "<ClassName> does not support swing_toggle_popup. Call swing_snapshot or swing_get_cells to verify the list of actions". |
 | BR-05 | All validation runs on the EDT inside `runInEDT()`. The action is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
-| BR-06 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. |
+| BR-06 | If the target is not effectively enabled (see **D_mirror_swing_semantics**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. |
 | BR-08 | `swing_toggle_popup` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after successful invocation. A pre-dispatch validation error (`MCPErrorResponseException`) does **not** clear the ref map — the UI state hasn't changed, so existing refs remain valid and the AI can retry without re-snapshotting. The AI must call `swing_snapshot` after every **successful** `swing_toggle_popup` call to obtain fresh refs. |
 | BR-09 | The tool toggles the popup regardless of its current open/closed state. If the popup is already open, calling this tool closes it; if closed, it opens it. The AI can infer the current state from the snapshot. |
 | BR-10 | `doAccessibleAction` on `JComboBox` throws `java.awt.HeadlessException` in headless mode (popup display requires `getScreenSize()`). This is not a concern in production — the MCP server only runs inside a real Swing app with a display. As a consequence, the happy-path test (successful toggle) cannot run headless and must live in `SwingTogglePopupScreenTest`. |
 | BR-11 | Both editable (`setEditable(true)`) and non-editable `JComboBox` support `toggle_popup` via the same accessibility action. Both are tested in `SwingTogglePopupScreenTest`. |
-| BR-12 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched toggle-popup on ref=<N> — call swing_snapshot to verify the outcome` (see **DR-dispatched-echo**). |
+| BR-12 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched toggle-popup on ref=<N> — call swing_snapshot to verify the outcome` (see **D_dispatched_echo**). |
 
 ### Algorithm: detecting and invoking the toggle-popup action
 
-See **architecture.md § 4 — Detecting Toggle-Popup Support** for the full algorithm.
+See **`SwingUtils.supportsTogglePopup`** for the full algorithm.
 
 Execution order:
 1. **BR-02** — ref lookup (fail fast if ref is invalid).
@@ -52,13 +52,13 @@ Execution order:
   - [x] Toggling popup on an editable `JComboBox` inside `JFrame` opens it (BR-11).
   - [x] Toggling popup on a `JComboBox` inside `JDialog` opens it.
   - [x] Toggling popup on a `JComboBox` inside `JInternalFrame` (within `JDesktopPane` inside `JFrame`) opens it.
-  - [x] Success returns the DR-dispatched-echo echo `Dispatched toggle-popup on ref=N — call swing_snapshot to verify the outcome`.
+  - [x] Success returns the D_dispatched_echo echo `Dispatched toggle-popup on ref=N — call swing_snapshot to verify the outcome`.
   - [x] Ref map is cleared after a successful call.
   - [x] MCP client smoke test.
 
 ### Component matrix
 
-Each matrix component from `verification.md` gets a dedicated test method.
+Each matrix component in `design/architecture.md` § Testing gets a dedicated test method.
 
 **Succeed (`toggle_popup` supported):** `JComboBox`.
 

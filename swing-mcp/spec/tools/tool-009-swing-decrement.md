@@ -13,14 +13,14 @@ Steps a spinner or slider down by one unit — mirror of `swing_increment`.
 |----|------|
 | BR-01 | The `ref` parameter is required and must be an integer. |
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
-| BR-03 | The decrement action is fired by scanning the component's `AccessibleAction` descriptions for `AccessibleAction.DECREMENT` (`"decrement"`) to get action index `i`, then posting `doAccessibleAction(i)` via `SwingUtilities.invokeLater()`. No UIManager lookup is needed — `JSlider` and `JSpinner` use the static constant directly. See **architecture.md § 2 — Fire-and-Forget Mutation Dispatch**. |
+| BR-03 | The decrement action is fired by scanning the component's `AccessibleAction` descriptions for `AccessibleAction.DECREMENT` (`"decrement"`) to get action index `i`, then posting `doAccessibleAction(i)` via `SwingUtilities.invokeLater()`. No UIManager lookup is needed — `JSlider` and `JSpinner` use the static constant directly. See **D_fire_and_forget_dispatch**. |
 | BR-04 | If the target does not support swing_decrement (i.e. `SwingUtils.supportsDecrement(accessible)` returns `-1`), the tool returns an MCP-level error (`isError: true`) with the message "<ClassName> does not support swing_decrement. Call swing_snapshot or swing_get_cells to verify the list of actions". |
 | BR-05 | All validation runs on the EDT inside `runInEDT()`. The action is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
-| BR-06 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. |
+| BR-06 | If the target is not effectively enabled (see **D_mirror_swing_semantics**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. |
 | BR-08 | `swing_decrement` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after successful invocation. A pre-dispatch validation error (`MCPErrorResponseException`) does **not** clear the ref map — the UI state hasn't changed, so existing refs remain valid and the AI can retry without re-snapshotting. |
 | BR-09 | The step size and boundary behaviour are determined entirely by the component and the accessibility API. The tool invokes the action once per call and accepts whatever the API does. The AI must call `swing_decrement` multiple times to decrement by more than one step. |
 | BR-10 | `doAccessibleAction` for decrement works correctly in headless mode for both `JSpinner` and `JSlider`. All happy-path tests can therefore run headless; `SwingDecrementScreenTest` exists solely for `JFrame`/`JDialog` coverage required by the component matrix. |
-| BR-11 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched decrement on ref=<N> — call swing_snapshot to verify the outcome` (see **DR-dispatched-echo**). |
+| BR-11 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched decrement on ref=<N> — call swing_snapshot to verify the outcome` (see **D_dispatched_echo**). |
 
 ### Algorithm: detecting and invoking the decrement action
 
@@ -43,18 +43,18 @@ Execution order:
   - [x] Decrementing a `JSpinner` (`SpinnerListModel`) fires the action; moves to previous item (verified after EDT drains).
   - [x] Decrementing a `JSpinner` (`SpinnerDateModel`) fires the action; moves back by one date unit (verified after EDT drains).
   - [x] Decrementing a `JSlider` fires the action; value decreases (verified after EDT drains).
-  - [x] Decrementing a `JSpinner` (`SpinnerNumberModel`) at its minimum returns the DR-dispatched-echo echo (fire-and-forget — no MCP error; value stays at min).
-  - [x] Decrementing a `JSpinner` (`SpinnerDateModel`) at its minimum returns the DR-dispatched-echo echo (fire-and-forget — no MCP error).
+  - [x] Decrementing a `JSpinner` (`SpinnerNumberModel`) at its minimum returns the D_dispatched_echo echo (fire-and-forget — no MCP error; value stays at min).
+  - [x] Decrementing a `JSpinner` (`SpinnerDateModel`) at its minimum returns the D_dispatched_echo echo (fire-and-forget — no MCP error).
   - [x] Invalid ref returns an MCP error with `isError: true`.
   - [x] The error message suggests calling `swing_snapshot` to refresh refs.
   - [x] Component without decrement support (e.g. `JButton`) returns an MCP error with `isError: true`.
   - [x] Disabled component returns an MCP error with `isError: true` explaining the component is disabled.
-  - [x] Success returns the DR-dispatched-echo echo `Dispatched decrement on ref=N — call swing_snapshot to verify the outcome`.
+  - [x] Success returns the D_dispatched_echo echo `Dispatched decrement on ref=N — call swing_snapshot to verify the outcome`.
   - [x] Ref map is cleared after a successful call.
   - [x] MCP client smoke test.
   - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [x] `SwingDecrementScreenTest` (`testSwing` — JFrame/JDialog coverage per `verification.md` matrix; no tests here that cannot run headless)
+- [x] `SwingDecrementScreenTest` (`testSwing` — JFrame/JDialog coverage per `design/architecture.md` § Testing matrix; no tests here that cannot run headless)
   - [x] Decrementing a `JSpinner` inside `JFrame` decreases its value (verified after EDT drains).
   - [x] Decrementing a `JSlider` inside `JFrame` decreases its value (verified after EDT drains).
   - [x] Decrementing a `JSpinner` inside `JDialog` decreases its value (verified after EDT drains).
@@ -62,7 +62,7 @@ Execution order:
 
 ### Component matrix
 
-Each matrix component from `verification.md` gets a dedicated test method.
+Each matrix component in `design/architecture.md` § Testing gets a dedicated test method.
 
 **Succeed (`decrement` supported):** `JSpinner`, `JSlider`.
 

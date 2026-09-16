@@ -397,20 +397,20 @@ class SwingClickToolTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenuBar() throws Exception {
-        // DR-jmenu-not-clickable: JMenuBar is structural; the JMenu inside it does NOT get a click ref.
+        // D_jmenu_not_clickable: JMenuBar is structural; the JMenu inside it does NOT get a click ref.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
 
         snapshot(mb);
         assertThrows(IllegalStateException.class, () -> context.getRefOf(menu),
-                "JMenu must not receive a click ref per DR-jmenu-not-clickable");
+                "JMenu must not receive a click ref per D_jmenu_not_clickable");
     }
 
     @Test
     void componentMatrix_JMenu() throws Exception {
-        // DR-jmenu-not-clickable: JMenu is structural — its title is not clickable. Items remain clickable.
-        // Registers the JMenu under a test ref (per verification.md component-matrix note)
+        // D_jmenu_not_clickable: JMenu is structural — its title is not clickable. Items remain clickable.
+        // Registers the JMenu under a test ref (per the component-matrix note in design/architecture.md)
         // to exercise the swing_click error path rather than the snapshot ref-gate.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");

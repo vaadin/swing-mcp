@@ -15,7 +15,7 @@ import java.net.http.HttpResponse;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for MCP session lifecycle gate (see DR-session-lifecycle-gate in {@code spec/decisions.md}).
+ * Tests for MCP session lifecycle gate (see D_session_gate_two_stage in {@code design/decisions.md}).
  * Uses raw HTTP requests for precise control over the {@code Mcp-Session-Id} header.
  */
 class HttpMCPServerSessionTest {
