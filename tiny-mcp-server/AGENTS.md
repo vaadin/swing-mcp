@@ -42,7 +42,7 @@ Every fact lives in exactly one of these; the others link to it.
 
 ## Conventions
 
-- **Java 17, plain classes, no framework.** GSON for JSON, `java.net.http.HttpClient` for the client side, `com.sun.net.httpserver` for the server side.
+- **Java 11, plain classes, no framework.** GSON for JSON, `java.net.http.HttpClient` for the client side, `com.sun.net.httpserver` for the server side. Tests compile at 17.
 - **Tests: JUnit 6**, driving the server through the official MCP SDK as a client — `testImplementation` only, never a runtime dependency.
 - **Diagnostics go to `java.util.logging`**, never to `System.out`; two audiences, two channels — the LLM reads the `isError` body, the operator reads stderr.
 - **Transports compose, never inherit.** A transport takes a configured `MCPHandler`; nothing extends a transport to configure it.

@@ -10,7 +10,7 @@ The primary use case is AI-assisted migration of Swing apps to Vaadin.
 
 - **An agent drives the app the way a person does.** Everything reachable goes through the real listener tree, and nothing is offered that a user could not do themselves.
 - **Cheap to read.** A text snapshot, not a screenshot: what it costs to look at a screen scales with the number of widgets, not the number of pixels.
-- **Droppable into an app we do not own.** It ships as a jar for a Swing application built years ago, so it adds as few runtime dependencies as it can and never asks that application to change how it starts.
+- **Droppable into an app we do not own.** It ships as a jar for a Swing application built years ago, so it adds as few runtime dependencies as it can, never asks that application to change how it starts, and never asks its owner — often someone who cannot choose — for a newer JVM.
 
 ## Design docs
 
@@ -49,7 +49,7 @@ Every fact lives in exactly one of these; the others link to it.
 
 ## Conventions
 
-- **Java 17 is the floor.** No API introduced later — this drops into applications that have not moved on (`List.getFirst()` is Java 21, and tempting).
+- **Java 11 is the floor for shipped code**, 17 for tests; `--release` enforces it, so no records and no `sealed`. See `D_java11_floor`.
 - **Tests: JUnit 6, two source sets.** `src/test` runs headless; `src/testSwing` needs a display and owns anything that must instantiate a real `Window`.
 - **Every tool test walks the component matrix** — a correct refusal is as much a result as a success; the matrix is in `design/architecture.md` § Testing.
 - **Diagnostics go to `java.util.logging`**, never to `System.out`; the LLM reads the error body, the developer reads stderr.

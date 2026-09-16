@@ -491,9 +491,9 @@ acted upon, and the caller knows its operation's idempotency while the client do
 server's own three-layer model (`D_three_error_layers`). The proxy then re-wraps it on its own
 server side, message preserved verbatim.
 
-## D_request_records — Why do handler callbacks take a record rather than positional arguments?
+## D_request_records — Why do handler callbacks take a bundle type rather than positional arguments?
 
-`ToolFunction` and its siblings receive a record bundling the identity slot — tool name, prompt
+`ToolFunction` and its siblings receive one immutable object bundling the identity slot — tool name, prompt
 name, resource URI — with the arguments, the transport headers, and the JSON-RPC `_meta` object.
 
 **Why, immediately.** Two things needed it at once. A single forwarding lambda registered once per
@@ -503,22 +503,22 @@ identity was the only carrier — workable, and ugly when many tools share one i
 proxy; without it they are silently dropped.
 
 **Why, durably.** JSON-RPC envelopes gain fields over time — `_meta` itself is one such addition.
-A record absorbs a new optional field without touching a single call site; a positional signature
+A bundle absorbs a new optional field without touching a single call site; a positional signature
 breaks every callback again, every time.
 
 **Why not just add the name as a second parameter.** Rejected — cheaper for that one round and
 fragile immediately: `_meta` was the very next field, and would have broken every signature a
-second time. A record pays the conversion cost once.
+second time. A bundle pays the conversion cost once.
 
 **Why not pass the `MCPSession` and let handlers reach into it** for name, headers and meta.
 Rejected — it couples handlers to internal session state and invites reaching for fields that
-should be explicit inputs. The record makes the contract visible at the call site.
+should be explicit inputs. The bundle makes the contract visible at the call site.
 
 **Why not put `_meta` in a thread-local** on the current session. Rejected — same coupling
 objection, plus thread-locals are awkward in asynchronous handlers and a nuisance in tests.
 
-**Why a record for resources too**, when a resource already receives its URI. Rejected the
-shortcut — symmetry across tools, prompts and resources is worth one extra record, and a future
+**Why a bundle for resources too**, when a resource already receives its URI. Rejected the
+shortcut — symmetry across tools, prompts and resources is worth one extra type, and a future
 `_meta` need on resources would immediately reopen the question.
 
 **Transport headers are empty over stdio**, since newline-delimited JSON carries no out-of-band

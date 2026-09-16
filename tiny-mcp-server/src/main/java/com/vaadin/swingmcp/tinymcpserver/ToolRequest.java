@@ -22,19 +22,30 @@ import java.util.Objects;
  * parsed {@code params._meta} GSON {@link JsonObject} if present in the
  * request, or {@code null} otherwise.
  *
- * <p>See D_request_records for the rationale behind preferring a record over
- * positional SAM arguments.
+ * <p>See D_request_records for the rationale behind preferring a bundle type
+ * over positional SAM arguments.
+ *
+ * <p>Immutable.
  */
-public record ToolRequest(
-        String name,
-        Parameters arguments,
-        Map<String, String> transportHeaders,
-        @Nullable JsonObject jsonRpcMeta) {
+public final class ToolRequest {
 
-    public ToolRequest {
-        Objects.requireNonNull(name, "name");
-        Objects.requireNonNull(arguments, "arguments");
-        Objects.requireNonNull(transportHeaders, "transportHeaders");
+    private final String name;
+    private final Parameters arguments;
+    private final Map<String, String> transportHeaders;
+    private final @Nullable JsonObject jsonRpcMeta;
+
+    /**
+     * @param transportHeaders unmodifiable; empty in stdio mode
+     * @param jsonRpcMeta      the request's {@code params._meta}, or {@code null} if absent
+     */
+    public ToolRequest(String name,
+                       Parameters arguments,
+                       Map<String, String> transportHeaders,
+                       @Nullable JsonObject jsonRpcMeta) {
+        this.name = Objects.requireNonNull(name, "name");
+        this.arguments = Objects.requireNonNull(arguments, "arguments");
+        this.transportHeaders = Objects.requireNonNull(transportHeaders, "transportHeaders");
+        this.jsonRpcMeta = jsonRpcMeta;
     }
 
     /** Convenience constructor that wraps the raw argument map in a {@link Parameters}. */
@@ -43,5 +54,21 @@ public record ToolRequest(
                        Map<String, String> transportHeaders,
                        @Nullable JsonObject jsonRpcMeta) {
         this(name, new Parameters(arguments), transportHeaders, jsonRpcMeta);
+    }
+
+    public String name() {
+        return name;
+    }
+
+    public Parameters arguments() {
+        return arguments;
+    }
+
+    public Map<String, String> transportHeaders() {
+        return transportHeaders;
+    }
+
+    public @Nullable JsonObject jsonRpcMeta() {
+        return jsonRpcMeta;
     }
 }

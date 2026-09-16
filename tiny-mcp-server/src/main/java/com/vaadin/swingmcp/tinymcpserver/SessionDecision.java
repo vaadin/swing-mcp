@@ -25,15 +25,29 @@ import java.util.Objects;
  * lock and blocks until any in-flight request on the evicted session has
  * completed, so {@code onSessionClosed} listeners observe the session
  * after it is fully quiesced.
+ *
+ * <p>Immutable.
+ *
+ * @implNote the private constructor is what seals the hierarchy to the three
+ * nested subclasses — only they can reach it. {@code sealed}/{@code permits}
+ * would say so declaratively, but this module compiles at Java 11.
  */
-public sealed interface SessionDecision
-        permits SessionDecision.Reject, SessionDecision.Accept, SessionDecision.AcceptAndEvict {
+public abstract class SessionDecision {
+
+    private SessionDecision() {
+    }
 
     /** Refuse the new session; {@code initialize} fails with HTTP 409. */
-    record Reject() implements SessionDecision {}
+    public static final class Reject extends SessionDecision {
+        public Reject() {
+        }
+    }
 
     /** Accept the new session without evicting any existing session. */
-    record Accept() implements SessionDecision {}
+    public static final class Accept extends SessionDecision {
+        public Accept() {
+        }
+    }
 
     /**
      * Accept the new session and evict the listed sessions. The list is
@@ -44,13 +58,30 @@ public sealed interface SessionDecision
      * should describe, in the calling application's terms, why the old
      * session was closed and what the user should do about it.
      */
-    record AcceptAndEvict(List<MCPSession> sessions, String evictionReason) implements SessionDecision {
-        public AcceptAndEvict {
-            sessions = List.copyOf(sessions);
+    public static final class AcceptAndEvict extends SessionDecision {
+
+        private final List<MCPSession> sessions;
+        private final String evictionReason;
+
+        /**
+         * @param evictionReason not blank; surfaces verbatim to the displaced client
+         * @throws IllegalArgumentException if {@code evictionReason} is blank
+         */
+        public AcceptAndEvict(List<MCPSession> sessions, String evictionReason) {
             Objects.requireNonNull(evictionReason, "evictionReason");
             if (evictionReason.isBlank()) {
                 throw new IllegalArgumentException("evictionReason must not be blank");
             }
+            this.sessions = List.copyOf(sessions);
+            this.evictionReason = evictionReason;
+        }
+
+        public List<MCPSession> sessions() {
+            return sessions;
+        }
+
+        public String evictionReason() {
+            return evictionReason;
         }
     }
 }

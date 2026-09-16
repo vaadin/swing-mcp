@@ -16,10 +16,42 @@ import java.util.Map;
  * unmodifiable.
  *
  * <p>See D_request_records for the rationale.
+ *
+ * <p>Immutable.
  */
-public record PromptRequest(
-        String name,
-        Map<String, String> arguments,
-        Map<String, String> transportHeaders,
-        JsonObject jsonRpcMeta) {
+public final class PromptRequest {
+
+    private final String name;
+    private final Map<String, String> arguments;
+    private final Map<String, String> transportHeaders;
+    private final JsonObject jsonRpcMeta;
+
+    /**
+     * @param jsonRpcMeta the request's {@code params._meta}, or {@code null} if absent
+     */
+    public PromptRequest(String name,
+                         Map<String, String> arguments,
+                         Map<String, String> transportHeaders,
+                         JsonObject jsonRpcMeta) {
+        this.name = name;
+        this.arguments = arguments;
+        this.transportHeaders = transportHeaders;
+        this.jsonRpcMeta = jsonRpcMeta;
+    }
+
+    public String name() {
+        return name;
+    }
+
+    public Map<String, String> arguments() {
+        return arguments;
+    }
+
+    public Map<String, String> transportHeaders() {
+        return transportHeaders;
+    }
+
+    public JsonObject jsonRpcMeta() {
+        return jsonRpcMeta;
+    }
 }

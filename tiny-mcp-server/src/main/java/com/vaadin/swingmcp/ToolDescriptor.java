@@ -12,6 +12,15 @@ import java.util.regex.Pattern;
  * canonical descriptor passed around by callers (manifest declarations,
  * proxy wiring, in-process registration).
  *
+ * <pre>{@code
+ * new ToolDescriptor(
+ *         "swing_click",
+ *         "Click a UI component by ref. Requires a ref obtained from swing_snapshot or swing_get_cells.",
+ *         new InputSchemaBuilder()
+ *                 .requiredInteger("ref", "The element reference number from swing_snapshot")
+ *                 .build());
+ * }</pre>
+ *
  * <p>Equality is structural: two descriptors compare equal iff their
  * names, descriptions, and input schemas are equal. Schema equality
  * follows {@link MCPProtocol.InputSchema#equals(Object)} (D_structural_schema_equality):
@@ -26,19 +35,27 @@ import java.util.regex.Pattern;
  * package alongside generic protocol types rather than under
  * {@code tinymcpserver} (which is the transport implementation).
  *
- * @param name        tool name; must match {@code [a-zA-Z_][a-zA-Z0-9_]*}
- * @param description human-readable description; not blank
- * @param inputSchema input parameter schema; usually built via
- *                    {@link com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder}
+ * <p>Immutable.
  */
-public record ToolDescriptor(
-        String name,
-        String description,
-        MCPProtocol.InputSchema inputSchema) {
+public final class ToolDescriptor {
 
     private static final Pattern NAME_PATTERN = Pattern.compile("[a-zA-Z_][a-zA-Z0-9_]*");
 
-    public ToolDescriptor {
+    private final String name;
+    private final String description;
+    private final MCPProtocol.InputSchema inputSchema;
+
+    /**
+     * @param name        tool name; must match {@code [a-zA-Z_][a-zA-Z0-9_]*}
+     * @param description human-readable description; not blank
+     * @param inputSchema input parameter schema; usually built via
+     *                    {@link com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder}
+     * @throws IllegalArgumentException if {@code name} is blank or malformed,
+     *                                  or {@code description} is blank
+     */
+    public ToolDescriptor(String name,
+                          String description,
+                          MCPProtocol.InputSchema inputSchema) {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(description, "description");
         Objects.requireNonNull(inputSchema, "inputSchema");
@@ -51,5 +68,45 @@ public record ToolDescriptor(
         if (description.isBlank()) {
             throw new IllegalArgumentException("Tool description must not be blank");
         }
+        this.name = name;
+        this.description = description;
+        this.inputSchema = inputSchema;
+    }
+
+    public String name() {
+        return name;
+    }
+
+    public String description() {
+        return description;
+    }
+
+    public MCPProtocol.InputSchema inputSchema() {
+        return inputSchema;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof ToolDescriptor)) {
+            return false;
+        }
+        final ToolDescriptor that = (ToolDescriptor) o;
+        return name.equals(that.name)
+                && description.equals(that.description)
+                && inputSchema.equals(that.inputSchema);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, description, inputSchema);
+    }
+
+    @Override
+    public String toString() {
+        return "ToolDescriptor[name=" + name + ", description=" + description
+                + ", inputSchema=" + inputSchema + ']';
     }
 }

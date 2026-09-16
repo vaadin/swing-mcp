@@ -54,11 +54,16 @@ subprojects {
 
     tasks.withType<JavaCompile> {
         options.encoding = "UTF-8"
+        // --release (not source/targetCompatibility) is what actually enforces
+        // the API floor: it compiles against that JDK's API signatures, so a
+        // post-11 method fails the build instead of failing at the customer.
+        options.release = 17
     }
 
-    java {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+    // Shipped code targets Java 11 — this drops into applications that have not
+    // moved on. Tests stay at 17: JUnit 6, the MCP SDK and Jetty all require it.
+    tasks.named<JavaCompile>("compileJava") {
+        options.release = 11
     }
     // creates a reusable function which configures proper deployment to Maven Central
     ext["configureMavenCentral"] = { artifactId: String ->

@@ -882,3 +882,35 @@ the failure at all, let alone recover from it.
 **Revisit trigger.** Telemetry showing form-filling as a dominant share of token spend across
 real sessions. Start from the outcome-reporting mechanism above, not from another pass at the
 pure fire-and-forget shape.
+
+## D_java11_floor — Why does the shipped code target Java 11 rather than 17?
+
+`options.release = 11` on `compileJava`; test source sets stay at 17. The published jars are
+class-file version 55, so they load into a Java 11 JVM.
+
+**Why, at all.** This drops into a Swing application built years ago, and those run on old JVMs.
+In a corporate environment the JVM is frequently not the developer's to choose: it is what the
+image ships with, and a newer one may not be installable at all — so "ask them to upgrade" is not
+a workaround, it is the end of the evaluation. The failure is also total rather than partial: a
+class-file version error is a hard load failure at startup, not a degraded feature. The reach of
+the artifact is the whole argument, and a language floor is the cheapest way to buy it.
+
+**Why 11 and not 8.** `java.net.http.HttpClient` is the client side of `MCPProxy` and arrived in
+11; `var`, `List.of`/`List.copyOf` and `String.isBlank` are used throughout. Java 8 would mean
+hand-rolling an HTTP client on `HttpURLConnection` and losing the immutable-collection factories
+— real work, for a JVM generation the migration target no longer justifies.
+
+**Why not 17, keeping records and `sealed`.** Rejected on what it costs to reverse. The nine
+records and one sealed interface were about forty lines of hand-written boilerplate to undo
+(only `ToolDescriptor` carried a real equality contract, and it is now hand-written); an
+application stuck on 11 cannot undo its JVM. The asymmetry decides it.
+
+**Why `--release` rather than `sourceCompatibility` / `targetCompatibility`.** Only `--release`
+compiles against that JDK's API signatures. `targetCompatibility` alone emits version-55 class
+files that happily call a Java 17 method — the build stays green and the failure lands on the
+customer as `NoSuchMethodError`. The old setting was 17 and had therefore never verified anything.
+
+**Why tests stay at 17.** JUnit 6, the official MCP SDK (the test client) and Jetty 12 all
+require it. Splitting the floor costs one line in the build and keeps the three best testing
+tools available; the artifact, which is what a customer loads, is unaffected. Proving the floor
+needs a Java 11 *runtime* leg in CI, which the version matrix does not yet have.
