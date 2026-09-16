@@ -274,6 +274,61 @@ class ParametersTest {
         assertEquals("Parameter 'indices' must be an array of integers, got Integer", ex.getMessage());
     }
 
+    // ── getIntArrayOrNull ────────────────────────────────────────────────────
+
+    @Test
+    void getIntArrayOrNullReturnsValues() {
+        var params = new Parameters(Map.of("indices", List.of(1.0, 2.0)));
+        assertEquals(List.of(1, 2), params.getIntArrayOrNull("indices"));
+    }
+
+    @Test
+    void getIntArrayOrNullReturnsNullWhenMissing() {
+        var params = new Parameters(Map.of());
+        assertNull(params.getIntArrayOrNull("indices"));
+    }
+
+    @Test
+    void getIntArrayOrNullDistinguishesAbsentFromEmpty() {
+        // An empty selection is a value; "no selection given" is not.
+        var params = new Parameters(Map.of("indices", List.of()));
+        assertEquals(List.of(), params.getIntArrayOrNull("indices"));
+    }
+
+    @Test
+    void getIntArrayOrNullThrowsWhenPresentButNotAList() {
+        var params = new Parameters(Map.of("indices", "1,2,3"));
+        var ex = assertThrows(MCPServerException.class, () -> params.getIntArrayOrNull("indices"));
+        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+    }
+
+    @Test
+    void getIntArrayOrNullThrowsWhenAnElementIsFractional() {
+        var params = new Parameters(Map.of("indices", List.of(1.0, 2.5)));
+        assertThrows(MCPServerException.class, () -> params.getIntArrayOrNull("indices"));
+    }
+
+    // ── value semantics ──────────────────────────────────────────────────────
+
+    @Test
+    void equalsAndHashCodeFollowTheUnderlyingMap() {
+        var a = new Parameters(Map.of("key", "value"));
+        var b = new Parameters(new HashMap<>(Map.of("key", "value")));
+        var other = new Parameters(Map.of("key", "different"));
+
+        assertEquals(a, a);
+        assertEquals(a, b);
+        assertEquals(a.hashCode(), b.hashCode());
+        assertNotEquals(a, other);
+        assertNotEquals(a, "not a Parameters");
+        assertNotEquals(a, null);
+    }
+
+    @Test
+    void toStringShowsTheArguments() {
+        assertEquals("Parameters{key=value}", new Parameters(Map.of("key", "value")).toString());
+    }
+
     // ── null map ─────────────────────────────────────────────────────────────
 
     @Test

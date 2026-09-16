@@ -233,6 +233,24 @@ class MCPProxyTest {
     }
 
     @Test
+    void driftInputSchemaDifference() throws IOException {
+        // Same name and description on both sides — only the schema moved.
+        // Forwarding here would hand upstream arguments it cannot validate.
+        ToolDescriptor manifestEcho = new ToolDescriptor(
+                "echo", "Echoes the supplied text",
+                new InputSchemaBuilder().requiredString("text", "the text").build());
+        ToolDescriptor upstreamEcho = new ToolDescriptor(
+                "echo", "Echoes the supplied text",
+                new InputSchemaBuilder().requiredString("message", "the text").build());
+        URI upstreamUrl = startUpstream(upstreamEcho);
+        startProxy(upstreamUrl, List.of(manifestEcho));
+
+        MCPProtocol.CallToolResult r = client.callTool("echo", Map.of("text", "x"));
+        assertEquals(Boolean.TRUE, r.getIsError());
+        assertEquals(MESSAGES.driftMessage(), textOf(r));
+    }
+
+    @Test
     void driftCachedForSession() throws IOException {
         // After drift is detected once, subsequent calls return the
         // same cached message *without* re-probing upstream.
@@ -298,6 +316,41 @@ class MCPProxyTest {
         MCPProtocol.CallToolResult r3 = client.callTool("echo", Map.of("text", "fresh"));
         assertNotEquals(Boolean.TRUE, r3.getIsError(),
                 "after session-lost, the next call must re-initialize upstream and succeed");
+    }
+
+    // ===== I/O failure mid-call =====
+
+    @Test
+    void upstreamDyingMidSessionReturnsIoMidCallMessage() throws IOException {
+        // Distinct from upstream-down: the session was healthy, so the
+        // operator needs to hear that the Swing app went away under them.
+        URI upstreamUrl = startUpstream(ECHO);
+        startProxy(upstreamUrl, List.of(ECHO));
+        client.callTool("echo", Map.of("text", "before"));
+
+        upstream.stop();
+        upstream = null;
+
+        MCPProtocol.CallToolResult r = client.callTool("echo", Map.of("text", "after"));
+        assertEquals(Boolean.TRUE, r.getIsError());
+        assertEquals(MESSAGES.ioMidCallMessage(), textOf(r));
+    }
+
+    // ===== Content-free results =====
+
+    @Test
+    void upstreamReturningNoContentForwardsAnEmptyResult() throws IOException {
+        // A tool that reports nothing but success — the proxy must pass that
+        // through rather than invent content or call it an error.
+        upstream = new HttpMCPServer(0, "/mcp");
+        upstream.getHandler().addTool(PING, request -> null);
+        upstream.start();
+        startProxy(URI.create(upstream.getUrl()), List.of(PING));
+
+        MCPProtocol.CallToolResult r = client.callTool("ping", Map.of());
+        assertNotEquals(Boolean.TRUE, r.getIsError());
+        assertTrue(r.getContent() == null || r.getContent().isEmpty(),
+                "expected no content, got " + r.getContent());
     }
 
     // ===== Round-trip count regression guard =====
