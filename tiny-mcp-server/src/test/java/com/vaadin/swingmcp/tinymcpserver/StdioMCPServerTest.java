@@ -141,7 +141,7 @@ class StdioMCPServerTest {
                 () -> server.runStdio(InputStream.nullInputStream(), null));
     }
 
-    // ===== stdout protection (DR-stdio-transport) =====
+    // ===== stdout protection (D_stdio_transport) =====
 
     /**
      * A stray {@code System.out.println} from a tool or a library would land

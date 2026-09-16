@@ -94,7 +94,7 @@ class TinyMCPClientErrorPathTest {
 
     @Test
     void sessionLostCarriesTheServerTombstoneMessage() throws IOException {
-        // DR-supersede-sessions: the server explains *why* the session is gone.
+        // D_supersede_sessions: the server explains *why* the session is gone.
         // A generic client-side "session not found" would throw that away.
         start((method, body) -> isMethod(body, "tools/list")
                 ? json(404, errorEnvelope(-32002, "Session superseded by a newer client."))

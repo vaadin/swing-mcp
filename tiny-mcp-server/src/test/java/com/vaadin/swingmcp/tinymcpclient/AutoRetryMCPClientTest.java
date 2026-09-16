@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests the one-shot session-loss retry contract of {@link AutoRetryMCPClient}
- * (DR-embedded-mcp-client): {@link MCPSessionLostException} triggers exactly one
+ * (D_no_auto_retry): {@link MCPSessionLostException} triggers exactly one
  * {@code initialize()} + replay; everything else passes straight through.
  *
  * <p>Driven through a scripted {@link FakeClient} rather than a real server —
