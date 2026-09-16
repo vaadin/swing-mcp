@@ -329,11 +329,16 @@ class ParametersTest {
         assertEquals("Parameters{key=value}", new Parameters(Map.of("key", "value")).toString());
     }
 
-    // ── null map ─────────────────────────────────────────────────────────────
+    // ── empty map ────────────────────────────────────────────────────────────
 
     @Test
-    void nullMapIsTreatedAsEmpty() {
-        var params = new Parameters(null);
+    void aNullMapIsRejected() {
+        assertThrows(NullPointerException.class, () -> new Parameters(null));
+    }
+
+    @Test
+    void anEmptyMapHasNoParameters() {
+        var params = new Parameters(Map.of());
         assertNull(params.getStringOrNull("key"));
         assertNull(params.getIntOrNull("key"));
         assertThrows(MCPServerException.class, () -> params.getString("key"));

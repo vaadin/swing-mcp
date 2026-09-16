@@ -1,5 +1,7 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * A tool handler function that receives a {@link ToolRequest} and returns content.
  * Invoked synchronously on the dispatch thread that is serving the
@@ -34,12 +36,11 @@ public interface ToolFunction {
     /**
      * Invokes the tool.
      *
-     * @param request the request bundle (name, arguments, transport headers, JSON-RPC {@code _meta}); never null
-     * @return the result content (wrapped in a single-element array),
-     *         or {@code null} for an empty result (produces {@code "content": []})
+     * @return the result content, wrapped in a single-element array, or
+     *         {@code null} for an empty result ({@code "content": []})
      * @throws MCPErrorResponseException to return {@code isError=true} with a clean message
      * @throws MCPServerException to return a JSON-RPC protocol error
      * @throws Exception if tool execution fails unexpectedly
      */
-    MCPProtocol.Content call(ToolRequest request) throws Exception;
+    MCPProtocol.@Nullable Content call(ToolRequest request) throws Exception;
 }

@@ -43,7 +43,7 @@ class SessionSupersedeTest {
     }
 
     private MCPHandler newHandlerWithEcho() {
-        MCPHandler handler = new MCPHandler(null, null)
+        MCPHandler handler = new MCPHandler()
                 .setOnSessionStarted(s -> startedIds.add(s.getId()))
                 .setOnSessionClosed(s -> closedIds.add(s.getId()));
         handler.addTool("echo", "Echo tool",

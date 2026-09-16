@@ -37,7 +37,7 @@ class AutoRetryMCPClientTest {
 
     @Test
     void constructorRejectsNullInner() {
-        assertThrows(IllegalArgumentException.class, () -> new AutoRetryMCPClient(null));
+        assertThrows(NullPointerException.class, () -> new AutoRetryMCPClient(null));
     }
 
     @Test

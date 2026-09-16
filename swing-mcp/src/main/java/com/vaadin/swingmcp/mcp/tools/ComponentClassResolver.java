@@ -1,5 +1,7 @@
 package com.vaadin.swingmcp.mcp.tools;
 
+import org.jspecify.annotations.Nullable;
+
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleRole;
@@ -220,11 +222,12 @@ public final class ComponentClassResolver {
 
     /**
      * Walks from {@code displayClass} up the superclass chain looking for a
-     * class that satisfies the qualifying-ancestor predicate. Returns
-     * {@code null} when no ancestor qualifies — indicating a non-Component
-     * accessible (BR-11 Case C).
+     * class that satisfies the qualifying-ancestor predicate.
+     *
+     * @return the first qualifying ancestor, or {@code null} when none
+     * qualifies — indicating a non-Component accessible (BR-11 Case C)
      */
-    static Class<?> findQualifyingAncestor(Class<?> displayClass) {
+    static @Nullable Class<?> findQualifyingAncestor(Class<?> displayClass) {
         Class<?> c = displayClass;
         while (c != null && c != Object.class) {
             if (isQualifying(c)) {

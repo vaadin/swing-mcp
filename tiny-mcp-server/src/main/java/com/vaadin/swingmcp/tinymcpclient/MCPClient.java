@@ -3,6 +3,7 @@ package com.vaadin.swingmcp.tinymcpclient;
 import com.google.gson.JsonObject;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.ToolRequest;
+import org.jspecify.annotations.Nullable;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -94,9 +95,7 @@ public interface MCPClient extends Closeable {
      * that don't have a {@link ToolRequest} on hand. Builds a request with
      * empty transport headers and no {@code _meta}.
      *
-     * @param name      the tool name; not null
-     * @param arguments the tool arguments; may be {@code null} or empty
-     * @return the {@code CallToolResult}; never {@code null}
+     * @param arguments the tool arguments; pass {@link Map#of()} for none
      * @throws MCPSessionLostException if the server returned HTTP 404
      * @throws MCPClientException      if the server returned any other
      *                                 protocol error
@@ -112,22 +111,17 @@ public interface MCPClient extends Closeable {
      * (D_forwarding_proxy / D_settable_listeners) so cross-cutting envelope fields like
      * {@code progressToken} survive end-to-end through a proxy hop.
      *
-     * @param name      the tool name; not null
-     * @param arguments the tool arguments; may be {@code null} or empty
-     * @param meta      the JSON-RPC {@code _meta} object to forward; may
-     *                  be {@code null} for "no meta"
-     * @return the {@code CallToolResult}; never {@code null}
+     * @param arguments the tool arguments; pass {@link Map#of()} for none
+     * @param meta      the JSON-RPC {@code _meta} object to forward, or
+     *                  {@code null} for "no meta"
      * @throws MCPSessionLostException if the server returned HTTP 404
      * @throws MCPClientException      if the server returned any other
      *                                 protocol error
      * @throws IOException             if the underlying HTTP transport fails
      */
-    default MCPProtocol.CallToolResult callTool(String name, Map<String, Object> arguments, JsonObject meta) throws IOException {
-        return callTool(new ToolRequest(
-                name,
-                arguments != null ? arguments : Collections.emptyMap(),
-                Collections.emptyMap(),
-                meta));
+    default MCPProtocol.CallToolResult callTool(String name, Map<String, Object> arguments,
+            @Nullable JsonObject meta) throws IOException {
+        return callTool(new ToolRequest(name, arguments, Collections.emptyMap(), meta));
     }
 
     /**

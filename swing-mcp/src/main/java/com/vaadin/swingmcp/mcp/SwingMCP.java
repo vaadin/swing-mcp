@@ -9,6 +9,7 @@ import com.vaadin.swingmcp.tools.SwingTools;
 import javax.swing.SwingUtilities;
 import com.vaadin.swingmcp.mcp.tools.AbstractSwingTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
+import org.jspecify.annotations.Nullable;
 
 import java.awt.Component;
 import java.awt.Dialog;
@@ -58,7 +59,7 @@ public class SwingMCP {
 
     private final MCPHandler handler;
     private final HttpMCPServer server;
-    private volatile Thread shutdownHook;
+    private volatile @Nullable Thread shutdownHook;
     /** Serialises all tool calls end-to-end (EDT phase + PostVerification polling). */
     private final Lock toolLock = new ReentrantLock();
 

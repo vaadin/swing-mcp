@@ -6,6 +6,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.ToNumberPolicy;
 import com.google.gson.annotations.SerializedName;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.HashSet;
 import java.util.List;
@@ -16,7 +18,14 @@ import java.util.Set;
 /**
  * MCP Protocol JSON POJOs and serialization utilities.
  * All MCP message types are represented as inner POJO classes.
+ *
+ * @implNote {@code @NullUnmarked}, against the package default: these are wire
+ * DTOs populated reflectively by GSON, and which fields may be absent is the MCP
+ * specification's call per message type, not this class's. Claiming non-null
+ * accessors here would be a contract the wire does not honour. Methods that do
+ * carry a nullness contract of their own state it with {@code @Nullable}.
  */
+@NullUnmarked
 public class MCPProtocol {
 
     private static final Gson GSON = new GsonBuilder()
@@ -90,14 +99,16 @@ public class MCPProtocol {
         }
 
         /**
-         * Returns the {@code params._meta} object from the JSON-RPC envelope,
-         * or {@code null} if the request has no params, the params are not a
-         * JSON object, the {@code _meta} field is absent, or {@code _meta} is
-         * not itself a JSON object. MCP uses {@code _meta} to carry
-         * cross-cutting fields such as {@code progressToken}; handlers that
-         * forward requests upstream typically pass it through verbatim.
+         * Returns the {@code params._meta} object from the JSON-RPC envelope.
+         * MCP uses {@code _meta} to carry cross-cutting fields such as
+         * {@code progressToken}; handlers that forward requests upstream
+         * typically pass it through verbatim.
+         *
+         * @return the {@code _meta} object, or {@code null} if the request has
+         * no params, the params are not a JSON object, {@code _meta} is absent,
+         * or {@code _meta} is not itself a JSON object
          */
-        public JsonObject getMeta() {
+        public @Nullable JsonObject getMeta() {
             if (params == null || !params.isJsonObject()) {
                 return null;
             }

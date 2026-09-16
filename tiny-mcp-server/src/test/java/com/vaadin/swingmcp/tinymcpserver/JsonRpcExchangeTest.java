@@ -74,9 +74,9 @@ class JsonRpcExchangeTest {
     // ===== Response shapes =====
 
     @Test
-    void sendPlainWithANullBodySendsNoContent() {
+    void sendPlainWithAnEmptyBodySendsNoContent() {
         FakeHttpExchange exchange = new FakeHttpExchange(PING);
-        new JsonRpcExchange(exchange).sendPlain(204, null);
+        new JsonRpcExchange(exchange).sendPlain(204, "");
 
         assertEquals(204, exchange.getResponseCode());
         assertEquals("", exchange.getResponseBodyString());

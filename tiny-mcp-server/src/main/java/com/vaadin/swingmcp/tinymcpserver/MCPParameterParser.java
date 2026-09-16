@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -24,6 +25,7 @@ class MCPParameterParser {
     private final Set<String> required;
 
     MCPParameterParser(String toolName, MCPProtocol.InputSchema schema) {
+        Objects.requireNonNull(schema, "schema");
         this.name = "tool '" + toolName + "'";
         this.properties = schema.getProperties() != null
                 ? new LinkedHashMap<>(schema.getProperties())
@@ -38,6 +40,7 @@ class MCPParameterParser {
      * {@code string} property — MCP prompts do not support other types.
      */
     MCPParameterParser(String promptName, List<MCPProtocol.PromptArgument> arguments) {
+        Objects.requireNonNull(arguments, "arguments");
         this.name = "prompt '" + promptName + "'";
         this.properties = new LinkedHashMap<>();
         this.required = new HashSet<>();

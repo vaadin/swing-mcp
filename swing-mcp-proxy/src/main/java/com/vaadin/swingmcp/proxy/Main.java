@@ -13,6 +13,7 @@ import java.io.PrintStream;
 import java.net.URI;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Entry point for {@code swing-mcp-proxy}: a stdio MCP server that
@@ -86,7 +87,7 @@ public final class Main {
      * @throws NumberFormatException if either provided value is non-numeric
      *         or out of the {@code [0, 65535]} range
      */
-    public static int resolvePort(String systemPropValue, String envValue) {
+    public static int resolvePort(@Nullable String systemPropValue, @Nullable String envValue) {
         String raw;
         if (systemPropValue != null && !systemPropValue.isBlank()) {
             raw = systemPropValue;

@@ -5,6 +5,7 @@ import com.vaadin.swingmcp.mcp.SwingMCP;
 import java.lang.instrument.Instrumentation;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Java Instrumentation Agent that starts the Swing MCP server.
@@ -29,7 +30,7 @@ public final class Agent {
      * The started server instance, or {@code null} if startup has not completed yet
      * (or failed). Package-private for test introspection.
      */
-    static volatile SwingMCP server;
+    static volatile @Nullable SwingMCP server;
 
     private Agent() {
     }
@@ -37,7 +38,7 @@ public final class Agent {
     /**
      * Entry point called by the JVM before {@code main()}.
      */
-    public static void premain(String agentArgs, Instrumentation inst) {
+    public static void premain(@Nullable String agentArgs, Instrumentation inst) {
         Thread starter = new Thread(() -> {
             try {
                 SwingMCP s = buildServer();

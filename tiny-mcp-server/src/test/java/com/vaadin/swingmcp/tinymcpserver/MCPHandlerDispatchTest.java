@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Protocol-version negotiation and the lookup/teardown helpers on
@@ -54,10 +55,11 @@ class MCPHandlerDispatchTest {
     // ===== Session lookup =====
 
     @Test
-    void lookupsTolerateANullId() {
+    void lookupsRejectANullId() {
         MCPHandler handler = new MCPHandler();
-        assertNull(handler.getSession(null));
-        assertNull(handler.getTombstoneReason(null));
+        assertThrows(NullPointerException.class, () -> handler.getSession(null));
+        assertThrows(NullPointerException.class, () -> handler.getTombstoneReason(null));
+        assertThrows(NullPointerException.class, () -> handler.removeSession(null));
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.vaadin.swingmcp.mcp.SwingUtils;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tools.SwingTools;
+import org.jspecify.annotations.Nullable;
 
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
@@ -151,7 +152,7 @@ public class SwingSnapshotTool extends AbstractSwingTool {
      * @return the header line (including trailing {@code '\n'}) or {@code null}
      *         when no header is emitted
      */
-    private static String buildModalStackHeader(Accessible rootAccessible) {
+    private static @Nullable String buildModalStackHeader(Accessible rootAccessible) {
         if (!(rootAccessible instanceof Dialog)) {
             return null;
         }

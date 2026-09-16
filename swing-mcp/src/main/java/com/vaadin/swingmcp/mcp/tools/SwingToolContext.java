@@ -28,7 +28,7 @@ import java.util.concurrent.Executor;
  */
 public class SwingToolContext {
 
-    private List<Component> consideredComponents;
+    private List<Component> consideredComponents = Collections.emptyList();
     /**
      * The {@link AbstractSwingTool#TOOL_SWING_SNAPSHOT} populates this map by assigning IDs to every accessible
      * that the client MCP can interact with. Stored as {@link Accessible} rather than {@link Component} because
@@ -52,9 +52,8 @@ public class SwingToolContext {
     }
 
     public void setConsideredComponents(List<Component> consideredComponents) {
-        this.consideredComponents = consideredComponents == null
-                ? Collections.emptyList()
-                : Collections.unmodifiableList(consideredComponents);
+        Objects.requireNonNull(consideredComponents, "consideredComponents");
+        this.consideredComponents = Collections.unmodifiableList(consideredComponents);
     }
 
     /**

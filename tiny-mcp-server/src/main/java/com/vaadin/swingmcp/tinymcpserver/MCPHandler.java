@@ -1,6 +1,7 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
 import com.vaadin.swingmcp.ToolDescriptor;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -78,7 +79,7 @@ public class MCPHandler {
     static final long CLEANUP_TICK_SECONDS = 60;
 
     private final MCPProtocol.Implementation serverInfo;
-    private final String instructions;
+    private final @Nullable String instructions;
 
     /**
      * Session-lifecycle listeners. Settable via fluent setters until the
@@ -132,13 +133,12 @@ public class MCPHandler {
     }
 
     /**
-     * @param serverInfo   advertised in {@code initialize.serverInfo};
-     *                     {@code null} means "use a default empty
-     *                     {@link MCPProtocol.Implementation}"
-     * @param instructions advertised in {@code initialize.instructions}; may be null
+     * @param serverInfo   advertised in {@code initialize.serverInfo}
+     * @param instructions advertised in {@code initialize.instructions};
+     *                     {@code null} advertises none
      */
-    public MCPHandler(MCPProtocol.Implementation serverInfo, String instructions) {
-        this.serverInfo = serverInfo != null ? serverInfo : new MCPProtocol.Implementation();
+    public MCPHandler(MCPProtocol.Implementation serverInfo, @Nullable String instructions) {
+        this.serverInfo = Objects.requireNonNull(serverInfo, "serverInfo");
         this.instructions = instructions;
     }
 
@@ -404,26 +404,30 @@ public class MCPHandler {
     }
 
     /**
-     * Looks up a session by id. Returns {@code null} if no such session
-     * exists. Callers that need to fail-fast with a 404 should check the
-     * result and throw {@link MCPServerException} themselves — the lookup
-     * itself is silent.
+     * Looks up a session by id.
+     *
+     * @return the session, or {@code null} if no session has that id. The
+     * lookup is silent: a caller that wants a 404 checks the result and
+     * throws {@link MCPServerException} itself.
      */
+    @Nullable
     MCPSession getSession(String id) {
-        if (id == null) return null;
+        Objects.requireNonNull(id, "id");
         return sessions.get(id);
     }
 
     /**
-     * Returns the tombstone reason for a session id that has been
-     * removed from the session map (via supersede or idle eviction), or
-     * {@code null} if no tombstone exists. Used by {@link HttpMCPServer}
-     * to produce a specific 404 message instead of the generic "Session
-     * not found." Tombstones are kept in a bounded LRU; older entries
-     * roll off and revert to the generic message. (D_supersede_sessions)
+     * Returns why a session id was removed from the session map, so
+     * {@link HttpMCPServer} can 404 with a specific message rather than the
+     * generic "Session not found." (D_supersede_sessions)
+     *
+     * @return the tombstone reason, or {@code null} if none is recorded —
+     * either the id was never a session, or its tombstone has rolled off the
+     * bounded LRU
      */
+    @Nullable
     String getTombstoneReason(String id) {
-        if (id == null) return null;
+        Objects.requireNonNull(id, "id");
         return tombstones.get(id);
     }
 
@@ -441,12 +445,15 @@ public class MCPHandler {
     }
 
     /**
-     * Removes the session with the given id. Returns the removed session
-     * (or {@code null}) without invoking {@code onSessionClosed} — the
-     * caller is responsible for calling it after any external state has
-     * been cleaned up.
+     * Removes the session with the given id without invoking
+     * {@code onSessionClosed} — the caller invokes it once any external
+     * state has been cleaned up.
+     *
+     * @return the removed session, or {@code null} if no session had that id
      */
+    @Nullable
     MCPSession removeSession(String id) {
+        Objects.requireNonNull(id, "id");
         synchronized (sessionGuardLock) {
             return sessions.remove(id);
         }

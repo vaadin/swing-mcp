@@ -1,8 +1,10 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
 import com.google.gson.JsonObject;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Bundle of inputs delivered to a {@link ToolFunction}
@@ -27,16 +29,19 @@ public record ToolRequest(
         String name,
         Parameters arguments,
         Map<String, String> transportHeaders,
-        JsonObject jsonRpcMeta) {
+        @Nullable JsonObject jsonRpcMeta) {
 
-    /**
-     * Convenience constructor that wraps the raw argument map in a
-     * {@link Parameters}. {@code null} is treated as empty.
-     */
+    public ToolRequest {
+        Objects.requireNonNull(name, "name");
+        Objects.requireNonNull(arguments, "arguments");
+        Objects.requireNonNull(transportHeaders, "transportHeaders");
+    }
+
+    /** Convenience constructor that wraps the raw argument map in a {@link Parameters}. */
     public ToolRequest(String name,
                        Map<String, Object> arguments,
                        Map<String, String> transportHeaders,
-                       JsonObject jsonRpcMeta) {
+                       @Nullable JsonObject jsonRpcMeta) {
         this(name, new Parameters(arguments), transportHeaders, jsonRpcMeta);
     }
 }

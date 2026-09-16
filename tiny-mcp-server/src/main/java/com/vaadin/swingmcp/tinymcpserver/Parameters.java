@@ -1,5 +1,7 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +21,7 @@ public final class Parameters {
     private final Map<String, Object> raw;
 
     public Parameters(Map<String, Object> raw) {
-        this.raw = raw == null ? Map.of() : raw;
+        this.raw = Objects.requireNonNull(raw, "raw");
     }
 
     /**
@@ -54,6 +56,7 @@ public final class Parameters {
      *
      * @throws MCPServerException if the value is present but not a String
      */
+    @Nullable
     public String getStringOrNull(String key) {
         Object value = raw.get(key);
         if (value == null) {
@@ -181,6 +184,7 @@ public final class Parameters {
      *
      * @throws MCPServerException if the value is present but not a List of whole numbers
      */
+    @Nullable
     public List<Integer> getIntArrayOrNull(String key) {
         if (!raw.containsKey(key)) {
             return null;
@@ -193,6 +197,7 @@ public final class Parameters {
      *
      * @throws MCPServerException if the value is present but not a Number
      */
+    @Nullable
     public Integer getIntOrNull(String key) {
         Object value = raw.get(key);
         if (value == null) {
@@ -219,7 +224,7 @@ public final class Parameters {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) return true;
         if (!(o instanceof Parameters)) return false;
         return raw.equals(((Parameters) o).raw);
