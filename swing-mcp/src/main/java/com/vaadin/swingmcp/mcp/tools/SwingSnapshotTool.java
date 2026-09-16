@@ -71,7 +71,7 @@ public class SwingSnapshotTool extends AbstractSwingTool {
                 sb.append("---\n");
             }
             SnapshotNode root = roots.get(i);
-            // BR-14 / D_modal_stack_header: emit a modal-stack header above any modal-dialog
+            // D_modal_stack_header: emit a modal-stack header above any modal-dialog
             // root whose getOwner() chain contains at least one visible
             // ancestor. Non-modal roots and modals without live owners get
             // nothing. Header is intentionally absent from the filtered branch
@@ -85,7 +85,7 @@ public class SwingSnapshotTool extends AbstractSwingTool {
 
         String rendered = SnapshotNode.stripTrailingNewlines(sb.toString());
 
-        // BR-09: optional tree filtering (operates on the SnapshotNode graph)
+        // optional tree filtering (operates on the SnapshotNode graph)
         String filter = params.getStringOrNull("filter_substring");
         if (filter != null && !filter.isEmpty()) {
             String filterLower = filter.toLowerCase();
@@ -122,11 +122,11 @@ public class SwingSnapshotTool extends AbstractSwingTool {
         return MCPProtocol.Content.text(rendered);
     }
 
-    // ── BR-14 / D_modal_stack_header: modal-stack header ──────────────────────
+    // ── D_modal_stack_header: modal-stack header ──────────────────────
 
     /**
      * Builds the {@code [modal stack (N, topmost first): ...]} header for a
-     * snapshot root per BR-14 / D_modal_stack_header, or returns {@code null} when the root
+     * snapshot root per D_modal_stack_header, or returns {@code null} when the root
      * does not qualify for a header.
      *
      * <p>Header applies when:
@@ -139,13 +139,13 @@ public class SwingSnapshotTool extends AbstractSwingTool {
      * <p>The chain walk skips invisible ancestors, which naturally handles
      * {@code JOptionPane.showMessageDialog(null, ...)} whose owner is Swing's
      * shared hidden frame. Ancestors are <b>not</b> required to be modal —
-     * BR-14 only checks the root's modality and the ancestors' visibility.
+     * only the root's modality and the ancestors' visibility are checked.
      *
      * <p>Each chain entry renders as
      * {@code <displayClass.getSimpleName()> "<sanitized accessible name>"} with
      * the quoted slot omitted when the name is null or blank. The display
-     * class comes from {@link ComponentClassResolver#resolveDisplayClass} so
-     * BR-11 strip rules (anonymous / synthetic / proxy / {@code plaf} / JDK
+     * class comes from {@link ComponentClassResolver#resolveDisplayClass} so the
+     * strip rules (anonymous / synthetic / proxy / {@code plaf} / JDK
      * internal) apply uniformly with the snapshot body.
      *
      * @param rootAccessible the root passed to {@link SnapshotNode#render}

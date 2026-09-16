@@ -22,7 +22,6 @@ import java.beans.PropertyVetoException;
  * for JDesktopIcon, resolves to the underlying JInternalFrame and calls
  * {@code setIcon(false)}. The client observes the result via {@code swing_snapshot}.</p>
  *
- * @see <a href="tool-023-swing-restore.md">T-023</a>
  */
 public class SwingRestoreTool extends AbstractSwingTool {
 
@@ -32,16 +31,16 @@ public class SwingRestoreTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // BR-01/BR-02: ref lookup
+        // ref lookup
         int ref = params.getInt("ref");
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // BR-05: gate on supportsRestore, then derive specific error message
+        // gate on supportsRestore, then derive specific error message
         if (!SwingUtils.supportsRestore(accessible)) {
             throw new MCPErrorResponseException(restoreErrorMessage(accessible));
         }
 
-        // BR-03: fire-and-forget restore dispatch
+        // fire-and-forget restore dispatch
         if (accessible instanceof Frame) {
             Frame frame = (Frame) accessible;
             SwingUtilities.invokeLater(() ->
@@ -59,7 +58,7 @@ public class SwingRestoreTool extends AbstractSwingTool {
                 }
             });
         }
-        // BR-09: D_dispatched_echo success echo
+        // D_dispatched_echo success echo
         return echo(ref);
     }
 

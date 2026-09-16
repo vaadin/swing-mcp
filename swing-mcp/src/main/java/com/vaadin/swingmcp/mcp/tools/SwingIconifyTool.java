@@ -22,7 +22,6 @@ import java.beans.PropertyVetoException;
  * calls {@code setIcon(true)}. The client observes the result via
  * {@code swing_snapshot}.</p>
  *
- * @see <a href="tool-022-swing-iconify.md">T-022</a>
  */
 public class SwingIconifyTool extends AbstractSwingTool {
 
@@ -32,16 +31,16 @@ public class SwingIconifyTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // BR-01/BR-02: ref lookup
+        // ref lookup
         int ref = params.getInt("ref");
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // BR-05: gate on supportsIconify, then derive specific error message
+        // gate on supportsIconify, then derive specific error message
         if (!SwingUtils.supportsIconify(accessible)) {
             throw new MCPErrorResponseException(iconifyErrorMessage(accessible));
         }
 
-        // BR-03: fire-and-forget iconify dispatch
+        // fire-and-forget iconify dispatch
         if (accessible instanceof Frame) {
             Frame frame = (Frame) accessible;
             SwingUtilities.invokeLater(() -> frame.setExtendedState(frame.getExtendedState() | Frame.ICONIFIED));
@@ -56,7 +55,7 @@ public class SwingIconifyTool extends AbstractSwingTool {
                 }
             });
         }
-        // BR-09: D_dispatched_echo success echo
+        // D_dispatched_echo success echo
         return echo(ref);
     }
 

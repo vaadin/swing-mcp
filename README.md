@@ -40,6 +40,18 @@ the session, the session remains locked — restart the Swing app to clear it.
 The MCP server binds to `127.0.0.1` only. No authentication is provided.
 The developer is responsible for local machine security.
 
+### Drag and drop
+
+`swing_drag` expects the source and the target to be in the same window. Dragging
+between two top-level windows is not supported, and nothing rejects it — it simply
+will not do what you meant.
+
+When a display is present and the source component is showing, the drag runs
+through `java.awt.Robot`, which exercises the real drag-and-drop pipeline.
+Otherwise it falls back to dispatching synthetic `MouseEvent`s: those reach
+`MouseListener`, `MouseMotionListener` and `DragGestureRecognizer`, but whether the
+native transfer phase (`DropTarget` events) follows is platform-dependent.
+
 ## Swing Component Reference
 
 How each Swing component appears in `swing_snapshot` output.
@@ -145,7 +157,9 @@ children (e.g. JList items, JTree nodes) use `(role)` only.
 - `JTable` shows `columns: [...]` when inside a `JScrollPane`. Children render as pipe-separated row lines (`row 0: val | val`), not individual cell labels.
 - `get_cell_count`/`get_cells` only appear on truncated `JList`/`JTree` (not `JTable`). `JTree` selection is suppressed — selection tools work only on `JList` and `JTable`.
 - Snapshot examples show typical states; actual output depends on the component's runtime configuration.
-- See [T-002 spec](swing-mcp/spec/tools/tool-002-swing-snapshot.md) for full pruning rules and snapshot format details.
+- Mutation actions prefixed with `!` are unavailable because the component is disabled or read-only — a disabled button shows `actions: !click`, a read-only field `actions: get_text, !set_text`.
+- A custom subclass keeps its own name alongside the Swing class it extends: `SearchField -> JTextField (text)`.
+- The line grammar, the pruning rules behind the `Pruned?` column above, and the full state list are in [`design/snapshot-format.md`](design/snapshot-format.md).
 
 ## Build
 

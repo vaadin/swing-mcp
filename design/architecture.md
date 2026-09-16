@@ -3,8 +3,8 @@
 How the pieces compose — what no single symbol can say and what would be expensive to overturn.
 **Normative: the code conforms.** Change this file first, then the code. Not here: why
 (`decisions.md` — cite the `D_`), what Swing and `javax.accessibility` do (`research.md` — cite
-the `R_`), one symbol's behaviour (its doc comment), one tool's rules
-(`swing-mcp/spec/tools/`), the module map (`AGENTS.md`).
+the `R_`), the text the snapshot emits (`snapshot-format.md`), one symbol's behaviour (its doc
+comment), the module map (`AGENTS.md`).
 
 ---
 

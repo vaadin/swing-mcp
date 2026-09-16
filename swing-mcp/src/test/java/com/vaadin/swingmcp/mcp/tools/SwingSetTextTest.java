@@ -116,8 +116,8 @@ class SwingSetTextTest extends AbstractHeadlessTest {
 
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setText(context.getRefOf(field), "new"));
-        // Non-editable fields pass the structural hasEditableText() check (BR-04)
-        // but fail the editable state check (BR-07).
+        // Non-editable fields pass the structural hasEditableText() check
+        // but fail the editable state check.
         assertEquals("Component is not editable", ex.getMessage());
     }
 
@@ -175,7 +175,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
 
     @Test
     void successOnJPasswordFieldReturnsValueEcho() throws Exception {
-        // BR-13: password fields use the same echo as regular text fields —
+        // password fields use the same echo as regular text fields —
         // the agent already supplied the value, so echoing it back is safe
         // and provides a strong confirmation signal.
         JPasswordField field = new JPasswordField();
@@ -219,7 +219,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         JPasswordField field = new JPasswordField("old");
         snapshot(field);
         setText(context.getRefOf(field), "newpass");
-        // BR-12: setTextContents writes the real password
+        // setTextContents writes the real password
         assertArrayEquals("newpass".toCharArray(), field.getPassword());
     }
 

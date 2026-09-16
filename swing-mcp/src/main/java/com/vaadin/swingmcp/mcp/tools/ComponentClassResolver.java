@@ -12,7 +12,7 @@ import java.util.Set;
 
 /**
  * Resolves the component-identity slot for a snapshot line per
- * <b>T-002 BR-11</b>. The slot takes one of three forms:
+ * <b>design/snapshot-format.md</b>. The slot takes one of three forms:
  *
  * <ul>
  *   <li><b>Case A (standard Swing component):</b>
@@ -30,10 +30,12 @@ import java.util.Set;
  * <p>Parenthesised role is unconditional — even when the role is a
  * tautological lowercasing of the class ({@code JButton (push_button)}) —
  * so that a non-standard overridden role becomes a clean attention signal
- * for the AI (see T-002 BR-11 rationale).</p>
+ * for the AI (see design/snapshot-format.md rationale).</p>
  *
- * <p>See T-002 § Implementation Notes — Component Identity Resolution
- * for the full algorithm and the audit test that guards against JDK drift.</p>
+ * <p>{@code design/snapshot-format.md} owns where this slot sits in a snapshot line.
+ * {@code ComponentClassResolverAuditTest} pins the qualifying-ancestor set against a
+ * checked-in fixture, so a JDK that adds or removes a Swing class fails the build rather
+ * than silently changing what every snapshot line says.</p>
  */
 public final class ComponentClassResolver {
 
@@ -41,15 +43,15 @@ public final class ComponentClassResolver {
     }
 
     /**
-     * Returns the <b>display class</b> for the given accessible per
-     * BR-11 Step 2: the first class up the superclass chain of
+     * Returns the <b>display class</b> for the given accessible: the first class up the
+     * superclass chain of
      * {@code accessible.getClass()} that is not anonymous, synthetic, local,
      * a runtime proxy ({@code $$}-containing runtime classes with no
      * enclosing class), a {@code javax.swing.plaf.*} L&amp;F internal, or a
      * JDK-internal nested class.
      *
-     * <p>This is the concrete-side identity used by BR-14's modal-stack header
-     * (T-002 BR-14 / D_modal_stack_header), where only the concrete simple class name is
+     * <p>This is the concrete-side identity used by the modal-stack header
+     * (D_modal_stack_header), where only the concrete simple class name is
      * shown (without the {@code -> JClass (role)} qualifying-ancestor
      * decoration). For the full identity slot including the qualifying
      * ancestor, see {@link #resolveIdentitySlot}.</p>
@@ -225,7 +227,7 @@ public final class ComponentClassResolver {
      * class that satisfies the qualifying-ancestor predicate.
      *
      * @return the first qualifying ancestor, or {@code null} when none
-     * qualifies — indicating a non-Component accessible (BR-11 Case C)
+     * qualifies — indicating a non-Component accessible, rendered as {@code (role)} alone
      */
     static @Nullable Class<?> findQualifyingAncestor(Class<?> displayClass) {
         Class<?> c = displayClass;
@@ -239,7 +241,7 @@ public final class ComponentClassResolver {
     }
 
     /**
-     * Qualifying-ancestor predicate per T-002 BR-11:
+     * Qualifying-ancestor predicate per design/snapshot-format.md:
      * <ul>
      *   <li>public;</li>
      *   <li>top-level (no enclosing class — excludes nested, inner, local,

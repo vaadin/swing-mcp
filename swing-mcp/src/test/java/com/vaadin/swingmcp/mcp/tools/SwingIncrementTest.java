@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Headless tests for {@code swing_increment}.
  * All happy-path cases can run headless; {@code doAccessibleAction} for increment
  * works correctly in headless mode for both {@code JSpinner} and {@code JSlider}
- * (see T-008 BR-10).
+ * (see design/snapshot-format.md).
  */
 class SwingIncrementTest extends AbstractHeadlessTest {
 
@@ -95,7 +95,7 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Boundary — value stays at maximum (T-008 BR-09 — fire-and-forget no-op)
+    // Boundary — value stays at maximum (design/snapshot-format.md — fire-and-forget no-op)
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test

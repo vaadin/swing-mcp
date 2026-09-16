@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * JDK-drift audit for {@link ComponentClassResolver#isQualifying} per
- * T-002 BR-11. Enumerates every class in the {@code java.desktop} JDK
+ * design/snapshot-format.md. Enumerates every class in the {@code java.desktop} JDK
  * module whose package is {@code javax.swing}, a subpackage of
  * {@code javax.swing} other than {@code javax.swing.plaf} and its
  * subpackages, or {@code java.awt}. Applies {@code isQualifying} and

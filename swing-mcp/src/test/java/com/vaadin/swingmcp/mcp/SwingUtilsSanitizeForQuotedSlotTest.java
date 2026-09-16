@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for {@link SwingUtils#sanitizeForQuotedSlot(String)} — the
- * BR-13 / D_quoted_slot_sanitizing helper that prepares strings for emission inside
+ * D_quoted_slot_sanitizing helper that prepares strings for emission inside
  * double-quoted snapshot slots (name, description, inline text preview).
  */
 class SwingUtilsSanitizeForQuotedSlotTest {

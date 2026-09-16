@@ -456,7 +456,7 @@ class SwingUtilsSupportsTextTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // BR-12 / D_inline_value_preview — readText helper contract
+    // D_inline_value_preview — readText helper contract
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -472,7 +472,7 @@ class SwingUtilsSupportsTextTest {
 
     @Test
     void readText_emptyField_returnsEmptyString() {
-        // T-005 BR-08 semantics: empty content is "" (the field exists and is
+        // design/snapshot-format.md semantics: empty content is "" (the field exists and is
         // empty), never null.
         assertEquals("", SwingUtils.readText(new JTextField(), 1000));
     }
@@ -481,14 +481,14 @@ class SwingUtilsSupportsTextTest {
     void readText_componentWithoutAccessibleText_returnsEmptyString() {
         // JButton has no AccessibleText — the helper returns "" rather than
         // throwing, so callers gated on supportsGetText() need no extra
-        // null-check. (Still defensive: BR-12 wraps the call in try/catch
+        // null-check. (Still defensive: the inline preview wraps the call in try/catch
         // anyway.)
         assertEquals("", SwingUtils.readText(new JButton("Save"), 1000));
     }
 
     @Test
     void readText_customAccessibleTextReturningNullContent_normalizedToEmpty() {
-        // Regression guard (BR-12 relies on null-normalisation): a custom
+        // Regression guard (the inline preview relies on null-normalisation): a custom
         // AccessibleEditableText whose getTextRange returns null must be
         // normalised to "" rather than propagated.
         JTextField fake = new JTextField("anything") {

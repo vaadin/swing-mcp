@@ -122,7 +122,7 @@ class SwingGetItemsTest extends AbstractHeadlessTest {
     // JTabbedPane — dropped as a supported target per P-001 Wave A.
     // The three former positive tests (all-tabs, disabled-tab, enabled-tab)
     // are replaced by a single regression guard below + componentMatrix_JTabbedPane.
-    // Tabs are now read inline from the snapshot per T-002 SC-2.
+    // Tabs are now read inline from the snapshot per design/snapshot-format.md.
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -197,7 +197,7 @@ class SwingGetItemsTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JTable — all selection modes succeed (T-017 BR-03 decouples read path
+    // JTable — all selection modes succeed (design/snapshot-format.md decouples read path
     // from the row-selection gate that swing_set_selection still enforces)
     // ══════════════════════════════════════════════════════════════════════════
 

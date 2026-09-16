@@ -41,6 +41,9 @@ trims to its length — which is how long this file gets, so keep it short.
 - `AccessiblePage` (a tab's virtual child) keeps `ENABLED` in its state set even when the tab is
   disabled — the state set disagrees with `JTabbedPane.isEnabledAt(idx)`, which is correct. **[verified 2026-04-13, Java 21]**
 - `JTable` cells likewise keep `ENABLED` when the host table is disabled. **[verified 2026-04-13, Java 21]**
+- `JTabbedPane.setEnabledAt` is the **only** per-item disable in standard Swing; `JList`,
+  `JComboBox` and `JTable` have no equivalent — disabling one item there takes a custom renderer
+  and a selection-model override. **[docs]**
 - `Window.setEnabled(false)` blocks input at the OS peer but paints inconsistently across
   platforms and look-and-feels — too unreliable to model. **[unverified]**
 
@@ -56,6 +59,8 @@ trims to its length — which is how long this file gets, so keep it short.
   `Double` written to an int-typed model leaves a `Double` in the model, after which the
   spinner's own increment logic compares `Double` against `Integer` bounds. **[verified 2026-04-08, Java 21]**
 - `SpinnerDateModel` and `SpinnerListModel` reject a non-matching value and return `false`. **[verified 2026-04-08, Java 21]**
+- `JTabbedPane` (role `PAGE_TAB_LIST`) returns `null` from `getAccessibleValue()`, so it fails a
+  value probe on its own without needing to be excluded by role. **[verified 2026-04-08, Java 21]**
 
 ## R_jspinner_accessibility — `JSpinner` misreports its own value capability
 
@@ -88,14 +93,47 @@ trims to its length — which is how long this file gets, so keep it short.
 - `getAccessibleIndexInParent()` on an item returned by `getAccessibleSelection(i)` equals that
   item's index in the `addAccessibleSelection` space, for every component checked — which is what
   makes reading a selection back possible at all. **[verified 2026-04-07, Java 21]**
-- `JTree`'s tree-level `AccessibleSelection` is non-functional. **[verified 2026-04-07, Java 21]**
+- A `JComboBox`'s selection API reports the selected item correctly even while the popup is
+  closed, so nothing has to be opened to read it. **[verified 2026-04-07, Java 21]**
+- `JTree`'s tree-level `AccessibleSelection` is non-functional — `getAccessibleSelectionCount()`
+  stays 0 however the tree is selected. The selection lives one level down: each **node** child
+  exposes its own `AccessibleSelection` reporting which of *its* children are selected, so
+  reading a tree selection means walking the hierarchy rather than asking the tree. **[verified 2026-04-07, Java 21]**
 
 ## R_multiselectable_not_reported — `JTable` does not report `MULTISELECTABLE`
 
 - A `JTable` in a multi-selection mode does **not** carry `AccessibleState.MULTISELECTABLE` in
   its state set, so the state set alone cannot tell single from multi. The honest probe is
   `getSelectionModel().getSelectionMode()`. **[verified 2026-04-07, Java 21]**
-- `JList` reports the state correctly, so the divergence is `JTable`-specific. **[verified 2026-04-07, Java 21]**
+- `JTable.getAccessibleSelection()` is non-null in **every** mode, including no-selection mode,
+  so a null check cannot stand in for a mode check either. **[verified 2026-04-07, Java 21]**
+- `JList` reports the state correctly, so the divergence is `JTable`-specific: `SINGLE_SELECTION`
+  omits `MULTISELECTABLE`, both interval modes carry it. It does not separate contiguous-only
+  from arbitrary selection. **[verified 2026-04-07, Java 21]**
+
+## R_accessible_selection_writes — Clearing and selecting-all are each broken on one component
+
+- `clearAccessibleSelection()` clears as documented on `JList` (both modes), `JComboBox` (to
+  `selectedIndex=-1`, a valid blank state) and `JTable` (row modes). On `JTabbedPane` it is a
+  silent **no-op** — the selected tab stays selected and the count stays 1. A tabbed pane has no
+  empty selection to reach. **[verified 2026-04-07, Java 21]**
+- `selectAllAccessibleSelection()` is a complete **no-op on `JTable`**: on a 5×3 table it selects
+  0 rows, 0 columns and reports an accessible selection count of 0. `JTable.selectAll()` does the
+  real thing — 5 rows, count 15 — and flips neither `rowSelectionAllowed` nor
+  `columnSelectionAllowed`. **[verified 2026-04-08, Java 21]**
+- The same call works correctly on `JList` in both interval modes, at 0 items and at 200. On a
+  `SINGLE_SELECTION` list it neither throws nor selects all: each interval add replaces the last,
+  so exactly the final item ends up selected. **[verified 2026-04-08, Java 21]**
+
+## R_jtable_selection_in_invokelater — `JTable`'s accessible selection write is lost inside `invokeLater`
+
+- `AccessibleJTable.addAccessibleSelection(i)` delegates to `JTable.changeSelection()`. Called
+  synchronously on the EDT it works; called inside a `SwingUtilities.invokeLater` block it is
+  **silently dropped** — no exception, and `getSelectedRows()` comes back empty. **[verified 2026-04-07, Java 21]**
+- `JTable.addRowSelectionInterval(row, row)` works in both positions, so the direct API is the
+  only reliable way to write a table selection from a posted block. **[verified 2026-04-07, Java 21]**
+- Why it happens is not established; `changeSelection()` appears to depend on event-dispatch
+  state that a posted block does not have. **[unverified]**
 
 ## R_jtable_cells_stamped — `JTable` cells are painted, not present
 

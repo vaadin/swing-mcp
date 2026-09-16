@@ -46,7 +46,7 @@ class SwingGetCellCountTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JTable — rejected (T-021 BR-03): redirected to swing_get_item_count
+    // JTable — rejected: redirected to swing_get_item_count
     // ══════════════════════════════════════════════════════════════════════════
 
     private static final String JTABLE_REDIRECT_MESSAGE =

@@ -16,7 +16,6 @@ import javax.swing.SwingUtilities;
  * <p>Looks up the component by ref, verifies it supports the increment action
  * and is effectively enabled, then invokes the matching {@link AccessibleAction}.</p>
  *
- * @see <a href="tool-008-swing-increment.md">T-008</a>
  */
 public class SwingIncrementTool extends AbstractSwingTool {
 
@@ -26,13 +25,13 @@ public class SwingIncrementTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // BR-01: ref is required integer
+        // ref is required integer
         int ref = params.getInt("ref");
 
-        // BR-02: ref lookup
+        // ref lookup
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // BR-04: increment support check
+        // increment support check
         int actionIndex = SwingUtils.supportsIncrement(accessible);
         if (actionIndex < 0) {
             throw new MCPErrorResponseException(
@@ -40,16 +39,16 @@ public class SwingIncrementTool extends AbstractSwingTool {
                             + " does not support swing_increment. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
-        // BR-06: effectively enabled check
+        // effectively enabled check
         if (!SwingUtils.isEffectivelyEnabled(accessible)) {
             throw new MCPErrorResponseException(
                     "Component is disabled and cannot be interacted with");
         }
 
-        // BR-03: fire the action asynchronously (fire-and-forget)
+        // fire the action asynchronously (fire-and-forget)
         AccessibleAction aa = accessible.getAccessibleContext().getAccessibleAction();
         SwingUtilities.invokeLater(() -> aa.doAccessibleAction(actionIndex));
-        // BR-11: D_dispatched_echo success echo
+        // D_dispatched_echo success echo
         return echo(ref);
     }
 

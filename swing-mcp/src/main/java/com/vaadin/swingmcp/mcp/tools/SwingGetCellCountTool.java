@@ -14,7 +14,6 @@ import javax.accessibility.Accessible;
  * {@code AccessibleContext.getAccessibleChildrenCount()} that lets the AI client
  * learn the cell count without fetching any cells.</p>
  *
- * @see <a href="tool-021-swing-get-cell-count.md">T-021</a>
  */
 public class SwingGetCellCountTool extends AbstractSwingTool {
 
@@ -24,17 +23,17 @@ public class SwingGetCellCountTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // Step 1 (BR-01): parameter validation
+        // parameter validation
         int ref = params.getInt("ref");
 
-        // Step 2 (BR-02): ref lookup
+        // ref lookup
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // Step 3 (BR-03): eligibility check — role must be LIST or TREE. JTable
+        // eligibility check — role must be LIST or TREE. JTable
         // is rejected with a redirect to swing_get_item_count.
         requireGetCellsSupported(accessible, "swing_get_cell_count", "swing_get_item_count");
 
-        // Step 4 (BR-07): compute count
+        // compute count
         int totalChildren = accessible.getAccessibleContext().getAccessibleChildrenCount();
 
         // Step 5: return as plain text integer
@@ -43,7 +42,7 @@ public class SwingGetCellCountTool extends AbstractSwingTool {
 
     @Override
     public boolean isMutation() {
-        // BR-05: read-only tool, ref map is NOT cleared
+        // read-only tool, ref map is NOT cleared
         return false;
     }
 }

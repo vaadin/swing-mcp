@@ -126,7 +126,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Single-selection — rejected (BR-04)
+    // Single-selection — rejected
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -180,7 +180,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JTable — unsupported modes (BR-03)
+    // JTable — unsupported modes
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -223,7 +223,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // No selection support (BR-03)
+    // No selection support
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -262,7 +262,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Disabled component (BR-05)
+    // Disabled component
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -279,7 +279,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Ref map clearing (BR-07 — mutation tool)
+    // Ref map clearing — mutation tool
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -311,7 +311,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Round-trip (BR-08 + verification)
+    // Round-trip + verification
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -366,7 +366,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Component matrix — single-selection (rejected by BR-04)
+    // Component matrix — single-selection, rejected
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -407,7 +407,7 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Component matrix — no selection support (rejected by BR-03)
+    // Component matrix — no selection support, rejected
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test

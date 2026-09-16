@@ -29,7 +29,6 @@ import java.util.logging.Logger;
  *       back to synthetic {@link Component#dispatchEvent} calls.</li>
  * </ul>
  *
- * @see <a href="tool-025-swing-drag.md">T-025</a>
  */
 public class SwingDragTool extends AbstractSwingTool {
 
@@ -45,7 +44,7 @@ public class SwingDragTool extends AbstractSwingTool {
         Integer sourceX = params.getIntOrNull("source_x");
         Integer sourceY = params.getIntOrNull("source_y");
 
-        // BR-01: validate source_x/source_y pair
+        // validate source_x/source_y pair
         if ((sourceX == null) != (sourceY == null)) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                     "Both 'source_x' and 'source_y' must be provided together");
@@ -55,13 +54,13 @@ public class SwingDragTool extends AbstractSwingTool {
         Integer targetX = params.getIntOrNull("target_x");
         Integer targetY = params.getIntOrNull("target_y");
 
-        // BR-03: validate target_x/target_y pair
+        // validate target_x/target_y pair
         if ((targetX == null) != (targetY == null)) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                     "Both 'target_x' and 'target_y' must be provided together");
         }
 
-        // BR-13: validate via (if provided)
+        // validate via (if provided)
         List<Integer> viaRaw = params.getIntArrayOrNull("via");
         if (viaRaw != null && viaRaw.size() % 3 != 0) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
@@ -69,10 +68,10 @@ public class SwingDragTool extends AbstractSwingTool {
                             + "length " + viaRaw.size() + " is not divisible by 3");
         }
 
-        // BR-02: look up source by ref
+        // look up source by ref
         Accessible sourceAccessible = context.getAccessibleByRef(sourceRef);
 
-        // BR-06: resolve source to Component + press point (defaults to center)
+        // resolve source to Component + press point (defaults to center)
         SwingUtils.ComponentAndPoint source = SwingUtils.resolveComponentAndPoint(sourceAccessible);
         if (source == null) {
             throw new MCPErrorResponseException(
@@ -80,15 +79,15 @@ public class SwingDragTool extends AbstractSwingTool {
                             + "Call swing_snapshot to verify available components");
         }
 
-        // BR-01: override press point with component-relative offsets if provided
+        // override press point with component-relative offsets if provided
         if (sourceX != null) {
             source = new SwingUtils.ComponentAndPoint(source.component, sourceX, sourceY);
         }
 
-        // BR-04: look up target by ref
+        // look up target by ref
         Accessible targetAccessible = context.getAccessibleByRef(targetRef);
 
-        // BR-06: resolve target to Component + drop point (defaults to center)
+        // resolve target to Component + drop point (defaults to center)
         SwingUtils.ComponentAndPoint target = SwingUtils.resolveComponentAndPoint(targetAccessible);
         if (target == null) {
             throw new MCPErrorResponseException(
@@ -96,21 +95,21 @@ public class SwingDragTool extends AbstractSwingTool {
                             + "Call swing_snapshot to verify available components");
         }
 
-        // BR-03: override drop point with component-relative offsets if provided
+        // override drop point with component-relative offsets if provided
         if (targetX != null) {
             target = new SwingUtils.ComponentAndPoint(target.component, targetX, targetY);
         }
 
-        // BR-13: resolve waypoint triplets
+        // resolve waypoint triplets
         List<SwingUtils.ComponentAndPoint> waypoints = resolveWaypoints(viaRaw, context);
 
-        // BR-05: check effectively enabled
+        // check effectively enabled
         if (!SwingUtils.isEffectivelyEnabled(sourceAccessible)) {
             throw new MCPErrorResponseException(
                     "Component is disabled and cannot be dragged");
         }
 
-        // BR-12: auto-detect dispatch strategy
+        // auto-detect dispatch strategy
         boolean useRobot = !GraphicsEnvironment.isHeadless() && source.component.isShowing();
 
         if (useRobot) {
@@ -119,7 +118,7 @@ public class SwingDragTool extends AbstractSwingTool {
             dispatchViaSynthetic(source, target, waypoints);
         }
 
-        // BR-10: D_dispatched_echo success echo
+        // D_dispatched_echo success echo
         return echo(sourceRef, "ref=" + targetRef);
     }
 

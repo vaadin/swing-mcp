@@ -20,7 +20,6 @@ import javax.swing.SwingUtilities;
  * {@link JTable#selectAll()} directly because the accessibility API's
  * {@code selectAllAccessibleSelection()} is a no-op on JTable.</p>
  *
- * @see <a href="tool-019-swing-select-all.md">T-019</a>
  */
 public class SwingSelectAllTool extends AbstractSwingTool {
 
@@ -30,16 +29,16 @@ public class SwingSelectAllTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // Step 1 (BR-01): parameter validation
+        // parameter validation
         int ref = params.getInt("ref");
 
-        // Step 2 (BR-02): ref lookup
+        // ref lookup
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // Step 3 (BR-03 + BR-04): selection support + multi-selection check
+        // selection support + multi-selection check
         requireMultiSelectable(accessible, "swing_select_all");
 
-        // Step 4 (BR-05): effectively enabled check
+        // effectively enabled check
         if (!SwingUtils.isEffectivelyEnabled(accessible)) {
             throw new MCPErrorResponseException(
                     "Component is disabled and cannot be modified");
@@ -47,22 +46,22 @@ public class SwingSelectAllTool extends AbstractSwingTool {
 
         // Step 5: fire-and-forget dispatch
         if (accessible instanceof JTable) {
-            // BR-09: JTable.selectAll() — accessibility API is broken (no-op)
+            // JTable.selectAll() — accessibility API is broken (no-op)
             JTable table = (JTable) accessible;
             SwingUtilities.invokeLater(table::selectAll);
         } else {
-            // BR-10: AccessibleSelection.selectAllAccessibleSelection()
+            // AccessibleSelection.selectAllAccessibleSelection()
             AccessibleSelection as = accessible.getAccessibleContext().getAccessibleSelection();
             SwingUtilities.invokeLater(as::selectAllAccessibleSelection);
         }
 
-        // Step 6 (BR-08): D_dispatched_echo success echo
+        // D_dispatched_echo success echo
         return echo(ref);
     }
 
     @Override
     public boolean isMutation() {
-        // BR-07: mutation tool, ref map IS cleared
+        // mutation tool, ref map IS cleared
         return true;
     }
 }

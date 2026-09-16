@@ -17,7 +17,6 @@ import java.util.Map;
  * <p>Looks up the component by ref, verifies it supports the {@code get_value} action,
  * then reads the value via the accessibility API ({@link AccessibleValue}).</p>
  *
- * @see <a href="tool-012-swing-get-value.md">T-012</a>
  */
 public class SwingGetValueTool extends AbstractSwingTool {
 
@@ -27,21 +26,21 @@ public class SwingGetValueTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // BR-01: ref is required integer
+        // ref is required integer
         int ref = params.getInt("ref");
 
-        // BR-02: look up the accessible by ref (throws MCPServerException if not found)
+        // look up the accessible by ref (throws MCPServerException if not found)
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // BR-03: check get_value support
+        // check get_value support
         if (!SwingUtils.supportsGetValue(accessible)) {
             throw new MCPErrorResponseException(
                     ComponentClassResolver.resolveClassName(accessible)
                             + " does not support swing_get_value. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
-        // BR-04: all access happens on EDT (guaranteed by SwingMCP.registerTool)
-        // Step 4: read current value via the shared helper (BR-12 / D_inline_value_preview
+        // all access happens on EDT (guaranteed by SwingMCP.registerTool)
+        // Step 4: read current value via the shared helper (D_inline_value_preview
         // shared-read with snapshot inline preview). supportsGetValue already
         // verified getCurrentAccessibleValue() is non-null so readValue
         // succeeds here; the IllegalStateException branch is a gate-violation
@@ -68,7 +67,7 @@ public class SwingGetValueTool extends AbstractSwingTool {
 
     @Override
     public boolean isMutation() {
-        // BR-05: read-only tool, ref map is NOT cleared
+        // read-only tool, ref map is NOT cleared
         return false;
     }
 }

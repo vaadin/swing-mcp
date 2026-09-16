@@ -40,7 +40,7 @@ public class SwingScreenshotTool extends AbstractSwingTool {
     @Override
     public MCPProtocol.Content execute(Parameters params,
                                        SwingToolContext context) throws Exception {
-        // BR-08: filter out zero-size components
+        // filter out zero-size components
         List<Component> renderables = new ArrayList<>();
         for (Component c : context.getConsideredComponents()) {
             if (c.getWidth() > 0 && c.getHeight() > 0) {
@@ -48,7 +48,7 @@ public class SwingScreenshotTool extends AbstractSwingTool {
             }
         }
 
-        // BR-03: empty after filtering → error
+        // empty after filtering → error
         if (renderables.isEmpty()) {
             throw new MCPErrorResponseException(
                     "No visible windows to capture. The application may still be starting up — retry shortly.");
@@ -68,6 +68,8 @@ public class SwingScreenshotTool extends AbstractSwingTool {
     private MCPProtocol.Content saveToDisk(BufferedImage image, String savePath)
             throws MCPErrorResponseException {
         Path path = Path.of(savePath);
+        // Absolute only: the caller cannot see the server's working directory, so a
+        // relative path would resolve somewhere neither side can predict.
         if (!path.isAbsolute()) {
             throw new MCPErrorResponseException(
                     "save_to must be an absolute path; got: " + savePath);
@@ -90,6 +92,9 @@ public class SwingScreenshotTool extends AbstractSwingTool {
         BufferedImage img = new BufferedImage(c.getWidth(), c.getHeight(), BufferedImage.TYPE_INT_RGB);
         Graphics g = img.createGraphics();
         try {
+            // Not SwingUtilities.paintComponent: it reparents the component into a
+            // CellRendererPane, which is unsafe for a JFrame/JDialog. printAll turns off
+            // RepaintManager double buffering, delegates to paint(), and restores it.
             c.printAll(g);
         } finally {
             g.dispose();
@@ -98,7 +103,7 @@ public class SwingScreenshotTool extends AbstractSwingTool {
     }
 
     private BufferedImage renderComposite(List<Component> components) {
-        // BR-02: composite width = max; composite height = sum of heights + gaps
+        // composite width = max; composite height = sum of heights + gaps
         int maxWidth = 0;
         int totalHeight = 0;
         for (Component c : components) {

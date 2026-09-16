@@ -51,7 +51,7 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JTable — rejected (T-020 BR-03): table cells are plain text labels, so
+    // JTable — rejected: table cells are plain text labels, so
     // swing_get_cells is refused; AI is redirected to swing_get_items.
     // ══════════════════════════════════════════════════════════════════════════
 
