@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for {@link StdioMCPServer}: drives {@code runStdio} on a worker
- * thread with piped streams (per DR-stdio-transport testing notes) and verifies the
+ * thread with piped streams (per D_stdio_transport testing notes) and verifies the
  * newline-delimited framing, dispatch, and error mapping.
  */
 class StdioMCPServerTest {
@@ -141,7 +141,7 @@ class StdioMCPServerTest {
                 () -> server.runStdio(InputStream.nullInputStream(), null));
     }
 
-    // ===== stdout protection (DR-stdio-transport) =====
+    // ===== stdout protection (D_stdio_transport) =====
 
     /**
      * A stray {@code System.out.println} from a tool or a library would land
@@ -355,10 +355,10 @@ class StdioMCPServerTest {
         assertNull(resp.get("error"));
     }
 
-    // ===== Session lifetime (DR-stdio-never-evicts) =====
+    // ===== Session lifetime (D_stdio_never_evicts) =====
 
     /**
-     * Regression test for DR-stdio-never-evicts: a scheduled tick here evicts the session
+     * Regression test for D_stdio_never_evicts: a scheduled tick here evicts the session
      * after 30 idle minutes and wedges the process for good, since no stdio
      * client ever re-initializes.
      */

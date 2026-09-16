@@ -21,12 +21,12 @@ import static org.junit.jupiter.api.Assertions.*;
  * shared manifest consumed by {@code swing-mcp-proxy}) and the actual
  * tools registered by {@link SwingMCP}. Catches manifest-vs-registration
  * drift at developer-test time so the proxy's runtime drift probe
- * (DR-forwarding-proxy) only ever fires on genuine deployment-version mismatches.
+ * (D_shared_tool_manifest) only ever fires on genuine deployment-version mismatches.
  *
  * <p>Uses {@link TinyMCPClient} (not the official SDK) so the
  * {@code listTools()} response deserialises directly into our
  * {@link MCPProtocol.Tool} POJOs — same equality semantics
- * (DR-structural-schema-equality) as the {@link ToolDescriptor}s in {@link SwingTools#ALL}.
+ * as the {@link ToolDescriptor}s in {@link SwingTools#ALL}.
  *
  * <p>Three assertions:
  * <ol>
@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *   <li>{@code initialize.instructions} equals {@link SwingTools#INSTRUCTIONS}.</li>
  *   <li>{@code listTools()} returns exactly {@link SwingTools#ALL} —
  *       same names, descriptions, and input schemas (structural equality
- *       per DR-structural-schema-equality).</li>
+ *      ).</li>
  * </ol>
  */
 class SwingToolsCoherenceTest {

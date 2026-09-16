@@ -27,8 +27,6 @@ import java.util.logging.Logger;
  * Claude sees here is bit-identical to what it would see talking
  * directly to {@code SwingMCP} over HTTP.
  *
- * <p>See {@code swing-mcp-proxy/spec/architecture.md} and DR-forwarding-proxy in
- * {@code tiny-mcp-server/spec/decisions.md} for the design.
  */
 public final class Main {
 
@@ -40,7 +38,7 @@ public final class Main {
     /** Environment variable whose value (if set) overrides the upstream port. */
     public static final String PORT_ENV_VAR = "SWING_MCP_PORT";
 
-    /** Loopback host the upstream {@code SwingMCP} binds to. Hardcoded per DR-localhost-http-no-auth. */
+    /** Loopback host the upstream {@code SwingMCP} binds to; it listens nowhere else. */
     public static final String UPSTREAM_HOST = "127.0.0.1";
 
     /** Context path the upstream {@code SwingMCP} serves on. Hardcoded. */
@@ -64,8 +62,7 @@ public final class Main {
                 SwingTools.ALL,
                 upstreamUrl,
                 messages);
-        // Proxy runs over stdio (DR-stdio-transport); single-session is configured by
-        // MCPProxy.newHandler.
+        // Single-session is already configured by MCPProxy.newHandler.
         StdioMCPServer stdio = new StdioMCPServer(handler);
 
         // SIGTERM/kill: close the upstream client cascading through

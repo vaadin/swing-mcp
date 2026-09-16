@@ -42,16 +42,16 @@ class MCPProtocolTest {
 
     @Test
     void initializeResponse() {
-        String json = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{\"tools\":{\"listChanged\":true},\"resources\":{\"subscribe\":true,\"listChanged\":true},\"prompts\":{\"listChanged\":true},\"logging\":{}},\"serverInfo\":{\"name\":\"Swing MCP\",\"version\":\"0.0.1\"},\"instructions\":\"Use tools to inspect the Swing app.\"}}";
+        String json = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{\"tools\":{\"listChanged\":true},\"resources\":{\"subscribe\":true,\"listChanged\":true},\"prompts\":{\"listChanged\":true},\"logging\":{}},\"serverInfo\":{\"name\":\"Demo MCP\",\"version\":\"0.0.1\"},\"instructions\":\"Use tools to inspect the demo app.\"}}";
 
         MCPProtocol.JsonRpcResponse resp = assertRoundTrip(json, MCPProtocol.JsonRpcResponse.class);
         assertEquals(1L, resp.getId());
 
         MCPProtocol.InitializeResult result = resp.getResultAs(MCPProtocol.InitializeResult.class);
         assertEquals("2024-11-05", result.getProtocolVersion());
-        assertEquals("Swing MCP", result.getServerInfo().getName());
+        assertEquals("Demo MCP", result.getServerInfo().getName());
         assertEquals("0.0.1", result.getServerInfo().getVersion());
-        assertEquals("Use tools to inspect the Swing app.", result.getInstructions());
+        assertEquals("Use tools to inspect the demo app.", result.getInstructions());
         assertTrue(result.getCapabilities().getTools().getListChanged());
         assertTrue(result.getCapabilities().getResources().getSubscribe());
         assertTrue(result.getCapabilities().getPrompts().getListChanged());
@@ -126,10 +126,10 @@ class MCPProtocolTest {
 
     @Test
     void toolsCallRequestWithIntegerArgument() {
-        String json = "{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"tools/call\",\"params\":{\"name\":\"swing_click\",\"arguments\":{\"ref\":42}}}";
+        String json = "{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"tools/call\",\"params\":{\"name\":\"demo_click\",\"arguments\":{\"ref\":42}}}";
         MCPProtocol.JsonRpcRequest req = assertRoundTrip(json, MCPProtocol.JsonRpcRequest.class);
         MCPProtocol.CallToolParams params = req.getParamsAs(MCPProtocol.CallToolParams.class);
-        assertEquals("swing_click", params.getName());
+        assertEquals("demo_click", params.getName());
         assertEquals(42L, params.getArguments().get("ref"));
     }
 

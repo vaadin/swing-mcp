@@ -17,12 +17,12 @@ Sets the numeric value on sliders, spinners, and split-pane dividers.
 | BR-02 | If the ref is not found, the tool returns an MCP-level error (`isError: true`) with a recovery message suggesting to call `swing_snapshot`. |
 | BR-03 | If the target does not support `set_value` (i.e. `SwingUtils.supportsSetValue(accessible)` returns `false`), the tool returns an MCP-level error (`isError: true`) with the message "<ClassName> does not support swing_set_value. Call swing_snapshot or swing_get_cells to verify the list of actions". |
 | BR-04 | All validation runs on the EDT inside `runInEDT()`. The `setCurrentAccessibleValue()` call is posted via `SwingUtilities.invokeLater()` from within `execute()` and executes asynchronously. |
-| BR-05 | If the target is not effectively enabled (see **architecture.md § 4 — Effectively Enabled Check**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. The enabled check runs before the range check (BR-07). |
+| BR-05 | If the target is not effectively enabled (see **D_mirror_swing_semantics**), the tool returns an MCP-level error (`isError: true`) with a message explaining that the component is disabled. The enabled check runs before the range check (BR-07). |
 | BR-06 | `swing_set_value` is a mutation tool: `isMutation()` returns `true` and the ref map is cleared after successful invocation. A pre-dispatch validation error (`MCPErrorResponseException`) does **not** clear the ref map — the UI state hasn't changed, so existing refs remain valid and the AI can retry without re-snapshotting. |
 | BR-07 | **Range validation.** Before setting the value, the tool reads `getMinimumAccessibleValue()` and `getMaximumAccessibleValue()`. If `min` is non-null and `value < min`, the tool returns an MCP-level error (`isError: true`) with the message "Value N is below the minimum (M). Call swing_get_value to check the valid range." If `max` is non-null and `value > max`, the error message is "Value N is above the maximum (M). Call swing_get_value to check the valid range." The comparison uses `doubleValue()` for generality. If `min` or `max` is null (unbounded), that bound is not checked. Min is checked before max. Numbers in error messages are formatted using the same `serializeNumber()` logic as T-012 BR-10 (integer when whole). |
 | BR-08 | **Type preservation.** The incoming `value` parameter arrives as a JSON number (Gson deserializes as `Double`). Before passing it to `setCurrentAccessibleValue()`, the tool reads the component's `getCurrentAccessibleValue()` and converts the incoming value to the same Java numeric type. This is critical: probe testing confirmed that `SpinnerNumberModel.setValue()` stores whatever `Number` type it receives, contaminating the model's value class (e.g. a `BigDecimal` model receiving `Double(60.5)` permanently changes its value class to `Double`). Conversion table: `Integer` → `intValue()`; `Long` → `longValue()`; `Float` → `floatValue()`; `Double` → `doubleValue()`; `BigDecimal` → `BigDecimal.valueOf(doubleValue())`. If the current value's class is none of these, pass the incoming value as-is. |
 | BR-11 | **Whole-number validation.** When the target type is `Integer` or `Long` (determined via BR-08), and the incoming value has a fractional part (`doubleValue() % 1 != 0`), the tool returns an MCP-level error (`isError: true`) with the message "Value N cannot be set — this component requires a whole number." This prevents silent truncation (e.g. `42.5` → `42`). The check runs after range validation (BR-07) and before the type conversion (BR-08). |
-| BR-09 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched set-value on ref=<N> to <value> — call swing_snapshot to verify the outcome` — `<value>` rendered bare (no quotes), integer-when-whole via the `serializeNumber()` helper (T-012 BR-10). The echo reflects the **post-conversion** value (BR-08 type preservation), so an `Integer`-model spinner receiving `42.0` echoes `42`, not `42.0`. See **DR-dispatched-echo** for value-rendering rules. |
+| BR-09 | **Return message.** On success, the dispatch wrapper returns a single text-content item: `Dispatched set-value on ref=<N> to <value> — call swing_snapshot to verify the outcome` — `<value>` rendered bare (no quotes), integer-when-whole via the `serializeNumber()` helper (T-012 BR-10). The echo reflects the **post-conversion** value (BR-08 type preservation), so an `Integer`-model spinner receiving `42.0` echoes `42`, not `42.0`. See **D_dispatched_echo** for value-rendering rules. |
 | BR-10 | `Parameters` must provide a `getNumber(String key)` method that returns the raw `Number` value (without converting to `int`). This is a prerequisite infrastructure change. |
 
 ### Algorithm
@@ -88,7 +88,7 @@ Execution order:
   - [x] Setting a fractional value on an `Integer`-model spinner returns an MCP error (BR-11).
   - [x] Each component from the component matrix is tested (dedicated test method per component).
 
-- [x] `SwingSetValueScreenTest` (`testSwing` — requires display; see `verification.md` § Component Matrix)
+- [x] `SwingSetValueScreenTest` (`testSwing` — requires display; see `design/architecture.md` § Testing)
   - [x] Setting a `JSlider` value inside `JFrame` changes the slider position.
   - [x] Setting a `JSpinner(SpinnerNumberModel)` value inside `JFrame` changes the spinner value.
   - [x] Setting a `JSlider` value inside `JDialog` changes the slider position.
@@ -97,7 +97,7 @@ Execution order:
 
 ### Component matrix
 
-Each matrix component from `verification.md` gets a dedicated test method.
+Each matrix component in `design/architecture.md` § Testing gets a dedicated test method.
 
 **Succeed (`set_value` supported):** `JSlider`, `JSpinner(SpinnerNumberModel)`, `JSplitPane`.
 

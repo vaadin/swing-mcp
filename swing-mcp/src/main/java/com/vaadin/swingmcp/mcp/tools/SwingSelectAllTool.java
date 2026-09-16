@@ -56,7 +56,7 @@ public class SwingSelectAllTool extends AbstractSwingTool {
             SwingUtilities.invokeLater(as::selectAllAccessibleSelection);
         }
 
-        // Step 6 (BR-08): DR-dispatched-echo success echo
+        // Step 6 (BR-08): D_dispatched_echo success echo
         return echo(ref);
     }
 

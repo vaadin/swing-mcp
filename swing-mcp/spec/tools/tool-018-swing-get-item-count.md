@@ -71,7 +71,7 @@ Execution order:
 
 ### Component matrix
 
-Each matrix component from `verification.md` gets a dedicated test method.
+Each matrix component in `design/architecture.md` § Testing gets a dedicated test method.
 
 **Succeed (`get_item_count` supported):** `JList`, `JComboBox`, `JTable` (any selection mode — read path is selection-mode agnostic per BR-03).
 

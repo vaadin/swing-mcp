@@ -38,7 +38,7 @@ class SnapshotNode {
 
     /**
      * Placeholder line emitted under an iconified Frame in place of its
-     * suppressed children (SC-8 / DR-iconified-children-hidden).
+     * suppressed children (SC-8 / D_iconified_children_hidden).
      */
     static final String ICONIFIED_PLACEHOLDER =
             "[Contents hidden — window is iconified. Call swing_restore to interact with this window.]";
@@ -53,10 +53,10 @@ class SnapshotNode {
     static final int MAX_DESCRIPTION_LENGTH = 120;
 
     /**
-     * Maximum length of an inline {@code text="..."} preview (BR-12 / DR-inline-value-preview).
+     * Maximum length of an inline {@code text="..."} preview (BR-12 / D_inline_value_preview).
      * Strings of this length or less are emitted in full; longer strings are
      * truncated to the first {@code PREVIEW_MAX_LENGTH - 1} characters plus a
-     * trailing U+2026. Matches DR-dispatched-echo's value-render convention for
+     * trailing U+2026. Matches D_dispatched_echo's value-render convention for
      * consistency across mutation echoes and snapshot previews.
      */
     static final int PREVIEW_MAX_LENGTH = 15;
@@ -113,7 +113,7 @@ class SnapshotNode {
             AccessibleState.COLLAPSED,
             AccessibleState.MODAL,
             AccessibleState.MULTI_LINE,
-            // ICONIFIED is synthetic (DR-synthetic-iconified-state) — derived from Frame.getExtendedState(),
+            // ICONIFIED is synthetic (D_synthetic_iconified_state) — derived from Frame.getExtendedState(),
             // not from AccessibleStateSet (JDK never sets it). See below.
             AccessibleState.HORIZONTAL,
             AccessibleState.VERTICAL,
@@ -510,7 +510,7 @@ class SnapshotNode {
         } else {
             ref = 0;
         }
-        // SC-8 / DR-iconified-children-hidden: iconified Frame — skip children (no refs assigned).
+        // SC-8 / D_iconified_children_hidden: iconified Frame — skip children (no refs assigned).
         if (isIconifiedFrame()) {
             markChildRefsZero();
             return nextRef;
@@ -557,7 +557,7 @@ class SnapshotNode {
 
     /**
      * Computes the inline {@code text="..."} / {@code value=N} preview for
-     * this node's rendered line, per BR-12 / DR-inline-value-preview.
+     * this node's rendered line, per BR-12 / D_inline_value_preview.
      *
      * <p>Gate parity with BR-06: emits {@code text="..."} iff
      * {@link SwingUtils#supportsGetText} returns {@code true}, and
@@ -578,17 +578,17 @@ class SnapshotNode {
     private String computeInlinePreview() {
         StringBuilder preview = new StringBuilder();
 
-        // text="..." — gated by supportsGetText (DR-password-not-readable password exclusion
-        // and DR-label-not-readable label exclusion are already baked into supportsGetText,
+        // text="..." — gated by supportsGetText (D_password_not_readable password exclusion
+        // and D_label_not_readable label exclusion are already baked into supportsGetText,
         // so password fields and JLabels produce no annotation for free).
         if (SwingUtils.supportsGetText(accessible)) {
             try {
                 String raw = SwingUtils.readText(accessible, PREVIEW_RAW_READ);
-                // Sanitise per BR-13 / DR-quoted-slot-sanitizing: collapse whitespace runs to
+                // Sanitise per BR-13 / D_quoted_slot_sanitizing: collapse whitespace runs to
                 // single spaces, strip leading/trailing whitespace, escape
                 // embedded quotes. Null-or-blank result → no preview.
                 String sanitized = SwingUtils.sanitizeForQuotedSlot(raw);
-                // Cap to PREVIEW_MAX_LENGTH chars (DR-inline-value-preview convention). The
+                // Cap to PREVIEW_MAX_LENGTH chars (D_inline_value_preview convention). The
                 // cap counts rendered chars including the backslash in an
                 // escaped quote — a field containing a single '"' produces
                 // the two-char sequence `\"` in the preview; we cap on the
@@ -666,7 +666,7 @@ class SnapshotNode {
     void render(int depth, StringBuilder sb) {
         renderSelfLine(depth, sb);
 
-        // SC-8 / DR-iconified-children-hidden: iconified Frame — emit placeholder instead of children.
+        // SC-8 / D_iconified_children_hidden: iconified Frame — emit placeholder instead of children.
         if (isIconifiedFrame()) {
             sb.append("  ".repeat(depth + 1)).append("- ").append(ICONIFIED_PLACEHOLDER).append('\n');
             return;
@@ -722,8 +722,8 @@ class SnapshotNode {
         // Name (omit if blank) — uses getEffectiveAccessibleName for
         // JInternalFrame (accessible name → title) and JDesktopIcon
         // (icon name → frame name → frame title). See T-002 SC-5.
-        // Sanitised per BR-13 / DR-quoted-slot-sanitizing: whitespace collapsed, embedded
-        // quotes escaped. Uncapped — name is identity (DR-quoted-slot-sanitizing §2).
+        // Sanitised per BR-13 / D_quoted_slot_sanitizing: whitespace collapsed, embedded
+        // quotes escaped. Uncapped — name is identity (D_quoted_slot_sanitizing §2).
         String name = SwingUtils.sanitizeForQuotedSlot(
                 SwingUtils.getEffectiveAccessibleName(accessible));
         if (name != null) {
@@ -733,7 +733,7 @@ class SnapshotNode {
         // Description (BR-10): resolved via SwingUtils.resolveDescription()
         // which tries accessibleDescription (with HTML cleanup), then tooltip
         // fallback, then sanitises. Result is capped at MAX_DESCRIPTION_LENGTH
-        // chars symmetrically across all sources (DR-quoted-slot-sanitizing §3).
+        // chars symmetrically across all sources (D_quoted_slot_sanitizing §3).
         String desc = SwingUtils.resolveDescription(accessible);
         if (desc != null) {
             sb.append(" \"").append(capDescription(desc)).append('"');
@@ -767,7 +767,7 @@ class SnapshotNode {
                 }
             }
         }
-        // Synthetic ICONIFIED (DR-synthetic-iconified-state): JDK never sets it in AccessibleStateSet.
+        // Synthetic ICONIFIED (D_synthetic_iconified_state): JDK never sets it in AccessibleStateSet.
         // Derived from Frame.getExtendedState() for JFrame.
         if (accessible instanceof Frame
                 && (((Frame) accessible).getExtendedState() & Frame.ICONIFIED) != 0) {
@@ -783,7 +783,7 @@ class SnapshotNode {
             sb.append(' ').append(additionalInfo);
         }
 
-        // Inline value preview (BR-12 / DR-inline-value-preview). Emitted after additionalInfo
+        // Inline value preview (BR-12 / D_inline_value_preview). Emitted after additionalInfo
         // so that on the (spec-permitted but never-actually-seen) co-occurrence
         // case `columns:` appears first, then `text=`/`value=`.
         String preview = computeInlinePreview();
@@ -877,7 +877,7 @@ class SnapshotNode {
      * <p>Serves as the single source of truth for {@link #hasAnyAction()}
      * (ref-assignment gate) and {@link #render} (snapshot output). Previously
      * the two were kept in sync by hand — an OR chain of {@code SwingUtils.supportsX}
-     * predicates mirroring the BR-06 steps — which drifted under DR-password-not-readable and had
+     * predicates mirroring the BR-06 steps — which drifted under D_password_not_readable and had
      * to be patched. Caching the list collapses both into one walk.
      */
     List<String> actions() {
@@ -925,7 +925,7 @@ class SnapshotNode {
         // Step 4: text.
         // get_text and set_text are independent capabilities: each branch
         // gates its action on the matching support predicate. SwingUtils.supportsGetText
-        // returns false for components where reading yields garbage (DR-password-not-readable
+        // returns false for components where reading yields garbage (D_password_not_readable
         // password fields), so step 4 does not need an explicit password check.
         // Read-only text fields (hasEditableText but not EDITABLE) emit set_text
         // too; BR-08 prefixes with "!" since the component is read-only.

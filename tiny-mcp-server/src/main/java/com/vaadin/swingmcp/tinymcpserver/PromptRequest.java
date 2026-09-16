@@ -15,7 +15,7 @@ import java.util.Map;
  * otherwise. Both {@code arguments} and {@code transportHeaders} are
  * unmodifiable.
  *
- * <p>See DR-request-records for the rationale.
+ * <p>See D_request_records for the rationale.
  */
 public record PromptRequest(
         String name,

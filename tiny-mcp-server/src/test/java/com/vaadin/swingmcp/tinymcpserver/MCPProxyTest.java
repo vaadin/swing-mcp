@@ -20,8 +20,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Integration tests for {@link MCPProxy} (DR-forwarding-proxy). Covers the
- * scenarios listed in {@code tiny-mcp-server/spec/architecture.md}:
+ * Integration tests for {@link MCPProxy} (D_forwarding_proxy). Covers the
+ * scenarios listed in {@code design/architecture.md}:
  * upstream-down, drift (symmetric), session-lost, IO mid-call,
  * {@code _meta} passthrough, and the static {@code tools/list}.
  *
@@ -301,7 +301,7 @@ class MCPProxyTest {
         // First call: success (upstream init + listTools + callTool).
         client.callTool("echo", Map.of("text", "hi"));
 
-        // Force upstream to drop its session — mimics a Swing app
+        // Force upstream to drop its session — mimics a host application
         // restart while the proxy is running. The proxy's upstream
         // client still holds a now-stale session id; the next
         // tools/call will see HTTP 404 → MCPSessionLostException.
@@ -390,7 +390,7 @@ class MCPProxyTest {
         assertEquals(2, upstreamCallToolCount.get());
     }
 
-    // ===== Single-session policy by default (supersede on conflict, DR-supersede-sessions) =====
+    // ===== Single-session policy by default (supersede on conflict, D_supersede_sessions) =====
 
     @Test
     void proxyIsSingleSessionByDefault() throws IOException {
@@ -403,7 +403,7 @@ class MCPProxyTest {
         TinyMCPClient first = new TinyMCPClient(URI.create(proxy.getUrl()));
         first.initialize();
 
-        // Second client: also succeeds, evicting the first (DR-supersede-sessions supersede).
+        // Second client: also succeeds, evicting the first (D_supersede_sessions supersede).
         try (TinyMCPClient second = new TinyMCPClient(URI.create(proxy.getUrl()))) {
             second.initialize();
             // The first client's next call is rejected with the supersede tombstone.

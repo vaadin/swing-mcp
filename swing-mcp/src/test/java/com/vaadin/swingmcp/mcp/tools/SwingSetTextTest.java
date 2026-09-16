@@ -162,7 +162,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
 
     @Test
     void successWithLongTextTruncatesValueInEcho() throws Exception {
-        // DR-dispatched-echo: string values are truncated at 15 chars — first 14 + U+2026.
+        // D_dispatched_echo: string values are truncated at 15 chars — first 14 + U+2026.
         JTextField field = new JTextField("old");
         snapshot(field);
         int ref = context.getRefOf(field);
@@ -341,7 +341,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenuBar() throws Exception {
-        // DR-jmenu-not-clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
+        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
@@ -355,7 +355,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenu() throws Exception {
-        // DR-jmenu-not-clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
+        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);

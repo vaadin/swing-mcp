@@ -49,7 +49,7 @@ sized via `panel.setSize(w, h)` + `panel.doLayout()` (never shown on screen).
 
 #### Component matrix (headless)
 
-- [x] Every matrix component from `verification.md` is placed inside a 200×100 `JPanel` (sized via `setSize` + `doLayout`) and renders to a valid 200×100 PNG.
+- [x] Every matrix component in `design/architecture.md` § Testing is placed inside a 200×100 `JPanel` (sized via `setSize` + `doLayout`) and renders to a valid 200×100 PNG.
 
 ### Screen-mode tests (`src/testSwing`) — `SwingScreenshotScreenTest`
 

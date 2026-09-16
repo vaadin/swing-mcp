@@ -3,7 +3,7 @@
 **Status:** Draft
 **Date:** 2026-04-16
 
-Returns the full, uncapped description of a component. The snapshot caps descriptions at 120 characters (BR-10 / DR-quoted-slot-sanitizing); when capped, the node advertises `get_description` so the AI can retrieve the complete text on demand. Needed because labels and other components can carry long semantic content (warnings in confirm dialogs, error messages, extended tooltips) that the AI must read in full to make informed decisions.
+Returns the full, uncapped description of a component. The snapshot caps descriptions at 120 characters (BR-10 / D_quoted_slot_sanitizing); when capped, the node advertises `get_description` so the AI can retrieve the complete text on demand. Needed because labels and other components can carry long semantic content (warnings in confirm dialogs, error messages, extended tooltips) that the AI must read in full to make informed decisions.
 
 **Tool description:** "Read the full description of a UI component by ref. Returns the complete text that was truncated in the snapshot's description slot. The description is resolved from the accessibility API (accessibleDescription, or tooltip fallback). Requires a ref obtained from swing_snapshot."
 

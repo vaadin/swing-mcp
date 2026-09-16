@@ -14,15 +14,15 @@ import java.util.regex.Pattern;
  *
  * <p>Equality is structural: two descriptors compare equal iff their
  * names, descriptions, and input schemas are equal. Schema equality
- * follows {@link MCPProtocol.InputSchema#equals(Object)} (DR-structural-schema-equality):
+ * follows {@link MCPProtocol.InputSchema#equals(Object)} (D_structural_schema_equality):
  * deep, set-semantics on {@code required}, order-insensitive on
  * {@code properties}, order-sensitive on {@code enum}. This is the
- * predicate {@code MCPProxy}'s drift probe uses (DR-forwarding-proxy) — extra care
+ * predicate {@code MCPProxy}'s drift probe uses (D_forwarding_proxy) — extra care
  * with that contract is warranted because false positives become
  * spurious drift errors and false negatives become silent
  * mismatched-version bugs.
  *
- * <p>See DR-settable-listeners for the rationale of the type living in this parent
+ * <p>See D_settable_listeners for the rationale of the type living in this parent
  * package alongside generic protocol types rather than under
  * {@code tinymcpserver} (which is the transport implementation).
  *

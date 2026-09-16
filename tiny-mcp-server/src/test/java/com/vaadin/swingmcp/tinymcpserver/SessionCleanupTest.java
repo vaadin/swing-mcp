@@ -265,7 +265,7 @@ class SessionCleanupTest {
     }
 
     /**
-     * The other half of DR-stdio-never-evicts: eviction is HTTP's job, so moving the tick
+     * The other half of D_stdio_never_evicts: eviction is HTTP's job, so moving the tick
      * off {@code MCPHandler.start()} must not have dropped it. Paired with
      * {@code StdioMCPServerTest.idleCleanupTickIsNotScheduledForStdio}.
      */

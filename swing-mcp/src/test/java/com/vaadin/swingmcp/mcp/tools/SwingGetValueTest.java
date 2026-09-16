@@ -284,7 +284,7 @@ class SwingGetValueTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenuBar() throws Exception {
-        // DR-jmenu-not-clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
+        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
@@ -296,7 +296,7 @@ class SwingGetValueTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenu() throws Exception {
-        // DR-jmenu-not-clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
+        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
