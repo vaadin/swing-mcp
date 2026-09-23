@@ -24,6 +24,7 @@ import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -416,21 +417,17 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
     // Component matrix — not supported
     // ══════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Calls the tool under a known ref, so a component the snapshot gives no ref is refused by
+     * the tool rather than skipped.
+     */
     private void assertGetSelectionNotSupported(Component component) throws Exception {
-        snapshot(component);
-        int ref;
-        try {
-            ref = context.getRefOf(component);
-        } catch (IllegalStateException e) {
-            // No ref — cannot call get_selection, acceptable
-            return;
-        }
+        context.putRef(99, (Accessible) component);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getSelection(ref));
-        assertTrue(ex.getMessage().contains("does not support swing_get_selection")
-                        || ex.getMessage().contains("row-selection mode"),
-                "Expected not-supported error for " + component.getClass().getSimpleName()
-                        + ", got: " + ex.getMessage());
+                () -> getSelection(99));
+        assertEquals(component.getClass().getSimpleName()
+                        + " does not support swing_get_selection. Call swing_snapshot or swing_get_cells to verify the list of actions.",
+                ex.getMessage());
     }
 
     @Test
@@ -508,14 +505,10 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenu() throws Exception {
-        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
-        context.putRef(99, (javax.accessibility.Accessible) menu);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getSelection(99));
-        assertTrue(ex.getMessage().contains("does not support swing_get_selection"));
+        assertGetSelectionNotSupported(menu);
     }
 
     @Test
@@ -548,20 +541,13 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
     void componentMatrix_JTree() throws Exception {
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("Root");
         root.add(new DefaultMutableTreeNode("A"));
-        JTree tree = new JTree(root);
-        snapshot(tree);
-        // No ref: its selection is suppressed (D_no_jtree_selection).
-        context.putRef(99, tree);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getSelection(99));
-        assertTrue(ex.getMessage().contains("does not support swing_get_selection"));
+        // Its selection is suppressed (D_no_jtree_selection).
+        assertGetSelectionNotSupported(new JTree(root));
     }
 
     @Test
     void componentMatrix_JDesktopPane() throws Exception {
-        JDesktopPane desktop = new JDesktopPane();
-        context.putRef(99, desktop);
-        assertThrows(MCPErrorResponseException.class, () -> getSelection(99));
+        assertGetSelectionNotSupported(new JDesktopPane());
     }
 
     @Test
@@ -571,8 +557,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         iframe.setSize(150, 80);
         iframe.setVisible(true);
         desktop.add(iframe);
-        context.putRef(99, iframe);
-        assertThrows(MCPErrorResponseException.class, () -> getSelection(99));
+        assertGetSelectionNotSupported(iframe);
     }
 
     // ══════════════════════════════════════════════════════════════════════════

@@ -18,6 +18,7 @@ package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
 import com.vaadin.swingmcp.mcp.DragRecordingPanel;
+import com.vaadin.swingmcp.mcp.MouseEventRecorder;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
@@ -551,67 +552,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Virtual accessible child resolution
-    // ══════════════════════════════════════════════════════════════════════════
-
-    @Test
-    void virtualChildAsSourceResolvesToHostComponent() throws Exception {
-        JList<String> list = new JList<>(new String[]{"Item A", "Item B", "Item C"});
-        list.setSize(100, 90);
-
-        DragRecordingPanel target = new DragRecordingPanel();
-        target.setSize(100, 50);
-
-        JPanel root = new JPanel(null);
-        root.setSize(300, 100);
-        list.setBounds(0, 0, 100, 90);
-        target.setBounds(200, 0, 100, 50);
-        root.add(list);
-        root.add(target);
-
-        snapshot(root);
-        int listRef = context.getRefOf(list);
-
-        dragToRef(listRef, context.getRefOf(target));
-    }
-
-    @Test
-    void virtualChildItemAsSourceResolvesToHostJList() throws Exception {
-        // A JList item is not a Component; the tool must walk getAccessibleParent() up to the JList.
-        JList<String> list = new JList<>(new String[]{"Item A", "Item B", "Item C"});
-        list.setSize(100, 90);
-        list.setCellRenderer(new DefaultListCellRenderer()); // ensure bounds are computed
-
-        DragRecordingPanel target = new DragRecordingPanel();
-        target.setSize(100, 50);
-
-        JPanel root = new JPanel(null);
-        root.setSize(300, 100);
-        list.setBounds(0, 0, 100, 90);
-        target.setBounds(200, 0, 100, 50);
-        root.add(list);
-        root.add(target);
-
-        SwingGetCellsTool getCellsTool = new SwingGetCellsTool();
-        snapshot(root);
-        int listRef = context.getRefOf(list);
-
-        // get_cells replaces the ref map: ref 1 is the list, refs 2.. its items.
-        getCellsTool.execute(new Parameters(Map.of("ref", listRef, "offset", 0, "length", 3)), context);
-
-        int targetRef = -1;
-        // Nothing here records events, so the test passes if the drag does not throw.
-        try {
-            dragTool.execute(
-                    new Parameters(Map.of("source_ref", 2, "target_ref", 1)),
-                    context);
-            SwingUtilities.invokeAndWait(() -> {}); // drain EDT
-        } finally {
-            context.clearRefMap();
-        }
-    }
-
-    // ══════════════════════════════════════════════════════════════════════════
     // No drag action in snapshot
     // ══════════════════════════════════════════════════════════════════════════
 
@@ -720,9 +660,11 @@ class SwingDragToolTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Component matrix
+    // Component matrix — the JList and JComboBox rows are in SwingDragScreenTest: headless,
+    // their UI delegate throws HeadlessException on the press (the JComboBox one on Java 11).
     // ══════════════════════════════════════════════════════════════════════════
 
+    /** Drags {@code source} onto a panel and asserts the full press-drag-release reached it. */
     private void dragComponentToTarget(Component source) throws Exception {
         DragRecordingPanel target = new DragRecordingPanel();
         target.setSize(100, 50);
@@ -735,9 +677,9 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         root.add(target);
 
         snapshot(root);
-        int sourceRef = context.getRefOf(source);
-        int targetRef = context.getRefOf(target);
-        dragToRef(sourceRef, targetRef);
+        MouseEventRecorder recorder = MouseEventRecorder.attachTo(source);
+        dragToRef(context.getRefOf(source), context.getRefOf(target));
+        assertEquals(MouseEventRecorder.SYNTHETIC_DRAG, recorder.getEventIds());
     }
 
     @Test
@@ -771,11 +713,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
     }
 
     @Test
-    void componentMatrix_JComboBox() throws Exception {
-        dragComponentToTarget(new JComboBox<>(new String[]{"A", "B"}));
-    }
-
-    @Test
     void componentMatrix_JToggleButton() throws Exception {
         dragComponentToTarget(new JToggleButton("Toggle"));
     }
@@ -788,13 +725,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
     @Test
     void componentMatrix_JSlider() throws Exception {
         dragComponentToTarget(new JSlider(0, 100, 50));
-    }
-
-    @Test
-    void componentMatrix_JList() throws Exception {
-        JList<String> list = new JList<>(new String[]{"A", "B"});
-        list.setSize(100, 50);
-        dragComponentToTarget(list);
     }
 
     @Test

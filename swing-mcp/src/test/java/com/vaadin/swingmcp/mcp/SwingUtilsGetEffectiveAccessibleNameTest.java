@@ -81,7 +81,7 @@ class SwingUtilsGetEffectiveAccessibleNameTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void desktopIcon_step3_fallsBackToFrameTitle() {
+    void desktopIcon_step2_frameNameDefaultsToTitle() {
         JInternalFrame frame = new JInternalFrame("Doc1");
         JInternalFrame.JDesktopIcon icon = frame.getDesktopIcon();
 
@@ -118,7 +118,7 @@ class SwingUtilsGetEffectiveAccessibleNameTest {
     }
 
     @Test
-    void desktopIcon_emptyTitle_frameAccessibleNameIsEmpty_returnsNull() {
+    void desktopIcon_emptyTitle_returnsEmptyString() {
         JInternalFrame frame = new JInternalFrame("");
         JInternalFrame.JDesktopIcon icon = frame.getDesktopIcon();
 

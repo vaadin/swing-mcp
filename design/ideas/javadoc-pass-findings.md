@@ -20,24 +20,22 @@ numbers are from the commit after the pass.
   or the convention is wrong (`Q_unknown_ref_error`). An unknown ref is arguably a
   protocol-level bad parameter.
 
+- **`SwingUtils.createDragAction`** dispatches the whole drag from one `Runnable`, so a listener
+  that throws on the press aborts the drags and the release. A real mouse sends each event
+  separately, and the EDT carries on after one throws. This only affects the synthetic, headless
+  path. **Checked:** `R_ui_delegate_press_throws` has two delegates that do this.
+
 ## Tests that prove less than they claim
 
 - **Tests that assert nothing:**
   - `SwingClickToolTest.componentMatrix_JTabbedPane`
   - `componentMatrix_JScrollPane` in `SwingDecrementTest`, `SwingIncrementTest`,
     `SwingToggleExpandTest` and `SwingTogglePopupTest`
-- **Helpers that silently return when a component has no ref**, in `SwingGetSelectionTest`,
-  `SwingGetTextTest` and `SwingSetValueTest`. architecture.md § Testing says to register the
-  component under a known id instead.
 - **Tests that assert `getRefOf` throws.** architecture.md § Testing calls that testing the
   harness, not the tool. They are in many headless tests, and in the JFrame / JDialog /
   JOptionPane matrix rows of the TogglePopup, Increment, Decrement and ToggleExpand screen tests.
-- **Names that contradict their bodies:**
-  - `SwingDragToolTest.virtualChildAsSourceResolvesToHostComponent` drags the JList itself,
-    not a child.
-  - `ComponentClassResolverTest.isRuntimeProxy_trueFor…` asserts only false cases.
-  - `SwingUtilsGetEffectiveAccessibleNameTest.desktopIcon_step3_…` exercises step 2.
-  - `…emptyTitle_…_returnsNull` asserts `""`, not null.
+  `SwingGetSelectionTest`, `SwingGetTextTest` and `SwingSetValueTest` are done: their
+  not-supported helper registers the component under ref 99 and asserts the whole refusal.
 - **`SwingUtilsSupportsTextTest.customLabelRoleComponent…`** uses a JLabel subclass, so it does
   not show the gate works for a component that isn't a JLabel.
 - **`SessionCloseTest`**: session 2 always gets a fresh context, whatever happened to session 1's
