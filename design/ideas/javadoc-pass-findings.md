@@ -46,12 +46,11 @@ numbers are from the commit after the pass.
   - `SwingClickToolTest.componentMatrix_JTabbedPane`
   - `componentMatrix_JScrollPane` in `SwingDecrementTest`, `SwingIncrementTest`,
     `SwingToggleExpandTest` and `SwingTogglePopupTest`
-- **Helpers that silently return when a component has no ref**, in `SwingGetSelectionTest`,
-  `SwingGetTextTest` and `SwingSetValueTest`. architecture.md § Testing says to register the
-  component under a known id instead.
 - **Tests that assert `getRefOf` throws.** architecture.md § Testing calls that testing the
   harness, not the tool. They are in many headless tests, and in the JFrame / JDialog /
   JOptionPane matrix rows of the TogglePopup, Increment, Decrement and ToggleExpand screen tests.
+  `SwingGetSelectionTest`, `SwingGetTextTest` and `SwingSetValueTest` are done: their
+  not-supported helper registers the component under ref 99 and asserts the whole refusal.
 - **Names that contradict their bodies:**
   - `SwingDragToolTest.virtualChildAsSourceResolvesToHostComponent` drags the JList itself,
     not a child.

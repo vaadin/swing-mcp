@@ -24,6 +24,7 @@ import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import javax.accessibility.Accessible;
 import javax.swing.*;
 import java.awt.*;
 import java.util.Arrays;
@@ -227,20 +228,17 @@ class SwingGetTextTest extends AbstractHeadlessTest {
     // Component matrix — not supported
     // ══════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Calls the tool under a known ref, so a component the snapshot gives no ref is refused by
+     * the tool rather than skipped.
+     */
     private void assertGetTextNotSupported(Component component) throws Exception {
-        snapshot(component);
-        int ref;
-        try {
-            ref = context.getRefOf(component);
-        } catch (IllegalStateException e) {
-            // Component has no ref (no actions) — cannot call get_text, skip
-            return;
-        }
+        context.putRef(99, (Accessible) component);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getText(ref));
-        assertTrue(ex.getMessage().contains("does not support swing_get_text"),
-                "Expected get_text not supported for " + component.getClass().getSimpleName()
-                        + ", got: " + ex.getMessage());
+                () -> getText(99));
+        assertEquals(component.getClass().getSimpleName()
+                        + " does not support swing_get_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                ex.getMessage());
     }
 
     @Test
@@ -285,17 +283,12 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JPanel() throws Exception {
-        JPanel panel = new JPanel();
-        panel.setName("TestPanel");
-        snapshot(panel);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(panel));
+        assertGetTextNotSupported(new JPanel());
     }
 
     @Test
     void componentMatrix_JScrollPane() throws Exception {
-        JScrollPane sp = new JScrollPane(new JTextArea("content"));
-        snapshot(sp);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(sp));
+        assertGetTextNotSupported(new JScrollPane(new JTextArea("content")));
     }
 
     @Test
@@ -303,16 +296,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         JTabbedPane tp = new JTabbedPane();
         tp.addTab("Tab1", new JPanel());
         tp.addTab("Tab2", new JPanel());
-        // JTabbedPane may or may not get a ref; if it does, get_text should fail
-        snapshot(tp);
-        try {
-            int ref = context.getRefOf(tp);
-            MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                    () -> getText(ref));
-            assertTrue(ex.getMessage().contains("does not support swing_get_text"));
-        } catch (IllegalStateException e) {
-            // No ref assigned — acceptable
-        }
+        assertGetTextNotSupported(tp);
     }
 
     @Test
@@ -323,20 +307,8 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JLabel() throws Exception {
-        JLabel label = new JLabel("Hello");
-        snapshot(label);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(label));
-    }
-
-    @Test
-    void dr015_plainJLabel_returnsGenericGetTextError() throws Exception {
-        // D_label_not_readable. A JLabel never gets a ref, so one is injected.
-        JLabel label = new JLabel("Hello");
-        context.putRef(99, (javax.accessibility.Accessible) label);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getText(99));
-        assertTrue(ex.getMessage().contains("does not support swing_get_text"),
-                "D_label_not_readable: plain JLabel must fail with generic error, got: " + ex.getMessage());
+        // D_label_not_readable.
+        assertGetTextNotSupported(new JLabel("Hello"));
     }
 
     @Test
@@ -394,26 +366,17 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenuBar() throws Exception {
-        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
-        JMenu menu = new JMenu("File");
-        mb.add(menu);
-        context.putRef(99, (javax.accessibility.Accessible) menu);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getText(99));
-        assertTrue(ex.getMessage().contains("does not support swing_get_text"));
+        mb.add(new JMenu("File"));
+        assertGetTextNotSupported(mb);
     }
 
     @Test
     void componentMatrix_JMenu() throws Exception {
-        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
-        context.putRef(99, (javax.accessibility.Accessible) menu);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getText(99));
-        assertTrue(ex.getMessage().contains("does not support swing_get_text"));
+        assertGetTextNotSupported(menu);
     }
 
     @Test
@@ -454,17 +417,12 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JTree() throws Exception {
-        JTree tree = new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root"));
-        snapshot(tree);
-        // JTree itself has no actions (selection suppressed, not truncated) — no ref
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(tree));
+        assertGetTextNotSupported(new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root")));
     }
 
     @Test
     void componentMatrix_JDesktopPane() throws Exception {
-        JDesktopPane desktop = new JDesktopPane();
-        context.putRef(99, desktop);
-        assertThrows(MCPErrorResponseException.class, () -> getText(99));
+        assertGetTextNotSupported(new JDesktopPane());
     }
 
     @Test
@@ -474,8 +432,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         iframe.setSize(150, 80);
         iframe.setVisible(true);
         desktop.add(iframe);
-        context.putRef(99, iframe);
-        assertThrows(MCPErrorResponseException.class, () -> getText(99));
+        assertGetTextNotSupported(iframe);
     }
 
     // ══════════════════════════════════════════════════════════════════════════

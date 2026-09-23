@@ -24,6 +24,7 @@ import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import javax.accessibility.Accessible;
 import javax.swing.*;
 import java.awt.*;
 import java.math.BigDecimal;
@@ -313,20 +314,17 @@ class SwingSetValueTest extends AbstractHeadlessTest {
     // Component matrix — not supported
     // ══════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Calls the tool under a known ref, so a component the snapshot gives no ref is refused by
+     * the tool rather than skipped.
+     */
     private void assertSetValueNotSupported(Component component) throws Exception {
-        snapshot(component);
-        int ref;
-        try {
-            ref = context.getRefOf(component);
-        } catch (IllegalStateException e) {
-            // Component has no ref (no actions) — cannot call set_value, skip
-            return;
-        }
+        context.putRef(99, (Accessible) component);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> setValue(ref, 42.0));
-        assertTrue(ex.getMessage().contains("does not support swing_set_value"),
-                "Expected set_value not supported for " + component.getClass().getSimpleName()
-                        + ", got: " + ex.getMessage());
+                () -> setValue(99, 42.0));
+        assertEquals(component.getClass().getSimpleName()
+                        + " does not support swing_set_value. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                ex.getMessage());
     }
 
     @Test
@@ -383,24 +381,17 @@ class SwingSetValueTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JLabel() throws Exception {
-        JLabel label = new JLabel("Hello");
-        snapshot(label);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(label));
+        assertSetValueNotSupported(new JLabel("Hello"));
     }
 
     @Test
     void componentMatrix_JPanel() throws Exception {
-        JPanel panel = new JPanel();
-        panel.setName("TestPanel");
-        snapshot(panel);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(panel));
+        assertSetValueNotSupported(new JPanel());
     }
 
     @Test
     void componentMatrix_JScrollPane() throws Exception {
-        JScrollPane sp = new JScrollPane(new JTextArea("content"));
-        snapshot(sp);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(sp));
+        assertSetValueNotSupported(new JScrollPane(new JTextArea("content")));
     }
 
     @Test
@@ -408,39 +399,22 @@ class SwingSetValueTest extends AbstractHeadlessTest {
         JTabbedPane tp = new JTabbedPane();
         tp.addTab("Tab1", new JPanel());
         tp.addTab("Tab2", new JPanel());
-        snapshot(tp);
-        try {
-            int ref = context.getRefOf(tp);
-            MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                    () -> setValue(ref, 1.0));
-            assertTrue(ex.getMessage().contains("does not support swing_set_value"));
-        } catch (IllegalStateException e) {
-            // No ref assigned — acceptable
-        }
+        assertSetValueNotSupported(tp);
     }
 
     @Test
     void componentMatrix_JMenuBar() throws Exception {
-        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
-        JMenu menu = new JMenu("File");
-        mb.add(menu);
-        context.putRef(99, (javax.accessibility.Accessible) menu);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> setValue(99, 42.0));
-        assertTrue(ex.getMessage().contains("does not support swing_set_value"));
+        mb.add(new JMenu("File"));
+        assertSetValueNotSupported(mb);
     }
 
     @Test
     void componentMatrix_JMenu() throws Exception {
-        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
-        context.putRef(99, (javax.accessibility.Accessible) menu);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> setValue(99, 42.0));
-        assertTrue(ex.getMessage().contains("does not support swing_set_value"));
+        assertSetValueNotSupported(menu);
     }
 
     @Test
@@ -481,9 +455,7 @@ class SwingSetValueTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JDesktopPane() throws Exception {
-        JDesktopPane desktop = new JDesktopPane();
-        context.putRef(99, desktop);
-        assertThrows(MCPErrorResponseException.class, () -> setValue(99, 42.0));
+        assertSetValueNotSupported(new JDesktopPane());
     }
 
     @Test
@@ -493,8 +465,7 @@ class SwingSetValueTest extends AbstractHeadlessTest {
         iframe.setSize(150, 80);
         iframe.setVisible(true);
         desktop.add(iframe);
-        context.putRef(99, iframe);
-        assertThrows(MCPErrorResponseException.class, () -> setValue(99, 42.0));
+        assertSetValueNotSupported(iframe);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
