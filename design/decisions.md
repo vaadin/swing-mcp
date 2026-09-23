@@ -700,6 +700,11 @@ renders normally — `[iconified]`, its ref, its window-level actions — and it
 neither ref-assigned nor rendered. One placeholder line under it says the contents are hidden and
 names `swing_restore`.
 
+**Filtered or not.** A filter never searches the hidden children, and a filtered snapshot always
+lists every iconified frame with its placeholder, match or not. Otherwise a filter that hit only
+hidden content would leak the children, and one that missed would say "no match" without
+pointing at the one window that might hold it.
+
 **Why.** An iconified `JFrame` looks entirely normal through the accessibility API: it stays
 `isShowing()`, its children stay accessible, and `printAll()` still renders its full content
 (`R_iconified_windows`). So the screenshot showed an ordinary window, the snapshot listed

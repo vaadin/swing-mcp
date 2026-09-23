@@ -183,5 +183,7 @@ see where a match sits) **and all their descendants** (so a matched container ke
 Non-matching sibling branches are dropped. Output opens with
 `[filter active: only nodes matching "<filter>" and their ancestors/descendants are shown]`;
 root separators and modal headers are dropped, since neither carries matchable content. Refs are
-unaffected — filtering happens after they are assigned. No match returns
+unaffected — filtering happens after they are assigned. An iconified `Frame` is always listed,
+with its placeholder and never its children, whether it matches or not
+(`D_iconified_children_hidden`). No match, and no iconified frame, returns
 `No lines matched filter_substring 'X'`.

@@ -664,6 +664,71 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
         }
     }
 
+    private String filteredSnapshot(String filter, Component... roots) throws Exception {
+        context.setConsideredComponents(Arrays.asList(roots));
+        MCPProtocol.Content result = executeOnEDT(() -> tool.execute(
+                new Parameters(Map.of("filter_substring", filter)), context));
+        return result.getText();
+    }
+
+    /**
+     * A filtered snapshot never shows an iconified frame's children, but always lists the frame
+     * and its placeholder: what the filter looks for may be hidden there.
+     */
+    @Test
+    void sc8_filteredSnapshot_iconifiedFrameAlwaysListedChildrenNever() throws Exception {
+        JFrame iconifiedFrame = newUnfocusableFrame("Minimized");
+        iconifiedFrame.getContentPane().add(new JButton("Hidden"));
+        JFrame normalFrame = newUnfocusableFrame("Active");
+        normalFrame.getContentPane().add(new JButton("Visible"));
+        try {
+            executeOnEDT(() -> {
+                iconifiedFrame.setSize(300, 200);
+                iconifiedFrame.setVisible(true);
+                normalFrame.setSize(300, 200);
+                normalFrame.setVisible(true);
+                return null;
+            });
+            executeOnEDT(() -> { iconifiedFrame.setExtendedState(Frame.ICONIFIED); return null; });
+            awaitExtendedState(iconifiedFrame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
+
+            String minimized = "- JFrame (frame) \"Minimized\" [ref=1, iconified] actions: close, restore\n"
+                    + "  - [Contents hidden — window is iconified. Call swing_restore to interact with this window.]";
+
+            // Matches only a hidden child: the child stays hidden.
+            assertEquals(
+                    "[filter active: only nodes matching \"Hidden\" and their ancestors/descendants are shown]\n"
+                    + minimized,
+                    filteredSnapshot("Hidden", iconifiedFrame, normalFrame));
+
+            // Matches the iconified frame's own line.
+            assertEquals(
+                    "[filter active: only nodes matching \"Minimized\" and their ancestors/descendants are shown]\n"
+                    + minimized,
+                    filteredSnapshot("Minimized", iconifiedFrame, normalFrame));
+
+            // Matches in the normal frame: the iconified one is listed beside it.
+            assertEquals(
+                    "[filter active: only nodes matching \"Visible\" and their ancestors/descendants are shown]\n"
+                    + minimized + "\n"
+                    + "- JFrame (frame) \"Active\" [ref=2] actions: close, iconify\n"
+                    + "  - JButton (push_button) \"Visible\" [ref=3] actions: click",
+                    filteredSnapshot("Visible", iconifiedFrame, normalFrame));
+
+            // Matches nothing: the iconified frame is still listed, not "No lines matched".
+            assertEquals(
+                    "[filter active: only nodes matching \"nonexistent\" and their ancestors/descendants are shown]\n"
+                    + minimized,
+                    filteredSnapshot("nonexistent", iconifiedFrame, normalFrame));
+        } finally {
+            executeOnEDT(() -> {
+                iconifiedFrame.dispose();
+                normalFrame.dispose();
+                return null;
+            });
+        }
+    }
+
     @Test
     void sc8_iconifiedJInternalFrame_handledBySC5NotSC8() throws Exception {
         // An iconified JInternalFrame renders as its JDesktopIcon (D_desktop_icon_as_itself),

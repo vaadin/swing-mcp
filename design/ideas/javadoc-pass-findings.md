@@ -10,13 +10,6 @@ numbers are from the commit after the pass.
 
 ## Possible code bugs — swing-mcp
 
-- **`SnapshotNode.renderFiltered`** (`SnapshotNode.java:701`): suppose an iconified frame does not
-  match the filter. It gets `renderSelfLine` and then recurses into its matching children, which
-  emits them without refs. That breaks `D_iconified_children_hidden`, because the unfiltered
-  `render` emits the placeholder instead.
-  **Checked:** the code does recurse regardless of the iconified state.
-  **Still open:** whether the built tree holds an iconified frame's children at all
-  (`Q_iconified_filter`). A filtered snapshot test over an iconified frame would settle it.
 - **`SwingUtils.isIconified`** (`SwingUtils.java:446`): the `JInternalFrame` branch requires
   `iframe.isShowing() && iframe.isIcon()`. `R_iconified_windows` says an iconified internal
   frame is not showing, so the branch may never return true. The desktop icon covers restore,

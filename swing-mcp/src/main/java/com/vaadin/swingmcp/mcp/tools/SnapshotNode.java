@@ -460,8 +460,8 @@ class SnapshotNode {
     }
 
     /**
-     * Sets every descendant's {@link #ref} to {@code 0}, so that {@link #getSelfLine()} does not
-     * throw on a hidden child a filter reaches.
+     * Sets every descendant's {@link #ref} to {@code 0}, so that {@link #getSelfLine()} cannot
+     * throw on a hidden child.
      */
     private void markChildRefsZero() {
         for (SnapshotNode child : children) {
@@ -681,10 +681,16 @@ class SnapshotNode {
         return getSelfLine().toLowerCase().contains(filterLower);
     }
 
-    /** True when this node or a descendant {@linkplain #matchesFilter matches}. */
+    /**
+     * True when this node or a descendant {@linkplain #matchesFilter matches}; an iconified
+     * frame's children are never searched (D_iconified_children_hidden).
+     */
     boolean subtreeMatchesFilter(String filterLower) {
         if (matchesFilter(filterLower)) {
             return true;
+        }
+        if (isIconifiedFrame()) {
+            return false;
         }
         for (int i = 0; i < children.size(); i++) {
             if (children.get(i).subtreeMatchesFilter(filterLower)) {
@@ -696,10 +702,12 @@ class SnapshotNode {
 
     /**
      * Renders a matching node with its whole subtree, and a non-matching one as its own line
-     * above its matching branches. Call only where {@link #subtreeMatchesFilter} holds.
+     * above its matching branches. An iconified frame renders as {@link #render} does, its
+     * placeholder included, match or not (D_iconified_children_hidden). Call only where
+     * {@link #subtreeMatchesFilter} or {@link #isIconifiedFrame} holds.
      */
     void renderFiltered(String filterLower, int depth, StringBuilder sb) {
-        if (matchesFilter(filterLower)) {
+        if (matchesFilter(filterLower) || isIconifiedFrame()) {
             render(depth, sb);
         } else {
             renderSelfLine(depth, sb);
