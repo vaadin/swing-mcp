@@ -344,6 +344,53 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
                 "JDesktopIcon should still be present after vetoed restore");
     }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // JInternalFrame iconified in place (no JDesktopPane) — R_iconified_windows
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private JInternalFrame showInternalFrameOutsideDesktopPane() throws Exception {
+        JFrame host = new JFrame("Host");
+        host.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        JLayeredPane layeredPane = new JLayeredPane();
+        host.setContentPane(layeredPane);
+        JInternalFrame iframe = new JInternalFrame("Doc", false, true, false, true);
+        iframe.setBounds(10, 10, 150, 80);
+        layeredPane.add(iframe);
+        currentWindow = host;
+        executeOnEDT(() -> {
+            host.setSize(400, 300);
+            host.setVisible(true);
+            iframe.setVisible(true);
+            return null;
+        });
+        return iframe;
+    }
+
+    @Test
+    void restoringJInternalFrameIconifiedInPlaceRestoresIt() throws Exception {
+        JInternalFrame iframe = showInternalFrameOutsideDesktopPane();
+        JFrame host = (JFrame) SwingUtilities.getWindowAncestor(iframe);
+        executeOnEDT(() -> { iframe.setIcon(true); return null; });
+        assertTrue(iframe.isShowing(), "precondition: iconified in place, still showing");
+
+        snapshot(host);
+        int ref = context.getRefOf(iframe);
+        MCPProtocol.Content result = restore(ref);
+
+        assertEquals("Dispatched restore on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText());
+        assertFalse(iframe.isIcon(), "internal frame should no longer be iconified");
+    }
+
+    @Test
+    void nonIconifiedJInternalFrameViaStaleRefReturnsMcpError() throws Exception {
+        JInternalFrame iframe = showInternalFrameOutsideDesktopPane();
+
+        context.putRef(99, iframe);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> executeOnEDT(() -> restoreTool.execute(new Parameters(Map.of("ref", 99)), context)));
+        assertEquals("JInternalFrame is not iconified. Call swing_snapshot to verify the current state", ex.getMessage());
+    }
+
     @Test
     void normalJInternalFrameDoesNotShowRestoreInSnapshot() throws Exception {
         JInternalFrame iframe = showInternalFrame(true);

@@ -197,8 +197,9 @@ class SnapshotNode {
     }
 
     /**
-     * True for an iconified {@link Frame}. Never for a {@link JInternalFrame}: an iconified one
-     * is replaced by its {@code JDesktopIcon} in the tree (D_desktop_icon_as_itself).
+     * True for an iconified {@link Frame}, whose children the snapshot hides. Never for a
+     * {@link JInternalFrame}: either its {@code JDesktopIcon} replaced it in the tree, or it was
+     * iconified in place and its children are still on screen (R_iconified_windows).
      */
     boolean isIconifiedFrame() {
         return accessible instanceof Frame
@@ -254,7 +255,8 @@ class SnapshotNode {
         }
 
         // Aqua nests the icons in a non-accessible Dock, hiding them from the walk above
-        // (D_desktop_icon_as_itself).
+        // (D_desktop_icon_as_itself). An icon with no parent was never added: its frame was
+        // iconified in place (R_iconified_windows).
         if (accessible instanceof JDesktopPane) {
             Set<Accessible> alreadyFound = new HashSet<>(children.size());
             for (SnapshotNode child : children) {
@@ -263,7 +265,7 @@ class SnapshotNode {
             for (JInternalFrame f : ((JDesktopPane) accessible).getAllFrames()) {
                 if (f.isIcon()) {
                     JInternalFrame.JDesktopIcon icon = f.getDesktopIcon();
-                    if (icon != null && !alreadyFound.contains(icon)) {
+                    if (icon != null && icon.getParent() != null && !alreadyFound.contains(icon)) {
                         children.add(build(icon));
                     }
                 }
@@ -460,8 +462,8 @@ class SnapshotNode {
     }
 
     /**
-     * Sets every descendant's {@link #ref} to {@code 0}, so that {@link #getSelfLine()} does not
-     * throw on a hidden child a filter reaches.
+     * Sets every descendant's {@link #ref} to {@code 0}, so that {@link #getSelfLine()} cannot
+     * throw on a hidden child.
      */
     private void markChildRefsZero() {
         for (SnapshotNode child : children) {
@@ -638,8 +640,8 @@ class SnapshotNode {
             }
         }
         // The JDK never puts ICONIFIED in the state set (D_synthetic_iconified_state).
-        if (accessible instanceof Frame
-                && (((Frame) accessible).getExtendedState() & Frame.ICONIFIED) != 0) {
+        if (isIconifiedFrame()
+                || (accessible instanceof JInternalFrame && ((JInternalFrame) accessible).isIcon())) {
             bracketParts.add("iconified");
         }
         if (!bracketParts.isEmpty()) {
@@ -681,10 +683,16 @@ class SnapshotNode {
         return getSelfLine().toLowerCase().contains(filterLower);
     }
 
-    /** True when this node or a descendant {@linkplain #matchesFilter matches}. */
+    /**
+     * True when this node or a descendant {@linkplain #matchesFilter matches}; an iconified
+     * frame's children are never searched (D_iconified_children_hidden).
+     */
     boolean subtreeMatchesFilter(String filterLower) {
         if (matchesFilter(filterLower)) {
             return true;
+        }
+        if (isIconifiedFrame()) {
+            return false;
         }
         for (int i = 0; i < children.size(); i++) {
             if (children.get(i).subtreeMatchesFilter(filterLower)) {
@@ -696,10 +704,12 @@ class SnapshotNode {
 
     /**
      * Renders a matching node with its whole subtree, and a non-matching one as its own line
-     * above its matching branches. Call only where {@link #subtreeMatchesFilter} holds.
+     * above its matching branches. An iconified frame renders as {@link #render} does, its
+     * placeholder included, match or not (D_iconified_children_hidden). Call only where
+     * {@link #subtreeMatchesFilter} or {@link #isIconifiedFrame} holds.
      */
     void renderFiltered(String filterLower, int depth, StringBuilder sb) {
-        if (matchesFilter(filterLower)) {
+        if (matchesFilter(filterLower) || isIconifiedFrame()) {
             render(depth, sb);
         } else {
             renderSelfLine(depth, sb);

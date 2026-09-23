@@ -29,9 +29,11 @@ import java.awt.Frame;
 import java.beans.PropertyVetoException;
 
 /**
- * MCP tool {@code swing_restore}: de-iconifies an iconified {@link Frame} or a
- * {@code JDesktopIcon} by ref — clearing only the frame's {@link Frame#ICONIFIED} bit, keeping
- * {@code MAXIMIZED_BOTH} and the rest, or calling the icon's frame's {@code setIcon(false)}.
+ * MCP tool {@code swing_restore}: de-iconifies an iconified {@link Frame}, {@link JInternalFrame}
+ * or {@code JDesktopIcon} by ref — clearing only the frame's {@link Frame#ICONIFIED} bit, keeping
+ * {@code MAXIMIZED_BOTH} and the rest, or calling the internal frame's {@code setIcon(false)}.
+ * An internal frame is the target only when it was iconified in place (R_iconified_windows);
+ * otherwise its icon is.
  */
 public class SwingRestoreTool extends AbstractSwingTool {
 
@@ -53,8 +55,9 @@ public class SwingRestoreTool extends AbstractSwingTool {
             SwingUtilities.invokeLater(() ->
                     frame.setExtendedState(frame.getExtendedState() & ~Frame.ICONIFIED));
         } else {
-            JInternalFrame.JDesktopIcon icon = (JInternalFrame.JDesktopIcon) accessible;
-            JInternalFrame iframe = icon.getInternalFrame();
+            JInternalFrame iframe = accessible instanceof JInternalFrame
+                    ? (JInternalFrame) accessible
+                    : ((JInternalFrame.JDesktopIcon) accessible).getInternalFrame();
             SwingUtilities.invokeLater(() -> {
                 try {
                     iframe.setIcon(false);
@@ -69,6 +72,9 @@ public class SwingRestoreTool extends AbstractSwingTool {
     private static String restoreErrorMessage(Accessible accessible) {
         if (accessible instanceof Frame) {
             return "Frame is not iconified. Call swing_snapshot to verify the current state";
+        }
+        if (accessible instanceof JInternalFrame) {
+            return "JInternalFrame is not iconified. Call swing_snapshot to verify the current state";
         }
         return ComponentClassResolver.resolveClassName(accessible)
                 + " does not support swing_restore. Call swing_snapshot or swing_get_cells to verify the list of actions";

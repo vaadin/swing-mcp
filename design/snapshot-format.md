@@ -65,8 +65,9 @@ Three are synthesized rather than read from `AccessibleStateSet`:
   snapshot shows `[disabled]`, a mutation tool refuses; if it does not, the tool accepts.
 - `read_only` — a text component exposing `AccessibleEditableText` but lacking `EDITABLE`. Its
   absence means editable, so no `editable` flag is ever emitted.
-- `iconified` — a `Frame` whose extended state has `ICONIFIED`; the JDK never puts it in the
-  state set (`R_iconified_windows`, `D_synthetic_iconified_state`).
+- `iconified` — a `Frame` whose extended state has `ICONIFIED`, or a `JInternalFrame` iconified
+  in place, whose `isIcon()` holds; the JDK never puts it in the state set
+  (`R_iconified_windows`, `D_synthetic_iconified_state`).
 
 Never shown, as noise or as always-true for a node that survived pruning: `visible`, `showing`,
 `enabled`, `editable`, `opaque`, `resizable`, `armed`, `transient`, `manages_descendants`.
@@ -183,5 +184,7 @@ see where a match sits) **and all their descendants** (so a matched container ke
 Non-matching sibling branches are dropped. Output opens with
 `[filter active: only nodes matching "<filter>" and their ancestors/descendants are shown]`;
 root separators and modal headers are dropped, since neither carries matchable content. Refs are
-unaffected — filtering happens after they are assigned. No match returns
+unaffected — filtering happens after they are assigned. An iconified `Frame` is always listed,
+with its placeholder and never its children, whether it matches or not
+(`D_iconified_children_hidden`). No match, and no iconified frame, returns
 `No lines matched filter_substring 'X'`.

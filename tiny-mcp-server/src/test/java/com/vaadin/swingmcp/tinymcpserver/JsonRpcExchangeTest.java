@@ -39,11 +39,11 @@ class JsonRpcExchangeTest {
     // ===== Transport failures =====
 
     @Test
-    void readBodyWrapsIoFailure() {
+    void parsePostWrapsIoFailure() {
         IOException cause = new IOException("connection reset");
         JsonRpcExchange rpc = new JsonRpcExchange(new FakeHttpExchange(PING).failIO(cause));
 
-        TransportIOException ex = assertThrows(TransportIOException.class, rpc::readBody);
+        TransportIOException ex = assertThrows(TransportIOException.class, rpc::parsePost);
         assertSame(cause, ex.getCause());
     }
 
@@ -94,19 +94,6 @@ class JsonRpcExchangeTest {
 
         assertEquals(204, exchange.getResponseCode());
         assertEquals("", exchange.getResponseBodyString());
-    }
-
-    @Test
-    void sendResponseRawEmbedsTheResultVerbatim() {
-        FakeHttpExchange exchange = new FakeHttpExchange(PING);
-        JsonRpcExchange rpc = new JsonRpcExchange(exchange);
-        rpc.parsePost();
-
-        rpc.sendResponseRaw("{\"precomputed\":true}");
-
-        assertEquals(200, exchange.getResponseCode());
-        assertEquals("{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"precomputed\":true}}",
-                exchange.getResponseBodyString());
     }
 
     @Test

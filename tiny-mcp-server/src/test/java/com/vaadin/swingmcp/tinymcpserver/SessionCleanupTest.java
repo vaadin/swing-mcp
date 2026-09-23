@@ -31,6 +31,8 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -237,6 +239,47 @@ class SessionCleanupTest {
         } finally {
             server.stop();
         }
+    }
+
+    // ===== Stop =====
+
+    @Test
+    void stopClosesEveryLiveSession() throws Exception {
+        RecordingServer server = newServer();
+        server.start();
+        MCPSession s1 = initAndGetSession(server);
+        MCPSession s2 = initAndGetSession(server);
+
+        server.stop();
+
+        assertEquals(0, server.getSessionCount());
+        assertEquals(Stream.of(s1.getId(), s2.getId()).sorted().collect(Collectors.toList()),
+                server.closedSessionIds.stream().sorted().collect(Collectors.toList()));
+    }
+
+    @Test
+    void onSessionClosedCanStillReachTheExecutorDuringStop() throws Exception {
+        AtomicReference<Object> executorSeen = new AtomicReference<>();
+        MCPHandler handler = new MCPHandler().setOnSessionClosed(session -> {
+            try {
+                executorSeen.set(session.getHandler().getExecutor());
+            } catch (IllegalStateException e) {
+                executorSeen.set(e);
+            }
+        });
+        HttpMCPServer server = new HttpMCPServer(0, "/mcp", handler);
+        server.start();
+        HttpClient.newHttpClient().send(HttpRequest.newBuilder(URI.create(server.getUrl()))
+                        .header("Content-Type", "application/json")
+                        .header("Accept", "application/json, text/event-stream")
+                        .POST(HttpRequest.BodyPublishers.ofString(
+                                "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\"}"))
+                        .build(),
+                HttpResponse.BodyHandlers.ofString());
+
+        server.stop();
+
+        assertInstanceOf(ScheduledExecutorService.class, executorSeen.get());
     }
 
     // ===== Executor =====

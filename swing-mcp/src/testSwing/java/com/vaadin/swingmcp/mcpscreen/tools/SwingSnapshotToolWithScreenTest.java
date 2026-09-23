@@ -178,6 +178,76 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
         assertTrue(text.contains("\"B\""), "snapshot should show button in second iframe");
     }
 
+    /**
+     * Outside a JDesktopPane, iconifying leaves the frame in place, children on screen
+     * (R_iconified_windows): [iconified] and restore, but no placeholder.
+     */
+    @Test
+    void jInternalFrameIconifiedInPlace_showsIconifiedStateAndChildren() throws Exception {
+        JFrame host = newUnfocusableFrame("Host");
+        JLayeredPane layeredPane = new JLayeredPane();
+        host.setContentPane(layeredPane);
+        JInternalFrame iframe = new JInternalFrame("Doc", false, false, false, true);
+        iframe.getContentPane().add(new JButton("OK"));
+        iframe.setBounds(10, 10, 150, 80);
+        layeredPane.add(iframe);
+        try {
+            executeOnEDT(() -> {
+                host.setSize(400, 300);
+                host.setVisible(true);
+                iframe.setVisible(true);
+                iframe.setIcon(true);
+                return null;
+            });
+
+            assertEquals(
+                    "- JFrame (frame) \"Host\" [ref=1] actions: close, iconify\n"
+                    + "  - JInternalFrame (internal_frame) \"Doc\" [ref=2, iconified] actions: restore\n"
+                    + "    - JButton (push_button) \"OK\" [ref=3] actions: click",
+                    snapshot(host));
+        } finally {
+            executeOnEDT(() -> { host.dispose(); return null; });
+        }
+    }
+
+    /**
+     * A DesktopManager that keeps the frame in place, shrunk to its title bar: the
+     * never-added JDesktopIcon stays out, and so does the button the shrink hid.
+     */
+    @Test
+    void jInternalFrameIconifiedByCustomDesktopManager_showsIconifiedStateNoIcon() throws Exception {
+        JFrame host = newUnfocusableFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        desktop.setDesktopManager(new DefaultDesktopManager() {
+            @Override
+            public void iconifyFrame(JInternalFrame f) {
+                f.setSize(f.getWidth(), 25);
+            }
+        });
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", false, false, false, true);
+        iframe.getContentPane().add(new JButton("OK"));
+        iframe.setBounds(10, 10, 150, 80);
+        desktop.add(iframe);
+        try {
+            executeOnEDT(() -> {
+                host.setSize(400, 300);
+                host.setVisible(true);
+                iframe.setVisible(true);
+                iframe.setIcon(true);
+                return null;
+            });
+
+            assertEquals(
+                    "- JFrame (frame) \"Host\" [ref=1] actions: close, iconify\n"
+                    + "  - JDesktopPane (desktop_pane)\n"
+                    + "    - JInternalFrame (internal_frame) \"Doc\" [ref=2, iconified] actions: restore",
+                    snapshot(host));
+        } finally {
+            executeOnEDT(() -> { host.dispose(); return null; });
+        }
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // JDialog tests
     // ══════════════════════════════════════════════════════════════════════════
@@ -655,6 +725,71 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
             assertThrows(IllegalStateException.class, () -> context.getRefOf(hiddenBtn));
 
             assertEquals(3, context.getRefOf(visibleBtn));
+        } finally {
+            executeOnEDT(() -> {
+                iconifiedFrame.dispose();
+                normalFrame.dispose();
+                return null;
+            });
+        }
+    }
+
+    private String filteredSnapshot(String filter, Component... roots) throws Exception {
+        context.setConsideredComponents(Arrays.asList(roots));
+        MCPProtocol.Content result = executeOnEDT(() -> tool.execute(
+                new Parameters(Map.of("filter_substring", filter)), context));
+        return result.getText();
+    }
+
+    /**
+     * A filtered snapshot never shows an iconified frame's children, but always lists the frame
+     * and its placeholder: what the filter looks for may be hidden there.
+     */
+    @Test
+    void sc8_filteredSnapshot_iconifiedFrameAlwaysListedChildrenNever() throws Exception {
+        JFrame iconifiedFrame = newUnfocusableFrame("Minimized");
+        iconifiedFrame.getContentPane().add(new JButton("Hidden"));
+        JFrame normalFrame = newUnfocusableFrame("Active");
+        normalFrame.getContentPane().add(new JButton("Visible"));
+        try {
+            executeOnEDT(() -> {
+                iconifiedFrame.setSize(300, 200);
+                iconifiedFrame.setVisible(true);
+                normalFrame.setSize(300, 200);
+                normalFrame.setVisible(true);
+                return null;
+            });
+            executeOnEDT(() -> { iconifiedFrame.setExtendedState(Frame.ICONIFIED); return null; });
+            awaitExtendedState(iconifiedFrame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
+
+            String minimized = "- JFrame (frame) \"Minimized\" [ref=1, iconified] actions: close, restore\n"
+                    + "  - [Contents hidden — window is iconified. Call swing_restore to interact with this window.]";
+
+            // Matches only a hidden child: the child stays hidden.
+            assertEquals(
+                    "[filter active: only nodes matching \"Hidden\" and their ancestors/descendants are shown]\n"
+                    + minimized,
+                    filteredSnapshot("Hidden", iconifiedFrame, normalFrame));
+
+            // Matches the iconified frame's own line.
+            assertEquals(
+                    "[filter active: only nodes matching \"Minimized\" and their ancestors/descendants are shown]\n"
+                    + minimized,
+                    filteredSnapshot("Minimized", iconifiedFrame, normalFrame));
+
+            // Matches in the normal frame: the iconified one is listed beside it.
+            assertEquals(
+                    "[filter active: only nodes matching \"Visible\" and their ancestors/descendants are shown]\n"
+                    + minimized + "\n"
+                    + "- JFrame (frame) \"Active\" [ref=2] actions: close, iconify\n"
+                    + "  - JButton (push_button) \"Visible\" [ref=3] actions: click",
+                    filteredSnapshot("Visible", iconifiedFrame, normalFrame));
+
+            // Matches nothing: the iconified frame is still listed, not "No lines matched".
+            assertEquals(
+                    "[filter active: only nodes matching \"nonexistent\" and their ancestors/descendants are shown]\n"
+                    + minimized,
+                    filteredSnapshot("nonexistent", iconifiedFrame, normalFrame));
         } finally {
             executeOnEDT(() -> {
                 iconifiedFrame.dispose();

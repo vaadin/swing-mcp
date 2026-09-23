@@ -90,14 +90,15 @@ public class SwingSnapshotTool extends AbstractSwingTool {
         if (filter != null && !filter.isEmpty()) {
             String filterLower = filter.toLowerCase();
 
-            boolean anyMatch = false;
+            // An iconified frame is listed whether or not it matches: what the filter looks for
+            // may sit among its hidden children (D_iconified_children_hidden).
+            List<SnapshotNode> shown = new ArrayList<>();
             for (SnapshotNode root : roots) {
-                if (root.subtreeMatchesFilter(filterLower)) {
-                    anyMatch = true;
-                    break;
+                if (root.isIconifiedFrame() || root.subtreeMatchesFilter(filterLower)) {
+                    shown.add(root);
                 }
             }
-            if (!anyMatch) {
+            if (shown.isEmpty()) {
                 return MCPProtocol.Content.text(
                         "No lines matched filter_substring '" + filter + "'");
             }
@@ -108,10 +109,8 @@ public class SwingSnapshotTool extends AbstractSwingTool {
                     .append("\" and their ancestors/descendants are shown]")
                     .append('\n');
 
-            for (SnapshotNode root : roots) {
-                if (root.subtreeMatchesFilter(filterLower)) {
-                    root.renderFiltered(filterLower, 0, filtered);
-                }
+            for (SnapshotNode root : shown) {
+                root.renderFiltered(filterLower, 0, filtered);
             }
 
             return MCPProtocol.Content.text(

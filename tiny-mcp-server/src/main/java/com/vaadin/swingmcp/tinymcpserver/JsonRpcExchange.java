@@ -81,15 +81,6 @@ class JsonRpcExchange {
         sendJsonBody(200, response.toJson());
     }
 
-    void sendResponseRaw(String resultJson) {
-        String json = "{\"jsonrpc\":\"2.0\",\"id\":" + MCPProtocol.toJson(requestId) + ",\"result\":" + resultJson + "}";
-        sendJsonBody(200, json);
-    }
-
-    void sendError(int code, String message) {
-        sendError(200, code, message);
-    }
-
     void sendError(int httpStatus, int code, String message) {
         MCPProtocol.ErrorObject errorObj = new MCPProtocol.ErrorObject();
         errorObj.setCode(code);
@@ -101,7 +92,7 @@ class JsonRpcExchange {
         sendJsonBody(httpStatus, GSON_WITH_NULLS.toJson(error));
     }
 
-    String readBody() {
+    private String readBody() {
         try (InputStream is = exchange.getRequestBody()) {
             requestBodyConsumed = true;
             return new String(is.readAllBytes(), StandardCharsets.UTF_8);

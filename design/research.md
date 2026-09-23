@@ -153,9 +153,14 @@ trims to its length — which is how long this file gets, so keep it short.
   `getAccessibleStateSet().contains(AccessibleState.ICONIFIED)` is `false`. **[verified 2026-04-14, Java 21]**
 - An iconified `JFrame` stays `isShowing() == true` and its children stay accessible — it looks
   entirely normal through the accessibility API, and `printAll()` still renders its full content. **[verified 2026-04-16, Java 21]**
-- An iconified `JInternalFrame` behaves oppositely: it is removed from both trees (`parent`
-  becomes `null`, `isShowing()` is `false`, and `ICONIFIED` is *not* in its state set) and a
-  `JDesktopIcon` takes its place as a child of the desktop pane. **[verified 2026-04-14, Java 21]**
+- An iconified `JInternalFrame` in a `JDesktopPane` behaves oppositely: it is removed from both
+  trees (`parent` becomes `null`, `isShowing()` is `false`, and `ICONIFIED` is *not* in its state
+  set) and a `JDesktopIcon` takes its place as a child of the desktop pane. **[verified 2026-04-14, Java 21]**
+- Outside a `JDesktopPane` (a plain `JLayeredPane` or `JPanel`) the swap never happens:
+  `DefaultDesktopManager.iconifyFrame` returns early when `getDesktopPane()` is `null`, so the
+  frame stays in place, showing, with its content, `isIcon() == true`, and its icon has no
+  parent. A custom `DesktopManager` that skips the swap has the same result. **[src]**
+  **[verified 2026-09-23, Temurin 11.0.32 / 17.0.20, Metal, Xvfb]**
 - On macOS Aqua the `JDesktopIcon` is nested inside a non-accessible
   `AquaInternalFramePaneUI$Dock` wrapper, so the desktop pane reports
   `getAccessibleChildrenCount() == 0` after iconification. Metal and Windows expose it directly. **[verified 2026-04-14, Java 21]**
