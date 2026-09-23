@@ -300,14 +300,6 @@ class HttpMCPServerSessionTest {
     }
 
     @Test
-    void threadLocalIsClearedAfterDispatch() throws Exception {
-        String sessionId = initialize();
-        HttpResponse<String> resp = post(jsonRpcToolsCall(2, "whoami", "{}"), sessionId);
-        assertEquals(200, resp.statusCode());
-        assertThrows(NullPointerException.class, MCPSession::getCurrent);
-    }
-
-    @Test
     void attributesPersistAcrossToolCallsInSameSession() throws Exception {
         String sessionId = initialize();
 

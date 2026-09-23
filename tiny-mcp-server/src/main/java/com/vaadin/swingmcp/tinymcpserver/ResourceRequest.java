@@ -17,6 +17,7 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
 import com.google.gson.JsonObject;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
 
@@ -31,14 +32,14 @@ public final class ResourceRequest {
 
     private final String uri;
     private final Map<String, String> transportHeaders;
-    private final JsonObject jsonRpcMeta;
+    private final @Nullable JsonObject jsonRpcMeta;
 
     /**
      * @param jsonRpcMeta the request's {@code params._meta}, or {@code null} if absent
      */
     public ResourceRequest(String uri,
                            Map<String, String> transportHeaders,
-                           JsonObject jsonRpcMeta) {
+                           @Nullable JsonObject jsonRpcMeta) {
         this.uri = uri;
         this.transportHeaders = transportHeaders;
         this.jsonRpcMeta = jsonRpcMeta;
@@ -52,7 +53,7 @@ public final class ResourceRequest {
         return transportHeaders;
     }
 
-    public JsonObject jsonRpcMeta() {
+    public @Nullable JsonObject jsonRpcMeta() {
         return jsonRpcMeta;
     }
 }

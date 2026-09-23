@@ -16,6 +16,8 @@
  */
 package com.vaadin.swingmcp.tinymcpserver;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -60,7 +62,8 @@ class MCPResourceHandler {
      * @throws IllegalStateException    if a resource with the same URI is
      *                                  already registered
      */
-    void addResource(String uri, String name, String description, String mimeType,
+    void addResource(String uri, String name, @Nullable String description,
+            @Nullable String mimeType,
             ResourceFunction function) {
         if (uri == null || uri.isBlank()) {
             throw new IllegalArgumentException("Resource URI must not be null or blank");

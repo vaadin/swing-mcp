@@ -25,6 +25,7 @@ import javax.swing.JDesktopPane;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JInternalFrame;
+import javax.swing.JWindow;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import java.awt.Window;
@@ -145,6 +146,15 @@ class SwingUtilsSupportsCloseTest extends AbstractScreenTest {
 
         assertFalse(SwingUtils.supportsClose(dialog),
                 "undecorated dialogs have no [×] button");
+    }
+
+    @Test
+    void showingJWindow_doesNotSupportClose() throws Exception {
+        JWindow window = new JWindow();
+        show(window);
+
+        assertFalse(SwingUtils.supportsClose(window),
+                "a JWindow is always undecorated, so it has no [×] button");
     }
 
     @Test

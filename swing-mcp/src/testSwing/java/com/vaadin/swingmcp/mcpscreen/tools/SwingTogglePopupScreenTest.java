@@ -242,14 +242,6 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
             String output = executeOnEDT(() ->
                     snapshotTool.execute(new Parameters(Map.of()), context).getText());
 
-            System.out.println("=== Snapshot with open combo popup ===");
-            System.out.println(output);
-            System.out.println("=== Visible windows: " + allVisible.size() + " ===");
-            for (Component c : allVisible) {
-                System.out.println("  " + c.getClass().getSimpleName()
-                        + " size=" + c.getWidth() + "x" + c.getHeight());
-            }
-
             long popupMenuCount = output.lines()
                     .filter(l -> l.contains("JPopupMenu") || l.contains("popup_menu"))
                     .count();

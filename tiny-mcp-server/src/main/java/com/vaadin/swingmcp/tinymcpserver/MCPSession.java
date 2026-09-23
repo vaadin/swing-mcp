@@ -144,9 +144,6 @@ public class MCPSession {
 
     /** Returns the owning handler — for tool code, the way to {@link MCPHandler#getExecutor()}. */
     public MCPHandler getHandler() {
-        if (handler == null) {
-            throw new IllegalStateException("Session was constructed without an owning handler");
-        }
         return handler;
     }
 
@@ -173,7 +170,7 @@ public class MCPSession {
     }
 
     private void checkLocked() {
-        if (!sessionLock.isLocked()) {
+        if (!sessionLock.isHeldByCurrentThread()) {
             throw new IllegalStateException("Invalid state: running outside of MCP session thread");
         }
     }
@@ -260,8 +257,7 @@ public class MCPSession {
             if (closed) {
                 throw new MCPServerException(404,
                         MCPServerException.SERVER_NOT_INITIALIZED,
-                        handler != null ? handler.tombstoneOrDefault(id)
-                                : MCPHandler.SESSION_NOT_FOUND_MESSAGE);
+                        handler.tombstoneOrDefault(id));
             }
             lastAccessNanos = System.nanoTime();
             instance.set(this);

@@ -21,6 +21,7 @@ import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tools.SwingTools;
+import org.jspecify.annotations.Nullable;
 
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
@@ -92,7 +93,7 @@ public class SwingSetValueTool extends AbstractSwingTool {
      * @throws MCPErrorResponseException if {@code value} is fractional and {@code current} is an
      *         {@code Integer} or {@code Long}
      */
-    static Number convertToType(Number value, Number current) {
+    static Number convertToType(Number value, @Nullable Number current) {
         if (current == null) {
             return value;
         }

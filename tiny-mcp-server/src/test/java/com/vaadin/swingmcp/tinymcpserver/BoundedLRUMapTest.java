@@ -111,8 +111,8 @@ class BoundedLRUMapTest {
         for (Thread w : workers) w.join();
         assertEquals(cap, m.size(), "size should settle at cap");
         // put trims under the same lock size() takes, so the transient cap+1 is
-        // never observable; the +1 is slack, not an expected state.
-        org.junit.jupiter.api.Assertions.assertTrue(maxObservedSize.get() <= cap + 1,
-                "size should never substantially exceed cap; observed " + maxObservedSize.get());
+        // never observable.
+        org.junit.jupiter.api.Assertions.assertTrue(maxObservedSize.get() <= cap,
+                "size should never exceed cap; observed " + maxObservedSize.get());
     }
 }

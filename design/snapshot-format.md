@@ -80,7 +80,8 @@ advertises and what a tool accepts cannot diverge:
 `decrement` / `toggle_expand`, matched against the `AccessibleAction` constants only · `get_text`
 / `set_text`, neither on a `PASSWORD_TEXT` or `LABEL` role (`D_password_not_readable`,
 `D_label_not_readable`) · `get_value` / `set_value` · a selection group label · `get_cells` /
-`get_cell_count` · `close` · `get_description`, only when the description hit its cap.
+`get_cell_count` · `close` · `iconify` · `restore` · `get_description`, only when the
+description hit its cap.
 
 A text component's dynamic `AccessibleAction` descriptions — `cut-to-clipboard`, `select-all`
 and the rest — are deliberately ignored: they are derived from `Action.NAME` at runtime, so they

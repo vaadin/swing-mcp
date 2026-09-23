@@ -56,31 +56,6 @@ import java.util.Objects;
  */
 public abstract class AbstractSwingTool {
 
-    public static final String TOOL_SWING_SNAPSHOT = "swing_snapshot";
-    public static final String TOOL_SWING_SCREENSHOT = "swing_screenshot";
-    public static final String TOOL_SWING_CLICK = "swing_click";
-    public static final String TOOL_SWING_TOGGLE_POPUP = "swing_toggle_popup";
-    public static final String TOOL_SWING_GET_TEXT = "swing_get_text";
-    public static final String TOOL_SWING_SET_TEXT = "swing_set_text";
-    public static final String TOOL_SWING_SET_VALUE = "swing_set_value";
-    public static final String TOOL_SWING_INCREMENT = "swing_increment";
-    public static final String TOOL_SWING_DECREMENT = "swing_decrement";
-    public static final String TOOL_SWING_TOGGLE_EXPAND = "swing_toggle_expand";
-    public static final String TOOL_SWING_GET_VALUE = "swing_get_value";
-    public static final String TOOL_SWING_CLOSE = "swing_close";
-    public static final String TOOL_SWING_GET_SELECTION = "swing_get_selection";
-    public static final String TOOL_SWING_SET_SELECTION = "swing_set_selection";
-    public static final String TOOL_SWING_CLEAR_SELECTION = "swing_clear_selection";
-    public static final String TOOL_SWING_GET_ITEMS = "swing_get_items";
-    public static final String TOOL_SWING_GET_ITEM_COUNT = "swing_get_item_count";
-    public static final String TOOL_SWING_SELECT_ALL = "swing_select_all";
-    public static final String TOOL_SWING_GET_CELLS = "swing_get_cells";
-    public static final String TOOL_SWING_GET_CELL_COUNT = "swing_get_cell_count";
-    public static final String TOOL_SWING_ICONIFY = "swing_iconify";
-    public static final String TOOL_SWING_RESTORE = "swing_restore";
-    public static final String TOOL_SWING_GET_DESCRIPTION = "swing_get_description";
-    public static final String TOOL_SWING_DRAG = "swing_drag";
-
     private final ToolDescriptor descriptor;
 
     /**

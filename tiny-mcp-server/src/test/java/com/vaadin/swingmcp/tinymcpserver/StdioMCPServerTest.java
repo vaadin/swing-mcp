@@ -33,6 +33,8 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -352,6 +354,25 @@ class StdioMCPServerTest {
         JsonObject resp = readResponse();
         assertEquals(3, resp.get("id").getAsInt());
         assertNull(resp.get("error"));
+    }
+
+    @Test
+    void reinitializeClosesTheReplacedSession() throws Exception {
+        AtomicReference<MCPSession> started = new AtomicReference<>();
+        List<MCPSession> closed = new CopyOnWriteArrayList<>();
+        handler.setOnSessionStarted(started::set);
+        handler.setOnSessionClosed(closed::add);
+        BufferedWriter w = startWorker();
+        send(w, initRequest(1));
+        readResponse();
+        MCPSession first = started.get();
+
+        send(w, initRequest(2));
+        readResponse();
+
+        assertEquals(List.of(first), closed);
+        assertTrue(first.isClosed());
+        assertNull(handler.getSession(first.getId()));
     }
 
     // ===== Session lifetime (D_stdio_never_evicts) =====

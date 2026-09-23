@@ -79,7 +79,13 @@ public final class Parameters {
         return (String) value;
     }
 
-    /** Returns a required integer parameter; a fractional value is rejected. */
+    /** {@code false} for a fractional value, and for one {@link Number#intValue()} would truncate. */
+    private static boolean isInt(Number num) {
+        double d = num.doubleValue();
+        return d % 1 == 0 && d >= Integer.MIN_VALUE && d <= Integer.MAX_VALUE;
+    }
+
+    /** Returns a required integer parameter; a fractional or out-of-{@code int}-range value is rejected. */
     public int getInt(String key) {
         Object value = raw.get(key);
         if (value == null) {
@@ -99,7 +105,7 @@ public final class Parameters {
                     "Parameter '" + key + "' must be an integer, got " + value.getClass().getSimpleName());
         }
         Number num = (Number) value;
-        if (num.doubleValue() % 1 != 0) {
+        if (!isInt(num)) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                     "Parameter '" + key + "' must be an integer, got " + num);
         }
@@ -160,7 +166,7 @@ public final class Parameters {
                 throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                         "Parameter '" + key + "' must be an array of integers");
             }
-            if (num.doubleValue() % 1 != 0) {
+            if (!isInt(num)) {
                 throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                         "Parameter '" + key + "' must be an array of integers, but element at index " + i + " is " + num);
             }
@@ -198,7 +204,7 @@ public final class Parameters {
                     "Parameter '" + key + "' must be an integer, got " + value.getClass().getSimpleName());
         }
         Number num = (Number) value;
-        if (num.doubleValue() % 1 != 0) {
+        if (!isInt(num)) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                     "Parameter '" + key + "' must be an integer, got " + num);
         }

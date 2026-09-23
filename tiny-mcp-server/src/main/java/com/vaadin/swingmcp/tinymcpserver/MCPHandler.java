@@ -244,7 +244,8 @@ public class MCPHandler {
      * @throws IllegalStateException    if the handler has been started, or a
      *                                  resource with that URI is already registered
      */
-    public void addResource(String uri, String name, String description, String mimeType,
+    public void addResource(String uri, String name, @Nullable String description,
+            @Nullable String mimeType,
             ResourceFunction function) {
         if (started) {
             throw new IllegalStateException("Cannot add resources after server has been started");
@@ -473,7 +474,11 @@ public class MCPHandler {
         for (MCPSession e : toEvict) {
             try {
                 e.close();
-                if (sessions.remove(e.getId(), e)) {
+                boolean removed;
+                synchronized (sessionGuardLock) {
+                    removed = sessions.remove(e.getId(), e);
+                }
+                if (removed) {
                     LOG.info("Session superseded: " + e.getId());
                     notifySessionClosed(e);
                 }

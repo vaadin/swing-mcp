@@ -278,13 +278,15 @@ class MCPSessionTest {
     }
 
     @Test
-    void runLockedReleasesLockAfterBlockEvenOnFailure() {
+    void runLockedReleasesLockAfterBlockEvenOnFailure() throws Exception {
         MCPSession s = freshSession();
         RuntimeException boom = new RuntimeException("boom");
         RuntimeException thrown = assertThrows(RuntimeException.class,
                 () -> s.runLocked(() -> { throw boom; }));
         assertSame(boom, thrown);
-        s.runLocked(() -> s.setAttribute("key", "value"));
+        // From another thread: the lock is reentrant, so this one would get it even if it leaked.
+        assertTrue(java.util.concurrent.CompletableFuture.supplyAsync(s::tryClose).get(),
+                "the session lock must be free after the failed block");
     }
 
     // ===== getCurrent() / ThreadLocal binding =====

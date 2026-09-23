@@ -17,6 +17,7 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
 import com.google.gson.JsonObject;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
 
@@ -32,7 +33,7 @@ public final class PromptRequest {
     private final String name;
     private final Map<String, String> arguments;
     private final Map<String, String> transportHeaders;
-    private final JsonObject jsonRpcMeta;
+    private final @Nullable JsonObject jsonRpcMeta;
 
     /**
      * @param jsonRpcMeta the request's {@code params._meta}, or {@code null} if absent
@@ -40,7 +41,7 @@ public final class PromptRequest {
     public PromptRequest(String name,
                          Map<String, String> arguments,
                          Map<String, String> transportHeaders,
-                         JsonObject jsonRpcMeta) {
+                         @Nullable JsonObject jsonRpcMeta) {
         this.name = name;
         this.arguments = arguments;
         this.transportHeaders = transportHeaders;
@@ -59,7 +60,7 @@ public final class PromptRequest {
         return transportHeaders;
     }
 
-    public JsonObject jsonRpcMeta() {
+    public @Nullable JsonObject jsonRpcMeta() {
         return jsonRpcMeta;
     }
 }

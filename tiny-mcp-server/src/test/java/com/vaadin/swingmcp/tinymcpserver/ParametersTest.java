@@ -87,6 +87,14 @@ class ParametersTest {
     }
 
     @Test
+    void getIntThrowsWhenOutOfIntRange() {
+        var params = new Parameters(Map.of("ref", 3_000_000_000L));
+        var ex = assertThrows(MCPServerException.class, () -> params.getInt("ref"));
+        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        assertEquals("Parameter 'ref' must be an integer, got 3000000000", ex.getMessage());
+    }
+
+    @Test
     void getIntThrowsWhenMissing() {
         var params = new Parameters(Map.of());
         var ex = assertThrows(MCPServerException.class, () -> params.getInt("ref"));

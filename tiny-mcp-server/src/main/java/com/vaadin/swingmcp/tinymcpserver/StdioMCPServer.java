@@ -184,8 +184,15 @@ public class StdioMCPServer {
             // Replace, not accumulate: a re-initialize would otherwise
             // orphan the old session in the handler's map.
             if (currentSession != null) {
-                handler.removeSession(currentSession.getId());
+                MCPSession old = currentSession;
                 currentSession = null;
+                handler.removeSession(old.getId());
+                old.close();
+                try {
+                    handler.notifySessionClosed(old);
+                } catch (RuntimeException e) {
+                    LOG.log(Level.WARNING, "onSessionClosed threw for " + old.getId(), e);
+                }
             }
             MCPHandler.InitializeOutcome outcome = handler.dispatchInitialize(request);
             currentSession = handler.getSession(outcome.sessionId());

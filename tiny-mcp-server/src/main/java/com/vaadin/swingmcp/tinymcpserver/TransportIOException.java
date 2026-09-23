@@ -25,7 +25,7 @@ import java.io.IOException;
  * code must not throw it — a handler-side I/O failure is an
  * {@link MCPServerException}.
  */
-class TransportIOException extends RuntimeException {
+public class TransportIOException extends RuntimeException {
 
     TransportIOException(IOException cause) {
         super(cause);

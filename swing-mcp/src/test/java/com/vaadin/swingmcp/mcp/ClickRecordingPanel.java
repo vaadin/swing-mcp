@@ -25,12 +25,14 @@ import java.util.List;
 /**
  * A {@code JPanel} whose own application {@code MouseListener} makes it a Tier 2 click target;
  * {@link #wasClicked()} reports whether it received exactly
- * MOUSE_PRESSED → MOUSE_RELEASED → MOUSE_CLICKED.
+ * MOUSE_PRESSED → MOUSE_RELEASED → MOUSE_CLICKED, each a single BUTTON1 click.
  */
 public class ClickRecordingPanel extends JPanel {
 
     private final List<Integer> eventIds = new ArrayList<>();
     private boolean sequenceValid = false;
+    /** Cleared by any event that is not a single BUTTON1 click. */
+    private boolean eventsValid = true;
 
     public ClickRecordingPanel() {
         // Give the panel a non-zero size so synthetic clicks have valid center coordinates
@@ -57,16 +59,13 @@ public class ClickRecordingPanel extends JPanel {
                         && eventIds.get(0) == MouseEvent.MOUSE_PRESSED
                         && eventIds.get(1) == MouseEvent.MOUSE_RELEASED
                         && eventIds.get(2) == MouseEvent.MOUSE_CLICKED) {
-                    sequenceValid = true;
+                    sequenceValid = eventsValid;
                 }
             }
 
             private void validateEvent(MouseEvent e) {
-                if (e.getButton() != MouseEvent.BUTTON1) {
-                    sequenceValid = false;
-                }
-                if (e.getClickCount() != 1) {
-                    sequenceValid = false;
+                if (e.getButton() != MouseEvent.BUTTON1 || e.getClickCount() != 1) {
+                    eventsValid = false;
                 }
             }
         });
@@ -83,5 +82,6 @@ public class ClickRecordingPanel extends JPanel {
     public void reset() {
         eventIds.clear();
         sequenceValid = false;
+        eventsValid = true;
     }
 }

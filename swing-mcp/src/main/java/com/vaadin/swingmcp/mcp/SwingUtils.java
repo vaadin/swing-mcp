@@ -380,7 +380,7 @@ public final class SwingUtils {
 
     /**
      * Returns {@code true} if {@code a} supports the synthetic {@code close} action: a showing
-     * {@link Window}, unless it is an undecorated {@code Frame} / {@code Dialog} or an
+     * {@code Frame} / {@code Dialog}, unless it is undecorated or an
      * {@code EXIT_ON_CLOSE} {@code JFrame}; a showing, closable {@link JInternalFrame} without
      * {@code EXIT_ON_CLOSE}; or a showing {@link JInternalFrame.JDesktopIcon} whose frame is
      * closable and not {@code EXIT_ON_CLOSE}.
@@ -389,6 +389,8 @@ public final class SwingUtils {
         if (a instanceof Window) {
             Window window = (Window) a;
             if (!window.isShowing()) return false;
+            // A bare Window (a JWindow, say) has no decorations, so no [×] button.
+            if (!(window instanceof Frame) && !(window instanceof Dialog)) return false;
             if (window instanceof Frame && ((Frame) window).isUndecorated()) return false;
             if (window instanceof Dialog && ((Dialog) window).isUndecorated()) return false;
             if (window instanceof JFrame &&
@@ -473,7 +475,7 @@ public final class SwingUtils {
      * {@link JInternalFrame.JDesktopIcon} to its frame's name — so an iconified frame keeps the
      * name it had.
      */
-    public static String getEffectiveAccessibleName(Accessible a) {
+    public static @Nullable String getEffectiveAccessibleName(Accessible a) {
         if (a instanceof JInternalFrame.JDesktopIcon) {
             JInternalFrame.JDesktopIcon icon = (JInternalFrame.JDesktopIcon) a;
 
