@@ -4,14 +4,64 @@ An in-process MCP (Model Context Protocol) HTTP server for Java Swing apps,
 designed to enable AI-driven inspection and interaction with Swing UIs.
 The primary use case is AI-assisted migration of Swing apps to Vaadin.
 
-## Architecture
+## Using in Swing Apps
 
-Subprojects:
+### Option 1: Java Agent (no code changes)
 
-- **`tiny-mcp-server`** — A generic, minimal MCP server in pure Java (GSON + built-in HttpServer): HTTP and stdio transports, plus a small HTTP client. No external framework dependencies.
-- **`swing-mcp`** — Swing-specific MCP tools built on top of `tiny-mcp-server`. Provides accessibility tree snapshots, screenshots, and UI interaction tools.
-- **`swing-mcp-agent`** — A Java Instrumentation Agent that starts the MCP server automatically via `-javaagent`. No code changes to the target app required.
-- **`test-apps`** — Demo Swing applications and screen-mode integration tests.
+Attach `swing-mcp-agent` as a `-javaagent` when launching your app.
+The MCP server starts automatically before `main()` runs:
+
+```bash
+java -javaagent:swing-mcp-agent-0.0.1-SNAPSHOT.jar -jar your-app.jar
+```
+
+The agent is a fat jar — it bundles all required dependencies, so no
+additional classpath entries are needed.
+
+### Option 2: Programmatic startup
+
+Add `swing-mcp` as a dependency and start `SwingMCP` from your code:
+
+```java
+public class Application {
+    public static void main(String[] args) {
+        new SwingMCP().startAndAutoStop();
+        SwingUtilities.invokeLater(() -> runApp());
+    }
+}
+```
+
+---
+
+In both cases the MCP server listens at `http://127.0.0.1:18088/mcp` by default.
+The agent takes another port from the `swing.mcp.port` system property
+(`java -Dswing.mcp.port=20000 -javaagent:… -jar your-app.jar`); register that
+URL instead.
+
+## Registering with Claude Code
+
+Register the in-process server once:
+
+```bash
+claude mcp add --transport http swing-mcp http://127.0.0.1:18088/mcp
+```
+
+### When the agent says the swing tools are missing
+
+Claude Code connects to MCP servers only when it starts. If the Swing app was
+not running then, `swing-mcp` is marked failed (`ECONNREFUSED`) and no
+`swing_*` tool exists for the whole session. The agent cannot fix this itself:
+`/mcp` is a command only you can run, and the server's own instructions never
+reached it. So:
+
+1. Start the Swing app.
+2. In Claude Code, run `/mcp` → `swing-mcp` → **Reconnect**.
+
+Tools that are listed but *failing* are a different case: the app went down
+mid-session. Restart it and nothing else — Claude Code re-initializes on its
+own at the next tool call. A connection refused with
+HTTP 409 means another session holds the app — see
+[Single session](#single-session).
 
 ## Known Limitations
 
@@ -50,9 +100,29 @@ Otherwise it falls back to dispatching synthetic `MouseEvent`s: those reach
 `MouseListener`, `MouseMotionListener` and `DragGestureRecognizer`, but whether the
 native transfer phase (`DropTarget` events) follows is platform-dependent.
 
+## Build
+
+```bash
+./gradlew                      # clean + build + all tests (default)
+./gradlew test                 # run all tests
+```
+
+## Project Layout
+
+Subprojects:
+
+- **`tiny-mcp-server`** — A generic, minimal MCP server in pure Java (GSON + built-in HttpServer): HTTP and stdio transports, plus a small HTTP client. No external framework dependencies.
+- **`swing-mcp`** — Swing-specific MCP tools built on top of `tiny-mcp-server`. Provides accessibility tree snapshots, screenshots, and UI interaction tools.
+- **`swing-mcp-agent`** — A Java Instrumentation Agent that starts the MCP server automatically via `-javaagent`. No code changes to the target app required.
+- **`test-apps`** — Demo Swing applications and screen-mode integration tests.
+
 ## Swing Component Reference
 
-How each Swing component appears in `swing_snapshot` output.
+How each Swing component appears in `swing_snapshot` output — which
+components are covered and what an agent will see of them. The agent itself
+does not need this section: it reads the snapshot and the instructions the
+server sends at connect time.
+
 Component-backed nodes use `JClassName (role)` format; non-Component virtual
 children (e.g. JList items, JTree nodes) use `(role)` only.
 
@@ -158,61 +228,6 @@ children (e.g. JList items, JTree nodes) use `(role)` only.
 - Mutation actions prefixed with `!` are unavailable because the component is disabled or read-only — a disabled button shows `actions: !click`, a read-only field `actions: get_text, !set_text`.
 - A custom subclass keeps its own name alongside the Swing class it extends: `SearchField -> JTextField (text)`.
 - The line grammar, the pruning rules behind the `Pruned?` column above, and the full state list are in [`design/snapshot-format.md`](design/snapshot-format.md).
-
-## Build
-
-```bash
-./gradlew                      # clean + build + all tests (default)
-./gradlew test                 # run all tests
-```
-
-## Using in Swing Apps
-
-### Option 1: Java Agent (no code changes)
-
-Attach `swing-mcp-agent` as a `-javaagent` when launching your app.
-The MCP server starts automatically before `main()` runs:
-
-```bash
-java -javaagent:swing-mcp-agent-0.0.1-SNAPSHOT.jar -jar your-app.jar
-```
-
-The agent is a fat jar — it bundles all required dependencies, so no
-additional classpath entries are needed.
-
-### Option 2: Programmatic startup
-
-Add `swing-mcp` as a dependency and start `SwingMCP` from your code:
-
-```java
-public class Application {
-    public static void main(String[] args) {
-        new SwingMCP().startAndAutoStop();
-        SwingUtilities.invokeLater(() -> runApp());
-    }
-}
-```
-
----
-
-In both cases the MCP server listens at `http://127.0.0.1:18088/mcp` by default.
-The agent takes another port from the `swing.mcp.port` system property
-(`java -Dswing.mcp.port=20000 -javaagent:… -jar your-app.jar`); register that
-URL instead.
-
-### Registering with Claude Code
-
-Register the in-process server once:
-
-```bash
-claude mcp add --transport http swing-mcp http://127.0.0.1:18088/mcp
-```
-
-Claude Code connects to MCP servers when it starts. If the Swing app is not
-running yet, `swing-mcp` shows as failed and its tools are missing; once the
-app is up, run `/mcp` → `swing-mcp` → **Reconnect**. A restart of the Swing
-app mid-session needs nothing: Claude Code re-initializes on its own at the
-next tool call.
 
 ## License
 
