@@ -17,8 +17,10 @@
 package com.vaadin.swingmcp.mcpscreen.tools;
 
 import com.vaadin.swingmcp.mcp.DragRecordingPanel;
+import com.vaadin.swingmcp.mcp.MouseEventRecorder;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.mcp.tools.SwingDragTool;
+import com.vaadin.swingmcp.mcp.tools.SwingGetCellsTool;
 import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
@@ -29,7 +31,9 @@ import org.junit.jupiter.api.Test;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseEvent;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -156,5 +160,85 @@ class SwingDragScreenTest extends AbstractScreenTest {
         snapshot(dialog);
         drag(context.getRefOf(source), context.getRefOf(target));
         assertTrue(source.wasDragged(), "Drag between panels in JDialog should work");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // The drag matrix's JList and JComboBox rows — here, not in SwingDragToolTest: headless,
+    // their UI delegate's press handler throws HeadlessException, which aborts the drag.
+    // ══════════════════════════════════════════════════════════════════════════
+
+    @Test
+    void jComboBoxAsSourceReceivesTheWholeDrag() throws Exception {
+        JFrame frame = new JFrame("Drag Test");
+        frame.setSize(400, 200);
+        JComboBox<String> combo = new JComboBox<>(new String[]{"A", "B"});
+        combo.setBounds(0, 0, 100, 50);
+        DragRecordingPanel target = new DragRecordingPanel();
+        target.setBounds(200, 0, 100, 50);
+        frame.getContentPane().setLayout(null);
+        frame.getContentPane().add(combo);
+        frame.getContentPane().add(target);
+
+        snapshot(frame);
+        MouseEventRecorder recorder = executeOnEDT(() -> MouseEventRecorder.attachTo(combo));
+        drag(context.getRefOf(combo), context.getRefOf(target));
+
+        assertEquals(MouseEventRecorder.SYNTHETIC_DRAG, recorder.getEventIds());
+    }
+
+    private static Point centerOf(Rectangle r) {
+        return new Point(r.x + r.width / 2, r.y + r.height / 2);
+    }
+
+    @Test
+    void jListAsSourceDragsFromItsCenter() throws Exception {
+        JFrame frame = new JFrame("Drag Test");
+        frame.setSize(400, 200);
+        JList<String> list = new JList<>(new String[]{"Item A", "Item B", "Item C"});
+        list.setBounds(0, 0, 100, 90);
+        DragRecordingPanel target = new DragRecordingPanel();
+        target.setBounds(200, 0, 100, 50);
+        frame.getContentPane().setLayout(null);
+        frame.getContentPane().add(list);
+        frame.getContentPane().add(target);
+
+        snapshot(frame);
+        MouseEventRecorder recorder = executeOnEDT(() -> MouseEventRecorder.attachTo(list));
+        drag(context.getRefOf(list), context.getRefOf(target));
+
+        assertEquals(MouseEventRecorder.SYNTHETIC_DRAG, recorder.getEventIds());
+        List<MouseEvent> events = recorder.getEvents();
+        assertEquals(new Point(50, 45), events.get(0).getPoint(), "press: the list's center");
+        // The target's center, in list-local coordinates.
+        assertEquals(new Point(250, 25), events.get(6).getPoint(), "release: the target's center");
+        assertFalse(target.wasDragged(), "every event goes to the source");
+    }
+
+    @Test
+    void virtualChildItemAsSourceResolvesToHostJList() throws Exception {
+        // A JList item is not a Component; the tool must walk getAccessibleParent() up to the JList.
+        JFrame frame = new JFrame("Drag Test");
+        frame.setSize(400, 200);
+        JList<String> list = new JList<>(new String[]{"Item A", "Item B", "Item C"});
+        list.setBounds(0, 0, 100, 90);
+        frame.getContentPane().setLayout(null);
+        frame.getContentPane().add(list);
+
+        snapshot(frame);
+        // get_cells replaces the ref map: ref 1 is the list, refs 2.. its items.
+        executeOnEDT(() -> new SwingGetCellsTool().execute(
+                new Parameters(Map.of("ref", context.getRefOf(list), "offset", 0, "length", 3)),
+                context));
+        MouseEventRecorder recorder = executeOnEDT(() -> MouseEventRecorder.attachTo(list));
+        drag(2, 4); // Item A onto Item C
+
+        assertEquals(MouseEventRecorder.SYNTHETIC_DRAG, recorder.getEventIds());
+        List<MouseEvent> events = recorder.getEvents();
+        assertEquals(executeOnEDT(() -> centerOf(list.getCellBounds(0, 0))),
+                events.get(0).getPoint(), "press: Item A's center");
+        assertEquals(executeOnEDT(() -> centerOf(list.getCellBounds(2, 2))),
+                events.get(6).getPoint(), "release: Item C's center");
+        // BasicListUI moves the selection with a drag, so it ends on the drop cell.
+        assertEquals(2, (int) executeOnEDT(list::getSelectedIndex));
     }
 }

@@ -46,8 +46,6 @@ numbers are from the commit after the pass.
   - `SwingClickToolTest.componentMatrix_JTabbedPane`
   - `componentMatrix_JScrollPane` in `SwingDecrementTest`, `SwingIncrementTest`,
     `SwingToggleExpandTest` and `SwingTogglePopupTest`
-  - `SwingDragToolTest.jListAsSourceDragsWithoutError` and
-    `virtualChildItemAsSourceResolvesToHostJList` pass as long as the drag does not throw
 - **Tests that assert `getRefOf` throws.** architecture.md § Testing calls that testing the
   harness, not the tool. They are in many headless tests, and in the JFrame / JDialog /
   JOptionPane matrix rows of the TogglePopup, Increment, Decrement and ToggleExpand screen tests.
