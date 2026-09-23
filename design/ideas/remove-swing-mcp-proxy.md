@@ -102,23 +102,14 @@ tiny-mcp-server product (its own design layer; cite across the boundary by path,
       - The new swing-mcp `D_` entry carries the why-not, so the forwarding-proxy entry needs no
         successor note. The reproduction recipe must survive in the new `R_` entry, since
         "re-measure it" is the answer to "should we bring the proxy back?".
-- [ ] **Delete `MCPHandler.setOnSessionStarted` and `setOnSessionClosed`** (owner, 2026-09-23).
-      After the proxy goes they have no production caller, and pre-1.0 an unused hook is a guess
-      at an API. `setAcceptNewSession` stays, because `SwingMCP` sets its single-session policy
-      through it.
-      - **The hooks are also the tests' window into the session lifecycle.** `SessionCleanupTest`
-        records closed ids through `onSessionClosed`, `SessionSupersedeTest` records started and
-        closed ids, and `StdioMCPServerTest` captures the started session. Those tests need
-        another way to observe, such as asserting on the handler's session map or on the wire
-        response, which is what a real client sees anyway.
-      - If that forces a test-only seam that is the hook in all but name, stop and reconsider
-        keeping `onSessionClosed`.
-      - `MCPHandlerListenerTest`, and the "a throwing listener does not strand other sessions"
-        case in `MCPHandlerDispatchTest`, go with the hooks.
-      - Shrink the settable-listeners entry ("Why are the session listeners
-      setters that lock…") to the one setter and its lock-after-first-session rule. Its "Why
-      setters at all" is `MCPProxy.newHandler` and needs a new reason or deletion, and its "Why
-      `onSessionStarted` exists" paragraph goes.
+- [ ] **Keep `MCPHandler.setOnSessionStarted` and `setOnSessionClosed` for now** (owner,
+      2026-09-23). After the proxy goes they have no production caller, but the session-lifecycle
+      tests observe through them, so removing them is its own job:
+      `design/ideas/remove-session-hooks.md`. For this removal, only make the settable-listeners
+      entry ("Why are the session listeners setters that lock…") truthful:
+      - its "Why setters at all" is `MCPProxy.newHandler`;
+      - its "Why `onSessionStarted` exists" says `MCPProxy` allocates per-session state there.
+      Both need to say what is true once the proxy is gone, without linking the idea file.
 - [ ] The structural-equality entry ("Why does `InputSchema` implement structural equality…"):
       **keep the code**. `SwingToolsCoherenceTest` compares `ToolDescriptor`s, and so
       `InputSchema`s, with `assertEquals`. Rewrite the entry's "why", which currently cites the
