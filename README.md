@@ -8,11 +8,9 @@ The primary use case is AI-assisted migration of Swing apps to Vaadin.
 
 Subprojects:
 
-- **`tiny-mcp-server`** — A generic, minimal MCP server in pure Java (GSON + built-in HttpServer): HTTP and stdio transports, plus the `MCPProxy` forwarding-proxy machinery. No external framework dependencies.
-- **`swing-mcp-tool-defs`** — Shared contract artifact: server identity (name / version / instructions), tool descriptors, and the session-lost message. Consumed by both `swing-mcp` and `swing-mcp-proxy` so both transports present bit-identical metadata.
+- **`tiny-mcp-server`** — A generic, minimal MCP server in pure Java (GSON + built-in HttpServer): HTTP and stdio transports, plus a small HTTP client. No external framework dependencies.
 - **`swing-mcp`** — Swing-specific MCP tools built on top of `tiny-mcp-server`. Provides accessibility tree snapshots, screenshots, and UI interaction tools.
 - **`swing-mcp-agent`** — A Java Instrumentation Agent that starts the MCP server automatically via `-javaagent`. No code changes to the target app required.
-- **`swing-mcp-proxy`** — Standalone stdio MCP server that Claude Code spawns as a subprocess and that forwards every `tools/call` to the in-process `swing-mcp` over loopback HTTP. Distributed as a self-contained fat jar.
 - **`test-apps`** — Demo Swing applications and screen-mode integration tests.
 
 ## Known Limitations
@@ -198,47 +196,23 @@ public class Application {
 ---
 
 In both cases the MCP server listens at `http://127.0.0.1:18088/mcp` by default.
+The agent takes another port from the `swing.mcp.port` system property
+(`java -Dswing.mcp.port=20000 -javaagent:… -jar your-app.jar`); register that
+URL instead.
 
 ### Registering with Claude Code
 
-Two ways to connect Claude Code to the running Swing app. The proxy is
-preferred — Claude Code launches stdio MCP servers as subprocesses
-natively, the proxy answers `tools/list` from a static manifest so it
-works even before the Swing app is up, and a Swing-app restart needs no
-re-registration (the proxy reconnects on the next `tools/call`).
-
-#### Preferred: stdio proxy
-
-Build the proxy fat jar (or download from Maven Central once published):
-
-```bash
-./gradlew :swing-mcp-proxy:shadowJar
-# → swing-mcp-proxy/build/libs/swing-mcp-proxy-0.0.1-SNAPSHOT.jar
-```
-
-Register it with Claude Code as a stdio MCP server:
-
-```bash
-claude mcp add swing-mcp -- java -jar /path/to/swing-mcp-proxy-0.0.1-SNAPSHOT.jar
-```
-
-If the in-process server runs on a non-default port, pass it via env:
-
-```bash
-claude mcp add -e SWING_MCP_PORT=20000 swing-mcp -- java -jar /path/to/swing-mcp-proxy-0.0.1-SNAPSHOT.jar
-```
-
-(The system property `swing.mcp.port` works too and takes precedence.)
-
-#### Traditional: direct HTTP
-
-Skip the proxy and have Claude Code talk to the in-process MCP server
-directly. Requires the Swing app to be running before Claude Code
-connects:
+Register the in-process server once:
 
 ```bash
 claude mcp add --transport http swing-mcp http://127.0.0.1:18088/mcp
 ```
+
+Claude Code connects to MCP servers when it starts. If the Swing app is not
+running yet, `swing-mcp` shows as failed and its tools are missing; once the
+app is up, run `/mcp` → `swing-mcp` → **Reconnect**. A restart of the Swing
+app mid-session needs nothing: Claude Code re-initializes on its own at the
+next tool call.
 
 ## License
 

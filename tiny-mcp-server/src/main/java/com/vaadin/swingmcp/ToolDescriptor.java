@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
  * schema. Distinct from the wire-shape POJO {@link MCPProtocol.Tool} —
  * that one is shaped for GSON serialization, this one is the
  * canonical descriptor passed around by callers (manifest declarations,
- * proxy wiring, in-process registration).
+ * in-process registration).
  *
  * <pre>{@code
  * new ToolDescriptor(
@@ -41,11 +41,9 @@ import java.util.regex.Pattern;
  * names, descriptions, and input schemas are equal. Schema equality
  * follows {@link MCPProtocol.InputSchema#equals(Object)} (D_structural_schema_equality):
  * deep, set-semantics on {@code required}, order-insensitive on
- * {@code properties}, order-sensitive on {@code enum}. This is the
- * predicate {@code MCPProxy}'s drift probe uses (D_forwarding_proxy) — extra care
- * with that contract is warranted because false positives become
- * spurious drift errors and false negatives become silent
- * mismatched-version bugs.
+ * {@code properties}, order-sensitive on {@code enum}. A manifest-coherence
+ * test compares descriptors with it, so a false negative hides real drift
+ * between a manifest and what the server registered.
  *
  * <p>See D_settable_listeners for the rationale of the type living in this parent
  * package alongside generic protocol types rather than under

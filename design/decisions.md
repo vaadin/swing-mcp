@@ -827,35 +827,63 @@ smaller of the two problems and none of the larger one.
 **Follow-up, if it is ever needed.** Bulk row access beyond the snapshot cap means row-dumping
 tools. Do not resurrect cell-indexed access to get there.
 
-## D_shared_tool_manifest — Why do both transports source their identity from a third module?
+## D_shared_tool_manifest — Why does every tool bind its name, description and schema from one manifest class?
 
-`swing-mcp-tool-defs` holds the server name and version, the instructions, the tool descriptors
-and the session-lost message; both `swing-mcp` and `swing-mcp-proxy` import them.
-`AbstractSwingTool` binds a `ToolDescriptor` at construction and makes its name, description and
-schema final, so a tool implementation cannot drift from the manifest even by accident.
+`SwingTools` holds the server name and version, the instructions and one `ToolDescriptor` per
+tool. `AbstractSwingTool` binds a descriptor at construction and makes its name, description and
+schema final, so a tool implementation cannot disagree with the manifest even by accident.
 
-**Why.** The failure being designed out is a proxy advertising a tool the in-process server no
-longer has, or the same tool with a different schema. The agent meets that as a call that fails
-for no stated reason, and no amount of retrying or re-reading the snapshot explains it. With one
-source of truth, the only remaining drift surface is "were both modules rebuilt and shipped
-together" — which is a deployment question, and exactly what the proxy's runtime probe catches.
-
-**Why a separate module rather than constants in `swing-mcp`.** Rejected — the proxy must not
-depend on `swing-mcp`, because that would drag the entire Swing stack into a standalone JVM that
-never opens a window. The manifest has to live somewhere both can reach without one reaching the
-other.
+**Why.** Everything the model reads about this server is in one file, and those texts refer to
+each other: the instructions name `swing_click` and `swing_set_text`, and most descriptions say
+"requires a ref obtained from `swing_snapshot` or `swing_get_cells`". Reviewed in one place, a
+rename or a changed contract is visible across all of them at once. Spread across the tool
+classes, each text reads fine alone, and the cross-reference that went stale is the one nobody
+opens.
 
 **Why bind the descriptor into `AbstractSwingTool` rather than let each tool declare its own
 name and schema.** Rejected — declaring them locally is how the drift starts. Making the three
 accessors final and descriptor-backed means a tool *cannot* disagree with the manifest, rather
 than being expected not to.
 
-**Why a developer-time test as well as the runtime probe.** A unit test boots the server, calls
-`listTools()` and compares the result structurally against the manifest, and separately asserts
-that `initialize` returns the shared identity constants. Without it, manifest-versus-registration
-drift would only ever be caught at runtime by the proxy — at which point it looks like a
-deployment-version mismatch, which is a different diagnosis with a different fix. The test keeps
-the runtime probe meaning only what it says.
+**Why a developer-time test as well.** `SwingToolsCoherenceTest` boots the server, calls
+`listTools()` and compares the result structurally against `SwingTools.ALL`, and asserts that
+`initialize` returns the identity constants. It catches the one drift the final accessors cannot:
+a descriptor in `ALL` that no tool registers, or a registered tool missing from `ALL`.
+
+**Why a class in `swing-mcp` rather than a module of its own.** The manifest was a module while a
+stdio proxy, running in its own JVM, needed it without the Swing stack. With the proxy gone
+(`D_direct_http_only`), a module would only add a build unit.
+
+## D_direct_http_only — Why does the MCP client connect to the in-process server directly rather than through a stdio proxy?
+
+The agent registers `http://127.0.0.1:18088/mcp` with its MCP client, which talks to `SwingMCP`
+over loopback. There is no process in between.
+
+**Why.** A proxy was built for two moments when the in-process server is not there: the
+application restarting mid-session, and the application not running yet when the client starts.
+Claude Code covers both (`R_claude_code_http_lifecycle`). A restart is recovered at the next tool
+call without the model noticing. A server that was down at startup comes back with one `/mcp`
+Reconnect once the application is up. What a proxy costs does not shrink. It is a second artifact
+to build, ship, register and keep in version step with the server, plus a manifest check between
+the two. And it is a stdio process that can wedge on its own: one expired its own session after
+half an hour idle and stayed broken until the client restarted.
+
+**Why not keep the proxy for the down-at-startup case.** Rejected, 2026-09-23. It saves one
+Reconnect per session that started before the application, at the whole price above, and in
+practice it never worked well. A proxy is cheap to rebuild and the client cheap to re-measure, so
+run the recipe in `R_claude_code_http_lifecycle` before reviving one.
+
+**Why the client's silent re-initialize after a restart is safe here.** tiny-mcp-server's own
+client deliberately never re-initializes on a lost session (its no-auto-retry decision, in
+`tiny-mcp-server/design/decisions.md`), because a replay against a fresh session can land on
+state nobody intended. Claude Code does exactly that. It is safe for this server because the ref
+map lives on the session. A restarted application starts with an empty one, so a ref the model
+held from before the restart is refused as stale rather than addressing a different widget, and
+the refusal tells the model to snapshot again.
+
+**What the model sees while the application is down.** The client's own `ECONNREFUSED` error,
+not a message of ours. The server instructions already say the application must be running and
+to ask the human to restart it; that is the recovery either way.
 
 ## D_single_session — Why does the server serve one agent at a time, and why does a newcomer win?
 
@@ -951,8 +979,9 @@ pure fire-and-forget shape.
 
 ## D_java11_floor — Why does the shipped code target Java 11 rather than 17?
 
-`options.release = 11` on `compileJava`; test source sets stay at 17. The published jars are
-class-file version 55, so they load into a Java 11 JVM.
+`options.release = 11` on every compile task, tests included; only tiny-mcp-server's
+`testOfficial` compiles at 17. The published jars are class-file version 55, so they load into a
+Java 11 JVM.
 
 **Why, at all.** This drops into a Swing application built years ago, and those run on old JVMs.
 In a corporate environment the JVM is frequently not the developer's to choose: it is what the
@@ -961,10 +990,12 @@ a workaround, it is the end of the evaluation. The failure is also total rather 
 class-file version error is a hard load failure at startup, not a degraded feature. The reach of
 the artifact is the whole argument, and a language floor is the cheapest way to buy it.
 
-**Why 11 and not 8.** `java.net.http.HttpClient` is the client side of `MCPProxy` and arrived in
-11; `var`, `List.of`/`List.copyOf` and `String.isBlank` are used throughout. Java 8 would mean
-hand-rolling an HTTP client on `HttpURLConnection` and losing the immutable-collection factories
-— real work, for a JVM generation the migration target no longer justifies.
+**Why 11 and not 8.** `var`, `List.of`/`List.copyOf` and `String.isBlank`/`repeat`/`strip` are
+used throughout the shipped code, and `TinyMCPClient` is built on `java.net.http.HttpClient`. The
+client ships in tiny-mcp-server's main source set although only tests use it. A `--release 8`
+compile of everything shipped fails with 69 errors (2026-09-23): nearly all mechanical, with the
+client the one real blocker. Java 8 would mean relocating or rewriting the client and every such
+call. That is real work, for a JVM generation nobody has yet shown the migration target needs.
 
 **Why not 17, keeping records and `sealed`.** Rejected on what it costs to reverse. The nine
 records and one sealed interface were about forty lines of hand-written boilerplate to undo

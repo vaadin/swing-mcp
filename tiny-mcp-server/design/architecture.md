@@ -18,9 +18,8 @@ the `R_`), one symbol's behaviour (its doc comment), the package map (`AGENTS.md
 - The two transports are shells over the same handler. `HttpMCPServer` adds the JDK `HttpServer`,
   method routing, `Mcp-Session-Id` validation and JSON-RPC framing over HTTP; `StdioMCPServer`
   adds a newline-delimited read loop and holds one implicit session.
-- `tinymcpclient` depends on `MCPProtocol` and on nothing else in the server package. `MCPProxy`
-  is the only type that depends on both directions — it builds a handler whose tool functions
-  are client calls.
+- `tinymcpclient` depends on `MCPProtocol` and on nothing else in the server package; nothing in
+  the server package depends on it.
 - Handler code never writes bytes. A handler method returns a result POJO or throws
   `MCPServerException`; `HttpMCPServer.handleRequest` is the single place an exception becomes a
   response (`D_three_error_layers`).
@@ -56,25 +55,6 @@ the `R_`), one symbol's behaviour (its doc comment), the package map (`AGENTS.md
    assertion, not a recovery path (`D_stdio_never_evicts`).
 5. Each response is written as one UTF-8 line to the private writer. EOF on stdin ends the loop
    and `stop()`s the handler in a `finally`.
-
-**The first `tools/call` through `MCPProxy`** (three upstream round trips; later calls pay one):
-
-1. `onSessionStarted` has already stashed a per-session state object — an unconnected
-   `TinyMCPClient`, `initialized = false`, `driftFailure = null` — on the session's attributes.
-   No upstream traffic yet.
-2. A cached `driftFailure` short-circuits here and returns the same message for the rest of the
-   session.
-3. Not yet initialized: the client `initialize`s upstream. `IOException` returns the
-   upstream-down message and leaves the state retryable — the next call tries again from scratch.
-4. The drift probe calls `listTools()` and compares it with the static manifest, symmetric and
-   hard-failing, using `InputSchema`'s structural equality (`D_structural_schema_equality`). A
-   mismatch caches `driftFailure` and returns the drift message.
-5. The call forwards with its `_meta` intact. `MCPSessionLostException` and a mid-call
-   `IOException` each return their own message and reset `initialized`, so the next call walks
-   lazy-init again; there is no silent re-initialize (`D_no_auto_retry`).
-6. Every message emitted to the model is a `ProxyMessages` string, verbatim. The diagnostic
-   detail — full descriptor JSON on drift, stack traces on IO failure — goes to JUL at WARNING
-   on stderr. Two audiences, two channels.
 
 **Session admission and eviction:**
 

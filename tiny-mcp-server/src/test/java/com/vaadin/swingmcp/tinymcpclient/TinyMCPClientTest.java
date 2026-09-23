@@ -298,7 +298,6 @@ class TinyMCPClientTest {
 
     @Test
     void callToolThreeArgOverloadForwardsMeta() throws IOException {
-        // D_settable_listeners: explicit-meta convenience overload used by MCPProxy.
         JsonObject meta = new JsonObject();
         meta.addProperty("progressToken", "tkn-3arg");
         try (MCPClient client = newClient()) {
@@ -322,9 +321,8 @@ class TinyMCPClientTest {
 
     @Test
     void metaIsForwardedToServer() throws IOException {
-        // The proxy use case relies on this: cross-cutting fields like
-        // progressToken must survive a hop through a forwarding proxy by
-        // riding through params._meta on the outgoing request.
+        // Cross-cutting fields like progressToken ride through params._meta
+        // on the outgoing request.
         JsonObject meta = new JsonObject();
         meta.add("progressToken", new JsonPrimitive("abc-123"));
         meta.addProperty("custom", 7);

@@ -1,7 +1,7 @@
 # Lower the Java floor from 11 to 8?
 
-Split out of `remove-swing-mcp-proxy.md` on 2026-09-23. The floor **stays at 11** for that
-removal; this idea asks whether to go lower afterwards.
+Split out of the proxy removal on 2026-09-23, which kept the floor at 11. This idea asks
+whether to go lower.
 
 ## Why it might matter
 
@@ -13,9 +13,10 @@ whether this is worth doing at all (`Q_market`).
 
 ## Measured cost, 2026-09-23
 
-`javac --release 8` over every shipped main source set: tiny-mcp-server, swing-mcp-tool-defs,
-swing-mcp and swing-mcp-agent, about 13 k lines. It uses gson 2.13.2 and jspecify 1.0 on the
-classpath and reports **69 errors**:
+`javac --release 8` over every shipped main source set: tiny-mcp-server, swing-mcp-tool-defs
+(since folded into swing-mcp), swing-mcp and swing-mcp-agent, about 13 k lines, with gson
+2.13.2 and jspecify 1.0 on the classpath. Measured before the proxy removal, so the counts
+include `MCPProxy` and `AutoRetryMCPClient`. It reports **69 errors**:
 
 | Module | Errors |
 |---|---|

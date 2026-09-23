@@ -65,13 +65,7 @@ public abstract class AbstractSwingTool {
     public static final String TOOL_SWING_GET_DESCRIPTION = "swing_get_description";
     public static final String TOOL_SWING_DRAG = "swing_drag";
 
-    /**
-     * Manifest descriptor (name, description, schema) supplied by the
-     * subclass at construction time — typically one of the
-     * {@code SwingTools.SWING_*} constants from {@code swing-mcp-tool-defs}.
-     * Sourced from {@code swing-mcp-tool-defs} so the in-process server
-     * and {@code swing-mcp-proxy} cannot drift on the contract.
-     */
+    /** One of the {@code SwingTools.SWING_*} constants, supplied by the subclass. */
     private final ToolDescriptor descriptor;
 
     /**

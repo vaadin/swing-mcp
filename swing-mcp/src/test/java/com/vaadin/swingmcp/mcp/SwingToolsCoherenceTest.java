@@ -34,10 +34,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Coherence test guarding the contract between {@link SwingTools} (the
- * shared manifest consumed by {@code swing-mcp-proxy}) and the actual
- * tools registered by {@link SwingMCP}. Catches manifest-vs-registration
- * drift at developer-test time so the proxy's runtime drift probe
- * (D_shared_tool_manifest) only ever fires on genuine deployment-version mismatches.
+ * manifest) and the tools {@link SwingMCP} actually registers
+ * (D_shared_tool_manifest).
  *
  * <p>Uses {@link TinyMCPClient} (not the official SDK) so the
  * {@code listTools()} response deserialises directly into our

@@ -43,13 +43,8 @@ import java.util.logging.Logger;
  *
  * <p>HTTP 404 from a non-{@code initialize} call is mapped to
  * {@link MCPSessionLostException}; other 4xx/5xx responses become
- * generic {@link MCPClientException} instances. The mapping happens
- * here, in the only class that knows the protocol — decorators
- * ({@link AutoRetryMCPClient}) do not re-derive it from status codes.
- *
- * <p>This implementation does <em>not</em> retry. Stateless callers can
- * opt into transparent recovery via {@link MCPClient#autoRetry()}; see
- * D_embedded_client.
+ * generic {@link MCPClientException} instances. It never retries
+ * (D_no_auto_retry); see D_embedded_client.
  */
 public final class TinyMCPClient implements MCPClient {
 
@@ -251,8 +246,8 @@ public final class TinyMCPClient implements MCPClient {
      * so the {@code initialize} response wires up subsequent calls.
      *
      * <p>If {@code extraMeta} is non-null, it is merged into the outgoing
-     * request's {@code params._meta} object, so a forwarding caller (proxy)
-     * can pass through cross-cutting fields such as {@code progressToken}.
+     * request's {@code params._meta} object, carrying cross-cutting fields
+     * such as {@code progressToken}.
      */
     private JsonElement sendRequest(String method, Object params, JsonObject extraMeta) throws IOException {
         MCPProtocol.JsonRpcRequest request = new MCPProtocol.JsonRpcRequest();

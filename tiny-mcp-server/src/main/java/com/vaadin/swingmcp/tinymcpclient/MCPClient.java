@@ -28,8 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Minimal MCP client surface used by in-tree consumers (notably the
- * forwarding proxy use case). Speaks the MCP HTTP transport from the
+ * Minimal MCP client surface, speaking the MCP HTTP transport from the
  * caller side.
  *
  * <p>The surface is intentionally small: {@link #initialize()},
@@ -58,8 +57,7 @@ public interface MCPClient extends Closeable {
     /**
      * Performs the JSON-RPC handshake, stores the {@code Mcp-Session-Id}
      * returned by the server, and sends the {@code notifications/initialized}
-     * follow-up. Idempotent: calling again starts a fresh session against
-     * the same URL — used by the {@link AutoRetryMCPClient} recovery path.
+     * follow-up. Calling again starts a fresh session against the same URL.
      *
      * @return the parsed {@code InitializeResult} from the server
      * @throws MCPClientException if the server returns a JSON-RPC protocol
@@ -84,8 +82,7 @@ public interface MCPClient extends Closeable {
      * Calls {@code tools/call}, forwarding the tool name, arguments, and
      * JSON-RPC {@code _meta} from the supplied {@link ToolRequest} to the
      * server. {@code _meta} (e.g. {@code progressToken}) is embedded into
-     * the outgoing request's {@code params._meta}, so cross-cutting fields
-     * survive a hop through a forwarding proxy (see D_request_records).
+     * the outgoing request's {@code params._meta} (see D_request_records).
      *
      * <p>{@link ToolRequest#transportHeaders()} is <em>not</em> forwarded
      * as outbound HTTP headers — they belong to the inbound transport and
@@ -123,9 +120,7 @@ public interface MCPClient extends Closeable {
 
     /**
      * Convenience overload of {@link #callTool(ToolRequest)} accepting an
-     * explicit JSON-RPC {@code _meta} object. Used by forwarding proxies
-     * (D_forwarding_proxy / D_settable_listeners) so cross-cutting envelope fields like
-     * {@code progressToken} survive end-to-end through a proxy hop.
+     * explicit JSON-RPC {@code _meta} object, such as a {@code progressToken}.
      *
      * @param arguments the tool arguments; pass {@link Map#of()} for none
      * @param meta      the JSON-RPC {@code _meta} object to forward, or
@@ -151,30 +146,4 @@ public interface MCPClient extends Closeable {
      */
     @Override
     void close() throws IOException;
-
-    /**
-     * Wraps {@code this} in a one-shot session-loss retry decorator.
-     * Calling code:
-     * <pre>{@code
-     *     MCPClient client = new TinyMCPClient(url).autoRetry();
-     * }</pre>
-     * makes any single {@link MCPSessionLostException} from {@code this}
-     * recoverable: the decorator catches the exception, calls
-     * {@code this.initialize()}, and replays the failed call exactly once.
-     * A second {@code MCPSessionLostException} on the replay surfaces to
-     * the caller. {@link IOException} is never retried.
-     *
-     * <p>Implemented as a default method so any future {@code MCPClient}
-     * implementation gets retry-wrapping for free, and chaining with
-     * future decorators reads left-to-right.
-     *
-     * <p>Auto-retry is opt-in because re-initialization silently discards
-     * any session-bound state (e.g. a map of handles a previous call handed
-     * out, whose keys mean nothing to a fresh session) — for
-     * stateful callers, failure is information; for stateless callers, the
-     * convenience is worth it. See D_no_auto_retry.
-     */
-    default MCPClient autoRetry() {
-        return new AutoRetryMCPClient(this);
-    }
 }

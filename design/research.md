@@ -1,10 +1,11 @@
-# Research — `javax.accessibility` as Swing implements it
+# Research — `javax.accessibility` as Swing implements it, and the MCP client driving it
 
 What the things we don't own actually do. About *them*, never us: a sentence starting "we chose"
 is a `D_`. `## R_<slug> — <title>`, one claim per bullet, one provenance marker per claim —
 **[docs]**, **[src]**, **[verified <date>, <version>]**, **[unverified]** (a hypothesis; a design
 built on it says so). A claim is earned by its provenance, or by having cost real work to find
-out. Checked against Java 21 OpenJDK unless a claim names its own version; Swing is frozen, so a
+out. Checked against Java 21 OpenJDK unless a claim names its own version (the MCP-client
+entries always do: a client, unlike Swing, is not frozen); Swing is frozen, so a
 finding here is not expected to rot. Cite by slug, `R_<slug>`, never by position;
 `grep '^## R_' design/research.md` is the index. The first entry is the ruler: every later one
 trims to its length — which is how long this file gets, so keep it short.
@@ -198,3 +199,28 @@ trims to its length — which is how long this file gets, so keep it short.
   it loses only the two step actions, not its whole surface. **[verified 2026-09-16, Temurin 11.0.32]**
 - Consequence: a capability keyed on `getAccessibleAction()` is JDK-dependent for this one
   component, so a test that hardcodes either answer fails on the other side of the boundary.
+
+## R_claude_code_http_lifecycle — What Claude Code does when an HTTP MCP server comes and goes
+
+- A server unreachable at client startup is marked `failed`, and its tools are absent for the
+  whole session. The client never retries it on its own: in 90 s with the server back up, it sent
+  zero requests. **[verified 2026-09-23, Claude Code 2.1.280]**
+- `/mcp` → the server → **Reconnect** brings that server's tools in without restarting the
+  client. **[verified 2026-09-23, Claude Code 2.1.280, interactive]**
+- A server restarted mid-session is recovered at the next tool call. The client sends the old
+  `Mcp-Session-Id`, gets a 404, re-initializes and succeeds, and the model sees no error.
+  **[verified 2026-09-23, Claude Code 2.1.280]**
+- While a server is down, its tools stay listed and each call returns `isError` with
+  `ECONNREFUSED: Unable to connect. Is the computer able to access the url?`. The first call
+  after it is back succeeds. **[verified 2026-09-23, Claude Code 2.1.280]**
+- On a reconnect it initializes more than once in quick succession, so a one-session server
+  supersedes its own new sessions a couple of times before settling. It settled every time.
+  **[verified 2026-09-23, Claude Code 2.1.280]**
+- Before `initialize` it POSTs `server/discover` without a session header, and falls back to
+  `initialize` when that is rejected. **[verified 2026-09-23, Claude Code 2.1.280]**
+- Recipe: register the endpoint in a JSON file (`{"mcpServers":{"swing":{"type":"http","url":…}}}`)
+  and run `claude -p --mcp-config <file> --strict-mcp-config --output-format stream-json
+  --verbose`, prompting the child to start and stop the application through Bash (allow its
+  script with `--allowedTools`) between tool calls. Launch the application under
+  `xvfb-run -a java -javaagent:swing-mcp-agent.jar …`; its JUL log (`unknown Mcp-Session-Id`,
+  `Session superseded`) shows what the client actually sent.
