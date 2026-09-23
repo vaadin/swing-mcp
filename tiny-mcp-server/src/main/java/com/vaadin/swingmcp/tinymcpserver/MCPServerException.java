@@ -17,11 +17,10 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
 /**
- * Exception thrown by the MCP server, carrying a JSON-RPC error code.
- * <p>
- * Error codes follow the
+ * A JSON-RPC protocol error: a
  * <a href="https://www.jsonrpc.org/specification#error_object">JSON-RPC 2.0</a>
- * and <a href="https://modelcontextprotocol.io">MCP</a> specifications.
+ * or <a href="https://modelcontextprotocol.io">MCP</a> error code plus the HTTP
+ * status it rides on. See D_three_error_layers.
  */
 public class MCPServerException extends RuntimeException {
 
@@ -65,11 +64,9 @@ public class MCPServerException extends RuntimeException {
     }
 
     /**
-     * HTTP status code to use when sending this error as a JSON-RPC
-     * response. Defaults to {@code 200} — JSON-RPC errors normally ride on
-     * a 200 HTTP response, with the error signalled in the body. Transport
-     * / protocol-level failures (session not found, malformed request)
-     * override this with a 4xx status.
+     * @return {@code 200} unless constructed with another — a JSON-RPC error
+     *         normally rides a 200; a session or request-shape failure uses a
+     *         4xx. Ignored over stdio.
      */
     public int getHttpStatus() {
         return httpStatus;

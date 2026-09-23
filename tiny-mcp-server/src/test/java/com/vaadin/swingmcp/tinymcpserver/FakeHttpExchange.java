@@ -31,10 +31,8 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Minimal fake {@link HttpExchange} for unit-testing {@link JsonRpcExchange}
- * and {@link MCPSession} without starting an HTTP server.
- * <p>
- * Captures the response status code, headers, and body for assertions.
+ * An in-memory {@link HttpExchange}: serves a fixed request body and captures
+ * the response code, headers and body, so no HTTP server has to start.
  */
 class FakeHttpExchange extends HttpExchange {
 

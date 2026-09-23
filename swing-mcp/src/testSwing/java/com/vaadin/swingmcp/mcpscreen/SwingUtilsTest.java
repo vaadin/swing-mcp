@@ -28,11 +28,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Screen-mode tests for {@link SwingUtils}.
- * Covers getTopmostModalDialog, plus supportsClick and isEffectivelyEnabled
- * for top-level window components (JFrame, JDialog) that require a display.
+ * The {@link SwingUtils} cases that need a real {@code JFrame} or {@code JDialog}.
  */
-
 class SwingUtilsTest extends AbstractScreenTest {
 
     private final List<Window> createdWindows = new ArrayList<>();
@@ -84,8 +81,6 @@ class SwingUtilsTest extends AbstractScreenTest {
 
     @Test
     void returnsNullWhenNoDialogsAreVisible() {
-        // Only a JFrame from AbstractScreenTest.assertScreenPresent() exists,
-        // and it is not a modal Dialog.
         assertNull(SwingUtils.getTopmostModalDialog());
     }
 
@@ -128,9 +123,6 @@ class SwingUtilsTest extends AbstractScreenTest {
 
     @Test
     void returnsLastOpenedModalDialog() throws InterruptedException {
-        // Two modal dialogs created in order; only the second is shown.
-        // Window.getWindows() is ordered by creation time; the fallback scan
-        // goes backwards, so the second (last-created visible) dialog is returned.
         JDialog first = newModalDialog();
         JDialog second = newModalDialog();
         setVisible(second, true);

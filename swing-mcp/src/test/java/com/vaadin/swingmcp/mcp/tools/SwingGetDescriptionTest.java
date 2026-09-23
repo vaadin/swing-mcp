@@ -108,7 +108,6 @@ class SwingGetDescriptionTest extends AbstractHeadlessTest {
 
         int ref = context.getRefOf(button);
         assertEquals("Some description", getDescription(ref));
-        // Second call with same ref should still work
         assertEquals("Some description", getDescription(ref));
     }
 
@@ -202,7 +201,6 @@ class SwingGetDescriptionTest extends AbstractHeadlessTest {
                 "- JLabel (label) \"Warning\" \"" + chars(120) + "\u2026\" [ref=1] actions: get_description",
                 snapshot(label));
 
-        // Verify we can actually call the tool on the label's ref
         assertEquals(longTooltip, getDescription(context.getRefOf(label)));
     }
 

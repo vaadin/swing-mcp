@@ -66,8 +66,7 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JTable — rejected: table cells are plain text labels, so
-    // swing_get_cells is refused; AI is redirected to swing_get_items.
+    // JTable — refused, with a redirect to swing_get_items (D_no_jtable_cells)
     // ══════════════════════════════════════════════════════════════════════════
 
     private JTable createTable(int rows, int cols) {
@@ -98,7 +97,6 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         snapshot(table);
         int ref = context.getRefOf(table);
         assertThrows(MCPErrorResponseException.class, () -> getCells(ref, 0, 5));
-        // Original snapshot ref must still resolve after the rejected call.
         assertSame(table, context.getAccessibleByRef(ref));
     }
 
@@ -154,7 +152,7 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         JList<String> list = new JList<>(items);
         snapshot(list);
         String output = getCells(context.getRefOf(list), 0, 3);
-        // Parent is ref=1 (not rendered but in ref map), children start from 2
+        // The parent holds ref=1 without being rendered.
         assertTrue(output.contains("[ref=2]"), "First child should have ref=2, got: " + output);
         assertTrue(output.contains("[ref=3]"), "Second child should have ref=3, got: " + output);
         assertTrue(output.contains("[ref=4]"), "Third child should have ref=4, got: " + output);
@@ -166,9 +164,7 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         for (int i = 0; i < 20; i++) items[i] = "Item-" + i;
         JList<String> list = new JList<>(items);
         snapshot(list);
-        // First get_cells
         getCells(context.getRefOf(list), 0, 3);
-        // Call again with ref=1 (parent) — should work without swing_snapshot
         String output2 = getCells(1, 10, 3);
         assertEquals(
                 "Showing 3 children from offset 10 (total 20) for list [ref=1]\n"
@@ -185,7 +181,6 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         JList<String> list = new JList<>(items);
         snapshot(list);
         getCells(context.getRefOf(list), 0, 3);
-        // Call swing_get_items with ref=1
         MCPProtocol.Content result = getItemsTool.execute(
                 new Parameters(Map.of("ref", 1, "offset", 0, "length", 3)),
                 context);
@@ -201,7 +196,6 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         JList<String> list = new JList<>(items);
         snapshot(list);
         getCells(context.getRefOf(list), 0, 3);
-        // Click child ref=2 (first item in output) — should not throw
         assertDoesNotThrow(() -> clickTool.execute(new Parameters(Map.of("ref", 2)), context));
     }
 
@@ -223,15 +217,12 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         panel.add(list);
         snapshot(panel);
 
-        // Remember the button's ref — it's ref=1 (first actionable node)
         JButton btn = (JButton) panel.getComponent(0);
         int btnRef = context.getRefOf(btn);
         assertEquals(1, btnRef, "Button should be ref=1 in original snapshot");
 
-        // Now call get_cells — replaces ref map. Ref=1 now maps to the JList, not the button.
         getCells(context.getRefOf(list), 0, 3);
 
-        // Ref=1 now resolves to JList, not JButton. The old mapping is gone.
         Accessible resolved = context.getAccessibleByRef(1);
         assertNotSame(btn, resolved, "ref=1 should no longer point to the button");
         assertSame(list, resolved, "ref=1 should now point to the JList parent");
@@ -246,13 +237,10 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         panel.add(list);
         snapshot(panel);
 
-        // get_cells replaces ref map
         getCells(context.getRefOf(list), 0, 3);
 
-        // Snapshot restores full ref map
         snapshot(panel);
 
-        // Button should be accessible again
         int btnRef = context.getRefOf(btn);
         assertDoesNotThrow(() -> clickTool.execute(new Parameters(Map.of("ref", btnRef)), context));
     }
@@ -267,14 +255,11 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
 
         int listRef = context.getRefOf(list);
 
-        // Offset beyond end — empty output, but ref map is still replaced
+        // Offset past the end: no children, yet the ref map is still replaced.
         getCells(listRef, 100, 5);
 
-        // Only ref=1 (parent) should exist; ref=2 and higher should be gone
-        // since no children were returned
         assertThrows(MCPServerException.class,
                 () -> context.getAccessibleByRef(2));
-        // ref=1 is the parent JList
         assertSame(list, context.getAccessibleByRef(1));
     }
 
@@ -462,12 +447,12 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
     @Test void componentMatrix_JToggleButton() throws Exception { assertNotSupported(new JToggleButton("T")); }
     @Test void componentMatrix_JSlider() throws Exception { assertNotSupported(new JSlider(0, 100, 50)); }
     @Test void componentMatrix_JPanel() throws Exception {
-        // JPanel has no actions (no ref) — verify via SwingUtils
+        // No ref, so checked through SwingUtils.
         JPanel p = new JPanel();
         assertFalse(com.vaadin.swingmcp.mcp.SwingUtils.isGetCellsSupported(p));
     }
     @Test void componentMatrix_JScrollPane() throws Exception {
-        // JScrollPane has no actions (no ref) — verify via SwingUtils
+        // No ref, so checked through SwingUtils.
         assertFalse(com.vaadin.swingmcp.mcp.SwingUtils.isGetCellsSupported(new JScrollPane(new JTextArea("c"))));
     }
     @Test void componentMatrix_JTabbedPane() throws Exception {
@@ -477,8 +462,7 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
     }
     @Test void componentMatrix_JSplitPane() throws Exception { assertNotSupported(new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JPanel(), new JPanel())); }
     @Test void componentMatrix_JLabel() throws Exception {
-        // JLabel has no actions -> no ref -> can't test via assertNotSupported.
-        // Verify it's not a large data component by checking SwingUtils directly.
+        // No ref, so checked through SwingUtils.
         JLabel label = new JLabel("Hello");
         assertFalse(com.vaadin.swingmcp.mcp.SwingUtils.isGetCellsSupported(label));
     }
@@ -491,13 +475,13 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
     @Test void componentMatrix_JToolBar() throws Exception {
         JToolBar tb = new JToolBar();
         tb.add(new JButton("T"));
-        // JToolBar has no actions (no ref) — verify via SwingUtils
+        // No ref, so checked through SwingUtils.
         assertFalse(com.vaadin.swingmcp.mcp.SwingUtils.isGetCellsSupported(tb));
     }
     @Test void componentMatrix_JMenuBar() throws Exception {
         JMenuBar mb = new JMenuBar();
         mb.add(new JMenu("File"));
-        // JMenuBar has no actions (no ref) — verify via SwingUtils
+        // No ref, so checked through SwingUtils.
         assertFalse(com.vaadin.swingmcp.mcp.SwingUtils.isGetCellsSupported(mb));
     }
     @Test void componentMatrix_JMenu() throws Exception {

@@ -23,11 +23,6 @@ import javax.swing.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Headless tests for {@link SwingUtils#supportsGetValue(javax.accessibility.Accessible)}
- * and {@link SwingUtils#supportsSetValue(javax.accessibility.Accessible)}.
- * Covers every component in the verification component matrix.
- */
 class SwingUtilsSupportsValueTest {
 
     @BeforeAll

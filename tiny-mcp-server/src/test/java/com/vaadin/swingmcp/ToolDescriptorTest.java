@@ -22,9 +22,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * D_settable_listeners: ToolDescriptor structural equality.
- */
 class ToolDescriptorTest {
 
     @Test
@@ -69,9 +66,6 @@ class ToolDescriptorTest {
 
     @Test
     void equalDescriptorsCompareEqual() {
-        // Same logical content, built independently (different schema
-        // instances, possibly different `properties` map iteration
-        // orders) — must compare equal.
         ToolDescriptor a = new ToolDescriptor("demo_click",
                 "Click a UI element by ref",
                 new InputSchemaBuilder()

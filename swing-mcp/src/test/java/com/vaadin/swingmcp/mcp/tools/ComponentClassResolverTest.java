@@ -35,8 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Unit tests for {@link ComponentClassResolver} — the implementation of
- * design/snapshot-format.md (component identity slot).
+ * Cases A, B and C are the three identity-slot forms of design/snapshot-format.md, in table order.
  */
 class ComponentClassResolverTest {
 
@@ -62,10 +61,8 @@ class ComponentClassResolverTest {
                 ComponentClassResolver.resolveIdentitySlot(new JTextField()));
     }
 
-    // JFrame rendering is covered by screen-mode tests (requires a display);
-    // headless JFrame construction throws HeadlessException. The predicate
-    // check `isQualifying_acceptsStandardSwingWidget()` covers JFrame at the
-    // class level.
+    // No JFrame case: a headless JFrame constructor throws HeadlessException. The screen-mode
+    // tests render one; isQualifying_acceptsStandardSwingWidget covers the class.
 
     // ══════════════════════════════════════════════════════════════════════════
     // Case A — stripped anonymous / local / synthetic subclasses
@@ -110,11 +107,8 @@ class ComponentClassResolverTest {
 
     @Test
     void abstractButtonSubclass_walksUpToAbstractButton() {
-        // AbstractButton qualifies (abstracts are recognised
-        // Swing types). Skipping it would land on JComponent and lose the
-        // "button-family" signal. Role defaults to "unknown" because the
-        // test fixture doesn't populate accessibleContext — the assertion
-        // ignores the role and checks the class-prefix structure.
+        // Skipping the abstract AbstractButton would land on JComponent and lose the
+        // button-family signal. The fixture has no AccessibleContext, so only the prefix is asserted.
         String slot = ComponentClassResolver.resolveIdentitySlot(new MyBareButton());
         assertTrue(slot.startsWith("MyBareButton -> AbstractButton ("),
                 "expected 'MyBareButton -> AbstractButton (<role>)', got: " + slot);
@@ -123,8 +117,6 @@ class ComponentClassResolverTest {
     @Test
     void transitiveCustomSubclass_walksToNearestSwingAncestor() {
         // DerivedSearchField -> SearchField -> JTextField.
-        // Walk-up stops at JTextField (first qualifying ancestor);
-        // display class is the concrete class (DerivedSearchField).
         assertEquals("DerivedSearchField -> JTextField (text)",
                 ComponentClassResolver.resolveIdentitySlot(new DerivedSearchField()));
     }
@@ -139,7 +131,7 @@ class ComponentClassResolverTest {
         tabs.addTab("One", new JPanel());
         Accessible page = tabs.getAccessibleContext().getAccessibleChild(0);
         assertNotNull(page, "JTabbedPane must expose its Page as accessible child");
-        // JTabbedPane.Page extends AccessibleContext, not Component, so Case C.
+        // JTabbedPane.Page extends AccessibleContext, not Component.
         assertEquals("(page_tab)",
                 ComponentClassResolver.resolveIdentitySlot(page));
     }
@@ -166,9 +158,8 @@ class ComponentClassResolverTest {
 
     @Test
     void resolveClassName_caseB_returnsQualifyingAncestor() {
-        // Custom subclasses resolve to the standard Swing ancestor the AI
-        // recognises — not the concrete subclass. Errors target the canonical
-        // Swing vocabulary, per project_accessibility_vocabulary.md.
+        // Errors name the standard Swing ancestor, the vocabulary a model knows
+        // (D_role_in_snapshot_only), not the concrete subclass.
         assertEquals("JButton", ComponentClassResolver.resolveClassName(new FancyButton()));
         assertEquals("JTextField", ComponentClassResolver.resolveClassName(new SearchField()));
     }
@@ -216,7 +207,6 @@ class ComponentClassResolverTest {
 
     @Test
     void isQualifying_acceptsAbstractSwingClasses() {
-        // abstract classes qualify.
         assertTrue(ComponentClassResolver.isQualifying(AbstractButton.class));
         assertTrue(ComponentClassResolver.isQualifying(javax.swing.text.JTextComponent.class));
     }
@@ -230,7 +220,7 @@ class ComponentClassResolverTest {
 
     @Test
     void isQualifying_rejectsPlafClasses() {
-        // javax.swing.plaf.* is explicitly excluded — walk past L&F internals.
+        // javax.swing.plaf.* is L&F internals; the walk goes past it.
         assertFalse(ComponentClassResolver.isQualifying(javax.swing.plaf.basic.BasicArrowButton.class));
     }
 
@@ -248,11 +238,8 @@ class ComponentClassResolverTest {
 
     @Test
     void isRuntimeProxy_trueForNullEnclosingAndMultipleDollars() {
-        // Heuristic unit check: we cannot easily synthesise a class with
-        // "$$" in its name from Java source (the compiler forbids it), so
-        // we probe the heuristic indirectly on known-good negatives and rely
-        // on the accompanying audit test + integration tests for coverage.
-        // Genuine nested classes (with an enclosing class) must never trip it.
+        // Negatives only: the positive case needs a generated class, which
+        // SwingSnapshotToolTest builds with ByteBuddy.
         assertFalse(ComponentClassResolver.isRuntimeProxy(FancyButton.class),
                 "nested class with enclosing must not be flagged as proxy");
         assertFalse(ComponentClassResolver.isRuntimeProxy(JButton.class),
@@ -288,12 +275,8 @@ class ComponentClassResolverTest {
     }
 
     /**
-     * Custom class extending an abstract Swing base — exercises the identity slot
-     * "abstract classes qualify." AbstractButton does not itself declare
-     * {@code implements Accessible} (only concrete subclasses like JButton
-     * do), so this fixture adds it explicitly. {@code accessibleContext}
-     * inherited from JComponent is left null — the role resolves to
-     * {@code "unknown"}, which the test deliberately ignores.
+     * Subclass of the abstract {@code AbstractButton}, which is not {@code Accessible} (its
+     * concrete subclasses are), so the fixture declares it. Its context stays null.
      */
     public static class MyBareButton extends AbstractButton implements Accessible {
         public MyBareButton() {

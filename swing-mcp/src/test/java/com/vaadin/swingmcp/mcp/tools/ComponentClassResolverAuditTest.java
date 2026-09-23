@@ -31,26 +31,10 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * JDK-drift audit for {@link ComponentClassResolver#isQualifying} per
- * design/snapshot-format.md. Enumerates every class in the {@code java.desktop} JDK
- * module whose package is {@code javax.swing}, a subpackage of
- * {@code javax.swing} other than {@code javax.swing.plaf} and its
- * subpackages, or {@code java.awt}. Applies {@code isQualifying} and
- * asserts the resulting set equals the checked-in fixture below.
- *
- * <p>This test fails when:</p>
- * <ul>
- *   <li>a future JDK adds a new qualifying class (e.g. a new {@code Jxxx}
- *       widget or AWT Component) — update {@link #EXPECTED_QUALIFYING} to
- *       include it;</li>
- *   <li>a JDK renames or removes a qualifying class — update the fixture
- *       to reflect the new reality;</li>
- *   <li>the {@code isQualifying} predicate changes its behaviour
- *       unintentionally — investigate the regression.</li>
- * </ul>
- *
- * <p>Failure messages surface the symmetric diff of actual-vs-expected so
- * the update is straightforward.</p>
+ * Pins the set of {@code java.desktop} classes (outside {@code javax.swing.plaf}) that
+ * {@link ComponentClassResolver#isQualifying} accepts. A JDK that adds, renames or removes a
+ * widget fails here with the diff to apply to {@link #EXPECTED_QUALIFYING}; so does an
+ * unintended change to the predicate, which is a regression to investigate instead.
  */
 class ComponentClassResolverAuditTest {
 
@@ -58,7 +42,6 @@ class ComponentClassResolverAuditTest {
     void qualifyingAncestorsMatchFixture() throws IOException {
         Set<String> actual = enumerateQualifying();
 
-        // Symmetric diff helps pinpoint which side changed.
         Set<String> extraInActual = new TreeSet<>(actual);
         extraInActual.removeAll(EXPECTED_QUALIFYING);
         Set<String> extraInExpected = new TreeSet<>(EXPECTED_QUALIFYING);
@@ -90,19 +73,15 @@ class ComponentClassResolverAuditTest {
 
     private static String toClassName(Path root, Path classFile) {
         String rel = root.relativize(classFile).toString();
-        // Strip trailing ".class" and convert path separators to dots.
         return rel.substring(0, rel.length() - ".class".length()).replace('/', '.');
     }
 
     /**
-     * Rough pre-filter so we only attempt {@link Class#forName} on names
-     * that could plausibly be qualifying. Exact qualification is decided by
-     * {@link ComponentClassResolver#isQualifying}.
+     * A rough pre-filter so {@link Class#forName} runs only on plausible names;
+     * {@link ComponentClassResolver#isQualifying} decides.
      */
     private static boolean isCandidatePackage(String className) {
-        // Skip module-info, package-info, and inner/nested-class forms —
-        // isQualifying rejects nested classes anyway, and they can't be
-        // loaded via forName without the enclosing class syntax.
+        // isQualifying rejects nested classes anyway.
         if (className.contains("$")) return false;
         if (className.endsWith("module-info") || className.endsWith("package-info")) return false;
 
@@ -123,21 +102,17 @@ class ComponentClassResolverAuditTest {
                 result.add(className);
             }
         } catch (Throwable ignored) {
-            // Some classes reference optional native types that may not be
-            // loadable during class resolution — skip them. They're not
-            // qualifying widgets anyway.
+            // Some classes reference optional native types and fail to load; none is a widget.
         }
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Fixture — populated from the initial run against the development JDK
+    // Fixture
     // ══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Frozen fixture — qualifying-ancestor set observed on JDK 21
-     * (initial population 2026-04-13). If this test fails, consult the
-     * diagnostic diff: add newly-surfaced JDK classes or remove removed
-     * ones deliberately. Do not blindly regenerate.
+     * The set observed on JDK 21. On a failure, apply the diagnostic diff one class at a
+     * time, deliberately; never blindly regenerate it.
      */
     private static final Set<String> EXPECTED_QUALIFYING = new TreeSet<>(Set.of(
             "java.awt.Button",

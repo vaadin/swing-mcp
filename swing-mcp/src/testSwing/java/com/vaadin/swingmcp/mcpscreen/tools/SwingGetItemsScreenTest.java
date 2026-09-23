@@ -91,8 +91,7 @@ class SwingGetItemsScreenTest extends AbstractScreenTest {
 
     @Test
     void jTabbedPaneInsideJFrame_isRejected() throws Exception {
-        // Regression guard for P-001 Wave A — JTabbedPane dropped as a
-        // supported target; tabs are read inline from the snapshot (design/snapshot-format.md).
+        // Its tabs are already in the snapshot, as page_tab children.
         JFrame frame = new JFrame("Test");
         JTabbedPane tp = new JTabbedPane();
         tp.addTab("Tab1", new JPanel());
@@ -172,20 +171,16 @@ class SwingGetItemsScreenTest extends AbstractScreenTest {
         frame.pack();
         frame.setVisible(true);
         try {
-            // Step 1: snapshot to discover combo and its editor child
             String snap = snapshot(frame);
             assertTrue(snap.contains("combo_box"), "snapshot must contain the combo_box");
             assertTrue(snap.contains("text"), "snapshot must contain the editor text child");
 
-            // Step 2: find the editor text ref and type a filter prefix
             JTextField editor = (JTextField) combo.getEditor().getEditorComponent();
             int editorRef = context.getRefOf(editor);
             setText(editorRef, "Al");
 
-            // Step 3: re-snapshot (refs may have changed after mutation)
             snapshot(frame);
 
-            // Step 4: verify filtered items via get_items on the combo ref
             assertEquals("Al", combo.getFilterText());
             String json = getItems(context.getRefOf(combo), 0, 10);
             assertEquals("{\"totalCount\":2,\"items\":["
@@ -205,7 +200,6 @@ class SwingGetItemsScreenTest extends AbstractScreenTest {
         frame.pack();
         frame.setVisible(true);
         try {
-            // Filter down
             snapshot(frame);
             JTextField editor = (JTextField) combo.getEditor().getEditorComponent();
             setText(context.getRefOf(editor), "B");
@@ -214,7 +208,6 @@ class SwingGetItemsScreenTest extends AbstractScreenTest {
                     + "{\"index\":0,\"name\":\"Beta\"}"
                     + "]}", getItems(context.getRefOf(combo), 0, 10));
 
-            // Clear filter — all items should reappear
             setText(context.getRefOf(editor), "");
             snapshot(frame);
             assertEquals("{\"totalCount\":3,\"items\":["
@@ -244,10 +237,6 @@ class SwingGetItemsScreenTest extends AbstractScreenTest {
             frame.dispose();
         }
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // JDialog
-    // ══════════════════════════════════════════════════════════════════════════
 
     // ══════════════════════════════════════════════════════════════════════════
     // JInternalFrame

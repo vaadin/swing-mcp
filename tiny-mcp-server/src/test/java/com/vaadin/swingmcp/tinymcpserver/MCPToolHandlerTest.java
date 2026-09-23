@@ -21,12 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Unit tests for {@link MCPToolHandler} tool registration.
- * Field-level descriptor validation lives in
- * {@link com.vaadin.swingmcp.ToolDescriptorTest}; this class only covers
- * registration-level invariants.
- */
+/** Registration-level invariants; descriptor field validation is {@link com.vaadin.swingmcp.ToolDescriptorTest}'s. */
 class MCPToolHandlerTest {
 
     private static ToolDescriptor descriptor(String name) {

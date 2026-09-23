@@ -25,10 +25,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Tests for {@link MCPResourceHandler} — registration validation and
- * direct handler dispatch (without going through HTTP).
- */
 class MCPResourceHandlerTest {
 
     private static ResourceFunction constResource() {

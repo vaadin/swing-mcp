@@ -21,19 +21,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 /**
- * Fluent builder for MCP prompt arguments.
- * <p>
- * Unlike {@link InputSchemaBuilder} (used for tools), this builder only
- * offers string arguments — MCP prompts always pass their arguments as
- * strings, so types like {@code integer}/{@code number}/{@code boolean}
- * cannot be expressed in a prompt definition at all.
+ * Fluent builder for a prompt's arguments — strings only, since MCP prompt
+ * arguments have no other type (tools use {@link InputSchemaBuilder}).
  *
- * <p>Example:
  * <pre>{@code
- * List<PromptArgument> args = new PromptArgumentsBuilder()
- *     .required("name", "Who to greet")
- *     .optional("style", "Greeting style (formal|casual)")
- *     .build();
+ * List<MCPProtocol.PromptArgument> args = new PromptArgumentsBuilder()
+ *         .required("name", "Who to greet")
+ *         .optional("style", "Greeting style")
+ *         .build();
  * }</pre>
  */
 public class PromptArgumentsBuilder {
@@ -41,8 +36,6 @@ public class PromptArgumentsBuilder {
     private final LinkedHashMap<String, MCPProtocol.PromptArgument> arguments = new LinkedHashMap<>();
 
     /**
-     * Declares a required string argument.
-     *
      * @throws IllegalArgumentException if the name or description is
      *         null/blank, or the name doesn't match
      *         {@code [a-zA-Z_][a-zA-Z0-9_]*}
@@ -53,11 +46,7 @@ public class PromptArgumentsBuilder {
         return add(name, description, true);
     }
 
-    /**
-     * Declares an optional string argument.
-     *
-     * @see #required(String, String) for validation rules
-     */
+    /** Throws as {@link #required(String, String)} does. */
     public PromptArgumentsBuilder optional(String name, String description) {
         return add(name, description, false);
     }

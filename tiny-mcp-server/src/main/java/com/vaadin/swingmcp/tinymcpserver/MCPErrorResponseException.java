@@ -17,16 +17,11 @@
 package com.vaadin.swingmcp.tinymcpserver;
 
 /**
- * Exception thrown by a tool to return an MCP error response
- * ({@code isError: true}) with a clean, human-readable message.
- *
- * <p>Unlike a bare {@link RuntimeException}, the error text sent to the client
- * is exactly {@link #getMessage()} — no Java class name prefix is included.
- * Use this when the error is a well-understood application-level condition
- * (e.g. "no visible windows") that the AI client should act on.</p>
- *
- * <p>Contrast with {@link MCPServerException}, which sends a JSON-RPC
- * protocol error and is intended for infrastructure-level failures.</p>
+ * Thrown by a tool to fail with {@code isError: true} and exactly
+ * {@link #getMessage()} as the text — no class-name prefix, unlike any other
+ * exception. For a condition the model can act on, such as "no visible
+ * windows"; {@link MCPServerException} is the protocol-error channel instead
+ * (D_three_error_layers).
  */
 public class MCPErrorResponseException extends RuntimeException {
 

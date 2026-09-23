@@ -191,7 +191,6 @@ class SwingSetValueTest extends AbstractHeadlessTest {
 
         setValue(ref, 75.0);
 
-        // ref map was cleared — next use of same ref fails with INVALID_PARAMS
         MCPServerException ex = assertThrows(MCPServerException.class,
                 () -> setValue(ref, 80.0));
         assertTrue(ex.getMessage().contains("swing_snapshot"));
@@ -207,7 +206,6 @@ class SwingSetValueTest extends AbstractHeadlessTest {
         assertThrows(MCPErrorResponseException.class, () ->
                 setValueTool.execute(new Parameters(Map.of("ref", ref, "value", 75.0)), context));
 
-        // Validation error — ref map must still be intact so the AI can retry
         slider.setEnabled(true);
         setValue(ref, 80.0);
         assertEquals(80, slider.getValue());
@@ -220,7 +218,7 @@ class SwingSetValueTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(slider);
         var result = setValueTool.execute(
                 new Parameters(Map.of("ref", ref, "value", 75.0)), context);
-        // JSlider uses Integer model → 75.0 is converted to Integer 75 → echoed as "75"
+        // A JSlider's model is Integer, so 75.0 is set, and echoed, as 75.
         assertEquals("Dispatched set-value on ref=" + ref + " to 75 — call swing_snapshot to verify the outcome", result.getText());
     }
 

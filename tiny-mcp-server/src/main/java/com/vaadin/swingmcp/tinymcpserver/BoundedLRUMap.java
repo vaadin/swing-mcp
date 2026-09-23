@@ -20,15 +20,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * A thread-safe least-recently-used map with a fixed maximum size. When
- * an insertion would exceed the cap, the least-recently <em>accessed</em>
- * entry is dropped (both {@link #put} and {@link #get} count as access).
+ * A least-recently-used map with a fixed maximum size. When an insertion
+ * would exceed the cap, the least-recently <em>accessed</em> entry is dropped
+ * (both {@link #put} and {@link #get} count as access).
  *
- * <p>All operations are guarded by the map's intrinsic lock; this is
- * sufficient for the small caps used in practice (a few dozen entries).
- *
- * @param <K> the key type
- * @param <V> the value type
+ * <p>Thread-safe: every method holds the intrinsic lock, which is cheap
+ * enough at the caps used here (a few dozen entries).
  */
 public final class BoundedLRUMap<K, V> {
 
@@ -52,7 +49,11 @@ public final class BoundedLRUMap<K, V> {
         };
     }
 
-    /** Inserts or replaces an entry; counts as access. */
+    /**
+     * Inserts or replaces an entry, evicting the eldest if over the cap.
+     *
+     * @return the previous value for {@code key}, or {@code null}
+     */
     public synchronized V put(K key, V value) {
         return map.put(key, value);
     }
@@ -62,12 +63,10 @@ public final class BoundedLRUMap<K, V> {
         return map.get(key);
     }
 
-    /** Returns the current entry count. */
     public synchronized int size() {
         return map.size();
     }
 
-    /** Returns the configured maximum size. */
     public int cap() {
         return cap;
     }

@@ -305,7 +305,6 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         snapshot(list);
         int ref = context.getRefOf(list);
         selectAll(ref);
-        // Ref map should now be cleared — using old ref should fail
         MCPServerException ex = assertThrows(MCPServerException.class,
                 () -> selectAll(ref));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
@@ -320,7 +319,6 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(list);
         assertThrows(MCPErrorResponseException.class,
                 () -> selectAllTool.execute(new Parameters(Map.of("ref", ref)), context));
-        // Validation error — ref map must still be intact so the AI can retry
         list.setEnabled(true);
         selectAll(ref);
         assertArrayEquals(new int[]{0, 1}, list.getSelectedIndices());
@@ -338,7 +336,6 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(list);
         selectAll(ref);
 
-        // Re-snapshot to get fresh refs
         snapshot(list);
         String json = getSelection(context.getRefOf(list));
         assertEquals(
@@ -350,8 +347,8 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
                 json);
     }
 
-    // JTable round-trip is in SwingSelectAllScreenTest
-    // (table.selectAll() in headless may not be readable via AccessibleSelection)
+    // The JTable round-trip is in SwingSelectAllScreenTest: headless, a selectAll()
+    // may not be readable through AccessibleSelection.
 
     // ══════════════════════════════════════════════════════════════════════════
     // Component matrix — supported

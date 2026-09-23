@@ -39,12 +39,8 @@ import java.util.Map;
  * }
  * }</pre>
  *
- * <p>Conversion to this project's types happens only on the way out, after the
- * SDK has parsed the response — so a reply our server malformed still fails
- * inside the SDK, which is the whole point of testing against it.
- *
- * <p>Test-scope only: it implements just the surface the suite exercises and
- * has no place in the shipped jar.
+ * <p>Conversion happens only after the SDK has parsed the response, so a reply
+ * our server malformed still fails inside the SDK. See D_conformance_two_clients.
  */
 final class OfficialMCPClient implements MCPClient {
 
@@ -113,9 +109,8 @@ final class OfficialMCPClient implements MCPClient {
         }
         schema.setType(sdk.type());
         if (sdk.properties() != null) {
-            // Only the property names are load-bearing for the suite; carrying the
-            // raw values across would mean re-deriving PropertySchema from untyped
-            // maps, which asserts nothing the server side does not already own.
+            // Names only: re-deriving PropertySchema from the SDK's untyped maps
+            // would assert nothing the server side does not already own.
             final Map<String, MCPProtocol.PropertySchema> properties = new LinkedHashMap<>();
             for (String name : sdk.properties().keySet()) {
                 properties.put(name, new MCPProtocol.PropertySchema());

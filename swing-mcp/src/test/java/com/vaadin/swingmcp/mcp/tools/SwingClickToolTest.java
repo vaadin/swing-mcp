@@ -48,20 +48,13 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         context = new SwingToolContext(Runnable::run);
     }
 
-    /**
-     * Runs a snapshot to populate ref map, then returns the snapshot text.
-     */
     private String snapshot(Component... roots) throws Exception {
         context.setConsideredComponents(Arrays.asList(roots));
         MCPProtocol.Content result = snapshotTool.execute(new Parameters(Map.of()), context);
         return result.getText();
     }
 
-    /**
-     * Clicks the given ref. Assumes snapshot was already called to populate refs.
-     * Clears the ref map afterwards (mirroring SwingMCP.registerTool behaviour
-     * for mutation tools).
-     */
+    /** Clicks, then clears the ref map as {@code SwingMCP.registerTool} does after a successful mutation. */
     private void click(int ref) throws Exception {
         clickTool.execute(new Parameters(Map.of("ref", ref)), context);
         context.clearRefMap();
@@ -144,7 +137,6 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(button);
         click(ref);
 
-        // Refs should be cleared after mutation — isMutation() == true
         MCPServerException ex = assertThrows(MCPServerException.class, () -> click(ref));
         assertTrue(ex.getMessage().contains("swing_snapshot"),
                 "Error should suggest calling swing_snapshot after invalidation");
@@ -152,8 +144,6 @@ class SwingClickToolTest extends AbstractHeadlessTest {
 
     @Test
     void refsPreservedAfterValidationError() throws Exception {
-        // A validation rejection (e.g. "disabled") must NOT clear the ref map —
-        // the UI state hasn't changed, so existing refs remain valid.
         JButton disabled = new JButton("No");
         disabled.setEnabled(false);
         JButton enabled = new JButton("OK");
@@ -165,11 +155,9 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         int disabledRef = context.getRefOf(disabled);
         int enabledRef = context.getRefOf(enabled);
 
-        // Click on disabled → MCPErrorResponseException, no EDT action dispatched
         assertThrows(MCPErrorResponseException.class,
                 () -> clickTool.execute(new Parameters(Map.of("ref", disabledRef)), context));
 
-        // The ref map must still be intact — the enabled button's ref is still valid
         AtomicBoolean clicked = new AtomicBoolean(false);
         enabled.addActionListener(e -> clicked.set(true));
         click(enabledRef);
@@ -188,10 +176,8 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         button.addActionListener(e -> clicked.set(true));
         mcpServer.setConsideredComponents(List.of(button));
 
-        // First take a snapshot to populate refs
         mcpClient.callTool("swing_snapshot", Map.of());
 
-        // Then click ref 1
         MCPProtocol.CallToolResult result = mcpClient.callTool("swing_click", Map.of("ref", 1));
         SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
 
@@ -205,10 +191,8 @@ class SwingClickToolTest extends AbstractHeadlessTest {
 
     @Test
     void disabledParentDoesNotPreventClick() throws Exception {
-        // Swing's setEnabled(false) does not propagate to children
-        // (Component.setEnabled javadoc; JDK-4177727 closed as won't-fix), so a
-        // button inside a disabled JPanel is still mechanically clickable —
-        // and Swing-MCP must mirror that exactly.
+        // setEnabled(false) does not propagate to children (JDK-4177727, won't fix):
+        // a user can still click this button. See D_mirror_swing_semantics.
         JPanel panel = new JPanel();
         JButton button = new JButton("Child");
         AtomicBoolean clicked = new AtomicBoolean(false);
@@ -344,7 +328,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         panel.setName("TestPanel");
 
         snapshot(panel);
-        // JPanel has no actions — should not receive a ref
+        // No actions, so no ref.
         assertThrows(IllegalStateException.class, () -> context.getRefOf(panel));
     }
 
@@ -353,7 +337,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         JScrollPane sp = new JScrollPane(new JTextArea("content"));
 
         snapshot(sp);
-        // Scroll pane itself is structural — no click ref expected on the scroll pane itself
+        // Structural, so no ref.
         assertThrows(IllegalStateException.class, () -> context.getRefOf(sp));
     }
 
@@ -364,9 +348,8 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         tp.addTab("Tab2", new JPanel());
 
         snapshot(tp);
-        // JTabbedPane.Page has no AccessibleAction — tabs do not get click refs
-        // (Tab switching would use selection actions, not click)
-        // The JTabbedPane itself may or may not get a ref depending on selection support
+        // Nothing to assert: a JTabbedPane.Page has no AccessibleAction, so no tab gets a
+        // click ref; switching tabs goes through the selection tools.
     }
 
     @Test
@@ -389,7 +372,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         JLabel label = new JLabel("Hello");
 
         snapshot(label);
-        // JLabel has no actions
+        // No actions, so no ref.
         assertThrows(IllegalStateException.class, () -> context.getRefOf(label));
     }
 
@@ -423,9 +406,8 @@ class SwingClickToolTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenu() throws Exception {
-        // D_jmenu_not_clickable: JMenu is structural — its title is not clickable. Items remain clickable.
-        // Registers the JMenu under a test ref (per the component-matrix note in design/architecture.md)
-        // to exercise the swing_click error path rather than the snapshot ref-gate.
+        // D_jmenu_not_clickable. The snapshot gives the JMenu no ref, so a test ref reaches
+        // the swing_click refusal itself (design/architecture.md § Testing).
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
@@ -464,7 +446,6 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         tb.add(button);
 
         snapshot(tb);
-        // JToolBar is structural; button inside gets click ref
         click(context.getRefOf(button));
     }
 
@@ -487,7 +468,6 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(listRef));
         assertTrue(ex.getMessage().contains("does not support swing_click"));
 
-        // Re-snapshot to get fresh refs after the failed click cleared the map
         snapshot(list);
 
         // JList children have click action — ref is listRef + 1
@@ -532,7 +512,6 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         ClickRecordingPanel panel = new ClickRecordingPanel();
         panel.setSize(200, 100);
 
-        // Record the event coordinates
         final int[] coords = new int[2];
         panel.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
@@ -582,7 +561,6 @@ class SwingClickToolTest extends AbstractHeadlessTest {
 
     @Test
     void componentWithNoClickSupportAndNoMouseListenerReturnsMcpError() throws Exception {
-        // A JSplitPane has get_value/set_value but no click and no app MouseListener
         JSplitPane sp = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JPanel(), new JPanel());
 
         snapshot(sp);
@@ -593,7 +571,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
 
     @Test
     void interactiveRoleWithMouseListenerIsNotClickable() throws Exception {
-        // JSlider has an interactive role — Tier 2 skipped even with app MouseListener
+        // An interactive role skips Tier 2, app MouseListener or not.
         JSlider slider = new JSlider(0, 100, 50);
         slider.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override

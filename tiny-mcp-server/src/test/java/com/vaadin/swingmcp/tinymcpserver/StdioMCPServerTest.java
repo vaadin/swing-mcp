@@ -47,18 +47,13 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Tests for {@link StdioMCPServer}: drives {@code runStdio} on a worker
- * thread with piped streams (per D_stdio_transport testing notes) and verifies the
- * newline-delimited framing, dispatch, and error mapping.
- */
 class StdioMCPServerTest {
 
     private StdioMCPServer server;
     private Thread worker;
     /** Test → server stdin. Closed by tests to signal EOF. */
     private PipedOutputStream clientOut;
-    /** Test ← server stdout. Read line-by-line. */
+    /** Test ← server stdout. */
     private BufferedReader clientIn;
     /** Set if the worker thread aborts unexpectedly. */
     private final AtomicReference<Throwable> workerError = new AtomicReference<>();
@@ -90,11 +85,7 @@ class StdioMCPServerTest {
         }
     }
 
-    /**
-     * Wires up piped streams and launches {@code runStdio} on a daemon
-     * worker. The test side gets a writer pointing at the server's stdin
-     * and a reader pointing at the server's stdout.
-     */
+    /** Launches {@code runStdio} on a daemon worker; returns a writer onto its stdin. */
     private BufferedWriter startWorker() throws IOException {
         PipedInputStream serverIn = new PipedInputStream(64 * 1024);
         clientOut = new PipedOutputStream(serverIn);
@@ -315,14 +306,11 @@ class StdioMCPServerTest {
     @Test
     void notificationProducesNoResponse() throws Exception {
         BufferedWriter w = startWorker();
-        // Send a notification (no id), then a real request — the only response
-        // the test should see is for the second message.
         send(w, "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}");
         send(w, initRequest(42));
 
         JsonObject resp = readResponse();
         assertEquals(42, resp.get("id").getAsInt());
-        // No second line buffered — the stream should be empty until we send more.
         assertFalse(clientIn.ready(), "unexpected extra response after notification + initialize");
     }
 
@@ -343,8 +331,6 @@ class StdioMCPServerTest {
         send(w, initRequest(1));
         readResponse();
 
-        // Closing client stdin should propagate EOF to the server reader and
-        // cause runStdio to return — verified in tearDown via worker.join.
         clientOut.close();
         clientOut = null;
         worker.join(5_000);
@@ -355,16 +341,13 @@ class StdioMCPServerTest {
 
     @Test
     void reinitializeReplacesSession() throws Exception {
-        // First init creates a session; second init replaces it. The handler's
-        // session map should hold exactly one session at a time.
         BufferedWriter w = startWorker();
         send(w, initRequest(1));
         readResponse();
         send(w, initRequest(2));
         readResponse();
-        // No way to peek the handler from the public surface, but if the old
-        // session were still in the map and routing were broken, a follow-up
-        // call would fail. The smoke check: ping still works after re-init.
+        // A smoke check: the session map is not visible from here, but routing
+        // broken by the re-init would fail this ping.
         send(w, "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"ping\"}");
         JsonObject resp = readResponse();
         assertEquals(3, resp.get("id").getAsInt());
@@ -374,9 +357,8 @@ class StdioMCPServerTest {
     // ===== Session lifetime (D_stdio_never_evicts) =====
 
     /**
-     * Regression test for D_stdio_never_evicts: a scheduled tick here evicts the session
-     * after 30 idle minutes and wedges the process for good, since no stdio
-     * client ever re-initializes.
+     * A scheduled tick would evict the session after 30 idle minutes and wedge
+     * the process for good: no stdio client re-initializes. See D_stdio_never_evicts.
      */
     @Test
     void idleCleanupTickIsNotScheduledForStdio() throws Exception {

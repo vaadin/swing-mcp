@@ -23,21 +23,9 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Bundle of inputs delivered to a {@link ToolFunction}
- * invocation. Carries the tool name (so one lambda registered under many
- * names can tell which one was invoked), the parsed arguments, transport-layer headers, and the JSON-RPC
- * {@code params._meta} object from the request envelope.
- *
- * <p>{@code arguments} is a typed {@link Parameters} wrapper around the
- * parsed argument map; use its accessors for type-checked extraction, or
- * {@link Parameters#raw()} to pass the map on unchanged. {@code transportHeaders} carries HTTP request headers in
- * HTTP mode and is empty in stdio mode (no out-of-band metadata in
- * newline-delimited JSON); it is unmodifiable. {@code jsonRpcMeta} is the
- * parsed {@code params._meta} GSON {@link JsonObject} if present in the
- * request, or {@code null} otherwise.
- *
- * <p>See D_request_records for the rationale behind preferring a bundle type
- * over positional SAM arguments.
+ * What a {@link ToolFunction} receives: the tool name (one function may serve
+ * several), the arguments, the HTTP request headers (empty over stdio) and the
+ * request's {@code params._meta}. See D_request_records.
  *
  * <p>Immutable.
  */
@@ -62,7 +50,6 @@ public final class ToolRequest {
         this.jsonRpcMeta = jsonRpcMeta;
     }
 
-    /** Convenience constructor that wraps the raw argument map in a {@link Parameters}. */
     public ToolRequest(String name,
                        Map<String, Object> arguments,
                        Map<String, String> transportHeaders,

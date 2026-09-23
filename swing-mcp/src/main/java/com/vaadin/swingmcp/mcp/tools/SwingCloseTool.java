@@ -29,15 +29,10 @@ import java.awt.Window;
 import java.awt.event.WindowEvent;
 
 /**
- * MCP tool {@code swing_close}: closes a window, dialog, internal frame, or
- * desktop icon (iconified internal frame) identified by ref.
- *
- * <p>Validates the ref and close support, then dispatches the close event
- * via {@code SwingUtilities.invokeLater()} (fire-and-forget). For windows,
- * posts {@link WindowEvent#WINDOW_CLOSING}; for internal frames and desktop
- * icons, calls {@code doDefaultCloseAction()}. The client observes the
- * result via {@code swing_snapshot}.</p>
- *
+ * MCP tool {@code swing_close}: closes a window, dialog, internal frame or desktop icon by ref the
+ * way its close button would — a window gets {@link WindowEvent#WINDOW_CLOSING}, an internal frame
+ * (or a desktop icon's frame) {@code doDefaultCloseAction()} — so the application's own close
+ * handling decides.
  */
 public class SwingCloseTool extends AbstractSwingTool {
 
@@ -47,29 +42,24 @@ public class SwingCloseTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // ref lookup
         int ref = params.getInt("ref");
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // check close support
         if (!SwingUtils.supportsClose(accessible)) {
             throw new MCPErrorResponseException(
                     ComponentClassResolver.resolveClassName(accessible)
                             + " does not support swing_close. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
-        // fire the close event asynchronously (fire-and-forget)
         if (accessible instanceof Window) {
             Window window = (Window) accessible;
             SwingUtilities.invokeLater(() -> window.dispatchEvent(new WindowEvent(window, WindowEvent.WINDOW_CLOSING)));
         } else {
-            // JInternalFrame or JDesktopIcon — resolve to frame, call doDefaultCloseAction
             JInternalFrame iframe = (accessible instanceof JInternalFrame.JDesktopIcon)
                     ? ((JInternalFrame.JDesktopIcon) accessible).getInternalFrame()
                     : (JInternalFrame) accessible;
             SwingUtilities.invokeLater(iframe::doDefaultCloseAction);
         }
-        // D_dispatched_echo success echo
         return echo(ref);
     }
 

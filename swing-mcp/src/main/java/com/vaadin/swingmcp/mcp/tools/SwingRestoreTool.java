@@ -29,15 +29,9 @@ import java.awt.Frame;
 import java.beans.PropertyVetoException;
 
 /**
- * MCP tool {@code swing_restore}: restores (de-iconifies) an iconified Frame
- * or JDesktopIcon (iconified JInternalFrame) identified by ref.
- *
- * <p>Validates the ref and restore support via {@link SwingUtils#supportsRestore},
- * then dispatches the restore via {@code SwingUtilities.invokeLater()} (fire-and-forget).
- * For Frame, clears the {@link Frame#ICONIFIED} bit preserving other extended-state bits;
- * for JDesktopIcon, resolves to the underlying JInternalFrame and calls
- * {@code setIcon(false)}. The client observes the result via {@code swing_snapshot}.</p>
- *
+ * MCP tool {@code swing_restore}: de-iconifies an iconified {@link Frame} or a
+ * {@code JDesktopIcon} by ref — clearing only the frame's {@link Frame#ICONIFIED} bit, keeping
+ * {@code MAXIMIZED_BOTH} and the rest, or calling the icon's frame's {@code setIcon(false)}.
  */
 public class SwingRestoreTool extends AbstractSwingTool {
 
@@ -47,34 +41,28 @@ public class SwingRestoreTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // ref lookup
         int ref = params.getInt("ref");
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // gate on supportsRestore, then derive specific error message
         if (!SwingUtils.supportsRestore(accessible)) {
             throw new MCPErrorResponseException(restoreErrorMessage(accessible));
         }
 
-        // fire-and-forget restore dispatch
         if (accessible instanceof Frame) {
             Frame frame = (Frame) accessible;
             SwingUtilities.invokeLater(() ->
                     frame.setExtendedState(frame.getExtendedState() & ~Frame.ICONIFIED));
         } else {
-            // JDesktopIcon — resolve to underlying JInternalFrame
             JInternalFrame.JDesktopIcon icon = (JInternalFrame.JDesktopIcon) accessible;
             JInternalFrame iframe = icon.getInternalFrame();
             SwingUtilities.invokeLater(() -> {
                 try {
                     iframe.setIcon(false);
                 } catch (PropertyVetoException e) {
-                    // Silently ignored — a VetoableChangeListener rejected the restore.
-                    // The client calls swing_snapshot to check the outcome.
+                    // The application vetoed it, as it may; the follow-up snapshot shows that.
                 }
             });
         }
-        // D_dispatched_echo success echo
         return echo(ref);
     }
 

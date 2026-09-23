@@ -26,15 +26,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * D_settable_listeners: MCPHandler exposes session-lifecycle listeners via fluent
- * setters with sensible no-op defaults. Settable until the first
- * session is accepted, then locked.
+ * The session-lifecycle listener setters: no-op defaults, settable until the
+ * first session is accepted, then locked. See D_settable_listeners.
  */
 class MCPHandlerListenerTest {
 
     @Test
     void defaultsAreNoopAcceptAll() {
-        // No setters called: handler should still produce a working session.
         MCPHandler handler = new MCPHandler();
         MCPHandler.InitializeOutcome o = initOnce(handler);
         assertNotNull(o.sessionId());
@@ -82,15 +80,12 @@ class MCPHandlerListenerTest {
 
     @Test
     void settersLockEvenWhenAcceptNewSessionRejects() {
-        // The lock fires the moment a session is *accepted* — a rejected
-        // initialize attempt does not lock the listeners.
+        // The lock fires when a session is *accepted*, not on a rejected attempt.
         MCPHandler handler = new MCPHandler()
                 .setAcceptNewSession(existing -> new SessionDecision.Reject());
         assertThrows(MCPServerException.class, () -> initOnce(handler));
-        // Still settable — no session was accepted.
         handler.setAcceptNewSession(existing -> new SessionDecision.Accept());
         initOnce(handler);
-        // Now locked.
         assertThrows(IllegalStateException.class,
                 () -> handler.setOnSessionStarted(s -> {}));
     }

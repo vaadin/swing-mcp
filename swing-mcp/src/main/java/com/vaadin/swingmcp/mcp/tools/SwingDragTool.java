@@ -34,17 +34,14 @@ import java.util.List;
 import java.util.logging.Logger;
 
 /**
- * MCP tool {@code swing_drag}: drags from one location to another.
- * <p>
- * Automatically selects the best dispatch strategy:
- * <ul>
- *   <li>When a graphical display is available and the source component is showing
- *       on screen, uses {@link java.awt.Robot} for real OS-level mouse events
- *       (compatible with both MouseListener-based drag and Java's DnD framework).</li>
- *   <li>Otherwise (headless environment or component not showing on screen), falls
- *       back to synthetic {@link Component#dispatchEvent} calls.</li>
- * </ul>
+ * MCP tool {@code swing_drag}: drags from a point on one component, through optional waypoints,
+ * to a point on another; each point defaults to its component's center. Refuses a disabled
+ * source.
  *
+ * <p>With a display and a showing source it drives a {@link java.awt.Robot} off the EDT, on the
+ * context's executor: real OS mouse events, which serve Java's DnD framework as well as a
+ * {@code MouseListener}-based drag. Otherwise it posts synthetic events with
+ * {@link Component#dispatchEvent}, every one of them to the source component.
  */
 public class SwingDragTool extends AbstractSwingTool {
 
@@ -60,7 +57,6 @@ public class SwingDragTool extends AbstractSwingTool {
         Integer sourceX = params.getIntOrNull("source_x");
         Integer sourceY = params.getIntOrNull("source_y");
 
-        // validate source_x/source_y pair
         if ((sourceX == null) != (sourceY == null)) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                     "Both 'source_x' and 'source_y' must be provided together");
@@ -70,13 +66,11 @@ public class SwingDragTool extends AbstractSwingTool {
         Integer targetX = params.getIntOrNull("target_x");
         Integer targetY = params.getIntOrNull("target_y");
 
-        // validate target_x/target_y pair
         if ((targetX == null) != (targetY == null)) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                     "Both 'target_x' and 'target_y' must be provided together");
         }
 
-        // validate via (if provided)
         List<Integer> viaRaw = params.getIntArrayOrNull("via");
         if (viaRaw != null && viaRaw.size() % 3 != 0) {
             throw new MCPServerException(MCPServerException.INVALID_PARAMS,
@@ -84,10 +78,8 @@ public class SwingDragTool extends AbstractSwingTool {
                             + "length " + viaRaw.size() + " is not divisible by 3");
         }
 
-        // look up source by ref
         Accessible sourceAccessible = context.getAccessibleByRef(sourceRef);
 
-        // resolve source to Component + press point (defaults to center)
         SwingUtils.ComponentAndPoint source = SwingUtils.resolveComponentAndPoint(sourceAccessible);
         if (source == null) {
             throw new MCPErrorResponseException(
@@ -95,15 +87,12 @@ public class SwingDragTool extends AbstractSwingTool {
                             + "Call swing_snapshot to verify available components");
         }
 
-        // override press point with component-relative offsets if provided
         if (sourceX != null) {
             source = new SwingUtils.ComponentAndPoint(source.component, sourceX, sourceY);
         }
 
-        // look up target by ref
         Accessible targetAccessible = context.getAccessibleByRef(targetRef);
 
-        // resolve target to Component + drop point (defaults to center)
         SwingUtils.ComponentAndPoint target = SwingUtils.resolveComponentAndPoint(targetAccessible);
         if (target == null) {
             throw new MCPErrorResponseException(
@@ -111,21 +100,17 @@ public class SwingDragTool extends AbstractSwingTool {
                             + "Call swing_snapshot to verify available components");
         }
 
-        // override drop point with component-relative offsets if provided
         if (targetX != null) {
             target = new SwingUtils.ComponentAndPoint(target.component, targetX, targetY);
         }
 
-        // resolve waypoint triplets
         List<SwingUtils.ComponentAndPoint> waypoints = resolveWaypoints(viaRaw, context);
 
-        // check effectively enabled
         if (!SwingUtils.isEffectivelyEnabled(sourceAccessible)) {
             throw new MCPErrorResponseException(
                     "Component is disabled and cannot be dragged");
         }
 
-        // auto-detect dispatch strategy
         boolean useRobot = !GraphicsEnvironment.isHeadless() && source.component.isShowing();
 
         if (useRobot) {
@@ -134,7 +119,6 @@ public class SwingDragTool extends AbstractSwingTool {
             dispatchViaSynthetic(source, target, waypoints);
         }
 
-        // D_dispatched_echo success echo
         return echo(sourceRef, "ref=" + targetRef);
     }
 
@@ -165,10 +149,6 @@ public class SwingDragTool extends AbstractSwingTool {
         return result;
     }
 
-    /**
-     * Robot dispatch — real OS-level mouse events via {@link java.awt.Robot}.
-     * All coordinates converted to screen-absolute.
-     */
     private void dispatchViaRobot(SwingUtils.ComponentAndPoint source,
                                   SwingUtils.ComponentAndPoint target,
                                   List<SwingUtils.ComponentAndPoint> waypoints,
@@ -201,20 +181,14 @@ public class SwingDragTool extends AbstractSwingTool {
         });
     }
 
-    /**
-     * Synthetic dispatch — all events sent to the source component.
-     * Used in headless environments or when the source component is not showing.
-     */
     private void dispatchViaSynthetic(SwingUtils.ComponentAndPoint source,
                                       SwingUtils.ComponentAndPoint target,
                                       List<SwingUtils.ComponentAndPoint> waypoints) {
-        // Convert target point to source-component-local coordinates
         Point targetPoint = new Point(target.x, target.y);
         Point converted = SwingUtilities.convertPoint(target.component, targetPoint, source.component);
         int localTargetX = converted.x;
         int localTargetY = converted.y;
 
-        // Convert waypoints to source-component-local coordinates
         List<int[]> localWaypoints = new ArrayList<>(waypoints.size());
         for (SwingUtils.ComponentAndPoint wp : waypoints) {
             Point wpPoint = new Point(wp.x, wp.y);

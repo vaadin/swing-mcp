@@ -26,9 +26,8 @@ import java.net.URI;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * The conformance suite driven by this project's own client — the leg that
- * also runs on Java 11, since {@link TinyMCPClient} has no dependency the
- * official SDK's Java 17 floor would drag in.
+ * The conformance suite driven by {@link TinyMCPClient} — the leg that also
+ * runs on Java 11. See D_conformance_two_clients.
  */
 class TinyClientToolConformanceTest extends AbstractToolConformanceTest {
 

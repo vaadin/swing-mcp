@@ -25,11 +25,6 @@ import javax.swing.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Headless tests for {@link SwingUtils#isEffectivelyEnabled(Accessible)}.
- * Covers every component in the verification component matrix, plus
- * parent-chain and edge-case scenarios.
- */
 class SwingUtilsIsEffectivelyEnabledTest {
 
     @BeforeAll
@@ -338,10 +333,8 @@ class SwingUtilsIsEffectivelyEnabledTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Parent chain — Swing does NOT propagate setEnabled(false) to children, so
-    // neither do we. A button inside a disabled container is still clickable in
-    // Swing, and must therefore still be reported as effectively enabled.
-    // (See Component.setEnabled javadoc; JDK-4177727 closed as won't-fix.)
+    // Parent chain — Swing does not propagate setEnabled(false) to children
+    // (JDK-4177727, won't fix), so neither do we (D_mirror_swing_semantics).
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test

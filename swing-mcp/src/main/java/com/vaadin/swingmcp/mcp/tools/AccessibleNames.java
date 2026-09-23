@@ -25,18 +25,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Utility class for resolving {@link AccessibleRole} and {@link AccessibleState} instances
- * to their field names (lowercased). Since neither class is an enum, resolution is done
- * via reflection over the declared public static fields, performed once at class-load time.
- * <p>
- * Unknown instances (custom subclasses not matching any declared field) fall back to {@code "unknown"}.
+ * Names an {@link AccessibleRole} or {@link AccessibleState} by its lowercased field name —
+ * {@code AccessibleRole.PUSH_BUTTON} → {@code "push_button"} — never by the localized
+ * {@code toDisplayString()} (D_role_in_snapshot_only). Neither class is an enum, so the
+ * public static fields are reflected once, at class load.
  */
 public final class AccessibleNames {
 
-    /** Map from {@link AccessibleRole} instance to its lowercased field name (e.g. {@code PUSH_BUTTON} → {@code "push_button"}). */
     public static final Map<AccessibleRole, String> ROLE_NAMES;
 
-    /** Map from {@link AccessibleState} instance to its lowercased field name (e.g. {@code DISABLED} → {@code "disabled"}). */
     public static final Map<AccessibleState, String> STATE_NAMES;
 
     static {
@@ -68,14 +65,15 @@ public final class AccessibleNames {
     }
 
     /**
-     * Returns the lowercased field name for the given role, or {@code "unknown"} if not found.
+     * @return {@code "unknown"} for a role no {@link AccessibleRole} field declares, such as a
+     *         custom subclass's own constant
      */
     public static String roleName(AccessibleRole role) {
         return ROLE_NAMES.getOrDefault(role, "unknown");
     }
 
     /**
-     * Returns the lowercased field name for the given state, or {@code "unknown"} if not found.
+     * @return {@code "unknown"} for a state no {@link AccessibleState} field declares
      */
     public static String stateName(AccessibleState state) {
         return STATE_NAMES.getOrDefault(state, "unknown");

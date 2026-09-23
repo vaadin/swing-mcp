@@ -24,15 +24,17 @@ import com.vaadin.swingmcp.tools.SwingTools;
 import javax.accessibility.Accessible;
 
 /**
- * MCP tool {@code swing_get_description}: reads the full description of a UI
- * component by ref.
+ * MCP tool {@code swing_get_description}: a component's description by ref, resolved as the
+ * snapshot's description slot is ({@link SwingUtils#resolveDescription}). Any component
+ * qualifies; one without a description yields empty text.
  *
- * <p>The snapshot caps descriptions at 120 characters (D_quoted_slot_sanitizing). When
- * the AI needs the full text it calls this tool. The description is resolved
- * using the same logic as the snapshot description slot: accessible description
- * first, tooltip fallback second, HTML cleanup and sanitisation applied —
- * but without the 120-character cap.</p>
+ * <p>The slot's 120-character cap (D_quoted_slot_sanitizing) becomes
+ * {@code MAX_DESCRIPTION_LENGTH}, with a notice quoting the real length:
  *
+ * <pre>
+ * &lt;first 1000 characters&gt;
+ * ... (truncated, 1100 total characters)
+ * </pre>
  */
 public class SwingGetDescriptionTool extends AbstractSwingTool {
 
@@ -44,23 +46,14 @@ public class SwingGetDescriptionTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // ref is required integer
         int ref = params.getInt("ref");
-
-        // look up the accessible by ref (throws MCPServerException if not found)
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // resolve description using the same logic as the snapshot
-        // (accessible description -> tooltip fallback -> HTML cleanup -> sanitize).
-        // no gate — every component has a description (possibly empty).
         String desc = SwingUtils.resolveDescription(accessible);
-
         if (desc == null || desc.isEmpty()) {
-            // explicit empty string, not null
             return MCPProtocol.Content.text("");
         }
 
-        // cap at MAX_DESCRIPTION_LENGTH with truncation notice
         if (desc.length() > MAX_DESCRIPTION_LENGTH) {
             int totalLength = desc.length();
             desc = desc.substring(0, MAX_DESCRIPTION_LENGTH)
@@ -72,7 +65,6 @@ public class SwingGetDescriptionTool extends AbstractSwingTool {
 
     @Override
     public boolean isMutation() {
-        // read-only tool, ref map is NOT cleared
         return false;
     }
 }

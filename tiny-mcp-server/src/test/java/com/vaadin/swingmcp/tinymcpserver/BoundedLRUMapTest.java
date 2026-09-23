@@ -52,9 +52,8 @@ class BoundedLRUMapTest {
         m.put(1, 10);
         m.put(2, 20);
         m.put(3, 30);
-        // Touch 1 → it's now most recently used; 2 is now LRU.
+        // The get makes 1 most recently used, so 4 evicts 2.
         assertEquals(10, m.get(1));
-        // Insert 4 → must evict 2 (LRU after the touch above).
         m.put(4, 40);
 
         assertEquals(10, m.get(1));
@@ -79,9 +78,7 @@ class BoundedLRUMapTest {
 
     @Test
     void concurrentPutsRespectCap() throws Exception {
-        // Sanity: hammer the map from many threads and verify size never
-        // exceeds the cap. We don't assert which entries survive — only
-        // that the synchronized methods don't corrupt the size invariant.
+        // Asserts only the size invariant, not which entries survive.
         int cap = 8;
         BoundedLRUMap<Integer, Integer> m = new BoundedLRUMap<>(cap);
         int threads = 16;
@@ -113,9 +110,8 @@ class BoundedLRUMapTest {
         start.countDown();
         for (Thread w : workers) w.join();
         assertEquals(cap, m.size(), "size should settle at cap");
-        // size() observation may catch the map mid-insert (size==cap+1)
-        // before removeEldestEntry trims; the synchronized contract still
-        // bounds it tightly.
+        // put trims under the same lock size() takes, so the transient cap+1 is
+        // never observable; the +1 is slack, not an expected state.
         org.junit.jupiter.api.Assertions.assertTrue(maxObservedSize.get() <= cap + 1,
                 "size should never substantially exceed cap; observed " + maxObservedSize.get());
     }

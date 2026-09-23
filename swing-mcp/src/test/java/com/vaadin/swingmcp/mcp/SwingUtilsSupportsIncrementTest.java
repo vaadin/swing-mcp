@@ -24,10 +24,6 @@ import javax.swing.*;
 import static com.vaadin.swingmcp.mcp.JdkCapabilities.SLIDER_HAS_ACCESSIBLE_ACTIONS;
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Headless tests for {@link SwingUtils#supportsIncrement(javax.accessibility.Accessible)}.
- * Covers every component in the verification component matrix.
- */
 class SwingUtilsSupportsIncrementTest {
 
     @BeforeAll

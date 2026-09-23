@@ -25,10 +25,6 @@ import javax.swing.tree.DefaultMutableTreeNode;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Headless tests for {@link SwingUtils#supportsToggleExpand(Accessible)}.
- * Covers every component in the verification component matrix, plus JTree node variants.
- */
 class SwingUtilsSupportsToggleExpandTest {
 
     @BeforeAll
@@ -45,14 +41,13 @@ class SwingUtilsSupportsToggleExpandTest {
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("root");
         root.add(new DefaultMutableTreeNode("child"));
         JTree tree = new JTree(root);
-        // root node is the first accessible child of JTree
         Accessible rootNode = tree.getAccessibleContext().getAccessibleChild(0);
         assertTrue(SwingUtils.supportsToggleExpand(rootNode) >= 0);
     }
 
     @Test
     void jTreeLeafNode_doesNotSupportToggleExpand() {
-        // A root node with no children is a leaf — accessible at index 0 without any expansion
+        // A childless root is a leaf, reachable at index 0 without expanding anything.
         JTree tree = new JTree(new DefaultMutableTreeNode("leaf-root"));
         Accessible leafNode = tree.getAccessibleContext().getAccessibleChild(0);
         assertNotNull(leafNode, "Root accessible should not be null");

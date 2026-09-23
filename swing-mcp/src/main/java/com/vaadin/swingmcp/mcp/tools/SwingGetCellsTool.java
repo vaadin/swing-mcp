@@ -28,13 +28,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * MCP tool {@code swing_get_cells}: enumerates accessible children of a large
- * data component (JTable, JList, JTree) with paging support.
+ * MCP tool {@code swing_get_cells}: a page of a {@code JList}'s or {@code JTree}'s accessible
+ * children by ref, each rendered as a snapshot subtree ({@code offset=5, length=3}):
  *
- * <p>Returns a paged accessibility tree (same format as {@code swing_snapshot})
- * rooted at the requested children. <b>Replaces the ref map</b> — the parent
- * component gets ref=1 and child refs start from 2.</p>
+ * <pre>
+ * Showing 3 children from offset 5 (total 20) for list [ref=1]
+ * - (label) "Item-5" [ref=2] actions: click
+ * - (label) "Item-6" [ref=3] actions: click
+ * - (label) "Item-7" [ref=4] actions: click
+ * </pre>
  *
+ * A {@code null} child renders as {@code - null}; a {@code JTable} is refused (D_no_jtable_cells).
+ *
+ * <p>Read-only, yet it <b>replaces the ref map</b>: the parent becomes ref 1, so the model can
+ * page on without a new snapshot.
  */
 public class SwingGetCellsTool extends AbstractSwingTool {
 
@@ -50,7 +57,6 @@ public class SwingGetCellsTool extends AbstractSwingTool {
     @Override
     public MCPProtocol.Content execute(Parameters params,
                                        SwingToolContext context) throws Exception {
-        // parameter validation
         int ref = params.getInt("ref");
         int offset = params.getInt("offset");
         int length = params.getInt("length");
@@ -61,28 +67,21 @@ public class SwingGetCellsTool extends AbstractSwingTool {
             throw new MCPErrorResponseException("length must be non-negative, got " + length);
         }
 
-        // ref lookup — uses existing ref map
         Accessible accessible = context.getAccessibleByRef(ref);
-
-        // eligibility check — role must be LIST or TREE. JTable
-        // is rejected with a redirect to swing_get_items.
         requireGetCellsSupported(accessible, "swing_get_cells", "swing_get_items");
 
         AccessibleContext ac = accessible.getAccessibleContext();
 
-        // Step 4: clear ref map and register parent as ref=1
         context.clearRefMap();
         context.putRef(1, accessible);
 
-        // Step 5: compute iteration range
         int totalChildren = ac.getAccessibleChildrenCount();
+        // long: offset + length can overflow int.
         int end = (int) Math.min((long) offset + length, totalChildren);
 
-        // Resolve role name for header
         AccessibleRole role = ac.getAccessibleRole();
         String roleName = role != null ? AccessibleNames.roleName(role) : "unknown";
 
-        // Early return for empty result
         if (offset >= totalChildren) {
             int shown = 0;
             String header = "Showing " + shown + " children from offset " + offset
@@ -90,14 +89,12 @@ public class SwingGetCellsTool extends AbstractSwingTool {
             return MCPProtocol.Content.text(header);
         }
 
-        // Step 6: enumerate children — build and prune each subtree
         List<SnapshotNode> childRoots = new ArrayList<>();
         List<Integer> nullIndices = new ArrayList<>();
 
         for (int i = offset; i < end; i++) {
             Accessible child = ac.getAccessibleChild(i);
             if (child == null) {
-                // null child — record for placeholder emission
                 nullIndices.add(i);
             } else {
                 SnapshotNode node = SnapshotNode.build(child);
@@ -106,13 +103,11 @@ public class SwingGetCellsTool extends AbstractSwingTool {
             }
         }
 
-        // assign refs starting from 2 (ref 1 is the parent)
         int nextRef = 2;
         for (SnapshotNode root : childRoots) {
             nextRef = root.assignRefs(nextRef, context);
         }
 
-        // Step 8: render
         int shown = end - offset;
         String header = "Showing " + shown + " children from offset " + offset
                 + " (total " + totalChildren + ") for " + roleName + " [ref=1]";
@@ -120,11 +115,9 @@ public class SwingGetCellsTool extends AbstractSwingTool {
         StringBuilder sb = new StringBuilder();
         sb.append(header).append('\n');
 
-        // Render children in order, interleaving null placeholders
         int childRootIdx = 0;
         for (int i = offset; i < end; i++) {
             if (nullIndices.contains(i)) {
-                // null placeholder
                 sb.append("- null\n");
             } else {
                 childRoots.get(childRootIdx).render(0, sb);

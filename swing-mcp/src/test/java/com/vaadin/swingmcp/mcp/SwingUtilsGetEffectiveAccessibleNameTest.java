@@ -26,12 +26,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
- * Headless tests for {@link SwingUtils#getEffectiveAccessibleName}.
- * <p>
- * JDesktopIcon is a JComponent (not a Window), so it can be instantiated
- * headlessly. The three-step fallback is testable without a display.
- *
- * @see <a href="tool-002-swing-snapshot.md">design/snapshot-format.md</a>
+ * A {@code JDesktopIcon} is a {@code JComponent}, not a {@code Window}, so its three-step
+ * fallback in {@link SwingUtils#getEffectiveAccessibleName} runs headless.
  */
 class SwingUtilsGetEffectiveAccessibleNameTest {
 
@@ -100,7 +96,6 @@ class SwingUtilsGetEffectiveAccessibleNameTest {
         frame.getAccessibleContext().setAccessibleName("Custom Frame Name");
         JInternalFrame.JDesktopIcon icon = frame.getDesktopIcon();
 
-        // Step 1 (icon name) is null, step 2 (frame accessible name) wins.
         assertEquals("Custom Frame Name", SwingUtils.getEffectiveAccessibleName(icon));
     }
 
@@ -111,7 +106,6 @@ class SwingUtilsGetEffectiveAccessibleNameTest {
         JInternalFrame.JDesktopIcon icon = frame.getDesktopIcon();
         icon.getAccessibleContext().setAccessibleName("Custom Icon Name");
 
-        // Step 1 (icon name) wins over step 2 and 3.
         assertEquals("Custom Icon Name", SwingUtils.getEffectiveAccessibleName(icon));
     }
 
@@ -120,7 +114,6 @@ class SwingUtilsGetEffectiveAccessibleNameTest {
         JInternalFrame frame = new JInternalFrame(null);
         JInternalFrame.JDesktopIcon icon = frame.getDesktopIcon();
 
-        // All three steps return null.
         assertNull(SwingUtils.getEffectiveAccessibleName(icon));
     }
 

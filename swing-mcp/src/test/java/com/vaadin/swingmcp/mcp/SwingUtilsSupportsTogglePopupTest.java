@@ -23,10 +23,6 @@ import javax.swing.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Headless tests for {@link SwingUtils#supportsTogglePopup(javax.accessibility.Accessible)}.
- * Covers every component in the verification component matrix.
- */
 class SwingUtilsSupportsTogglePopupTest {
 
     @BeforeAll

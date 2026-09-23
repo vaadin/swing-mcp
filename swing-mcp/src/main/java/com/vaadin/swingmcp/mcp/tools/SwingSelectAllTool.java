@@ -28,14 +28,9 @@ import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 
 /**
- * MCP tool {@code swing_select_all}: selects all items in a multi-selection
- * UI component by ref.
- *
- * <p>Only works on components marked {@code multi-selection} in the snapshot.
- * Single-selection components are rejected. For JTable, uses
- * {@link JTable#selectAll()} directly because the accessibility API's
- * {@code selectAllAccessibleSelection()} is a no-op on JTable.</p>
- *
+ * MCP tool {@code swing_select_all}: selects every item of a multi-selection component by ref,
+ * through the component's own select-all rather than a list of every index
+ * (D_select_all_standalone). Refuses a single-selection or disabled component.
  */
 public class SwingSelectAllTool extends AbstractSwingTool {
 
@@ -45,39 +40,29 @@ public class SwingSelectAllTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // parameter validation
         int ref = params.getInt("ref");
-
-        // ref lookup
         Accessible accessible = context.getAccessibleByRef(ref);
-
-        // selection support + multi-selection check
         requireMultiSelectable(accessible, "swing_select_all");
 
-        // effectively enabled check
         if (!SwingUtils.isEffectivelyEnabled(accessible)) {
             throw new MCPErrorResponseException(
                     "Component is disabled and cannot be modified");
         }
 
-        // Step 5: fire-and-forget dispatch
         if (accessible instanceof JTable) {
-            // JTable.selectAll() — accessibility API is broken (no-op)
+            // selectAllAccessibleSelection() is a no-op on JTable (R_accessible_selection_writes).
             JTable table = (JTable) accessible;
             SwingUtilities.invokeLater(table::selectAll);
         } else {
-            // AccessibleSelection.selectAllAccessibleSelection()
             AccessibleSelection as = accessible.getAccessibleContext().getAccessibleSelection();
             SwingUtilities.invokeLater(as::selectAllAccessibleSelection);
         }
 
-        // D_dispatched_echo success echo
         return echo(ref);
     }
 
     @Override
     public boolean isMutation() {
-        // mutation tool, ref map IS cleared
         return true;
     }
 }

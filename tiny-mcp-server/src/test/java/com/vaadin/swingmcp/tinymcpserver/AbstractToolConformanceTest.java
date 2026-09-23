@@ -47,9 +47,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * }
  * }</pre>
  *
- * <p>Running the same assertions through this project's own client and through
- * the official MCP SDK is what stops the suite being circular — the SDK is an
- * independent reading of the same specification. See D_conformance_two_clients.
+ * <p>The official-SDK leg is what stops the suite being circular. See
+ * D_conformance_two_clients.
  */
 abstract class AbstractToolConformanceTest {
 
@@ -64,13 +63,11 @@ abstract class AbstractToolConformanceTest {
 
     /**
      * Runs {@code call}, which must fail with a JSON-RPC protocol error, and
-     * reports that error's code and message. The two clients signal it with
-     * different exception types, which is the only difference this suite has
-     * to absorb.
+     * reports that error's code and message — the one thing the two clients
+     * signal differently.
      */
     protected abstract RpcError rpcErrorOf(Executable call);
 
-    /** A JSON-RPC error, as either client is able to report it. */
     protected static final class RpcError {
         final int code;
         final String message;
@@ -83,18 +80,13 @@ abstract class AbstractToolConformanceTest {
 
     @BeforeEach
     void startServer() throws Exception {
-        // Port 0 → OS-assigned ephemeral port, so parallel test runs don't collide.
         server = new HttpMCPServer(0, "/mcp");
-
-
-        // Tool: echo_text — returns the "message" string as text content
         server.getHandler().addTool("echo_text", "Echo a text message",
                 new InputSchemaBuilder()
                         .requiredString("message", "The message to echo")
                         .build(),
                 request -> MCPProtocol.Content.text((String) request.arguments().raw().get("message")));
 
-        // Tool: add_integers — returns sum of two integers as text
         server.getHandler().addTool("add_integers", "Add two integers",
                 new InputSchemaBuilder()
                         .requiredInteger("a", "First integer")
@@ -103,7 +95,6 @@ abstract class AbstractToolConformanceTest {
                 request -> MCPProtocol.Content.text(
                         String.valueOf((Integer) request.arguments().raw().get("a") + (Integer) request.arguments().raw().get("b"))));
 
-        // Tool: multi_type — accepts all parameter types, records args, returns text
         server.getHandler().addTool("multi_type", "Test all parameter types",
                 new InputSchemaBuilder()
                         .requiredString("str_param", "A string")
@@ -116,7 +107,6 @@ abstract class AbstractToolConformanceTest {
                     return MCPProtocol.Content.text("ok");
                 });
 
-        // Tool: optional_params — has one required and one optional param
         server.getHandler().addTool("optional_params", "Tool with optional parameters",
                 new InputSchemaBuilder()
                         .requiredString("required_str", "Required string")
@@ -127,22 +117,18 @@ abstract class AbstractToolConformanceTest {
                     return MCPProtocol.Content.text("ok");
                 });
 
-        // Tool: return_null — always returns null content
         server.getHandler().addTool("return_null", "Returns null content",
                 new InputSchemaBuilder().build(),
                 request -> null);
 
-        // Tool: return_image — returns image content
         server.getHandler().addTool("return_image", "Returns image content",
                 new InputSchemaBuilder().build(),
                 request -> MCPProtocol.Content.image("aW1hZ2VkYXRh", "image/png"));
 
-        // Tool: return_audio — returns audio content
         server.getHandler().addTool("return_audio", "Returns audio content",
                 new InputSchemaBuilder().build(),
                 request -> MCPProtocol.Content.audio("YXVkaW9kYXRh", "audio/wav"));
 
-        // Tool: return_resource — returns embedded resource content
         server.getHandler().addTool("return_resource", "Returns resource content",
                 new InputSchemaBuilder().build(),
                 request -> {
@@ -153,19 +139,16 @@ abstract class AbstractToolConformanceTest {
                     return MCPProtocol.Content.resource(rc);
                 });
 
-        // Tool: throw_exception — always throws
         server.getHandler().addTool("throw_exception", "Always throws an exception",
                 new InputSchemaBuilder().build(),
                 request -> { throw new RuntimeException("something went wrong"); });
 
-        // Tool: throw_mcp_internal_error — throws MCPServerException with INTERNAL_ERROR
         server.getHandler().addTool("throw_mcp_internal_error", "Throws MCPServerException INTERNAL_ERROR",
                 new InputSchemaBuilder().build(),
                 request -> {
                     throw new MCPServerException(MCPServerException.INTERNAL_ERROR, "internal failure");
                 });
 
-        // Tool: throw_mcp_invalid_params — throws MCPServerException with INVALID_PARAMS
         server.getHandler().addTool("throw_mcp_invalid_params", "Throws MCPServerException INVALID_PARAMS",
                 new InputSchemaBuilder()
                         .requiredString("value", "A value to validate")
@@ -175,21 +158,18 @@ abstract class AbstractToolConformanceTest {
                             "value must be non-empty");
                 });
 
-        // Tool: throw_mcp_custom_code — throws MCPServerException with a custom code
         server.getHandler().addTool("throw_mcp_custom_code", "Throws MCPServerException with custom code",
                 new InputSchemaBuilder().build(),
                 request -> {
                     throw new MCPServerException(-32000, "custom server error");
                 });
 
-        // Tool: throw_mcp_error_response — throws MCPErrorResponseException
         server.getHandler().addTool("throw_mcp_error_response", "Throws MCPErrorResponseException",
                 new InputSchemaBuilder().build(),
                 request -> {
                     throw new MCPErrorResponseException("clean error message");
                 });
 
-        // Tool: no_params_tool — has no defined params, to test unknown param rejection
         server.getHandler().addTool("no_params_tool", "Tool with no params",
                 new InputSchemaBuilder().build(),
                 request -> {
@@ -197,7 +177,6 @@ abstract class AbstractToolConformanceTest {
                     return MCPProtocol.Content.text("ok");
                 });
 
-        // Tool: bounded_integer — integer param with min and max constraints
         server.getHandler().addTool("bounded_integer", "Tool with bounded integer parameter",
                 new InputSchemaBuilder()
                         .requiredInteger("count", "Number of items")
@@ -209,7 +188,6 @@ abstract class AbstractToolConformanceTest {
                     return MCPProtocol.Content.text("ok");
                 });
 
-        // Tool: enum_string — string param with enum constraint
         server.getHandler().addTool("enum_string", "Tool with enum string parameter",
                 new InputSchemaBuilder()
                         .requiredString("color", "A color")
@@ -220,14 +198,12 @@ abstract class AbstractToolConformanceTest {
                     return MCPProtocol.Content.text("ok");
                 });
 
-        // Tool: echo_array — accepts a required array param, returns it as JSON content
         server.getHandler().addTool("echo_array", "Echoes an array back as JSON",
                 new InputSchemaBuilder()
                         .requiredArray("items", "The items to echo")
                         .build(),
                 request -> MCPProtocol.Content.json(request.arguments().raw().get("items")));
 
-        // Tool: echo_object — accepts a required object param, returns it as JSON content
         server.getHandler().addTool("echo_object", "Echoes an object back as JSON",
                 new InputSchemaBuilder()
                         .requiredObject("config", "The config to echo")

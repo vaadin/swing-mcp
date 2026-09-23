@@ -37,10 +37,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Request-scoped wrapper around {@link HttpExchange} that provides
- * JSON-RPC response helpers. Created once per incoming request; holds
- * the mutable request ID (set after parsing) and the session ID
- * (set by {@link HttpMCPServer} after routing to a session).
+ * One HTTP request's JSON-RPC view: {@link #parsePost} reads the body and
+ * remembers its id, and the {@code send*} methods write a response echoing
+ * that id and, once {@link #setSessionId} has run, the {@code Mcp-Session-Id}
+ * header.
  */
 class JsonRpcExchange {
 
@@ -60,12 +60,8 @@ class JsonRpcExchange {
     void setSessionId(String sessionId) { this.sessionId = Objects.requireNonNull(sessionId, "sessionId"); }
 
     /**
-     * Returns the request transport headers as an unmodifiable
-     * {@code Map<String, String>}, taking the first value for each header
-     * (HTTP allows multi-valued headers; MCP transport headers are
-     * single-valued in practice). Used by {@link MCPToolHandler},
-     * {@link MCPPromptHandler}, and {@link MCPResourceHandler} to populate
-     * the {@code transportHeaders} field on the request records.
+     * Returns the request headers, unmodifiable, keeping only the first value
+     * of a multi-valued header — MCP's are single-valued in practice.
      */
     Map<String, String> getTransportHeaders() {
         Map<String, String> result = new LinkedHashMap<>();
@@ -119,13 +115,12 @@ class JsonRpcExchange {
      * stays reusable.
      *
      * @implNote {@code com.sun.net.httpserver} closes the TCP connection when a
-     * handler responds without consuming the request body. The rejection paths
-     * — an unknown session id, an unsupported method — answer before the body
-     * is ever parsed, and would otherwise poison a keep-alive connection the
-     * client has already pooled. A client that then reuses it sees the request
-     * die with no response; Java 11's {@code HttpClient} does not retry a POST
-     * in that case (JDK 12+ does), so on the Java 11 floor this surfaces as a
-     * flat "header parser received no bytes" rather than a clean error.
+     * handler responds without consuming the request body, and the rejection
+     * paths — an unknown session id, an unsupported method — answer before
+     * reading it. The client's next request on that pooled keep-alive
+     * connection dies with no response; Java 11's {@code HttpClient} does not
+     * retry the POST (JDK 12+ does), so it fails with a flat "header parser
+     * received no bytes".
      */
     private void drainRequestBody() {
         if (requestBodyConsumed) {
@@ -143,17 +138,14 @@ class JsonRpcExchange {
     }
 
     /**
-     * Reads the request body, parses it as a JSON-RPC request, and sets the
-     * request ID. Session ID validation is handled by {@link HttpMCPServer}
-     * before this method is called.
+     * Reads the body as one JSON-RPC request and remembers its id for the
+     * response.
      *
-     * @return the parsed request, or {@code null} if the body was a
-     * notification — an id-less request that gets no JSON-RPC response. The
-     * 202 Accepted has already been sent by the time {@code null} comes back,
-     * so the caller must simply return.
-     * @throws MCPServerException with an appropriate HTTP status for
-     * parse/shape errors — caught and rendered by
-     * {@link HttpMCPServer#handleRequest}
+     * @return the parsed request, or {@code null} for a notification — the
+     * 202 Accepted has already been sent, so the caller just returns
+     * @throws MCPServerException HTTP 400 with {@code PARSE_ERROR} for
+     * malformed JSON, or {@code INVALID_REQUEST} for a batch or a non-request
+     * shape
      */
     MCPProtocol.@Nullable JsonRpcRequest parsePost() {
         String body = readBody();
@@ -183,7 +175,6 @@ class JsonRpcExchange {
             throw new MCPServerException(400, MCPServerException.INVALID_REQUEST, "Invalid Request", e);
         }
 
-        // Notifications have no id — respond with 202 Accepted
         if (request.getId() == null) {
             sendPlain(202, "");
             return null;

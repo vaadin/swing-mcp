@@ -131,8 +131,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
 
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setText(context.getRefOf(field), "new"));
-        // Non-editable fields pass the structural hasEditableText() check
-        // but fail the editable state check.
+        // Structurally it has editable text; only the EDITABLE state is missing.
         assertEquals("Component is not editable", ex.getMessage());
     }
 
@@ -158,7 +157,6 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         assertThrows(MCPErrorResponseException.class, () ->
                 setTextTool.execute(new Parameters(Map.of("ref", ref, "text", "new")), context));
 
-        // Validation error — ref map must still be intact so the AI can retry
         field.setEnabled(true);
         setText(ref, "another");
         assertEquals("another", field.getText());
@@ -190,9 +188,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
 
     @Test
     void successOnJPasswordFieldReturnsValueEcho() throws Exception {
-        // password fields use the same echo as regular text fields —
-        // the agent already supplied the value, so echoing it back is safe
-        // and provides a strong confirmation signal.
+        // The same echo as a text field: the agent supplied the value, so echoing it leaks nothing.
         JPasswordField field = new JPasswordField();
         snapshot(field);
         int ref = context.getRefOf(field);

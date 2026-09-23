@@ -29,15 +29,9 @@ import java.awt.Frame;
 import java.beans.PropertyVetoException;
 
 /**
- * MCP tool {@code swing_iconify}: iconifies (minimizes) a Frame or
- * JInternalFrame identified by ref.
- *
- * <p>Validates the ref and iconify support, then dispatches the iconify
- * via {@code SwingUtilities.invokeLater()} (fire-and-forget). For Frame,
- * sets the {@link Frame#ICONIFIED} extended state; for JInternalFrame,
- * calls {@code setIcon(true)}. The client observes the result via
- * {@code swing_snapshot}.</p>
- *
+ * MCP tool {@code swing_iconify}: iconifies a {@link Frame} or {@code JInternalFrame} by ref — the
+ * frame's {@link Frame#ICONIFIED} extended-state bit, or the internal frame's
+ * {@code setIcon(true)}. A refusal names why: undecorated, not iconifiable, or already iconified.
  */
 public class SwingIconifyTool extends AbstractSwingTool {
 
@@ -47,16 +41,13 @@ public class SwingIconifyTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // ref lookup
         int ref = params.getInt("ref");
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // gate on supportsIconify, then derive specific error message
         if (!SwingUtils.supportsIconify(accessible)) {
             throw new MCPErrorResponseException(iconifyErrorMessage(accessible));
         }
 
-        // fire-and-forget iconify dispatch
         if (accessible instanceof Frame) {
             Frame frame = (Frame) accessible;
             SwingUtilities.invokeLater(() -> frame.setExtendedState(frame.getExtendedState() | Frame.ICONIFIED));
@@ -66,12 +57,10 @@ public class SwingIconifyTool extends AbstractSwingTool {
                 try {
                     iframe.setIcon(true);
                 } catch (PropertyVetoException e) {
-                    // Silently ignored — a VetoableChangeListener rejected the iconify.
-                    // The client calls swing_snapshot to check the outcome.
+                    // The application vetoed it, as it may; the follow-up snapshot shows that.
                 }
             });
         }
-        // D_dispatched_echo success echo
         return echo(ref);
     }
 

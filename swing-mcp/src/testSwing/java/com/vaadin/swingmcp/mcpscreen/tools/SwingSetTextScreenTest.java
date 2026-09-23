@@ -210,7 +210,6 @@ class SwingSetTextScreenTest extends AbstractScreenTest {
     void componentMatrix_JFrame() throws Exception {
         JFrame frame = new JFrame("Test");
         snapshot(frame);
-        // JFrame itself has no set_text action — it has no ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(frame));
     }
 
@@ -219,7 +218,6 @@ class SwingSetTextScreenTest extends AbstractScreenTest {
         JDialog dialog = new JDialog();
         dialog.setTitle("Test");
         snapshot(dialog);
-        // JDialog itself has no set_text action — it has no ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(dialog));
     }
 
@@ -231,7 +229,6 @@ class SwingSetTextScreenTest extends AbstractScreenTest {
                 null, new Object[]{"OK"}, "OK");
         dialog.setContentPane(optionPane);
         snapshot(dialog);
-        // JOptionPane itself has no set_text action — it has no ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(optionPane));
     }
 }

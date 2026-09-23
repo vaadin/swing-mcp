@@ -34,9 +34,8 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Screen-mode tests for {@code swing_toggle_popup}.
- * Happy-path tests live here because {@code doAccessibleAction} on {@code JComboBox}
- * throws {@code HeadlessException} in headless mode (see design/snapshot-format.md).
+ * The happy paths live here because {@code doAccessibleAction} on a {@code JComboBox}
+ * throws {@code HeadlessException} in headless mode.
  */
 class SwingTogglePopupScreenTest extends AbstractScreenTest {
 
@@ -96,12 +95,11 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
             snapshot(frame);
             int ref = context.getRefOf(combo);
 
-            // Open — call execute directly (no ref-clearing) to keep the ref for the close call
+            // execute directly, not togglePopup(), so the ref survives for the second toggle
             executeOnEDT(() -> togglePopupTool.execute(new Parameters(Map.of("ref", ref)), context));
             executeOnEDT(() -> null); // drain EDT so fire-and-forget action has run
             assertTrue(combo.isPopupVisible(), "Popup should be open");
 
-            // Close — same ref, still valid (ref-clearing is tested separately)
             executeOnEDT(() -> togglePopupTool.execute(new Parameters(Map.of("ref", ref)), context));
             executeOnEDT(() -> null); // drain EDT so fire-and-forget action has run
             assertFalse(combo.isPopupVisible(), "Popup should be closed after second toggle");
@@ -122,17 +120,12 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
             int ref = context.getRefOf(combo);
             togglePopup(ref);
 
-            // Ref map cleared — same ref should now be invalid
             assertThrows(com.vaadin.swingmcp.tinymcpserver.MCPServerException.class,
                     () -> togglePopup(ref));
         } finally {
             frame.dispose();
         }
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // Editable JComboBox
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void togglePopupOpensEditableComboInsideJFrame() throws Exception {
@@ -151,10 +144,6 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // JDialog
-    // ══════════════════════════════════════════════════════════════════════════
-
     @Test
     void togglePopupOpensComboInsideJDialog() throws Exception {
         JDialog dialog = new JDialog();
@@ -171,10 +160,6 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
             dialog.dispose();
         }
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // JInternalFrame
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void togglePopupOpensComboInsideJInternalFrame() throws Exception {
@@ -206,7 +191,6 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
     void componentMatrix_JFrame() throws Exception {
         JFrame frame = new JFrame("Test");
         snapshot(frame);
-        // JFrame itself has no toggle_popup action — it has no ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(frame));
     }
 
@@ -215,7 +199,6 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
         JDialog dialog = new JDialog();
         dialog.setTitle("Test");
         snapshot(dialog);
-        // JDialog itself has no toggle_popup action — it has no ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(dialog));
     }
 
@@ -227,19 +210,13 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
                 null, new Object[]{"OK"}, "OK");
         dialog.setContentPane(optionPane);
         snapshot(dialog);
-        // JOptionPane itself has no toggle_popup action — it has no ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(optionPane));
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // Combo box popup duplication 
-    // ══════════════════════════════════════════════════════════════════════════
-
     /**
-     * Reproducer for the combo box popup duplication bug.
-     * When Window.getWindows() is used to collect roots (as in production),
-     * the heavyweight popup window appears as a separate root AND as a nested
-     * child inside the JComboBox, causing duplicate JPopupMenu/JList nodes.
+     * A heavyweight popup is a {@code Window} of its own, so {@code Window.getWindows()}
+     * yields it as a root besides its place under the {@code JComboBox}; the root copy
+     * must be filtered out.
      */
     @Test
     void openComboPopupShouldNotDuplicateInSnapshot() throws Exception {
@@ -249,12 +226,10 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
         frame.pack();
         frame.setVisible(true);
         try {
-            // Open the popup
             executeOnEDT(() -> { combo.setPopupVisible(true); return null; });
             assertTrue(combo.isPopupVisible(), "Popup should be open");
 
-            // Simulate production: collect all visible windows, applying the
-            // same isRedundantPopupWindow filter as MCPServer.getConsideredComponents()
+            // The window filter of SwingMCP.getConsideredComponents()
             java.util.List<Component> allVisible = new java.util.ArrayList<>();
             for (Window w : Window.getWindows()) {
                 if (com.vaadin.swingmcp.mcp.SwingUtils.isVisible(w)
@@ -263,7 +238,6 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
                 }
             }
 
-            // Snapshot with all visible windows as roots
             context.setConsideredComponents(allVisible);
             String output = executeOnEDT(() ->
                     snapshotTool.execute(new Parameters(Map.of()), context).getText());
@@ -276,7 +250,6 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
                         + " size=" + c.getWidth() + "x" + c.getHeight());
             }
 
-            // Count JPopupMenu and JList occurrences — should appear at most once each
             long popupMenuCount = output.lines()
                     .filter(l -> l.contains("JPopupMenu") || l.contains("popup_menu"))
                     .count();
@@ -294,10 +267,6 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
             frame.dispose();
         }
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // MCP client smoke test
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void swingTogglePopupViaMcpClient() throws Exception {

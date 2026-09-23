@@ -124,7 +124,6 @@ class SwingGetValueTest extends AbstractHeadlessTest {
         snapshot(slider);
         int ref = context.getRefOf(slider);
 
-        // Call get_value twice with same ref — should succeed both times (map not cleared)
         assertEquals("{\"current\":42,\"min\":0,\"max\":100}", getValue(ref));
         assertEquals("{\"current\":42,\"min\":0,\"max\":100}", getValue(ref));
     }
@@ -151,7 +150,6 @@ class SwingGetValueTest extends AbstractHeadlessTest {
         JSlider slider = new JSlider(0, 100, 42);
         snapshot(slider);
         String json = getValue(context.getRefOf(slider));
-        // Should be 42, not 42.0
         assertTrue(json.contains("\"current\":42,"), "Should serialize as integer, got: " + json);
         assertFalse(json.contains("42.0"), "Should not contain 42.0, got: " + json);
     }

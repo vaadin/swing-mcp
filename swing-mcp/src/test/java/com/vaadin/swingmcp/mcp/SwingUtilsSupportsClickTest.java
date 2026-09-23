@@ -25,10 +25,6 @@ import javax.swing.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Headless tests for {@link SwingUtils#supportsClick(Accessible)}.
- * Covers every component in the verification component matrix.
- */
 class SwingUtilsSupportsClickTest {
 
     @BeforeAll
@@ -161,8 +157,7 @@ class SwingUtilsSupportsClickTest {
 
     @Test
     void jMenu_doesNotSupportClick() {
-        // D_jmenu_not_clickable: JMenu is a structural container, not a click target.
-        // The menu's JMenuItem children are directly clickable via their own refs.
+        // D_jmenu_not_clickable: its items are clicked directly instead.
         JMenu menu = new JMenu("File");
         assertNull(SwingUtils.supportsClick(menu));
     }
@@ -253,7 +248,6 @@ class SwingUtilsSupportsClickTest {
 
     @Test
     void interactiveRoleWithAppMouseListener_doesNotSupportClickViaTier2() {
-        // JSlider has an interactive role — Tier 2 should be skipped
         JSlider slider = new JSlider(0, 100, 50);
         slider.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
@@ -274,7 +268,6 @@ class SwingUtilsSupportsClickTest {
                 // additional app listener
             }
         });
-        // Should still return non-null (Tier 1 takes precedence)
         assertNotNull(SwingUtils.supportsClick(button),
                 "Button with both AccessibleAction click and MouseListener should support click");
     }

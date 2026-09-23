@@ -23,13 +23,8 @@ import com.vaadin.swingmcp.tools.SwingTools;
 import javax.accessibility.Accessible;
 
 /**
- * MCP tool {@code swing_get_cell_count}: returns the total number of accessible
- * children (cells) of a large data component by ref, as a plain integer.
- *
- * <p>This is a thin wrapper around
- * {@code AccessibleContext.getAccessibleChildrenCount()} that lets the AI client
- * learn the cell count without fetching any cells.</p>
- *
+ * MCP tool {@code swing_get_cell_count}: the accessible-children count of a {@code JList} or
+ * {@code JTree} by ref, as plain text — the index space {@code swing_get_cells} pages through.
  */
 public class SwingGetCellCountTool extends AbstractSwingTool {
 
@@ -39,26 +34,16 @@ public class SwingGetCellCountTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // parameter validation
         int ref = params.getInt("ref");
-
-        // ref lookup
         Accessible accessible = context.getAccessibleByRef(ref);
-
-        // eligibility check — role must be LIST or TREE. JTable
-        // is rejected with a redirect to swing_get_item_count.
         requireGetCellsSupported(accessible, "swing_get_cell_count", "swing_get_item_count");
 
-        // compute count
         int totalChildren = accessible.getAccessibleContext().getAccessibleChildrenCount();
-
-        // Step 5: return as plain text integer
         return MCPProtocol.Content.text(String.valueOf(totalChildren));
     }
 
     @Override
     public boolean isMutation() {
-        // read-only tool, ref map is NOT cleared
         return false;
     }
 }

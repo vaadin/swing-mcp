@@ -24,13 +24,19 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Typed wrapper around the raw {@code Map<String, Object>} received from MCP
- * tool requests. Provides type-safe accessors that throw
- * {@link MCPServerException} with {@link MCPServerException#INVALID_PARAMS}
- * when a required parameter is missing or has the wrong type.
+ * A tool call's arguments, read through typed accessors:
  *
- * <p>Equality and {@link #hashCode()} are defined over the underlying raw
- * map, so two {@code Parameters} wrapping equal maps compare equal.
+ * <pre>{@code
+ * int ref = params.getInt("ref");
+ * }</pre>
+ *
+ * <p>Every accessor throws {@link MCPServerException} with
+ * {@link MCPServerException#INVALID_PARAMS} naming the parameter when a
+ * required one is missing or a value has the wrong type. The numeric ones
+ * also take a string-encoded number, {@code "21"} for {@code 21}
+ * (D_coerce_string_numbers).
+ *
+ * <p>Equality is over the raw map.
  */
 public final class Parameters {
 
@@ -40,16 +46,12 @@ public final class Parameters {
         this.raw = Objects.requireNonNull(raw, "raw");
     }
 
-    /** Returns the underlying map, for passing the arguments on unchanged. */
+    /** For passing the arguments on unchanged. */
     public Map<String, Object> raw() {
         return raw;
     }
 
-    /**
-     * Returns the value of a required string parameter.
-     *
-     * @throws MCPServerException if the key is missing or the value is not a String
-     */
+    /** Returns a required string parameter. */
     public String getString(String key) {
         Object value = raw.get(key);
         if (value == null) {
@@ -63,11 +65,7 @@ public final class Parameters {
         return (String) value;
     }
 
-    /**
-     * Returns the value of an optional string parameter, or {@code null} if absent.
-     *
-     * @throws MCPServerException if the value is present but not a String
-     */
+    /** Returns an optional string parameter, or {@code null} if absent. */
     @Nullable
     public String getStringOrNull(String key) {
         Object value = raw.get(key);
@@ -81,13 +79,7 @@ public final class Parameters {
         return (String) value;
     }
 
-    /**
-     * Returns the value of a required integer parameter.
-     * JSON numbers arrive as {@link Number} (typically {@link Double} from
-     * Gson); this method converts via {@link Number#intValue()}.
-     *
-     * @throws MCPServerException if the key is missing or the value is not a Number
-     */
+    /** Returns a required integer parameter; a fractional value is rejected. */
     public int getInt(String key) {
         Object value = raw.get(key);
         if (value == null) {
@@ -115,11 +107,8 @@ public final class Parameters {
     }
 
     /**
-     * Returns the value of a required numeric parameter as a raw {@link Number}.
-     * Unlike {@link #getInt(String)}, this does not convert to {@code int} —
-     * it preserves the original numeric type (typically {@link Double} from Gson).
-     *
-     * @throws MCPServerException if the key is missing or the value is not a Number
+     * Returns a required numeric parameter as parsed, not narrowed to
+     * {@code int}; a string-encoded one comes back as a {@link Double}.
      */
     public Number getNumber(String key) {
         Object value = raw.get(key);
@@ -142,16 +131,7 @@ public final class Parameters {
         return (Number) value;
     }
 
-    /**
-     * Returns the value of a required integer-array parameter.
-     * Gson deserializes JSON arrays as {@code List<?>} with numbers as
-     * {@link Double}. This method validates that every element is a
-     * whole number (no fractional part) and converts via
-     * {@link Number#intValue()}.
-     *
-     * @throws MCPServerException if the key is missing, the value is not a
-     *         List, or any element is not a whole number
-     */
+    /** Returns a required integer-array parameter; every element must be a whole number. */
     public List<Integer> getIntArray(String key) {
         Object value = raw.get(key);
         if (value == null) {
@@ -189,13 +169,7 @@ public final class Parameters {
         return result;
     }
 
-    /**
-     * Returns the value of an optional integer-array parameter, or {@code null} if absent.
-     * Same validation as {@link #getIntArray(String)} but returns {@code null} instead
-     * of throwing when the key is missing.
-     *
-     * @throws MCPServerException if the value is present but not a List of whole numbers
-     */
+    /** Returns an optional integer-array parameter, or {@code null} if absent. */
     @Nullable
     public List<Integer> getIntArrayOrNull(String key) {
         if (!raw.containsKey(key)) {
@@ -204,11 +178,7 @@ public final class Parameters {
         return getIntArray(key);
     }
 
-    /**
-     * Returns the value of an optional integer parameter, or {@code null} if absent.
-     *
-     * @throws MCPServerException if the value is present but not a Number
-     */
+    /** Returns an optional integer parameter, or {@code null} if absent. */
     @Nullable
     public Integer getIntOrNull(String key) {
         Object value = raw.get(key);

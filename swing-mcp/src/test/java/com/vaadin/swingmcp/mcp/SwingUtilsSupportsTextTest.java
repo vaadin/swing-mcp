@@ -26,9 +26,9 @@ import javax.swing.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Headless tests for {@link SwingUtils#supportsGetText(Accessible)} and
- * {@link SwingUtils#supportsSetText(Accessible)}.
- * Covers every component in the verification component matrix.
+ * {@link SwingUtils#supportsGetText(Accessible)} and {@link SwingUtils#supportsSetText(Accessible)}
+ * across the component matrix, plus {@link SwingUtils#hasPasswordRole} and
+ * {@link SwingUtils#readText}.
  */
 class SwingUtilsSupportsTextTest {
 
@@ -53,9 +53,7 @@ class SwingUtilsSupportsTextTest {
 
     @Test
     void jPasswordField_doesNotSupportGetText() {
-        // D_password_not_readable: password-role accessibles return echo chars (garbage), not real
-        // content. supportsGetText reflects the domain answer "can I surface real
-        // content?" — for passwords, no.
+        // D_password_not_readable: reading yields echo chars, not the content.
         assertFalse(SwingUtils.supportsGetText(new JPasswordField("secret")));
     }
 
@@ -135,12 +133,8 @@ class SwingUtilsSupportsTextTest {
 
     @Test
     void htmlJLabel_doesNotSupportGetText_dr015() {
-        // D_label_not_readable: LABEL-role accessibles are excluded from get_text
-        // regardless of whether AccessibleText is exposed. An HTML-wrapped
-        // JLabel exposes AccessibleText via the JDK's HTML rendering
-        // plumbing (AccessibleHTMLTextSupport) — before D_label_not_readable this
-        // accidentally flipped the gate to true. The role-based exclusion
-        // makes plain and HTML JLabels behave identically.
+        // An HTML JLabel does expose AccessibleText (AccessibleHTMLTextSupport); the
+        // LABEL role still wins.
         JLabel html = new JLabel("<html>Hello <b>world</b></html>");
         assertFalse(SwingUtils.supportsGetText(html),
                 "HTML JLabel must not support get_text (D_label_not_readable)");
@@ -148,8 +142,7 @@ class SwingUtilsSupportsTextTest {
 
     @Test
     void customLabelRoleComponent_doesNotSupportGetText_dr015() {
-        // D_label_not_readable: role-based gate covers any component whose role is LABEL,
-        // not just javax.swing.JLabel.
+        // D_label_not_readable: a LABEL-role accessible is excluded even when it exposes AccessibleText.
         JLabel custom = new JLabel("x") {
             @Override
             public javax.accessibility.AccessibleContext getAccessibleContext() {
@@ -162,9 +155,6 @@ class SwingUtilsSupportsTextTest {
 
                         @Override
                         public javax.accessibility.AccessibleText getAccessibleText() {
-                            // Pretend we surface AccessibleText even though
-                            // we're plain text — simulates a custom LABEL-role
-                            // widget that exposes it.
                             return new javax.accessibility.AccessibleText() {
                                 @Override public int getIndexAtPoint(java.awt.Point p) { return -1; }
                                 @Override public java.awt.Rectangle getCharacterBounds(int i) { return null; }
@@ -372,11 +362,8 @@ class SwingUtilsSupportsTextTest {
     // get_text and set_text are decoupled capabilities
     // ══════════════════════════════════════════════════════════════════════════
     //
-    // Historically AccessibleEditableText extends AccessibleText would make
-    // "supportsSetText implies supportsGetText" look like an invariant, but
-    // D_password_not_readable formally decouples them: JPasswordField supports set_text without
-    // supportsGetText returning true. The per-component checks below are
-    // descriptive observations about specific components, not a universal rule.
+    // AccessibleEditableText extends AccessibleText, yet supportsSetText does not imply
+    // supportsGetText: a password field is writable but not readable (D_password_not_readable).
 
     @Test
     void jTextField_supportsBothGetAndSetText() {
@@ -394,9 +381,6 @@ class SwingUtilsSupportsTextTest {
 
     @Test
     void jPasswordField_supportsSetTextWithoutSupportsGetText() {
-        // D_password_not_readable: the canonical write-only-from-the-AI's-perspective case.
-        // A password field accepts set_text (needed for login-form filling)
-        // but supportsGetText returns false (reading yields echo chars).
         JPasswordField field = new JPasswordField("secret");
         assertTrue(SwingUtils.supportsSetText(field),
                 "Password field must remain writable for login-form filling");
@@ -452,8 +436,7 @@ class SwingUtilsSupportsTextTest {
 
     @Test
     void customComponentWithPasswordRole_hasPasswordRole() {
-        // D_password_not_readable gate is role-based, not class-based. A component that is not a
-        // JPasswordField but claims AccessibleRole.PASSWORD_TEXT still trips the gate.
+        // D_password_not_readable gates on the PASSWORD_TEXT role, not the JPasswordField class.
         JTextField fake = new JTextField("secret") {
             @Override
             public AccessibleContext getAccessibleContext() {
@@ -482,31 +465,24 @@ class SwingUtilsSupportsTextTest {
 
     @Test
     void readText_appliesMaxCharsCap() {
-        // Cap below content length: returns the first N chars only.
         assertEquals("hello", SwingUtils.readText(new JTextField("hello world"), 5));
     }
 
     @Test
     void readText_emptyField_returnsEmptyString() {
-        // design/snapshot-format.md semantics: empty content is "" (the field exists and is
-        // empty), never null.
+        // "" means the field exists and is empty; never null.
         assertEquals("", SwingUtils.readText(new JTextField(), 1000));
     }
 
     @Test
     void readText_componentWithoutAccessibleText_returnsEmptyString() {
-        // JButton has no AccessibleText — the helper returns "" rather than
-        // throwing, so callers gated on supportsGetText() need no extra
-        // null-check. (Still defensive: the inline preview wraps the call in try/catch
-        // anyway.)
+        // "" rather than a throw or null, so a caller needs no null-check.
         assertEquals("", SwingUtils.readText(new JButton("Save"), 1000));
     }
 
     @Test
     void readText_customAccessibleTextReturningNullContent_normalizedToEmpty() {
-        // Regression guard (the inline preview relies on null-normalisation): a custom
-        // AccessibleEditableText whose getTextRange returns null must be
-        // normalised to "" rather than propagated.
+        // The inline preview relies on a null getTextRange being normalised to "".
         JTextField fake = new JTextField("anything") {
             @Override
             public AccessibleContext getAccessibleContext() {
@@ -533,8 +509,6 @@ class SwingUtilsSupportsTextTest {
                                 public void selectText(int s, int e) {}
                                 @Override
                                 public void setAttributes(int s, int e, javax.swing.text.AttributeSet a) {}
-                                // AccessibleText delegates — unused for this
-                                // test but required by the interface contract.
                                 @Override
                                 public int getIndexAtPoint(java.awt.Point p) { return -1; }
                                 @Override

@@ -60,9 +60,12 @@ public abstract class AbstractScreenTest {
     }
 
     /**
-     * Runs {@code block} on the EDT via {@link SwingUtilities#invokeAndWait} and returns
-     * its result. Use this in place of direct {@code tool.execute()} calls so that Swing
-     * state mutations happen on the correct thread, matching production behaviour.
+     * Runs {@code block} on the EDT and returns its result, rethrowing what it throws. A
+     * no-op block drains the EDT, so a tool's fire-and-forget action has run afterwards:
+     *
+     * <pre>{@code
+     * executeOnEDT(() -> null);
+     * }</pre>
      */
     protected static <T> T executeOnEDT(Callable<T> block) throws Exception {
         AtomicReference<T> result = new AtomicReference<>();

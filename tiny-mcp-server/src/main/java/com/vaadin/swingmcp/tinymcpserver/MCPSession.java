@@ -25,19 +25,25 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
 /**
- * Represents a single MCP session and handles protocol dispatch for all
- * session-scoped requests (everything after {@code initialize}).
- * <p>
- * {@link MCPHandler} owns the session map and creates sessions on
- * {@code initialize}; the active transport ({@link HttpMCPServer} or
- * {@link StdioMCPServer}) routes incoming requests to the appropriate
- * session. Transport-level concerns (HTTP/stdio lifecycle, session
- * creation/destruction, {@code initialize}, {@code ping}) live on the
- * handler/transport; per-session protocol handling lives here.
- * <p>
- * Thread safety: callers must hold this session's intrinsic lock
- * ({@code synchronized(session)}) for the entire duration of
- * {@link #handlePost}.
+ * One client's MCP session, created by {@link MCPHandler} on
+ * {@code initialize}: it dispatches that client's {@code tools/*},
+ * {@code resources/*} and {@code prompts/*} requests and carries its
+ * attributes. Tool code reaches it through {@link #getCurrent()}, here to
+ * attach per-session state on first use:
+ *
+ * <pre>{@code
+ * MCPSession session = MCPSession.getCurrent();
+ * ToolContext context = session.getAttribute(ToolContext.class);
+ * if (context == null) {
+ *     context = new ToolContext(session.getHandler().getExecutor());
+ *     session.setAttribute(ToolContext.class, context);
+ * }
+ * }</pre>
+ *
+ * <p>Thread-safe: a private lock serialises every request on the session.
+ * The attribute accessors, though, must run while that lock is held — inside
+ * a dispatched request or a lifecycle listener — or they throw
+ * {@link IllegalStateException}.
  */
 public class MCPSession {
 
@@ -47,25 +53,12 @@ public class MCPSession {
     private final MCPPromptHandler promptHandler;
     private final MCPHandler handler;
     private final Map<String, @Nullable Object> attributes = new HashMap<>();
-    /**
-     * The session lock, prevents concurrent access to the session.
-     */
     private final ReentrantLock sessionLock = new ReentrantLock();
 
-    /**
-     * Monotonic timestamp of the last dispatched request, used by the
-     * server's idle-cleanup tick to decide when to evict this session.
-     * Updated under the session lock in {@link #handlePost}; read without
-     * the lock from the cleanup thread.
-     */
+    /** {@link System#nanoTime()} of the last dispatch; written under the lock, read without it. */
     private volatile long lastAccessNanos = System.nanoTime();
 
-    /**
-     * Set to {@code true} by {@link #tryClose()} to mark this session as
-     * evicted. Any further dispatch on this session will throw a 404
-     * {@link MCPServerException}. Checked under the session lock to
-     * serialise with in-flight requests.
-     */
+    /** Once set, every dispatch fails with a 404; written and checked under the lock. */
     private volatile boolean closed = false;
 
     MCPSession(String id, MCPToolHandler toolHandler, MCPResourceHandler resourceHandler,
@@ -77,35 +70,24 @@ public class MCPSession {
         this.handler = Objects.requireNonNull(handler, "handler");
     }
 
-    /**
-     * Returns this session's opaque identifier, assigned by the server at
-     * session creation and surfaced to clients via the {@code Mcp-Session-Id}
-     * HTTP header.
-     */
+    /** An opaque id; over HTTP it is the {@code Mcp-Session-Id} header value. */
     public String getId() {
         return id;
     }
 
     /**
-     * Dispatches a parsed JSON-RPC request to the appropriate handler and
-     * returns the result POJO. Called for all session-scoped methods
-     * (everything except {@code initialize} and {@code ping}, which are
-     * handled by {@link MCPHandler}). The caller is responsible for
-     * writing the result to the wire.
+     * Dispatches one session-scoped request under the session lock.
      *
-     * @param request          the parsed JSON-RPC request
-     * @param transportHeaders headers from the underlying transport (HTTP
-     *                         request headers; empty for stdio)
-     * @return the JSON-RPC {@code result} POJO produced by the matching
-     *         handler — never {@code null}
+     * @param transportHeaders the HTTP request headers; empty over stdio
+     * @return the JSON-RPC {@code result} POJO, never {@code null}
+     * @throws MCPServerException {@code -32601} for an unknown method, or a
+     *                            404 if the session has been closed
      */
     Object handlePost(MCPProtocol.JsonRpcRequest request, Map<String, String> transportHeaders) {
         return runLocked(() -> doHandlePost(request, transportHeaders));
     }
 
     /**
-     * Whether this session has been closed.
-     *
      * @return {@code true} once closed; read without the session lock, so
      *         {@code false} is a hint, not a guarantee — the authoritative
      *         check is the one {@link #runLocked} makes while holding it
@@ -115,30 +97,24 @@ public class MCPSession {
     }
 
     /**
-     * Returns the monotonic {@link System#nanoTime()} value recorded at the
-     * start of the most recently dispatched request, or at session creation
-     * if no request has yet been dispatched. Read without the session lock;
-     * callers use this for idle-detection only.
+     * Returns the {@link System#nanoTime()} at which the last request was
+     * dispatched, or the session created; good for idle detection only, as
+     * it is read without the lock.
      */
     long getLastAccessNanos() {
         return lastAccessNanos;
     }
 
-    /**
-     * For use by tests only: forces the recorded last-access timestamp to a
-     * given {@link System#nanoTime()} value, allowing the cleanup tick to be
-     * exercised without waiting real wall-clock time.
-     */
+    /** Test hook: backdates the last access so the idle tick fires without waiting. */
     void setLastAccessNanos(long nanos) {
         this.lastAccessNanos = nanos;
     }
 
     /**
-     * Attempts to close this session. Acquires the session lock
-     * non-blockingly; if an in-flight request holds it, returns {@code false}
-     * and leaves the session untouched — the caller should retry on the next
-     * cleanup tick. On success, sets the {@code closed} flag so any later
-     * dispatch on this session fails with a 404.
+     * Closes this session unless a request is in flight on it.
+     *
+     * @return {@code false} if a request holds the lock — the session is left
+     *         open, for the next idle tick to retry (D_idle_eviction)
      */
     boolean tryClose() {
         if (!sessionLock.tryLock()) {
@@ -153,13 +129,9 @@ public class MCPSession {
     }
 
     /**
-     * Closes this session, blocking until any in-flight request has
-     * completed. Used by the supersede-on-conflict path
-     * ({@link SessionDecision.AcceptAndEvict}) where we must let the
-     * displaced client's current call finish cleanly before
-     * {@code onSessionClosed} fires and per-session resources are
-     * released. Sets the {@code closed} flag so any later dispatch on
-     * this session fails with a 404.
+     * Closes this session, blocking until any in-flight request finishes —
+     * so a superseded client's last call completes before
+     * {@code onSessionClosed} releases its resources.
      */
     void close() {
         sessionLock.lock();
@@ -170,14 +142,7 @@ public class MCPSession {
         }
     }
 
-    /**
-     * Returns the {@link MCPHandler} that owns this session, giving tool
-     * handlers access to the shared scheduled executor (see
-     * {@link MCPHandler#getExecutor()}) and other handler-level services.
-     *
-     * @throws IllegalStateException if this session was constructed without
-     *                               an owning handler (tests only)
-     */
+    /** Returns the owning handler — for tool code, the way to {@link MCPHandler#getExecutor()}. */
     public MCPHandler getHandler() {
         if (handler == null) {
             throw new IllegalStateException("Session was constructed without an owning handler");
@@ -214,16 +179,10 @@ public class MCPSession {
     }
 
     /**
-     * Returns the value of the named session attribute, or {@code null} if
-     * no attribute with that name is set (or if the stored value is itself
-     * {@code null}).
-     * <p>
-     * Attributes let handlers and tool callbacks stash session-scoped state
-     * (such as user-specific caches or ref maps) that lives for the lifetime
-     * of the session and is discarded when the session is closed.
+     * Returns session-scoped state a tool or listener stored earlier; it lives
+     * as long as the session.
      *
-     * @param name attribute name; must not be {@code null}
-     * @throws NullPointerException if {@code name} is {@code null}
+     * @return the value, or {@code null} if none is set
      */
     public @Nullable Object getAttribute(String name) {
         checkLocked();
@@ -232,13 +191,9 @@ public class MCPSession {
     }
 
     /**
-     * Stores a session attribute under the given name, replacing any previous
-     * value. Passing a {@code null} value clears the existing mapping as far
-     * as {@link #getAttribute(String)} is concerned (it will return {@code null}).
+     * Stores session-scoped state, replacing any previous value.
      *
-     * @param name  attribute name; must not be {@code null}
-     * @param value attribute value; may be {@code null}
-     * @throws NullPointerException if {@code name} is {@code null}
+     * @param value {@code null} clears it
      */
     public void setAttribute(String name, @Nullable Object value) {
         checkLocked();
@@ -247,16 +202,10 @@ public class MCPSession {
     }
 
     /**
-     * Type-safe variant of {@link #getAttribute(String)} that keys the
-     * attribute by the fully-qualified name of {@code type}. Returns
-     * {@code null} if no value is stored under that key.
+     * {@link #getAttribute(String)} keyed by {@code type.getName()}.
      *
-     * @param type the class whose name is used as the attribute key
-     * @param <T>  the expected attribute type
-     * @throws ClassCastException if a value is stored under this key but is
-     *                            not an instance of {@code type} (can occur
-     *                            if the same key was previously set via the
-     *                            {@link #setAttribute(String, Object)} overload)
+     * @throws ClassCastException if the string overload stored something else
+     *                            under that name
      */
     public <T> @Nullable T getAttribute(Class<T> type) {
         checkLocked();
@@ -264,58 +213,38 @@ public class MCPSession {
     }
 
     /**
-     * Type-safe variant of {@link #setAttribute(String, Object)} that keys
-     * the attribute by the fully-qualified name of {@code type}. Intended
-     * for the common case where a handler stores a single instance of a
-     * given type on the session.
-     *
-     * @param type  the class whose name is used as the attribute key
-     * @param value attribute value; may be {@code null}
-     * @param <T>   the attribute type
+     * {@link #setAttribute(String, Object)} keyed by {@code type.getName()} —
+     * for the usual one instance of a type per session.
      */
     public <T> void setAttribute(Class<T> type, @Nullable T value) {
         checkLocked();
         setAttribute(type.getName(), value);
     }
 
-    /**
-     * Thread-local binding to the session currently dispatching a request.
-     * Set by {@link #runLocked} around the dispatched block and cleared
-     * immediately after; visible only on the dispatch thread.
-     */
+    /** Bound by {@link #runLocked} and {@link #runListenerHook} for their duration. */
     private static final ThreadLocal<MCPSession> instance = new ThreadLocal<>();
 
     /**
-     * Returns the session whose request is being dispatched on the current
-     * thread. Intended for tool callbacks and other handler code that needs
-     * to reach its session without having it passed explicitly — for example,
-     * to read or write session attributes.
-     * <p>
-     * Only bound on the dispatch thread for the duration of
-     * {@link #handlePost}. If a tool marshals its work onto another thread
-     * (e.g. a UI toolkit's event thread), resolve the session attribute <em>before</em> crossing the
-     * thread boundary and capture it into the other thread's closure.
+     * Returns the session whose request or lifecycle listener is running on
+     * this thread.
      *
-     * @return the current session, never {@code null}
-     * @throws NullPointerException if no session is bound to the current
-     *                              thread (i.e. this method was called outside
-     *                              of a session-dispatched request)
+     * @apiNote bound on the dispatch thread only: a tool that hands work to
+     * another thread (a UI toolkit's event thread, say) resolves the session,
+     * or the attribute it needs, first and captures it into the closure.
+     * @throws NullPointerException if called outside a dispatched request or
+     *                              listener
      */
     public static MCPSession getCurrent() {
         return Objects.requireNonNull(instance.get(), "Not running in a MCP session");
     }
 
     /**
-     * Runs {@code block} with the session lock held and {@link #instance}
-     * bound to this session. Used by {@link #handlePost} for request dispatch
-     * and by tests to exercise lock-guarded accessors (such as
-     * {@link #getAttribute(String)} and {@link #setAttribute(String, Object)})
-     * without dispatching a real HTTP request.
-     * <p>
-     * Also refreshes {@link #lastAccessNanos} so the cleanup tick leaves this
-     * session alone, and fails fast with a 404 {@link MCPServerException} if
-     * the session has already been closed by the cleanup tick (or any other
-     * {@link #tryClose()} caller).
+     * Runs {@code block} as a dispatched request: under the session lock, with
+     * {@link #getCurrent()} bound, and counting as activity for the idle tick.
+     * The chokepoint every request passes through (D_idle_eviction).
+     *
+     * @throws MCPServerException a 404 carrying the tombstone reason, if the
+     *                            session is closed
      */
     void runLocked(Runnable block) {
         runLocked(() -> {
@@ -324,11 +253,7 @@ public class MCPSession {
         });
     }
 
-    /**
-     * Result-returning variant of {@link #runLocked(Runnable)} — same lock
-     * acquisition and {@code closed}/timestamp semantics, but propagates the
-     * value produced by {@code block}.
-     */
+    /** {@link #runLocked(Runnable)}, returning what {@code block} returns. */
     <T extends @Nullable Object> T runLocked(Supplier<T> block) {
         sessionLock.lock();
         try {
@@ -351,21 +276,11 @@ public class MCPSession {
     }
 
     /**
-     * Briefly acquires the session lock to run a session-lifecycle
-     * listener (e.g. {@code onSessionStarted}, {@code onSessionClosed}).
-     * Differs from {@link #runLocked(Runnable)} in two ways:
-     * <ul>
-     *   <li>Bypasses the {@code closed} check — necessary for
-     *       {@code onSessionClosed} on the cleanup-tick path where
-     *       {@code closed} has just been set to {@code true}.</li>
-     *   <li>Does not refresh {@code lastAccessNanos} — listener calls
-     *       are not "activity" for idle-timeout purposes.</li>
-     * </ul>
-     * Holding the session lock during the listener gives the listener
-     * proper synchronization with later {@link #setAttribute}/{@link #getAttribute}
-     * calls (which require the lock to ensure memory visibility), and
-     * sets the {@link #getCurrent()} thread-local so the listener can
-     * use the same accessor pattern as a tool callback.
+     * Runs a lifecycle listener under the session lock with
+     * {@link #getCurrent()} bound, so it can use the attribute accessors as a
+     * tool does. Unlike {@link #runLocked(Runnable)} it runs on a closed
+     * session — {@code onSessionClosed} always does — and is not activity for
+     * the idle tick.
      */
     void runListenerHook(Runnable block) {
         sessionLock.lock();

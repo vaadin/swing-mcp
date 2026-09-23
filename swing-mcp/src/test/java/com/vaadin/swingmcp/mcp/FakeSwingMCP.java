@@ -22,17 +22,12 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Test double for {@link SwingMCP} that allows tests to supply their own component
- * hierarchies via {@link #setConsideredComponents(List)}.
+ * A {@link SwingMCP} that serves whatever components the test passes to
+ * {@link #setConsideredComponents(List)}.
  * <p>
- * The {@code useEDT} constructor flag controls {@link #runInEDT(Callable)} behaviour:
- * <ul>
- *   <li>{@code false} — block is called directly on the calling thread; use this for
- *       headless tests where no real EDT is running.</li>
- *   <li>{@code true} — delegates to {@code super.runInEDT}, which marshals the block
- *       onto the EDT via {@link javax.swing.SwingUtilities#invokeAndWait}; use this for
- *       screen-mode tests where a real EDT is running.</li>
- * </ul>
+ * {@code useEDT} picks what {@link #runInEDT(Callable)} does: {@code false} runs the block on the
+ * calling thread, for headless tests, which have no EDT; {@code true} marshals it onto the real
+ * EDT, for screen-mode tests.
  */
 public class FakeSwingMCP extends SwingMCP {
 
@@ -53,11 +48,9 @@ public class FakeSwingMCP extends SwingMCP {
     }
 
     /**
-     * Sets the components returned by {@link #getConsideredComponents()}.
-     * Thread-safe: the list is copied into a {@link CopyOnWriteArrayList}
-     * and stored in a volatile field.
+     * Safe to call from any thread; the list is copied.
      *
-     * @param components the components to consider; must not be null
+     * @param components must not be null
      */
     public void setConsideredComponents(List<Component> components) {
         this.consideredComponents = new CopyOnWriteArrayList<>(components);

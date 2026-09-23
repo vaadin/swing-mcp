@@ -67,15 +67,11 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
         return result == null ? null : result.getText();
     }
 
-    /**
-     * Calls swing_restore and drains the EDT so the fire-and-forget invokeLater has run.
-     * Returns the tool's success Content (D_dispatched_echo echo) so callers can assert on it.
-     */
+    /** Calls swing_restore, then drains the EDT so its fire-and-forget action has run. */
     private MCPProtocol.Content restore(int ref) throws Exception {
         MCPProtocol.Content result = executeOnEDT(
                 () -> restoreTool.execute(new Parameters(Map.of("ref", ref)), context));
         context.clearRefMap();
-        // Drain the EDT: this no-op is queued after the fire-and-forget invokeLater
         executeOnEDT(() -> null);
         return result;
     }
@@ -96,17 +92,12 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
 
     /**
      * Polls {@link Frame#getExtendedState()} until {@code (state & mask) == expected}
-     * or {@code timeoutMs} elapses. Silently returns on timeout — the caller's
-     * subsequent assertion produces the diagnostic.
+     * or {@code timeoutMs} elapses. Returns silently on timeout; the caller's next
+     * assertion reports it.
      *
-     * <p><b>Why this exists.</b> {@code Frame.setExtendedState} posts a state-change
-     * request to the native window manager and returns immediately. On X11 the
-     * reported state can lag the call by tens of milliseconds, and chaining two
-     * requests in quick succession (e.g. {@code MAXIMIZED_BOTH} then
-     * {@code ICONIFIED}) can silently drop the second one if the first has not
-     * fully settled. Tests that read {@code getExtendedState()} directly after
-     * a {@code setExtendedState} call are therefore race-prone. Polling closes
-     * the gap with no commitment on the timing of individual WMs.
+     * <p>{@code setExtendedState} only posts a request to the window manager: on X11
+     * the reported state lags by tens of milliseconds, and a second request chained
+     * before the first settles can be silently dropped.
      */
     private static void awaitExtendedState(Frame frame, int mask, int expected, long timeoutMs) {
         long deadline = System.currentTimeMillis() + timeoutMs;
@@ -159,7 +150,6 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
 
         String text = snapshot(frame);
         assertFalse(text.contains("iconified"), "snapshot should not show [iconified]");
-        // restore action should no longer be listed
         for (String line : text.split("\n")) {
             if (line.contains("JFrame") && line.contains("actions:")) {
                 assertFalse(line.contains("restore"),
@@ -185,11 +175,9 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
     }
 
     /**
-     * Verifies that restoring an iconified+maximized JFrame clears only the ICONIFIED bit.
-     * The tool passes {@code getExtendedState() & ~ICONIFIED} (preserving MAXIMIZED_BOTH)
-     * to {@code setExtendedState}; however, whether MAXIMIZED_BOTH is actually preserved
-     * depends on the platform window manager (Xvfb may drop it). The hard assertion is
-     * that ICONIFIED is cleared — that's the tool's responsibility.
+     * The tool keeps {@code MAXIMIZED_BOTH}, but whether the window manager does is
+     * platform-dependent (Xvfb may drop it), so only the cleared {@code ICONIFIED} bit
+     * is asserted.
      */
     @Test
     void restoringIconifiedMaximizedJFrameClearsIconifiedBit() throws Exception {
@@ -201,10 +189,6 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
             frame.setVisible(true);
             return null;
         });
-        // Maximize first, then iconify — mirrors real user interaction. Wait
-        // after each setExtendedState so the first change has time to settle
-        // before the next request arrives; on X11 chaining the two without a
-        // wait can silently drop the second one (observed on Linux 2026-04-15).
         executeOnEDT(() -> { frame.setExtendedState(Frame.MAXIMIZED_BOTH); return null; });
         awaitExtendedState(frame, Frame.MAXIMIZED_BOTH, Frame.MAXIMIZED_BOTH, 2000);
         executeOnEDT(() -> {
@@ -214,16 +198,12 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
         awaitExtendedState(frame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
 
         int preState = frame.getExtendedState();
-        // Some WMs (e.g. Xvfb, macOS) don't support MAXIMIZED_BOTH | ICONIFIED combined state
         Assumptions.assumeTrue((preState & Frame.ICONIFIED) != 0 && (preState & Frame.MAXIMIZED_BOTH) != 0,
                 "WM does not support MAXIMIZED_BOTH | ICONIFIED (state=" + preState + "), skipping");
 
         snapshot(frame);
-        // On macOS the ICONIFIED bit can be transient when combined with MAXIMIZED_BOTH —
-        // the WM may drop it between the precondition check above and when the
-        // restore tool reads it on the EDT. Catching the tool's error and
-        // aborting is strictly more robust than re-checking before the call,
-        // because the race window is inside the tool dispatch, not before it.
+        // macOS may drop a combined ICONIFIED bit while the tool dispatches, after any
+        // pre-check could run, so the refusal is caught instead of pre-empted.
         try {
             restore(context.getRefOf(frame));
         } catch (MCPErrorResponseException e) {
@@ -276,10 +256,6 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // JFrame — negative case (stale ref)
-    // ══════════════════════════════════════════════════════════════════════════
-
     @Test
     void nonIconifiedJFrameViaStaleRefReturnsMcpError() throws Exception {
         JFrame frame = new JFrame("Normal");
@@ -287,7 +263,6 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
         currentWindow = frame;
         executeOnEDT(() -> { frame.setSize(200, 100); frame.setVisible(true); return null; });
 
-        // Force a ref to a non-iconified frame to test the error path
         context.putRef(99, (Accessible) frame);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> restoreTool.execute(new Parameters(Map.of("ref", 99)), context)));
@@ -303,18 +278,15 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
         JInternalFrame iframe = showInternalFrame(true);
         JFrame host = (JFrame) SwingUtilities.getWindowAncestor(iframe);
 
-        // Iconify the internal frame to create a JDesktopIcon
         executeOnEDT(() -> { iframe.setIcon(true); return null; });
         assertTrue(iframe.isIcon(), "precondition: internal frame is iconified");
 
-        // Snapshot shows JDesktopIcon, get its ref
         String text = snapshot(host);
         assertTrue(text.contains("JDesktopIcon"), "precondition: snapshot has JDesktopIcon");
 
         JInternalFrame.JDesktopIcon icon = iframe.getDesktopIcon();
         restore(context.getRefOf(icon));
 
-        // After restore, the JInternalFrame should be back
         assertFalse(iframe.isIcon(), "internal frame should no longer be iconified");
 
         text = snapshot(host);
@@ -341,10 +313,6 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // VetoableChangeListener rejects restore
-    // ══════════════════════════════════════════════════════════════════════════
-
     @Test
     void vetoedRestoreLeavesDesktopIconPresent() throws Exception {
         JInternalFrame iframe = showInternalFrame(true);
@@ -352,7 +320,6 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
 
         executeOnEDT(() -> { iframe.setIcon(true); return null; });
 
-        // Install a VetoableChangeListener that rejects de-iconification
         iframe.addVetoableChangeListener(new VetoableChangeListener() {
             @Override
             public void vetoableChange(PropertyChangeEvent evt) throws PropertyVetoException {
@@ -370,17 +337,12 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
 
         assertEquals("Dispatched restore on ref=" + ref + " — call swing_snapshot to verify the outcome", result.getText(),
                 "D_dispatched_echo: tool returns echo on dispatch even when listener vetoes");
-        // Frame should still be iconified
         assertTrue(iframe.isIcon(), "vetoed restore should leave frame iconified");
 
         String text = snapshot(host);
         assertTrue(text.contains("JDesktopIcon"),
                 "JDesktopIcon should still be present after vetoed restore");
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // JInternalFrame (non-iconified) — no restore action
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void normalJInternalFrameDoesNotShowRestoreInSnapshot() throws Exception {
@@ -396,10 +358,6 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
             }
         }
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // JDesktopPane component matrix — does not support swing_restore
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void componentMatrix_JDesktopPane() throws Exception {

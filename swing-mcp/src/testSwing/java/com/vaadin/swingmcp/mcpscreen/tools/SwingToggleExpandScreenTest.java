@@ -32,9 +32,8 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Screen-mode tests for {@code swing_toggle_expand}.
- * Verifies that the tool fails cleanly on JFrame and JDialog themselves
- * (not JTree nodes), which require a display.
+ * Only the top-level windows, which need a display; the {@code JTree} cases run headless
+ * in {@code SwingToggleExpandTest}.
  */
 class SwingToggleExpandScreenTest extends AbstractScreenTest {
 
@@ -65,7 +64,6 @@ class SwingToggleExpandScreenTest extends AbstractScreenTest {
     void componentMatrix_JFrame() throws Exception {
         JFrame frame = new JFrame("Test");
         snapshot(frame);
-        // JFrame itself has no toggle_expand action — it has no ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(frame));
         frame.dispose();
     }
@@ -75,7 +73,6 @@ class SwingToggleExpandScreenTest extends AbstractScreenTest {
         JDialog dialog = new JDialog();
         dialog.setTitle("Test");
         snapshot(dialog);
-        // JDialog itself has no toggle_expand action — it has no ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(dialog));
         dialog.dispose();
     }
@@ -93,7 +90,7 @@ class SwingToggleExpandScreenTest extends AbstractScreenTest {
         host.setVisible(true);
         try {
             snapshot(host);
-            // JInternalFrame itself has close/iconify actions but no toggle_expand — verify it doesn't have toggle_expand
+            // It has a ref through its close/iconify actions, but no toggle_expand
             int ref = context.getRefOf(iframe);
             var ex = assertThrows(com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException.class,
                     () -> executeOnEDT(() -> {
@@ -135,7 +132,6 @@ class SwingToggleExpandScreenTest extends AbstractScreenTest {
                 null, new Object[]{"OK"}, "OK");
         dialog.setContentPane(optionPane);
         snapshot(dialog);
-        // JOptionPane itself has no toggle_expand action — it has no ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(optionPane));
         dialog.dispose();
     }

@@ -48,9 +48,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         context = new SwingToolContext(Runnable::run);
     }
 
-    /**
-     * Runs a snapshot to populate ref map.
-     */
     private String snapshot(Component... roots) throws Exception {
         context.setConsideredComponents(Arrays.asList(roots));
         MCPProtocol.Content result = snapshotTool.execute(new Parameters(Map.of()), context);
@@ -58,9 +55,8 @@ class SwingDragToolTest extends AbstractHeadlessTest {
     }
 
     /**
-     * Drags source_ref to target_ref. Drains the EDT so fire-and-forget action completes.
-     * Clears the ref map afterwards only on successful dispatch, mirroring
-     * {@code SwingMCP.registerTool} behaviour for mutation tools.
+     * Drags, then clears the ref map as {@code SwingMCP.registerTool} does after a
+     * successful mutation, and drains the EDT so the fire-and-forget action has run.
      */
     private MCPProtocol.Content dragToRef(int sourceRef, int targetRef) throws Exception {
         MCPProtocol.Content result = dragTool.execute(
@@ -71,10 +67,7 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         return result;
     }
 
-    /**
-     * Drags source_ref to target_ref with component-relative target offsets. Drains the EDT.
-     * Clears the ref map afterwards only on successful dispatch.
-     */
+    /** As {@link #dragToRef}, with {@code target_x}/{@code target_y} relative to the target. */
     private MCPProtocol.Content dragToRefWithOffset(int sourceRef, int targetRef,
                                                      int targetX, int targetY) throws Exception {
         MCPProtocol.Content result = dragTool.execute(
@@ -137,17 +130,13 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         int sourceRef = context.getRefOf(source);
         int targetRef = context.getRefOf(target);
 
-        // Drag to offset (20, 10) within target (not center)
         MCPProtocol.Content result = dragToRefWithOffset(sourceRef, targetRef, 20, 10);
         assertEquals("Dispatched drag on ref=" + sourceRef + " to ref=" + targetRef
                         + " — call swing_snapshot to verify the outcome",
                 result.getText());
         assertTrue(source.wasDragged(), "Source should have received a valid drag sequence");
 
-        // Verify the release event coordinates
-        // Target offset (20, 10) in target-local coords → convert to source-local:
-        // target is at (150, 50), source is at (10, 10)
-        // so (150+20 - 10, 50+10 - 10) = (160, 50) in source-local coords
+        // Every event goes to the source, so the target point arrives in source-local coords.
         MouseEvent release = source.getReleaseEvent();
         assertNotNull(release);
         assertEquals(160, release.getX(), "Release X should be (150+20)-10=160 in source-local coords");
@@ -160,8 +149,7 @@ class SwingDragToolTest extends AbstractHeadlessTest {
 
     @Test
     void headlessEnvironmentUsesSyntheticDispatch() throws Exception {
-        // In headless mode (this test suite), the tool falls back to synthetic
-        // Component.dispatchEvent(). Verify events arrive directly at the source.
+        // Headless, the tool falls back to Component.dispatchEvent() on the source.
         DragRecordingPanel source = new DragRecordingPanel();
         source.setSize(100, 50);
         DragRecordingPanel target = new DragRecordingPanel();
@@ -177,7 +165,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         snapshot(root);
         dragToRef(context.getRefOf(source), context.getRefOf(target));
 
-        // Synthetic dispatch delivers events directly to the source component
         assertTrue(source.wasDragged(),
                 "Headless environment should use synthetic dispatch and deliver events to source");
         assertFalse(target.wasDragged(),
@@ -206,7 +193,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         int sourceRef = context.getRefOf(source);
         int targetRef = context.getRefOf(target);
 
-        // Provide source_x/source_y to override center (10, 5 instead of 50, 25)
         MCPProtocol.Content result = dragTool.execute(
                 new Parameters(Map.of(
                         "source_ref", sourceRef,
@@ -220,7 +206,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
                 result.getText());
         assertTrue(source.wasDragged(), "Drag with custom offset should succeed");
 
-        // Verify press event is at the custom offset, not the center
         MouseEvent press = source.getPressEvent();
         assertNotNull(press);
         assertEquals(10, press.getX(), "Press X should be at custom offset 10, not center 50");
@@ -482,14 +467,12 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         snapshot(root);
         dragToRef(context.getRefOf(source), context.getRefOf(target));
 
-        // MOUSE_PRESSED: BUTTON1 + BUTTON1_DOWN_MASK
         MouseEvent press = source.getPressEvent();
         assertNotNull(press);
         assertEquals(MouseEvent.BUTTON1, press.getButton());
         assertTrue((press.getModifiersEx() & InputEvent.BUTTON1_DOWN_MASK) != 0,
                 "Press should have BUTTON1_DOWN_MASK");
 
-        // MOUSE_DRAGGED: NOBUTTON + BUTTON1_DOWN_MASK
         for (MouseEvent drag : source.getDragEvents()) {
             assertEquals(MouseEvent.NOBUTTON, drag.getButton(),
                     "Drag events should have NOBUTTON (AWT convention)");
@@ -497,7 +480,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
                     "Drag events should have BUTTON1_DOWN_MASK");
         }
 
-        // MOUSE_RELEASED: BUTTON1 + no BUTTON1_DOWN_MASK
         MouseEvent release = source.getReleaseEvent();
         assertNotNull(release);
         assertEquals(MouseEvent.BUTTON1, release.getButton());
@@ -527,7 +509,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         assertNotNull(press);
         assertNotNull(release);
 
-        // Verify interpolation: each drag event should be progressively further from press
         List<MouseEvent> drags = source.getDragEvents();
         int prevX = press.getX();
         for (MouseEvent drag : drags) {
@@ -535,7 +516,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
                     "Drag X should increase monotonically toward target");
             prevX = drag.getX();
         }
-        // Final drag should be at target position
         MouseEvent lastDrag = drags.get(drags.size() - 1);
         assertEquals(release.getX(), lastDrag.getX(),
                 "Last drag X should equal release X (both at target)");
@@ -592,15 +572,12 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         snapshot(root);
         int listRef = context.getRefOf(list);
 
-        // Drag the list itself to the target — should work (list is a Component)
         dragToRef(listRef, context.getRefOf(target));
-        // Verify no exception was thrown
     }
 
     @Test
     void virtualChildItemAsSourceResolvesToHostJList() throws Exception {
-        // Drag an actual virtual child (JList item, not the JList itself).
-        // The tool should walk up via getAccessibleParent() to the host JList.
+        // A JList item is not a Component; the tool must walk getAccessibleParent() up to the JList.
         JList<String> list = new JList<>(new String[]{"Item A", "Item B", "Item C"});
         list.setSize(100, 90);
         list.setCellRenderer(new DefaultListCellRenderer()); // ensure bounds are computed
@@ -615,23 +592,15 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         root.add(list);
         root.add(target);
 
-        // Use swing_get_cells to get virtual child refs
         SwingGetCellsTool getCellsTool = new SwingGetCellsTool();
         snapshot(root);
         int listRef = context.getRefOf(list);
 
-        // get_cells replaces the ref map — child items get refs
+        // get_cells replaces the ref map: ref 1 is the list, refs 2.. its items.
         getCellsTool.execute(new Parameters(Map.of("ref", listRef, "offset", 0, "length", 3)), context);
 
-        // Ref 1 is the list itself after get_cells, child items get refs 2, 3, 4, etc.
-        // The first child item should be "Item A" at ref 2
         int targetRef = -1;
-        // We need to find a target ref — snapshot again to get fresh refs
-        // But get_cells replaced the ref map. Let's just use ref 2 (first child)
-        // as source and ref 1 (the list, which gets_cells assigns) as... no.
-        // Actually, after get_cells the ref map only has the cells.
-        // We can drag from a cell ref to another cell ref.
-        // But we need a target that records events. Let's just verify no exception.
+        // Nothing here records events, so the test passes if the drag does not throw.
         try {
             dragTool.execute(
                     new Parameters(Map.of("source_ref", 2, "target_ref", 1)),
@@ -640,7 +609,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         } finally {
             context.clearRefMap();
         }
-        // If we get here without exception, virtual child resolution worked
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -706,7 +674,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         int targetRef = context.getRefOf(target);
         dragToRef(sourceRef, targetRef);
 
-        // Refs must be cleared after a successful mutation
         MCPServerException ex = assertThrows(MCPServerException.class,
                 () -> dragTool.execute(
                         new Parameters(Map.of("source_ref", sourceRef, "target_ref", targetRef)),
@@ -717,8 +684,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
 
     @Test
     void refsPreservedAfterValidationError() throws Exception {
-        // A validation rejection (e.g. "disabled source") must NOT clear the ref map —
-        // the UI state hasn't changed, so existing refs remain valid.
         DragRecordingPanel disabled = new DragRecordingPanel();
         disabled.setEnabled(false);
         DragRecordingPanel enabled = new DragRecordingPanel();
@@ -738,13 +703,11 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         int enabledRef = context.getRefOf(enabled);
         int targetRef = context.getRefOf(target);
 
-        // Drag from disabled source → MCPErrorResponseException, no EDT action dispatched
         assertThrows(MCPErrorResponseException.class,
                 () -> dragTool.execute(
                         new Parameters(Map.of("source_ref", disabledRef, "target_ref", targetRef)),
                         context));
 
-        // The ref map must still be intact — the enabled source's ref is still valid
         MCPProtocol.Content result = dragTool.execute(
                 new Parameters(Map.of("source_ref", enabledRef, "target_ref", targetRef)),
                 context);
@@ -851,7 +814,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         root.add(target);
 
         snapshot(root);
-        // JTree itself should not have a ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(tree));
     }
 
@@ -882,10 +844,8 @@ class SwingDragToolTest extends AbstractHeadlessTest {
 
         mcpServer.setConsideredComponents(List.of(root));
 
-        // Take a snapshot to populate refs
         mcpClient.callTool("swing_snapshot", Map.of());
 
-        // Drag source to target via MCP
         MCPProtocol.CallToolResult result = mcpClient.callTool("swing_drag",
                         Map.of("source_ref", 1, "target_ref", 2));
         SwingUtilities.invokeAndWait(() -> {}); // drain EDT
@@ -911,7 +871,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         snapshot(root);
         int ref = context.getRefOf(panel);
 
-        // Drag from (50,100) → via (200,100) → to (350,100) within the same panel
         try {
             dragTool.execute(
                     new Parameters(Map.of(
@@ -926,8 +885,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
 
         assertTrue(panel.wasDragged(), "Drag with waypoints should produce valid sequence");
 
-        // Verify drag events pass through the waypoint region
-        // With 1 waypoint: 2 segments × 3 steps = 6 drag events
         assertEquals(6, panel.getDragCount(),
                 "With 1 waypoint: 2 segments × 3 steps = 6 drag events");
     }
@@ -1032,7 +989,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         snapshot(root);
         int ref = context.getRefOf(panel);
 
-        // Self-edge: drag from (300,100) → via (100,100) → back to (300,100)
         try {
             dragTool.execute(
                     new Parameters(Map.of(
@@ -1047,7 +1003,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
 
         assertTrue(panel.wasDragged(), "Self-edge with via should produce valid drag sequence");
 
-        // Press and release should be at the same point (300, 100)
         MouseEvent press = panel.getPressEvent();
         MouseEvent release = panel.getReleaseEvent();
         assertNotNull(press);
@@ -1055,7 +1010,6 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         assertEquals(press.getX(), release.getX(), "Self-edge: press and release X should match");
         assertEquals(press.getY(), release.getY(), "Self-edge: press and release Y should match");
 
-        // But intermediate drag events should have gone through the waypoint (100, 100)
         List<MouseEvent> drags = panel.getDragEvents();
         boolean passedThroughWaypoint = drags.stream()
                 .anyMatch(d -> d.getX() <= 150); // somewhere left of center, toward waypoint

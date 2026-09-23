@@ -32,13 +32,10 @@ import java.util.List;
 
 
 /**
- * MCP tool {@code swing_screenshot}: captures a screenshot of the Swing
- * application and returns it as a single PNG image.
- *
- * <p>Components are obtained from {@link SwingToolContext#getConsideredComponents()}.
- * Zero-size components are silently skipped. If no renderable components remain,
- * an error is returned. Multiple components are arranged vertically with a
- * {@value #WINDOW_GAP} px gap between them.</p>
+ * MCP tool {@code swing_screenshot}: paints every
+ * {@linkplain SwingToolContext#getConsideredComponents() considered component} into one PNG,
+ * returned inline or written to an absolute {@code save_to} path. Several stack top to bottom,
+ * each centred horizontally, {@value #WINDOW_GAP} px apart; a zero-size one is skipped.
  */
 public class SwingScreenshotTool extends AbstractSwingTool {
 
@@ -56,7 +53,6 @@ public class SwingScreenshotTool extends AbstractSwingTool {
     @Override
     public MCPProtocol.Content execute(Parameters params,
                                        SwingToolContext context) throws Exception {
-        // filter out zero-size components
         List<Component> renderables = new ArrayList<>();
         for (Component c : context.getConsideredComponents()) {
             if (c.getWidth() > 0 && c.getHeight() > 0) {
@@ -64,7 +60,6 @@ public class SwingScreenshotTool extends AbstractSwingTool {
             }
         }
 
-        // empty after filtering → error
         if (renderables.isEmpty()) {
             throw new MCPErrorResponseException(
                     "No visible windows to capture. The application may still be starting up — retry shortly.");
@@ -119,7 +114,6 @@ public class SwingScreenshotTool extends AbstractSwingTool {
     }
 
     private BufferedImage renderComposite(List<Component> components) {
-        // composite width = max; composite height = sum of heights + gaps
         int maxWidth = 0;
         int totalHeight = 0;
         for (Component c : components) {

@@ -57,8 +57,7 @@ class MCPHandlerDispatchTest {
 
     @Test
     void malformedInitializeParamsFallBackToLatest() {
-        // params is a bare string instead of an object — unparseable, but
-        // not worth failing the handshake over.
+        // Unparseable params are not worth failing the handshake over.
         MCPHandler handler = new MCPHandler();
         MCPProtocol.JsonRpcRequest request = initializeRequest(null);
         request.setParams(new JsonPrimitive("nonsense"));
@@ -101,8 +100,7 @@ class MCPHandlerDispatchTest {
 
     @Test
     void closeAllSessionsEmptiesTheMapEvenWhenTheListenerThrows() {
-        // Called from the stdio read loop's finally block — a listener that
-        // blows up there must not strand the remaining sessions.
+        // A listener that blows up during teardown must not strand the remaining sessions.
         MCPHandler handler = new MCPHandler()
                 .setOnSessionClosed(s -> { throw new IllegalStateException("listener blew up"); });
         initializeOnce(handler);

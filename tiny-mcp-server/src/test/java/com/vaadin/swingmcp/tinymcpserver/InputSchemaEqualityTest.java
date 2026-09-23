@@ -27,9 +27,8 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * D_structural_schema_equality: InputSchema and PropertySchema implement deep structural equality.
- * Manifest-coherence tests compare descriptors via these methods, so this
- * is the contract test for the underlying equality predicate.
+ * The contract of the equality that manifest-coherence tests compare descriptors
+ * with. See D_structural_schema_equality.
  */
 class InputSchemaEqualityTest {
 
@@ -123,8 +122,7 @@ class InputSchemaEqualityTest {
 
     @Test
     void propertyEnumOrderMatters() {
-        // JSON Schema treats enum as an ordered list — same members in
-        // different order are NOT equal (D_structural_schema_equality).
+        // Unlike required, enum is compared in order (D_structural_schema_equality).
         PropertySchema a = stringProp("dir");
         a.setEnumValues(List.of("up", "down"));
         PropertySchema b = stringProp("dir");
@@ -144,10 +142,8 @@ class InputSchemaEqualityTest {
 
     @Test
     void roundTripThroughGsonPreservesEquality() {
-        // The schema produced by InputSchemaBuilder must compare equal to
-        // the schema deserialized from its own JSON — this is the exact
-        // shape a coherence test sees (one side from a static descriptor,
-        // the other from the server's listTools wire response).
+        // The exact pair a coherence test compares: a static descriptor against
+        // the server's listTools wire response.
         InputSchema original = new InputSchemaBuilder()
                 .requiredInteger("ref", "the element ref")
                 .optionalString("value", "optional value")

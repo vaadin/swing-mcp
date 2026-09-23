@@ -178,7 +178,6 @@ class SwingSetSelectionScreenTest extends AbstractScreenTest {
         snapshot(frame);
         setSelection(context.getRefOf(table), List.of(0.0, 2.0));
 
-        // Re-snapshot to get fresh refs
         snapshot(frame);
         String json = getSelection(context.getRefOf(table));
         assertEquals(

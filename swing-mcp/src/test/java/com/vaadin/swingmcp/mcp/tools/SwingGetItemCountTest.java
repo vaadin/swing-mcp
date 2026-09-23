@@ -88,11 +88,7 @@ class SwingGetItemCountTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JTabbedPane — dropped as a supported target per P-001 Wave A.
-    // The two former positive tests (3-tabs, empty) are replaced by a single
-    // regression guard below + componentMatrix_JTabbedPane. The tab count is
-    // now derivable from the snapshot, which renders every tab inline per
-    // design/snapshot-format.md.
+    // JTabbedPane — refused: the snapshot already lists every tab inline
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -277,7 +273,7 @@ class SwingGetItemCountTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JTabbedPane() throws Exception {
-        // Dropped per P-001 — JTabbedPane is no longer a supported target.
+        // Refused: the snapshot lists every tab inline.
         JTabbedPane tp = new JTabbedPane();
         tp.addTab("First", new JPanel());
         tp.addTab("Second", new JPanel());

@@ -20,27 +20,27 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Outcome of {@link MCPHandler#setAcceptNewSession}'s policy callback.
- * The callback receives a snapshot of currently active sessions and
- * returns one of:
+ * What an {@link MCPHandler#setAcceptNewSession} policy returns for each
+ * {@code initialize}, given the sessions already live. Single-session,
+ * new-wins:
+ *
+ * <pre>{@code
+ * new MCPHandler()
+ *         .setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(existing, EVICTION_REASON));
+ * }</pre>
+ *
  * <ul>
- *   <li>{@link Reject} — refuse the new session ({@code initialize} fails
- *       with HTTP 409).</li>
- *   <li>{@link Accept} — accept without evicting any existing session
- *       (only valid if the cap permits it; otherwise the policy should
- *       use {@link AcceptAndEvict} or {@link Reject}).</li>
- *   <li>{@link AcceptAndEvict} — accept the new session and evict the
- *       listed existing sessions. Eviction inserts a tombstone (carrying
- *       the decision's {@code evictionReason}) for each evicted id, so
- *       the displaced client gets a clean error on its next call, and
- *       runs {@code onSessionClosed}. An empty list is a no-op
- *       equivalent to {@link Accept}.</li>
+ *   <li>{@link Reject} — {@code initialize} fails with HTTP 409.</li>
+ *   <li>{@link Accept} — admit it alongside the existing sessions.</li>
+ *   <li>{@link AcceptAndEvict} — admit it and evict the listed sessions: each
+ *       gets a tombstone carrying the {@code evictionReason}, so its client's
+ *       next call fails with a 404 saying why, and then
+ *       {@code onSessionClosed}.</li>
  * </ul>
  *
- * <p>Eviction always happens <em>outside</em> the handler's session-guard
- * lock and blocks until any in-flight request on the evicted session has
- * completed, so {@code onSessionClosed} listeners observe the session
- * after it is fully quiesced.
+ * <p>Eviction runs outside the handler's guard lock and blocks until the
+ * evicted session's in-flight request finishes, so {@code onSessionClosed}
+ * sees a quiesced session. See D_supersede_sessions.
  *
  * <p>Immutable.
  *
@@ -53,7 +53,7 @@ public abstract class SessionDecision {
     private SessionDecision() {
     }
 
-    /** Refuse the new session; {@code initialize} fails with HTTP 409. */
+    /** Refuse the new session. */
     public static final class Reject extends SessionDecision {
         public Reject() {
         }
@@ -66,13 +66,8 @@ public abstract class SessionDecision {
     }
 
     /**
-     * Accept the new session and evict the listed sessions. The list is
-     * defensively copied; an empty list is permitted and behaves like
-     * {@link Accept}. The {@code evictionReason} is written to the
-     * tombstone for each evicted session and surfaces verbatim in the
-     * 404 error the displaced client receives on its next call — so it
-     * should describe, in the calling application's terms, why the old
-     * session was closed and what the user should do about it.
+     * Accept the new session and evict the listed sessions; an empty list
+     * behaves like {@link Accept}.
      */
     public static final class AcceptAndEvict extends SessionDecision {
 
@@ -80,7 +75,10 @@ public abstract class SessionDecision {
         private final String evictionReason;
 
         /**
-         * @param evictionReason not blank; surfaces verbatim to the displaced client
+         * @param sessions       copied defensively
+         * @param evictionReason the displaced client's 404 message, verbatim — so
+         *                       say, in the application's terms, why its session
+         *                       closed and what the user should do
          * @throws IllegalArgumentException if {@code evictionReason} is blank
          */
         public AcceptAndEvict(List<MCPSession> sessions, String evictionReason) {

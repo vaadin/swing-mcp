@@ -213,7 +213,6 @@ class SwingClickScreenTest extends AbstractScreenTest {
     void componentMatrix_JFrame() throws Exception {
         JFrame frame = new JFrame("Test");
         snapshot(frame);
-        // JFrame itself has no click action — it has no ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(frame));
     }
 
@@ -222,7 +221,6 @@ class SwingClickScreenTest extends AbstractScreenTest {
         JDialog dialog = new JDialog();
         dialog.setTitle("Test");
         snapshot(dialog);
-        // JDialog itself has no click action — it has no ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(dialog));
     }
 
@@ -234,7 +232,6 @@ class SwingClickScreenTest extends AbstractScreenTest {
                 null, new Object[]{"OK"}, "OK");
         dialog.setContentPane(optionPane);
         snapshot(dialog);
-        // JOptionPane itself has no click action — it has no ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(optionPane));
     }
 }

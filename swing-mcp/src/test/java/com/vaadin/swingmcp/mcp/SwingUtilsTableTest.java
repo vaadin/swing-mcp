@@ -28,12 +28,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Headless tests for {@link SwingUtils} JTable header and row utilities:
- * {@link SwingUtils#isTableHeaderVisible},
- * {@link SwingUtils#getTableColumnNames}, and
- * {@link SwingUtils#buildTableRowText}.
- */
 class SwingUtilsTableTest {
 
     @BeforeAll
@@ -122,21 +116,17 @@ class SwingUtilsTableTest {
 
         @Test
         void nullColumnHeader_usesDefaultTableModelFallback() {
-            // DefaultTableModel replaces null column names with auto-generated
-            // letters (A, B, C...), so getHeaderValue() is never null here.
-            // We test getTableColumnNames faithfully reports whatever the model provides.
+            // DefaultTableModel replaces a null column name with a letter, so the header is never null.
             JTable table = createTable(
                     new Object[][]{{"a", "b"}},
                     new Object[]{"Name", null});
             List<String> names = SwingUtils.getTableColumnNames(table);
             assertEquals("Name", names.get(0));
-            // DefaultTableModel auto-names the second column "B"
             assertNotNull(names.get(1));
         }
 
         @Test
         void explicitNullHeaderValue_showsNull() {
-            // Directly set a column's header value to null after creation
             JTable table = createTable(
                     new Object[][]{{"a", "b"}},
                     new Object[]{"Name", "Value"});
@@ -159,7 +149,6 @@ class SwingUtilsTableTest {
             JTable table = createTable(
                     new Object[][]{{"a", "b", "c"}},
                     new Object[]{"A", "B", "C"});
-            // Move column 2 ("C") to position 0
             table.getColumnModel().moveColumn(2, 0);
             assertEquals(List.of("C", "A", "B"),
                     SwingUtils.getTableColumnNames(table));
@@ -224,10 +213,9 @@ class SwingUtilsTableTest {
             AccessibleTable at = table.getAccessibleContext().getAccessibleTable();
 
             String text = SwingUtils.buildTableRowText(at, 0, cols);
-            // Should have MAX_ROW_NAME_COLUMNS values plus trailing ellipsis
             assertTrue(text.endsWith("| \u2026"),
                     "Should end with ellipsis when columns exceed limit");
-            // Count pipes: MAX_ROW_NAME_COLUMNS values + 1 ellipsis = MAX_ROW_NAME_COLUMNS pipes
+            // MAX_ROW_NAME_COLUMNS values plus the ellipsis are joined by MAX_ROW_NAME_COLUMNS pipes.
             long pipeCount = text.chars().filter(c -> c == '|').count();
             assertEquals(SwingUtils.MAX_ROW_NAME_COLUMNS, pipeCount);
         }

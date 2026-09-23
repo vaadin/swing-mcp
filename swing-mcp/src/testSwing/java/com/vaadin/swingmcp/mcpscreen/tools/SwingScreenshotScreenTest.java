@@ -88,14 +88,9 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
     }
 
     /**
-     * Waits until the window's reported size stops changing — i.e. the WM has
-     * delivered any ConfigureNotify events and the frame has settled at its
-     * final decorated size. Swing's {@code setVisible(true)} returns before
-     * this X11 round-trip completes, so without this wait a decorated frame
-     * can grow by the title-bar height <i>after</i> the test has proceeded,
-     * leading to an image dimension / frame dimension mismatch at assertion
-     * time. Polled on the EDT because {@code Component.getWidth/getHeight}
-     * are updated there in response to reshape events.
+     * Waits until the window's size stops changing, returning silently on timeout.
+     * {@code setVisible(true)} returns before the window manager's X11 round-trip, so a
+     * decorated frame can still grow by its title-bar height after the test moves on.
      */
     private static void awaitSizeSettled(Window w) throws Exception {
         long deadline = System.currentTimeMillis() + 2_000;
@@ -113,7 +108,6 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
             last = now;
             Thread.sleep(50);
         }
-        // Timeout — proceed anyway so the assertion surfaces any real breakage.
     }
 
     private BufferedImage decodeResult(MCPProtocol.CallToolResult result) throws Exception {
@@ -133,8 +127,7 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         MCPProtocol.CallToolResult result = mcpClient.callTool("swing_screenshot", Map.of());
         BufferedImage image = decodeResult(result);
 
-        // Read dimensions after the call: by this point the OS has applied any window
-        // decorations and the frame has settled at its final size.
+        // Read after the call, once the window manager has applied the decorations.
         int[] dims = new int[2];
         SwingUtilities.invokeAndWait(() -> {
             dims[0] = frame.getWidth();
@@ -146,9 +139,8 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
 
     @Test
     void multipleVisibleFramesProduceSingleVerticallyStackedImage() throws Exception {
-        // Use undecorated frames to avoid WM resizing races — the window manager
-        // can asynchronously adjust decorated frame sizes after setVisible(), making
-        // exact pixel assertions flaky.
+        // Undecorated: the window manager may resize a decorated frame after setVisible(),
+        // and this asserts exact pixels.
         JFrame frame1 = showUndecoratedFrame(400, 300);
         JFrame frame2 = showUndecoratedFrame(300, 200);
         mcpServer.setConsideredComponents(List.of(frame1, frame2));
@@ -165,15 +157,14 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         JFrame frame = showFrame(400, 300);
         JDialog dialog = showDialog(frame, 200, 150);
 
-        // Simulate what MCPServer.getConsideredComponents() returns when a modal
-        // dialog is present: only the dialog is considered.
+        // What SwingMCP.getConsideredComponents() returns while a modal dialog is showing
         mcpServer.setConsideredComponents(List.of(dialog));
 
         MCPProtocol.CallToolResult result = mcpClient.callTool("swing_screenshot", Map.of());
         BufferedImage image = decodeResult(result);
 
         assertEquals(dialog.getWidth(), image.getWidth());
-        // sometimes the height is 187, probably the dialog OS title bar is included?
+        // Sometimes 187 — probably the OS title bar is included
         assertTrue(image.getHeight() >= 150, "Height was " + image.getHeight());
     }
 
@@ -187,8 +178,7 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         MCPProtocol.CallToolResult result = mcpClient.callTool("swing_screenshot", Map.of());
         BufferedImage image = decodeResult(result);
 
-        // Read dimensions after the call: by this point the OS has applied any window
-        // decorations and the frame has settled at its final size.
+        // Read after the call, once the window manager has applied the decorations.
         int[] dims = new int[2];
         SwingUtilities.invokeAndWait(() -> {
             dims[0] = frame.getWidth();
@@ -226,8 +216,7 @@ class SwingScreenshotScreenTest extends AbstractScreenTest {
         MCPProtocol.CallToolResult result = mcpClient.callTool("swing_screenshot", Map.of());
         BufferedImage image = decodeResult(result);
 
-        // Read dimensions after the call: by this point the OS has applied any window
-        // decorations and the dialog has settled at its final size.
+        // Read after the call, once the window manager has applied the decorations.
         int[] dims = new int[2];
         SwingUtilities.invokeAndWait(() -> {
             dims[0] = dialog.getWidth();

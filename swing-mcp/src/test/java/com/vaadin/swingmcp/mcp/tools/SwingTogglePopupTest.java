@@ -31,9 +31,8 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Headless tests for {@code swing_toggle_popup} — error cases only.
- * The happy-path (actually opening/closing the popup) requires a display
- * and lives in {@code SwingTogglePopupScreenTest} (see design/snapshot-format.md).
+ * Error cases only: showing a popup needs a display, so the happy path is
+ * {@code SwingTogglePopupScreenTest}.
  */
 class SwingTogglePopupTest extends AbstractHeadlessTest {
 
@@ -97,7 +96,7 @@ class SwingTogglePopupTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Component matrix — all standard 20 components fail
+    // Component matrix — every component refuses
     // ══════════════════════════════════════════════════════════════════════════
 
     private void assertTogglePopupNotSupported(Component component) throws Exception {
@@ -173,7 +172,7 @@ class SwingTogglePopupTest extends AbstractHeadlessTest {
     @Test
     void componentMatrix_JScrollPane() throws Exception {
         snapshot(new JScrollPane(new JTextArea("content")));
-        // JScrollPane has no ref
+        // Nothing to assert: a JScrollPane gets no ref.
     }
 
     @Test

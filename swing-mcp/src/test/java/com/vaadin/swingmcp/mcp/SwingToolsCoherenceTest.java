@@ -33,24 +33,10 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Coherence test guarding the contract between {@link SwingTools} (the
- * manifest) and the tools {@link SwingMCP} actually registers
- * (D_shared_tool_manifest).
- *
- * <p>Uses {@link TinyMCPClient} (not the official SDK) so the
- * {@code listTools()} response deserialises directly into our
- * {@link MCPProtocol.Tool} POJOs — same equality semantics
- * as the {@link ToolDescriptor}s in {@link SwingTools#ALL}.
- *
- * <p>Three assertions:
- * <ol>
- *   <li>{@code initialize.serverInfo} matches {@link SwingTools#SERVER_NAME}
- *       and {@link SwingTools#SERVER_VERSION}.</li>
- *   <li>{@code initialize.instructions} equals {@link SwingTools#INSTRUCTIONS}.</li>
- *   <li>{@code listTools()} returns exactly {@link SwingTools#ALL} —
- *       same names, descriptions, and input schemas (structural equality
- *      ).</li>
- * </ol>
+ * What a live server advertises must equal the {@link SwingTools} manifest
+ * (D_shared_tool_manifest). {@link TinyMCPClient}, not the official SDK, so {@code listTools()}
+ * deserialises into our own {@link MCPProtocol.Tool} and compares with the same equality as
+ * {@link ToolDescriptor}.
  */
 class SwingToolsCoherenceTest {
 

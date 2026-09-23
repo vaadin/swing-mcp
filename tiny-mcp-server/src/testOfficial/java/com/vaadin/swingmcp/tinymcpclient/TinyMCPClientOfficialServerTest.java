@@ -44,15 +44,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Drives {@link TinyMCPClient} against a real MCP server from the
- * official {@code io.modelcontextprotocol.sdk} library, embedded in
- * Jetty for the duration of the test class.
- *
- * <p>The point is to verify our client speaks valid MCP wire format to a
- * third-party server — a check our internal {@code TinyMCPClient} ↔
- * {@code HttpMCPServer} pairing cannot make, since both sides share the
- * same {@code MCPProtocol} POJOs and would happily agree on the same
- * wrong field name.
+ * Drives {@link TinyMCPClient} against the official SDK's server, embedded in
+ * Jetty. {@code HttpMCPServer} cannot make this check: it shares the client's
+ * {@code MCPProtocol} POJOs, so both would agree on the same wrong field name.
  */
 class TinyMCPClientOfficialServerTest {
 

@@ -84,7 +84,6 @@ class SwingGetCellCountTest extends AbstractHeadlessTest {
         snapshot(table);
         int ref = context.getRefOf(table);
         assertThrows(MCPErrorResponseException.class, () -> getCount(ref));
-        // Read-only: ref still resolves after the rejected call.
         assertSame(table, context.getAccessibleByRef(ref));
     }
 
@@ -231,8 +230,7 @@ class SwingGetCellCountTest extends AbstractHeadlessTest {
         tree.setRootVisible(false);
         tree.setSize(200, 400);
         tree.expandRow(0);
-        // JTree with 2 nodes won't get a ref via snapshot (below MAX_DATA_ROW_NODES
-        // and no selection actions), so register directly
+        // Two nodes: not truncated and no selection action, so no snapshot ref.
         context.putRef(99, tree);
         assertEquals("2", getCount(99));
     }

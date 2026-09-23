@@ -34,24 +34,27 @@ import java.util.logging.Logger;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Internal tree node used during the four-phase snapshot pipeline.
- * Each node mirrors one node in the accessibility tree and holds its
- * pruned children, an optional numeric ref, and truncation metadata
- * for large-data components.
+ * One node of the snapshot tree, mirroring one accessible. Each of the four passes runs over
+ * every root before the next starts, and refs number across all roots:
  *
- * <p>The pipeline phases are implemented as methods on this class:</p>
- * <ol>
- *   <li><b>{@link #build(Accessible)}</b> — mirror the accessibility tree into SnapshotNodes.</li>
- *   <li><b>{@link #pruneChildren()}</b> — drop invisible/internal nodes; flatten transparent wrappers.</li>
- *   <li><b>{@link #assignRefs(int, SwingToolContext)}</b> — number every action-bearing node.</li>
- *   <li><b>{@link #render(int, StringBuilder)}</b> — serialise to indented text.</li>
- * </ol>
+ * <pre>{@code
+ * SnapshotNode root = SnapshotNode.build(window);
+ * root.pruneChildren();
+ * nextRef = root.assignRefs(nextRef, context);
+ * root.render(0, sb);                  // or renderFiltered(filterLower, 0, sb)
+ * }</pre>
+ *
+ * The passes are described in {@code design/architecture.md}; the text they emit is owned by
+ * {@code design/snapshot-format.md}.
+ *
+ * @apiNote Rendering or filtering before {@link #assignRefs} throws: a node's line carries its
+ *          ref, and is cached on first use.
  */
 class SnapshotNode {
 
     private static final Logger LOG = Logger.getLogger(SnapshotNode.class.getName());
 
-    /** Maximum child SnapshotNodes for large data components (JTable rows, JList items, JTree nodes). */
+    /** Cap on the children built for a large data component: JTable rows, JList items, JTree nodes. */
     static final int MAX_DATA_ROW_NODES = 5;
 
     /**
@@ -61,38 +64,26 @@ class SnapshotNode {
     static final String ICONIFIED_PLACEHOLDER =
             "[Contents hidden — window is iconified. Call swing_restore to interact with this window.]";
 
-    /**
-     * Maximum length of a rendered description. Strings longer than
-     * this are truncated to this many characters and a trailing U+2026
-     * appended. Applies symmetrically to real {@code accessibleDescription}
-     * values and tooltip-fallback values so the AI cannot distinguish the
-     * two sources from the rendered output.
-     */
+    /** Cap on the rendered description, whichever source it came from (D_quoted_slot_sanitizing). */
     static final int MAX_DESCRIPTION_LENGTH = 120;
 
     /**
-     * Maximum length of an inline {@code text="..."} preview (D_inline_value_preview).
-     * Strings of this length or less are emitted in full; longer strings are
-     * truncated to the first {@code PREVIEW_MAX_LENGTH - 1} characters plus a
-     * trailing U+2026. Matches D_dispatched_echo's value-render convention for
-     * consistency across mutation echoes and snapshot previews.
+     * Cap on the inline {@code text="…"} preview, counted after quote escaping
+     * (D_inline_value_preview) — the same cap as the mutation echo.
      */
     static final int PREVIEW_MAX_LENGTH = 15;
 
     /**
-     * Raw read budget for the preview read. Wider than
-     * {@link #PREVIEW_MAX_LENGTH} so that whitespace-heavy content still
-     * produces a meaningful preview after collapsing. A pathological case
-     * where all {@value #PREVIEW_RAW_READ} raw chars collapse to ≤
-     * {@link #PREVIEW_MAX_LENGTH} is signalled by an appended ellipsis.
+     * Characters read for the preview, wider than {@link #PREVIEW_MAX_LENGTH} so that
+     * whitespace-heavy content still fills the preview after collapsing.
      */
     private static final int PREVIEW_RAW_READ = 64;
 
-    // ── Roles that are always included ──────────────────────────────────
+    // ── Roles that are always kept ──────────────────────────────────────
 
     private static final Set<AccessibleRole> SEMANTIC_ROLES;
 
-    // ── Known AccessibleAction constants for Step 3 normalization ────
+    // ── AccessibleAction descriptions advertised as actions ─────────────
 
     private static final Map<String, String> STEP3_CONSTANTS = Map.of(
             AccessibleAction.INCREMENT, "increment",
@@ -101,10 +92,8 @@ class SnapshotNode {
     );
 
     // ── Mutation availability gates ─────────────────────────────────
-    // Maps mutation action names to predicates that check whether the action
-    // can succeed right now.  Actions absent from this map are never "!"-prefixed.
-    // Window-level actions (close, iconify) are intentionally absent — they work
-    // regardless of the component's enabled state.
+    // A failing gate prefixes the action with "!". The window actions (close, iconify,
+    // restore) are absent on purpose: they work regardless of the enabled state.
 
     private static final Map<String, Predicate<Accessible>> MUTATION_AVAILABILITY = Map.of(
             "click",          SwingUtils::isEffectivelyEnabled,
@@ -119,20 +108,16 @@ class SnapshotNode {
 
     // ── States shown in the snapshot ──────────────────────────────────────────
 
-    // Note: AccessibleState has no DISABLED constant; disability is the absence of ENABLED.
-    // "disabled" is injected manually in render when ENABLED is absent (see render).
+    // disabled, read_only and iconified are synthesized in calculateSelfLine rather than
+    // read from the state set.
     private static final List<AccessibleState> DISPLAYED_STATES = List.of(
             AccessibleState.FOCUSED,
             AccessibleState.SELECTED,
             AccessibleState.CHECKED,
-            // EDITABLE is omitted — editable is the default for text fields.
-            // Its absence is shown as "read_only" (synthetic, see render()).
             AccessibleState.EXPANDED,
             AccessibleState.COLLAPSED,
             AccessibleState.MODAL,
             AccessibleState.MULTI_LINE,
-            // ICONIFIED is synthetic (D_synthetic_iconified_state) — derived from Frame.getExtendedState(),
-            // not from AccessibleStateSet (JDK never sets it). See below.
             AccessibleState.HORIZONTAL,
             AccessibleState.VERTICAL,
             AccessibleState.BUSY,
@@ -140,9 +125,7 @@ class SnapshotNode {
     );
 
     static {
-        // ── SEMANTIC_ROLES ──────────────────────────────────────────────────────
-        // Interactive and structural-semantic roles that are always kept.
-        // PANEL is handled separately (kept only when named/titled).
+        // PANEL is absent: it is kept only when named or titled (isUnnamedPanel).
         Set<AccessibleRole> roles = new HashSet<>();
         // Interactive
         roles.add(AccessibleRole.PUSH_BUTTON);
@@ -182,7 +165,7 @@ class SnapshotNode {
         roles.add(AccessibleRole.SEPARATOR);
         roles.add(AccessibleRole.LABEL);
         roles.add(AccessibleRole.STATUS_BAR);
-        // TABLE_HEADER does not exist in Java 21; use COLUMN_HEADER, ROW_HEADER, HEADER
+        // AccessibleRole has no TABLE_HEADER.
         roles.add(AccessibleRole.COLUMN_HEADER);
         roles.add(AccessibleRole.ROW_HEADER);
         roles.add(AccessibleRole.HEADER);
@@ -192,40 +175,21 @@ class SnapshotNode {
 
     // ── Instance fields ────────────────────────────────────────────────────────
 
-    /**
-     * The accessibility object this node mirrors. May be {@code null} for
-     * virtual nodes that do not correspond to any real accessible (e.g.
-     * {@link JTableRowSnapshotNode}).
-     */
+    /** {@code null} only on a {@link JTableRowSnapshotNode}, which mirrors no accessible. */
     final @Nullable Accessible accessible;
 
-    /** Mutable children list; replaced during Phase 2 (prune). */
     List<SnapshotNode> children = new ArrayList<>();
 
-    /**
-     * Numeric ref assigned during Phase 3 (assignRefs).
-     * {@code 0} means this node has no ref. null means ref hasn't been calculated yet.
-     */
+    /** {@code 0} for no ref; {@code null} until {@link #assignRefs} runs. */
     protected Integer ref = null;
 
-    /**
-     * True when this node's children were capped at {@link #MAX_DATA_ROW_NODES}
-     * during Phase 1 (build).
-     */
+    /** True when {@link #build} stopped at {@link #MAX_DATA_ROW_NODES} children. */
     boolean truncated = false;
 
-    /**
-     * Number of accessible children that were NOT built due to the cap.
-     * Valid only when {@link #truncated} is true.
-     */
+    /** Children left unbuilt by the cap; meaningful only when {@link #truncated}. */
     int truncatedCount = 0;
 
-    /**
-     * Lazily-computed cached action list for this node, without the
-     * {@code "!"} prefix. {@code null}
-     * until {@link #actions()} is first called. Cached so {@link #hasAnyAction()}
-     * and {@link #render} share a single walk of the action pipeline per node.
-     */
+    /** Cache behind {@link #actions()}; {@code null} until its first call. */
     private @Nullable List<String> actions;
 
     SnapshotNode(@Nullable Accessible accessible) {
@@ -233,10 +197,8 @@ class SnapshotNode {
     }
 
     /**
-     * Returns {@code true} when this node is a {@link Frame} (including
-     * {@code JFrame}) whose extended state includes {@link Frame#ICONIFIED}.
-     * Does not apply to {@link JInternalFrame} — an iconified one is replaced
-     * by a {@code JDesktopIcon} in the tree (D_desktop_icon_as_itself).
+     * True for an iconified {@link Frame}. Never for a {@link JInternalFrame}: an iconified one
+     * is replaced by its {@code JDesktopIcon} in the tree (D_desktop_icon_as_itself).
      */
     boolean isIconifiedFrame() {
         return accessible instanceof Frame
@@ -248,10 +210,8 @@ class SnapshotNode {
     // ══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Recursively builds a SnapshotNode tree from an accessibility tree root.
-     * Large data components (JTable, JList, JTree) are truncated to
-     * {@link #MAX_DATA_ROW_NODES} children. JTable gets a specialised subclass
-     * that renders rows instead of individual cells.
+     * Mirrors the accessibility tree under {@code accessible}; a {@link JTable} becomes a
+     * {@link JTableSnapshotNode} with one child per row.
      */
     static SnapshotNode build(Accessible accessible) {
         SnapshotNode node = (accessible instanceof JTable)
@@ -261,20 +221,14 @@ class SnapshotNode {
         return node;
     }
 
-    /**
-     * Populates this node's children by walking the accessibility tree.
-     * Large data components are truncated to {@link #MAX_DATA_ROW_NODES} children.
-     * Subclasses (e.g. {@link JTableSnapshotNode}) override this to provide
-     * component-specific child construction.
-     */
+    /** Builds this node's children, stopping at {@link #MAX_DATA_ROW_NODES} for a large data component. */
     void buildChildren() {
         AccessibleContext ctx = accessible.getAccessibleContext();
         if (ctx == null) {
             return;
         }
 
-        // JDesktopIcon's children (L&F button + label) are rendering
-        // artifacts, not semantic content. Skip child-walking entirely.
+        // The icon's L&F button and label are rendering artifacts (D_desktop_icon_as_itself).
         if (accessible instanceof JInternalFrame.JDesktopIcon) {
             return;
         }
@@ -299,9 +253,8 @@ class SnapshotNode {
             truncatedCount = totalChildren - MAX_DATA_ROW_NODES;
         }
 
-        // Some L&Fs (macOS Aqua) nest JDesktopIcon inside a non-accessible
-        // wrapper (Dock), so iconified internal frames don't appear in the
-        // accessibility tree.  Supplement with JDesktopPane's own API.
+        // Aqua nests the icons in a non-accessible Dock, hiding them from the walk above
+        // (D_desktop_icon_as_itself).
         if (accessible instanceof JDesktopPane) {
             Set<Accessible> alreadyFound = new HashSet<>(children.size());
             for (SnapshotNode child : children) {
@@ -324,10 +277,7 @@ class SnapshotNode {
 
     private enum PruneResult { KEEP, DROP, TRANSPARENT }
 
-    /**
-     * Recursively replaces {@code this.children} with the pruned list.
-     * The node itself is not evaluated here — that is the responsibility of its parent.
-     */
+    /** Prunes the subtree below this node; the node itself is its parent's to judge. */
     void pruneChildren() {
         List<SnapshotNode> newChildren = new ArrayList<>();
         for (SnapshotNode child : children) {
@@ -335,7 +285,6 @@ class SnapshotNode {
             if (decision == PruneResult.DROP) {
                 continue;
             }
-            // Recurse before promoting/keeping so grandchildren are also pruned.
             child.pruneChildren();
             if (decision == PruneResult.TRANSPARENT) {
                 newChildren.addAll(child.children);
@@ -352,42 +301,33 @@ class SnapshotNode {
 
         // ── Stage 1: hard exclusions ──────────────────────────────────────────
 
-        // non-visible component (invisible or zero-size)
         if (!SwingUtils.isVisible(accessible)) {
             return PruneResult.DROP;
         }
 
-        // CellRendererPane (rendering artifact)
         if (accessible instanceof CellRendererPane) {
             return PruneResult.DROP;
         }
 
-        // JTableHeader — column names are shown via columns: annotation on table node
         if (accessible instanceof JTableHeader) {
             return PruneResult.DROP;
         }
 
-        // JPopupMenu belonging to an open JMenu. The JMenu already exposes
-        // the same JMenuItem instances as its accessible children (via its
-        // internal popupMenu), so the popup would duplicate every entry once
-        // the menu is open. Right-click / context popups — whose invoker is not
-        // a JMenu — are kept as usual.
+        // An open JMenu already exposes the same JMenuItem instances as its own children.
         if (accessible instanceof JPopupMenu
                 && ((JPopupMenu) accessible).getInvoker() instanceof JMenu) {
             return PruneResult.DROP;
         }
 
-        // glass pane of JRootPane
         if (accessible instanceof Component) {
             Component comp = (Component) accessible;
             if (isGlassPane(comp)) {
-                // Empty glass pane → drop; non-empty → transparent (promote children)
                 int accessibleChildCount = ctx != null ? ctx.getAccessibleChildrenCount() : 0;
                 return accessibleChildCount == 0 ? PruneResult.DROP : PruneResult.TRANSPARENT;
             }
         }
 
-        // ── Stage 3 safety net: always-included nodes override Stage 2 ────────
+        // ── Stage 3 safety net, checked first: it overrides Stage 2 ──────────
         if (mustKeep(node, ctx)) {
             return PruneResult.KEEP;
         }
@@ -414,9 +354,7 @@ class SnapshotNode {
         return parent instanceof JRootPane && ((JRootPane) parent).getGlassPane() == comp;
     }
 
-    /**
-     * Stage 3 safety net: returns true if this node must always be kept.
-     */
+    /** Stage 3: a node with any of these is kept, whatever Stage 2 would say. */
     private static boolean mustKeep(SnapshotNode node, AccessibleContext ctx) {
         if (ctx == null) {
             return false;
@@ -424,28 +362,23 @@ class SnapshotNode {
         Accessible accessible = node.accessible;
         AccessibleRole role = ctx.getAccessibleRole();
 
-        // semantic (non-structural) role
         if (role != null && SEMANTIC_ROLES.contains(role)) {
             return true;
         }
 
-        // named panel (panel with accessible name, description, or TitledBorder)
         if (role == AccessibleRole.PANEL && !isUnnamedPanel(accessible, ctx)) {
             return true;
         }
 
-        // has accessible name
         String name = ctx.getAccessibleName();
         if (name != null && !name.isEmpty()) {
             return true;
         }
 
-        // has at least one action
         if (node.hasAnyAction()) {
             return true;
         }
 
-        // has accessible text with content, or accessible value
         AccessibleText at = ctx.getAccessibleText();
         if (at != null && at.getCharCount() > 0) {
             return true;
@@ -454,7 +387,6 @@ class SnapshotNode {
             return true;
         }
 
-        // is focused
         AccessibleStateSet states = ctx.getAccessibleStateSet();
         if (states != null && states.contains(AccessibleState.FOCUSED)) {
             return true;
@@ -463,10 +395,7 @@ class SnapshotNode {
         return false;
     }
 
-    /**
-     * Returns true when the panel has no accessible name, no accessible description,
-     * and no TitledBorder — i.e., it is a pure layout wrapper with no semantic meaning.
-     */
+    /** True for a pure layout panel: no accessible name, no description, no {@link TitledBorder}. */
     private static boolean isUnnamedPanel(Accessible accessible, AccessibleContext ctx) {
         String name = ctx.getAccessibleName();
         if (name != null && !name.isEmpty()) {
@@ -506,21 +435,12 @@ class SnapshotNode {
     // ══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Depth-first traversal; assigns the next integer ref to every node that exposes
-     * at least one action, and stores the mapping in
-     * {@code context}.
-     * <br/>
-     * The function must assign a value to {@link #ref}.
+     * Numbers every node with an action depth-first, from {@code nextRef}, and registers each in
+     * {@code context}. An override must still set {@link #ref} on every node it covers.
      *
-     * @param nextRef the first ref value available for assignment
-     * @param context the tool context that holds the ref → accessible map
-     * @return the next free ref value after processing this subtree
+     * @return the next free ref
      */
     int assignRefs(int nextRef, SwingToolContext context) {
-        // Dropped the historical `|| truncated` tail: every truncated container
-        // now has at least one action via the action list (LIST/TREE emit
-        // get_cell_count/get_cells in step 6b; TABLE always has a selection
-        // group label), so truncation is already covered by hasAnyAction().
         if (hasAnyAction()) {
             ref = nextRef;
             context.putRef(nextRef, accessible);
@@ -528,7 +448,7 @@ class SnapshotNode {
         } else {
             ref = 0;
         }
-        // D_iconified_children_hidden: iconified Frame — skip children (no refs assigned).
+        // D_iconified_children_hidden
         if (isIconifiedFrame()) {
             markChildRefsZero();
             return nextRef;
@@ -540,10 +460,8 @@ class SnapshotNode {
     }
 
     /**
-     * Recursively sets {@link #ref} to {@code 0} on all descendants.
-     * Used by iconified-frame suppression to ensure those children have a non-null ref
-     * (so {@link #getSelfLine()} does not throw) without assigning
-     * real ref numbers.
+     * Sets every descendant's {@link #ref} to {@code 0}, so that {@link #getSelfLine()} does not
+     * throw on a hidden child a filter reaches.
      */
     private void markChildRefsZero() {
         for (SnapshotNode child : children) {
@@ -556,81 +474,44 @@ class SnapshotNode {
     // Phase 4 — Render
     // ══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Returns additional component-specific info to append after the name/description
-     * on the node's rendered line (e.g. column headers for JTable).
-     * Default returns empty string. Subclasses override to provide info.
-     */
+    /** The line's {@code <extra>} slot, e.g. a JTable's {@code columns: [ID, Name]}; {@code ""} for none. */
     String getAdditionalInfo() {
         return "";
     }
 
-    /**
-     * Returns the label used in truncation summaries (e.g. "items", "rows").
-     * Default returns "items". Subclasses override for component-specific labels.
-     */
+    /** The noun in {@code ... and N more items}. */
     String getTruncationLabel() {
         return "items";
     }
 
     /**
-     * Computes the inline {@code text="..."} / {@code value=N} preview for
-     * this node's rendered line, per D_inline_value_preview.
+     * Computes the inline {@code text="…"} / {@code value=N} preview (D_inline_value_preview),
+     * gated by the same {@link SwingUtils#supportsGetText} / {@link SwingUtils#supportsGetValue}
+     * as the {@code get_text} / {@code get_value} actions. A custom widget passing both gates
+     * gets both, text first.
      *
-     * <p>Gate parity with the action algorithm: emits {@code text="..."} iff
-     * {@link SwingUtils#supportsGetText} returns {@code true}, and
-     * {@code value=N} iff {@link SwingUtils#supportsGetValue} returns
-     * {@code true}. In standard Swing these are disjoint, so at most one of
-     * the two labels appears; a custom widget exposing both is permitted to
-     * emit both (text first, then value).
-     *
-     * <p>Defensive read: every accessibility-API call is wrapped in try/catch.
-     * If a custom widget's {@code AccessibleText}/{@code AccessibleValue}
-     * throws (document lock contention, misbehaving custom impl, etc.), the
-     * affected annotation is omitted and a {@code FINE} log line records the
-     * failure — the rest of the snapshot still renders.
-     *
-     * @return the preview string (without leading/trailing spaces) or
-     *         {@code ""} if neither gate fires
+     * @return {@code ""} when neither gate passes; a read that throws drops only its own part
      */
     private String computeInlinePreview() {
         StringBuilder preview = new StringBuilder();
 
-        // text="..." — gated by supportsGetText (D_password_not_readable password exclusion
-        // and D_label_not_readable label exclusion are already baked into supportsGetText,
-        // so password fields and JLabels produce no annotation for free).
         if (SwingUtils.supportsGetText(accessible)) {
             try {
                 String raw = SwingUtils.readText(accessible, PREVIEW_RAW_READ);
-                // Sanitise per D_quoted_slot_sanitizing: collapse whitespace runs to
-                // single spaces, strip leading/trailing whitespace, escape
-                // embedded quotes. Null-or-blank result → no preview.
+                // Capped after escaping, so the cap bounds the characters on screen.
                 String sanitized = SwingUtils.sanitizeForQuotedSlot(raw);
-                // Cap to PREVIEW_MAX_LENGTH chars (D_inline_value_preview convention). The
-                // cap counts rendered chars including the backslash in an
-                // escaped quote — a field containing a single '"' produces
-                // the two-char sequence `\"` in the preview; we cap on the
-                // rendered length, not the pre-escape length, so the 15-char
-                // budget is an upper bound on on-screen characters.
                 String truncated;
                 if (sanitized == null) {
                     truncated = "";
                 } else if (sanitized.length() <= PREVIEW_MAX_LENGTH) {
-                    // Did we read everything? If raw hit the raw-read budget
-                    // there may be more content that collapsed away; mark
-                    // truncation so the AI knows to call swing_get_text.
+                    // A full raw read may have more text behind it.
                     if (raw.length() < PREVIEW_RAW_READ) {
                         truncated = sanitized;
                     } else {
                         truncated = sanitized + "…";
                     }
                 } else {
-                    // Strip trailing whitespace inside the cap window so the
-                    // preview does not render " …" (space + ellipsis) when the
-                    // 14-char prefix happens to end in whitespace. Also avoid
-                    // splitting an escape sequence: if the cap would land
-                    // between `\` and `"`, drop the dangling backslash so the
-                    // preview never ends in a half-finished escape.
+                    // Never " …", and never a dangling backslash from a split \" escape.
                     String prefix = sanitized.substring(0, PREVIEW_MAX_LENGTH - 1).stripTrailing();
                     if (prefix.endsWith("\\")) {
                         prefix = prefix.substring(0, prefix.length() - 1).stripTrailing();
@@ -644,8 +525,6 @@ class SnapshotNode {
             }
         }
 
-        // value=N — gated by supportsGetValue. Progress bars with a non-null
-        // maximum render as value=current/max (progress-bar exception).
         if (SwingUtils.supportsGetValue(accessible)) {
             try {
                 Number current = SwingUtils.readValue(accessible);
@@ -675,35 +554,25 @@ class SnapshotNode {
         return preview.toString();
     }
 
-    /**
-     * Renders this node and its children as indented text lines.
-     *
-     * @param depth current indentation depth
-     * @param sb    the target buffer
-     */
+    /** Appends this subtree's lines to {@code sb}, indented two spaces per {@code depth}. */
     void render(int depth, StringBuilder sb) {
         renderSelfLine(depth, sb);
 
-        // D_iconified_children_hidden: iconified Frame — emit placeholder instead of children.
+        // D_iconified_children_hidden
         if (isIconifiedFrame()) {
             sb.append("  ".repeat(depth + 1)).append("- ").append(ICONIFIED_PLACEHOLDER).append('\n');
             return;
         }
 
-        // Children
         for (SnapshotNode child : children) {
             child.render(depth + 1, sb);
         }
 
-        // Truncation summary (render-only, no node, no ref)
         renderTruncationSummary(depth, sb);
     }
 
     private @Nullable String selfLine = null;
 
-    /**
-     * Renders only this node's own line (no children, no truncation summary).
-     */
     private void renderSelfLine(int depth, StringBuilder sb) {
         String indent = "  ".repeat(depth);
         sb.append(indent).append("- ");
@@ -722,14 +591,8 @@ class SnapshotNode {
         final StringBuilder sb = new StringBuilder();
         AccessibleContext ctx = accessible.getAccessibleContext();
         AccessibleRole role = ctx != null ? ctx.getAccessibleRole() : null;
-        // design/snapshot-format.md: component identity slot is "JClass (role)",
-        // "Concrete -> JClass (role)", or "(role)" for non-Component accessibles.
         sb.append(ComponentClassResolver.resolveIdentitySlot(accessible));
 
-        // design/snapshot-format.md: emit the 0-based tab index inline for JTabbedPane pages,
-        // so an AI client can pass it straight to swing_set_selection as [N]
-        // without a separate enumeration call. Mirrors the JTable
-        // row rendering pattern (- row N: …).
         if (role == AccessibleRole.PAGE_TAB && ctx != null) {
             int tabIndex = ctx.getAccessibleIndexInParent();
             if (tabIndex >= 0) {
@@ -737,38 +600,27 @@ class SnapshotNode {
             }
         }
 
-        // Name (omit if blank) — uses getEffectiveAccessibleName for
-        // JInternalFrame (accessible name → title) and JDesktopIcon
-        // (icon name → frame name → frame title). See design/snapshot-format.md.
-        // Sanitised per D_quoted_slot_sanitizing: whitespace collapsed, embedded
-        // quotes escaped. Uncapped — name is identity (D_quoted_slot_sanitizing §2).
+        // Uncapped: the name is identity (D_quoted_slot_sanitizing).
         String name = SwingUtils.sanitizeForQuotedSlot(
                 SwingUtils.getEffectiveAccessibleName(accessible));
         if (name != null) {
             sb.append(" \"").append(name).append('"');
         }
 
-        // Description: resolved via SwingUtils.resolveDescription()
-        // which tries accessibleDescription (with HTML cleanup), then tooltip
-        // fallback, then sanitises. Result is capped at MAX_DESCRIPTION_LENGTH
-        // chars symmetrically across all sources (D_quoted_slot_sanitizing §3).
         String desc = SwingUtils.resolveDescription(accessible);
         if (desc != null) {
             sb.append(" \"").append(capDescription(desc)).append('"');
         }
 
-        // Bracket: [ref=N, state1, state2, ...]
         List<String> bracketParts = new ArrayList<>();
         if (ref > 0) {
             bracketParts.add("ref=" + ref);
         }
-        // Compute enabled/read-only state once for both bracket and action prefixing
         boolean effectivelyEnabled = SwingUtils.isEffectivelyEnabled(accessible);
         boolean readOnly = ctx != null && SwingUtils.hasEditableText(accessible)
                 && ctx.getAccessibleStateSet() != null
                 && !ctx.getAccessibleStateSet().contains(AccessibleState.EDITABLE);
 
-        // "disabled" uses isEffectivelyEnabled() — walks the parent chain
         if (!effectivelyEnabled) {
             bracketParts.add("disabled");
         }
@@ -785,8 +637,7 @@ class SnapshotNode {
                 }
             }
         }
-        // Synthetic ICONIFIED (D_synthetic_iconified_state): JDK never sets it in AccessibleStateSet.
-        // Derived from Frame.getExtendedState() for JFrame.
+        // The JDK never puts ICONIFIED in the state set (D_synthetic_iconified_state).
         if (accessible instanceof Frame
                 && (((Frame) accessible).getExtendedState() & Frame.ICONIFIED) != 0) {
             bracketParts.add("iconified");
@@ -795,21 +646,16 @@ class SnapshotNode {
             sb.append(" [").append(String.join(", ", bracketParts)).append(']');
         }
 
-        // Additional component-specific info (e.g. column headers for JTable)
         String additionalInfo = getAdditionalInfo();
         if (!additionalInfo.isEmpty()) {
             sb.append(' ').append(additionalInfo);
         }
 
-        // Inline value preview (D_inline_value_preview). Emitted after additionalInfo
-        // so that on the (spec-permitted but never-actually-seen) co-occurrence
-        // case `columns:` appears first, then `text=`/`value=`.
         String preview = computeInlinePreview();
         if (!preview.isEmpty()) {
             sb.append(' ').append(preview);
         }
 
-        // Actions with "!" prefix for unavailable mutations
         List<String> acts = actions();
         if (!acts.isEmpty()) {
             List<String> prefixed = prefixUnavailable(acts, accessible);
@@ -820,9 +666,7 @@ class SnapshotNode {
         return sb.toString();
     }
 
-    /**
-     * Renders the truncation summary line if this node was truncated.
-     */
+    /** Appends the render-only {@code ... and N more items} line, if {@link #truncated}. */
     void renderTruncationSummary(int depth, StringBuilder sb) {
         if (truncated) {
             sb.append("  ".repeat(depth + 1))
@@ -832,18 +676,12 @@ class SnapshotNode {
 
     // ── Tree filtering ────────────────────────────────────────────────
 
-    /**
-     * Returns whether this node's rendered self-line contains the given
-     * filter substring (case-insensitive). Used by the tree filter algorithm.
-     */
+    /** True when this node's rendered line contains {@code filterLower}, which the caller lowercases. */
     boolean matchesFilter(String filterLower) {
         return getSelfLine().toLowerCase().contains(filterLower);
     }
 
-    /**
-     * Checks whether this node or any descendant matches the filter.
-     * Returns {@code true} if this node should be included in filtered output.
-     */
+    /** True when this node or a descendant {@linkplain #matchesFilter matches}. */
     boolean subtreeMatchesFilter(String filterLower) {
         if (matchesFilter(filterLower)) {
             return true;
@@ -857,29 +695,20 @@ class SnapshotNode {
     }
 
     /**
-     * Renders this node's filtered subtree. If this node directly matches
-     * the filter, it and all descendants are rendered unconditionally.
-     * Otherwise, only the self-line is rendered (as an ancestor providing
-     * context) and filtering continues into children.
-     *
-     * @param filterLower the lowercase filter substring
-     * @param depth       current indentation depth
-     * @param sb          the target buffer
+     * Renders a matching node with its whole subtree, and a non-matching one as its own line
+     * above its matching branches. Call only where {@link #subtreeMatchesFilter} holds.
      */
     void renderFiltered(String filterLower, int depth, StringBuilder sb) {
         if (matchesFilter(filterLower)) {
-            // Direct match — render this node and ALL descendants unconditionally
             render(depth, sb);
         } else {
-            // Ancestor of a match — render self-line, recurse only into matching branches
             renderSelfLine(depth, sb);
             for (SnapshotNode child : children) {
                 if (child.subtreeMatchesFilter(filterLower)) {
                     child.renderFiltered(filterLower, depth + 1, sb);
                 }
             }
-            // Don't render truncation summary for ancestor-only nodes —
-            // the truncated children are not part of the filtered output
+            // No truncation summary: it would count children the filter hid.
         }
     }
 
@@ -888,14 +717,13 @@ class SnapshotNode {
     // ══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Returns this node's action labels, without the {@code "!"} prefix.
-     * Lazily computed on first call and cached for reuse — see {@link #actions}.
+     * Returns this node's action labels, in the order {@code design/snapshot-format.md} fixes,
+     * without the {@code "!"} prefix.
      *
-     * @implNote The single source of truth for {@link #hasAnyAction()}
-     * (ref-assignment gate) and {@link #render} (snapshot output). Keep it that way: an
-     * OR chain of {@code SwingUtils.supportsX} predicates mirroring the action steps
-     * looks equivalent and is what this replaced — it drifted silently under
-     * D_password_not_readable, advertising a ref for a node that then rendered no action.
+     * @implNote The one source for both {@link #hasAnyAction()} (the ref gate) and the
+     * rendered {@code actions:} slot. An OR chain of {@code SwingUtils.supportsX} predicates
+     * looks equivalent but drifts silently: under D_password_not_readable it advertised a ref
+     * on a node that then rendered no action.
      */
     List<String> actions() {
         if (actions == null) {
@@ -904,11 +732,6 @@ class SnapshotNode {
         return actions;
     }
 
-    /**
-     * Computes the action labels for this node in the order
-     * {@code design/snapshot-format.md} fixes. Called exactly once per node via
-     * {@link #actions()}.
-     */
     private List<String> computeActions() {
         Accessible accessible = this.accessible;
         AccessibleContext ctx = accessible.getAccessibleContext();
@@ -918,17 +741,14 @@ class SnapshotNode {
 
         List<String> actions = new ArrayList<>();
 
-        // Step 1: click (Tier 1: AccessibleAction, Tier 2: MouseListener fallback)
         if (SwingUtils.supportsClick(accessible) != null) {
             actions.add("click");
         }
 
-        // Step 2: toggle_popup
         if (SwingUtils.supportsTogglePopup(accessible) >= 0) {
             actions.add("toggle_popup");
         }
 
-        // Step 3: known AccessibleAction constants (INCREMENT, DECREMENT, TOGGLE_EXPAND)
         AccessibleAction aa = ctx.getAccessibleAction();
         if (aa != null) {
             for (int i = 0; i < aa.getAccessibleActionCount(); i++) {
@@ -940,25 +760,17 @@ class SnapshotNode {
             }
         }
 
-        // Step 4: text.
-        // get_text and set_text are independent capabilities: each branch
-        // gates its action on the matching support predicate. SwingUtils.supportsGetText
-        // returns false for components where reading yields garbage (D_password_not_readable
-        // password fields), so step 4 does not need an explicit password check.
-        // Read-only text fields (hasEditableText but not EDITABLE) emit set_text
-        // too; rendering prefixes it with "!" since the component is read-only.
+        // A read-only field still advertises set_text, rendered "!set_text".
         if (SwingUtils.supportsSetText(accessible)) {
             if (SwingUtils.supportsGetText(accessible)) actions.add("get_text");
             actions.add("set_text");
         } else if (SwingUtils.hasEditableText(accessible)) {
-            // Read-only text field: has AccessibleEditableText but lacks EDITABLE state
             if (SwingUtils.supportsGetText(accessible)) actions.add("get_text");
             actions.add("set_text");
         } else if (SwingUtils.supportsGetText(accessible)) {
             actions.add("get_text");
         }
 
-        // Step 5: value
         if (SwingUtils.supportsGetValue(accessible)) {
             actions.add("get_value");
             if (SwingUtils.supportsSetValue(accessible)) {
@@ -966,43 +778,33 @@ class SnapshotNode {
             }
         }
 
-        // Step 6: selection group labels
+        // Group labels, not callable actions.
         if (SwingUtils.supportsMultiSelection(accessible)) {
             actions.add("multi-selection");
         } else if (SwingUtils.supportsSingleSelection(accessible)) {
             actions.add("single-selection");
         }
 
-        // Step 6b: content discovery for truncated large data components.
-        // JTable is excluded — its cells are stamp-painted plain text labels
-        // with no actionable children; use swing_get_items instead
-        // (D_no_jtable_cells).
+        // Never on a JTable (D_no_jtable_cells).
         if (truncated && SwingUtils.isGetCellsSupported(accessible)) {
             actions.add("get_cell_count");
             actions.add("get_cells");
         }
 
-        // Step 7: close (synthetic, for windows only)
         if (SwingUtils.supportsClose(accessible)) {
             actions.add("close");
         }
 
-        // Step 8: iconify (synthetic, for frames only)
         if (SwingUtils.supportsIconify(accessible)) {
             actions.add("iconify");
         }
 
-        // Step 9: restore (synthetic, for iconified frames and JDesktopIcon)
         if (SwingUtils.supportsRestore(accessible)) {
             actions.add("restore");
         }
 
-        // Step 10: description retrieval when description is capped.
-        // The resolved description exceeds MAX_DESCRIPTION_LENGTH → the snapshot
-        // will cap it with '…', so advertise get_description so the AI can
-        // retrieve the full text. This can be the sole action on a node
-        // (e.g. a JLabel with a long tooltip), giving it a ref it would not
-        // otherwise have.
+        // Only when capDescription will bite. It may be a node's sole action — a
+        // JLabel with a long tooltip — and so give it a ref it would not otherwise have.
         String desc = SwingUtils.resolveDescription(accessible);
         if (desc != null && desc.length() > MAX_DESCRIPTION_LENGTH) {
             actions.add("get_description");
@@ -1011,12 +813,7 @@ class SnapshotNode {
         return actions;
     }
 
-    /**
-     * Prefixes mutation actions with "!" when they would fail validation.
-     * Each action in {@link #MUTATION_AVAILABILITY} has its own predicate that
-     * determines availability.  Actions absent from the map (read-only tools,
-     * window-level actions like close/iconify) are never prefixed.
-     */
+    /** Prefixes {@code "!"} to each action whose {@link #MUTATION_AVAILABILITY} gate fails. */
     private static List<String> prefixUnavailable(List<String> actions,
                                                    Accessible accessible) {
         List<String> result = null; // lazy — most nodes have no unavailable actions
@@ -1036,18 +833,12 @@ class SnapshotNode {
         return result != null ? result : actions;
     }
 
-    /**
-     * Returns {@code true} if this node has at least one action — the
-     * ref-assignment gate. Derived from {@link #actions()}.
-     */
+    /** The ref gate. */
     boolean hasAnyAction() {
         return !actions().isEmpty();
     }
 
-    /**
-     * Caps a description string at {@link #MAX_DESCRIPTION_LENGTH} characters,
-     * appending a trailing U+2026 ('…') when truncation occurs.
-     */
+    /** @return {@code s}, or its first {@link #MAX_DESCRIPTION_LENGTH} characters plus {@code …} */
     static String capDescription(String s) {
         if (s.length() <= MAX_DESCRIPTION_LENGTH) {
             return s;
@@ -1055,9 +846,6 @@ class SnapshotNode {
         return s.substring(0, MAX_DESCRIPTION_LENGTH) + "\u2026";
     }
 
-    /**
-     * Strips all trailing newline characters from the given string.
-     */
     static String stripTrailingNewlines(String s) {
         int end = s.length();
         while (end > 0 && s.charAt(end - 1) == '\n') {
@@ -1071,9 +859,8 @@ class SnapshotNode {
     // ══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Snapshot node for a JTable. Overrides child construction to create
-     * {@link JTableRowSnapshotNode}s (one per row, capped at {@link #MAX_DATA_ROW_NODES}),
-     * and provides column header info and row-based truncation labels.
+     * A {@link JTable}: one {@link JTableRowSnapshotNode} per row rather than one node per cell
+     * (D_no_jtable_cells), and {@code columns: […]} when the header is visible.
      */
     static final class JTableSnapshotNode extends SnapshotNode {
 
@@ -1124,10 +911,8 @@ class SnapshotNode {
     }
 
     /**
-     * Virtual snapshot node for a single JTable row. Stores the 0-based row
-     * index and pre-built pipe-separated row text. Has no children, no actions,
-     * no ref, and no backing accessible ({@code accessible} is {@code null}).
-     * Render produces {@code - row 0: Val1 | Val2 | Val3}.
+     * One {@link JTable} row, rendered as {@code - row 0: 1 | Alice | NY}. It mirrors no
+     * accessible, and has no children, actions or ref.
      */
     static final class JTableRowSnapshotNode extends SnapshotNode {
 
@@ -1140,7 +925,6 @@ class SnapshotNode {
             this.rowText = rowText;
         }
 
-        /** No actions, no children — nothing to assign. */
         @Override
         int assignRefs(int nextRef, SwingToolContext context) {
             ref = 0;

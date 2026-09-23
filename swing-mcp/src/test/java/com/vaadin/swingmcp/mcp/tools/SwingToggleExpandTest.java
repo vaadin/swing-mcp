@@ -37,9 +37,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Headless tests for {@code swing_toggle_expand}.
- * The happy-path (actually expanding/collapsing a JTree node) runs headless
- * because JTree expansion is a model-level operation (see design/snapshot-format.md).
+ * Expanding a {@code JTree} node is a model-level operation, so even the happy path runs headless.
  */
 class SwingToggleExpandTest extends AbstractHeadlessTest {
 
@@ -118,7 +116,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
 
     @Test
     void leafNodeReturnsMcpError() throws Exception {
-        // A root node with no children is a leaf — accessible at index 0 without any expansion
+        // A childless root is a leaf, reachable at index 0 without expanding anything.
         JTree tree = new JTree(new DefaultMutableTreeNode("leaf-root"));
         Accessible leafAcc = tree.getAccessibleContext().getAccessibleChild(0);
         context.putRef(1, leafAcc);
@@ -182,7 +180,6 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
 
         toggleExpand(1); // succeeds, clears ref map
 
-        // Ref map cleared — same ref should now be invalid
         MCPServerException ex = assertThrows(MCPServerException.class, () -> toggleExpand(1));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
     }
@@ -200,7 +197,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
 
         mcpServer.setConsideredComponents(List.of(tree));
 
-        // After snapshot: JTree has no ref (selection suppressed), root node (toggle_expand) → ref=1
+        // The JTree gets no ref (D_no_jtree_selection), so the root node is ref=1.
         mcpClient.callTool("swing_snapshot", Map.of());
         MCPProtocol.CallToolResult result = mcpClient.callTool("swing_toggle_expand", Map.of("ref", 1));
         SwingUtilities.invokeAndWait(() -> {}); // drain EDT so fire-and-forget action has run
@@ -210,7 +207,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Component matrix — all standard 20 components fail
+    // Component matrix — every component refuses
     // ══════════════════════════════════════════════════════════════════════════
 
     private void assertToggleExpandNotSupported(Component component) throws Exception {
@@ -291,7 +288,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
     @Test
     void componentMatrix_JScrollPane() throws Exception {
         snapshot(new JScrollPane(new JTextArea("content")));
-        // JScrollPane has no ref
+        // Nothing to assert: a JScrollPane gets no ref.
     }
 
     @Test
@@ -378,7 +375,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JTree() throws Exception {
-        // JTree itself (not its nodes) — has selection but no toggle_expand
+        // The JTree itself, not a node.
         assertToggleExpandNotSupported(new JTree(new DefaultMutableTreeNode("Root")));
     }
 

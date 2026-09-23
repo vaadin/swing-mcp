@@ -23,17 +23,22 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Fluent builder for MCP tool input schemas.
+ * Fluent builder for a tool's input schema; a {@code with*} call constrains
+ * the parameter added just before it.
  *
- * <p>Example usage:
  * <pre>{@code
- * InputSchema schema = new InputSchemaBuilder()
- *     .requiredInteger("ref", "The element reference number")
- *     .build();
+ * new InputSchemaBuilder()
+ *         .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
+ *         .requiredInteger("offset", "0-based start index for paging").withMinimum(0)
+ *         .requiredInteger("length", "Number of children to return").withMinimum(0)
+ *         .build();
  * }</pre>
  *
- * <p>Parameter insertion order is preserved in the built schema and in
- * {@link #toString()}; this ordering is contractual.
+ * <p>Parameter order is insertion order, in the built schema and in
+ * {@link #toString()}; it is contractual. Every adder throws
+ * {@link IllegalArgumentException} for a blank or malformed name
+ * ({@code [a-zA-Z_][a-zA-Z0-9_]*}) or a blank description, and
+ * {@link IllegalStateException} for a duplicate name.
  */
 public class InputSchemaBuilder {
 
@@ -113,7 +118,11 @@ public class InputSchemaBuilder {
         return this;
     }
 
-    /** Applies to the most recently added parameter. */
+    /**
+     * @throws IllegalArgumentException if {@code values} is empty
+     * @throws IllegalStateException    if no parameter was added yet, or it
+     *                                  already has an enum
+     */
     public InputSchemaBuilder withEnum(String... values) {
         if (lastAdded == null) {
             throw new IllegalStateException("No parameter has been added yet");
@@ -129,7 +138,10 @@ public class InputSchemaBuilder {
         return this;
     }
 
-    /** Applies to the most recently added parameter. */
+    /**
+     * @throws IllegalStateException if no parameter was added yet, or it
+     *                               already has a minimum
+     */
     public InputSchemaBuilder withMinimum(Number min) {
         if (lastAdded == null) {
             throw new IllegalStateException("No parameter has been added yet");
@@ -142,7 +154,10 @@ public class InputSchemaBuilder {
         return this;
     }
 
-    /** Applies to the most recently added parameter. */
+    /**
+     * @throws IllegalStateException if no parameter was added yet, or it
+     *                               already has a maximum
+     */
     public InputSchemaBuilder withMaximum(Number max) {
         if (lastAdded == null) {
             throw new IllegalStateException("No parameter has been added yet");
@@ -163,10 +178,13 @@ public class InputSchemaBuilder {
     }
 
     /**
-     * Returns a compact, human-readable representation of the schema:
-     * {@code name: type} for required, {@code name: type?} for optional,
-     * with {@code (a|b|...)} for enum values and {@code [min,max]} for
-     * numeric bounds (either side may be empty). Descriptions are omitted.
+     * Renders the parameters without their descriptions:
+     *
+     * <pre>
+     * ref: integer, page: integer[1,], count: integer?[,100], status: string(active|inactive|pending)
+     * </pre>
+     *
+     * {@code ?} marks an optional parameter.
      */
     @Override
     public String toString() {

@@ -33,16 +33,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * MCP tool {@code swing_get_items}: lists items of a UI
- * component by ref, with paging support.
+ * MCP tool {@code swing_get_items}: a page of a {@code JList}'s, {@code JComboBox}'s or
+ * {@code JTable}'s items by ref, as JSON:
  *
- * <p>Supported components: {@code JList}, {@code JComboBox}, {@code JTable}.
- * Returns a JSON object with {@code totalCount} and {@code items} (array of
- * objects, each with {@code index} and {@code name}). For JTable, index is
- * the row index and name is a pipe-separated summary of cell values.
- * {@code JTabbedPane} is not a supported target (dropped per P-001); tabs are
- * rendered inline in the snapshot.</p>
+ * <pre>{@code
+ * {"totalCount":5,"items":[{"index":0,"name":"Alpha"},{"index":1,"name":"Beta"}]}
+ * }</pre>
  *
+ * The index is what {@code swing_set_selection} takes; a {@code JTable} item is a row, named by a
+ * pipe-separated summary of its cells. A {@code null} item keeps its slot with a {@code null}
+ * name.
  */
 public class SwingGetItemsTool extends AbstractSwingTool {
 
@@ -52,7 +52,6 @@ public class SwingGetItemsTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // parameter validation
         int ref = params.getInt("ref");
         int offset = params.getInt("offset");
         int length = params.getInt("length");
@@ -63,28 +62,19 @@ public class SwingGetItemsTool extends AbstractSwingTool {
             throw new MCPErrorResponseException("length must be non-negative, got " + length);
         }
 
-        // ref lookup
         Accessible accessible = context.getAccessibleByRef(ref);
-
-        // read-only gate — any JTable passes (regardless of
-        // selection mode); other components must satisfy supportsSelection.
         requireGetItemsSupported(accessible, "swing_get_items");
 
-        // all access on EDT (guaranteed by SwingMCP.registerTool)
         AccessibleContext ac = accessible.getAccessibleContext();
-
-        // Step 4: determine totalCount and enumerate items
         int totalCount = SwingUtils.getItemCount(accessible);
 
-        // offset beyond totalCount → empty items
-        // Integer overflow guard: use long arithmetic for end bound
+        // long: offset + length can overflow int.
         int end = (int) Math.min((long) offset + length, totalCount);
         int start = Math.min(offset, totalCount);
 
         List<Map<String, Object>> items = new ArrayList<>();
 
         if (accessible instanceof JTable) {
-            // JTable row enumeration
             AccessibleTable at = ac.getAccessibleTable();
             int cols = at.getAccessibleColumnCount();
             for (int r = start; r < end; r++) {
@@ -94,7 +84,7 @@ public class SwingGetItemsTool extends AbstractSwingTool {
                 items.add(item);
             }
         } else if (accessible instanceof JComboBox) {
-            // JComboBox item enumeration
+            // Not accessible children: a combo's only child is its popup (R_selection_index_spaces).
             JComboBox<?> combo = (JComboBox<?>) accessible;
             for (int i = start; i < end; i++) {
                 Object obj = combo.getItemAt(i);
@@ -104,19 +94,15 @@ public class SwingGetItemsTool extends AbstractSwingTool {
                 items.add(item);
             }
         } else {
-            // JList enumeration (only non-JTable, non-JComboBox target
-            // left after JTabbedPane was dropped per P-001 Wave A).
             for (int i = start; i < end; i++) {
                 Accessible child = ac.getAccessibleChild(i);
                 Map<String, Object> item = new LinkedHashMap<>();
                 item.put("index", i);
                 item.put("name", child != null ? child.getAccessibleContext().getAccessibleName() : null);
-                // null child — name is null, entry not skipped
                 items.add(item);
             }
         }
 
-        // Build JSON response
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("totalCount", totalCount);
         result.put("items", items);
@@ -125,7 +111,6 @@ public class SwingGetItemsTool extends AbstractSwingTool {
 
     @Override
     public boolean isMutation() {
-        // read-only tool, ref map is NOT cleared
         return false;
     }
 }

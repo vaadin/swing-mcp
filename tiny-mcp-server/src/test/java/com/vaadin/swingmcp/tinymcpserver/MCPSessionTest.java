@@ -24,10 +24,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Unit tests for {@link MCPSession} protocol dispatch.
- * Uses {@link FakeHttpExchange} to test without an HTTP server.
- */
 class MCPSessionTest {
 
     private static MCPSession session;
@@ -278,8 +274,6 @@ class MCPSessionTest {
     void runLockedReleasesLockAfterBlock() {
         MCPSession s = freshSession();
         s.runLocked(() -> s.setAttribute("key", "value"));
-        // After runLocked returns, the session lock is released again — calls
-        // from unlocked threads must still fail.
         assertThrows(IllegalStateException.class, () -> s.getAttribute("key"));
     }
 
@@ -290,7 +284,6 @@ class MCPSessionTest {
         RuntimeException thrown = assertThrows(RuntimeException.class,
                 () -> s.runLocked(() -> { throw boom; }));
         assertSame(boom, thrown);
-        // Lock was released — a subsequent runLocked on the same thread works.
         s.runLocked(() -> s.setAttribute("key", "value"));
     }
 
@@ -344,7 +337,6 @@ class MCPSessionTest {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-            // main thread's binding is untouched by the other thread
             assertSame(main, MCPSession.getCurrent());
         });
         if (err[0] != null) throw new AssertionError(err[0]);

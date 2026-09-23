@@ -38,13 +38,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 
 /**
- * No-retry HTTP MCP client. Drives the server's HTTP transport via
- * {@link HttpClient} (JDK built-in, zero new runtime deps per D_no_framework_deps).
- *
- * <p>HTTP 404 from a non-{@code initialize} call is mapped to
- * {@link MCPSessionLostException}; other 4xx/5xx responses become
- * generic {@link MCPClientException} instances. It never retries
- * (D_no_auto_retry); see D_embedded_client.
+ * {@link MCPClient} over the JDK's {@link HttpClient}, so it adds no runtime
+ * dependency (D_no_framework_deps). See D_embedded_client.
  */
 public final class TinyMCPClient implements MCPClient {
 
@@ -58,18 +53,10 @@ public final class TinyMCPClient implements MCPClient {
     private final HttpClient http;
     private final AtomicLong nextId = new AtomicLong(1);
 
-    /**
-     * The {@code Mcp-Session-Id} returned by the server during
-     * {@link #initialize()}. Sent on every subsequent request.
-     */
+    /** From the {@code initialize} response; {@code null} before it. */
     private volatile @Nullable String sessionId;
 
-    /**
-     * The protocol version the server picked in its {@code initialize}
-     * response, captured so we can echo it back via the
-     * {@code MCP-Protocol-Version} HTTP header on every subsequent
-     * request (required by the MCP spec from 2025-06-18 onward).
-     */
+    /** The version the server picked in {@code initialize}; {@code null} before it. */
     private volatile @Nullable String negotiatedProtocolVersion;
 
     private volatile boolean closed;
@@ -91,9 +78,7 @@ public final class TinyMCPClient implements MCPClient {
         clientInfo.setVersion(CLIENT_VERSION);
         params.setClientInfo(clientInfo);
 
-        // Reset before sending; the new session id arrives in the response
-        // header and is captured by sendRequest(). The negotiated protocol
-        // version is captured here once the server replies.
+        // Clear first, or the initialize request would carry the old session's headers.
         sessionId = null;
         negotiatedProtocolVersion = null;
 
@@ -102,8 +87,6 @@ public final class TinyMCPClient implements MCPClient {
                 MCPProtocol.InitializeResult.class);
         negotiatedProtocolVersion = result.getProtocolVersion();
 
-        // Per the MCP spec, the client must follow up with the
-        // notifications/initialized notification.
         sendNotification("notifications/initialized");
 
         return result;
@@ -148,7 +131,7 @@ public final class TinyMCPClient implements MCPClient {
             HttpResponse<Void> response = http.send(builder.build(), BodyHandlers.discarding());
             int status = response.statusCode();
             if (status != 200 && status != 404) {
-                // Don't throw on a best-effort cleanup, just log.
+                // Best-effort cleanup: log, don't throw.
                 LOG.warning("DELETE returned HTTP " + status + " for session " + sessionId);
             }
         } catch (InterruptedException e) {
@@ -168,12 +151,9 @@ public final class TinyMCPClient implements MCPClient {
     }
 
     /**
-     * Adds the session-scoped HTTP headers to {@code builder}: the
-     * {@code Mcp-Session-Id} from the server's {@code initialize} response
-     * (so the server can route the request) and the
-     * {@code MCP-Protocol-Version} header naming the negotiated version
-     * (required by the MCP spec from 2025-06-18 onward, ignored by older
-     * servers). Both are no-ops before {@code initialize} succeeds.
+     * Adds {@code Mcp-Session-Id} and {@code MCP-Protocol-Version} (required
+     * by the MCP spec from 2025-06-18 onward); each is omitted until
+     * {@code initialize} has set it.
      */
     private void addSessionHeaders(HttpRequest.Builder builder) {
         if (sessionId != null) {
@@ -185,9 +165,8 @@ public final class TinyMCPClient implements MCPClient {
     }
 
     /**
-     * Sends a JSON-RPC notification (no {@code id}, no expected response
-     * body). Used for {@code notifications/initialized}. Server replies
-     * with HTTP 202 Accepted; any other 2xx is also tolerated.
+     * Sends a JSON-RPC notification. Any 2xx succeeds (the server answers
+     * 202 Accepted); 404 throws {@link MCPSessionLostException}.
      */
     private void sendNotification(String method) throws IOException {
         MCPProtocol.JsonRpcNotification notif = new MCPProtocol.JsonRpcNotification();
@@ -216,11 +195,12 @@ public final class TinyMCPClient implements MCPClient {
     }
 
     /**
-     * Parses a JSON-RPC error envelope and returns its {@code error.message}
-     * field; falls back to {@code fallback} on any parse failure or if the
-     * field is missing/empty. Used to surface server-side 404 reasons (e.g.
-     * the supersede tombstone message — see D_supersede_sessions) instead of a generic
-     * client-side string.
+     * Returns the {@code error.message} of a JSON-RPC error envelope, so a 404
+     * carries the server's reason (such as the supersede tombstone,
+     * D_supersede_sessions).
+     *
+     * @return {@code fallback} if {@code body} does not parse or has no
+     *         non-empty message
      */
     private static String extractErrorMessage(String body, String fallback) {
         if (body == null || body.isEmpty()) return fallback;
@@ -239,15 +219,10 @@ public final class TinyMCPClient implements MCPClient {
     }
 
     /**
-     * Sends a JSON-RPC request and returns the {@code result} as a
-     * {@link JsonElement} ready to be deserialized by the caller.
+     * Sends a JSON-RPC request and returns its {@code result}; captures any
+     * {@code Mcp-Session-Id} response header.
      *
-     * <p>Captures the {@code Mcp-Session-Id} response header, if present,
-     * so the {@code initialize} response wires up subsequent calls.
-     *
-     * <p>If {@code extraMeta} is non-null, it is merged into the outgoing
-     * request's {@code params._meta} object, carrying cross-cutting fields
-     * such as {@code progressToken}.
+     * @param extraMeta set as {@code params._meta} when non-null
      */
     private JsonElement sendRequest(String method, Object params, JsonObject extraMeta) throws IOException {
         MCPProtocol.JsonRpcRequest request = new MCPProtocol.JsonRpcRequest();
@@ -282,31 +257,19 @@ public final class TinyMCPClient implements MCPClient {
         }
 
         int status = response.statusCode();
-        // Streamable HTTP transport allows the server to reply with either
-        // application/json (a single JSON-RPC envelope) or text/event-stream
-        // (one or more SSE events whose data: payload is the JSON-RPC
-        // envelope). For our minimal request/response surface there is
-        // always exactly one response event, so it is safe to extract the
-        // first event's data and treat it as plain JSON.
+        // Streamable HTTP may answer as SSE instead of plain JSON.
         String body = unframeSse(response.body(),
                 response.headers().firstValue("Content-Type").orElse(null));
 
-        // 404 from a non-initialize call → session lost.
-        // initialize itself never carries a session id, so the server
-        // would not send 404 there; treat it as a generic protocol error.
+        // initialize carries no session id, so its 404 is not a lost session.
         if (status == 404 && !"initialize".equals(method)) {
             throw new MCPSessionLostException(extractErrorMessage(body,
                     "Session not found (HTTP 404) on " + method));
         }
 
-        // Capture session id from the response header. The server emits it
-        // on every successful response (including initialize); we record it
-        // so initialize wires up subsequent calls. Already-known ids are
-        // overwritten harmlessly (they will be the same).
+        // Only initialize's response brings a new id; later ones repeat it.
         response.headers().firstValue("Mcp-Session-Id").ifPresent(id -> this.sessionId = id);
 
-        // 4xx/5xx (other than the 404 above) — try to surface a JSON-RPC
-        // error from the body, falling back to a synthetic one.
         if (status / 100 != 2) {
             MCPProtocol.ErrorObject errObj = tryParseErrorBody(body);
             if (errObj != null) {
@@ -316,7 +279,6 @@ public final class TinyMCPClient implements MCPClient {
                     "HTTP " + status + ": " + (body != null ? body : ""));
         }
 
-        // 2xx — parse the JSON-RPC envelope.
         JsonElement bodyEl;
         try {
             bodyEl = MCPProtocol.fromJson(body, JsonElement.class);
@@ -344,16 +306,14 @@ public final class TinyMCPClient implements MCPClient {
     }
 
     /**
-     * If {@code contentType} indicates SSE framing, returns the data
-     * payload of the first complete event in {@code body}. Multiple
-     * {@code data:} lines for one event are joined with {@code \n} as
-     * the SSE spec requires. Otherwise returns {@code body} unchanged.
+     * Returns the data of the first SSE event in {@code body}, its
+     * {@code data:} lines joined with {@code \n}; a non-SSE body comes back
+     * unchanged.
      *
-     * <p>This is intentionally minimal: our client surface
-     * (initialize / listTools / callTool) does not request progress
-     * notifications, so the server replies with a single response event;
-     * if a future caller does request progress, this code will need to
-     * evolve to scan for the event whose payload matches the request id.
+     * @implNote Reading only the first event assumes it is the response. A
+     * server that streams {@code notifications/progress} first — as it may
+     * once a caller sends a {@code progressToken} — would be misread; the fix
+     * is to scan for the event whose id matches the request.
      */
     private static String unframeSse(String body, String contentType) {
         if (body == null || contentType == null
@@ -371,16 +331,14 @@ public final class TinyMCPClient implements MCPClient {
             } else if (line.isEmpty() && data.length() > 0) {
                 return data.toString();
             }
-            // Other SSE fields (id:, event:, comments starting with :) are
-            // not load-bearing for our request/response surface.
+            // id:, event: and : comment lines carry nothing we need.
         }
         return data.toString();
     }
 
     /**
-     * @return the JSON-RPC {@code error} object parsed out of an HTTP error
-     * body, or {@code null} if the body is blank, is not JSON, or carries no
-     * {@code error} member — in which case the caller synthesizes one
+     * @return the JSON-RPC {@code error} object of an HTTP error body, or
+     *         {@code null} if it is blank, not JSON, or has none
      */
     private static MCPProtocol.@Nullable ErrorObject tryParseErrorBody(@Nullable String body) {
         if (body == null || body.isBlank()) return null;

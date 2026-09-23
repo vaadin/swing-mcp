@@ -22,9 +22,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Unit tests for {@link SwingUtils#sanitizeForQuotedSlot(String)} — the
- * D_quoted_slot_sanitizing helper that prepares strings for emission inside
- * double-quoted snapshot slots (name, description, inline text preview).
+ * {@link SwingUtils#sanitizeForQuotedSlot(String)} is the helper behind D_quoted_slot_sanitizing.
  */
 class SwingUtilsSanitizeForQuotedSlotTest {
 
@@ -40,8 +38,7 @@ class SwingUtilsSanitizeForQuotedSlotTest {
 
     @Test
     void emptyStringReturnsNull() {
-        // Callers expect null ⇒ "omit the slot"; empty-string from upstream
-        // should not emit "".
+        // null means "omit the slot", so an empty string never emits "".
         assertNull(SwingUtils.sanitizeForQuotedSlot(""));
     }
 
@@ -93,32 +90,27 @@ class SwingUtilsSanitizeForQuotedSlotTest {
 
     @Test
     void backslashesPassThroughUnescaped() {
-        // D_quoted_slot_sanitizing "Alternatives considered": full JSON-style escaping
-        // rejected. Backslashes stay literal so paths render readably.
+        // D_quoted_slot_sanitizing rejects JSON-style escaping: backslashes stay literal so paths read.
         assertEquals("C:\\Users\\foo", SwingUtils.sanitizeForQuotedSlot("C:\\Users\\foo"));
     }
 
     @Test
     void quoteNextToBackslashRendersDoubleBackslashQuote() {
-        // A literal `\"` in input produces `\\"` in output: the backslash
-        // is preserved verbatim, the quote is escaped. D_quoted_slot_sanitizing accepts the
-        // ambiguity for the rare case where both characters collide.
+        // The backslash stays verbatim and the quote is escaped; D_quoted_slot_sanitizing
+        // accepts the ambiguity for this rare collision.
         assertEquals("a\\\\\"b", SwingUtils.sanitizeForQuotedSlot("a\\\"b"));
     }
 
     @Test
     void newlineAndQuoteCombined() {
-        // Both rules apply: \n collapses to space, " escapes to \".
         assertEquals("line1 \\\"quoted\\\" line2",
                 SwingUtils.sanitizeForQuotedSlot("line1\n\"quoted\"\nline2"));
     }
 
     @Test
     void doubleSanitizationDoubleEscapesQuotes() {
-        // Re-sanitising is deliberately NOT idempotent: because backslashes
-        // are not escaped (see helper javadoc), the second pass would turn
-        // `\"` into `\\"`. Call-site discipline (render path invokes the
-        // sanitiser once per slot) is what prevents double-escape.
+        // Deliberately not idempotent: backslashes are not escaped, so a slot must be
+        // sanitised exactly once.
         String once = SwingUtils.sanitizeForQuotedSlot("say \"hi\"");
         String twice = SwingUtils.sanitizeForQuotedSlot(once);
         assertEquals("say \\\"hi\\\"", once);
@@ -135,8 +127,6 @@ class SwingUtilsSanitizeForQuotedSlotTest {
 
     @Test
     void bracketsAndSpecialCharsPassThroughUnchanged() {
-        // Brackets and other punctuation are not special; only whitespace
-        // and quotes get transformed.
         assertEquals("[ref=99] fake", SwingUtils.sanitizeForQuotedSlot("[ref=99] fake"));
         assertEquals("a & b < c > d", SwingUtils.sanitizeForQuotedSlot("a & b < c > d"));
     }

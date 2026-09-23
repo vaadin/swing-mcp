@@ -32,22 +32,17 @@ class MCPParameterParserTest {
         return new MCPParameterParser(toolName, builder.build());
     }
 
-    /** Shorthand for a parser with a single required string parameter. */
     private static MCPParameterParser stringTool() {
         return parser("test_tool", new InputSchemaBuilder()
                 .requiredString("message", "The message"));
     }
 
-    /** Shorthand for a parser with a single required integer parameter. */
     private static MCPParameterParser intTool() {
         return parser("test_tool", new InputSchemaBuilder()
                 .requiredInteger("count", "A count"));
     }
 
-    /**
-     * {@code Map.of()} doesn't allow null values. This creates a mutable map
-     * that supports nulls, which we need to test null-value handling.
-     */
+    /** Like {@code Map.of}, but admits {@code null} values. */
     private static Map<String, Object> mapWithNulls(Object... keysAndValues) {
         Map<String, Object> map = new HashMap<>();
         for (int i = 0; i < keysAndValues.length; i += 2) {
@@ -282,7 +277,6 @@ class MCPParameterParserTest {
 
         @Test
         void integerPassedThroughUnchanged() {
-            // An actual Integer value — no coercion needed
             Map<String, Object> result = intTool().parse(Map.of("count", 99));
             assertInstanceOf(Integer.class, result.get("count"));
             assertEquals(99, result.get("count"));
@@ -290,8 +284,7 @@ class MCPParameterParserTest {
 
         @Test
         void stringPassedThroughForIntegerParam() {
-            // Strings are not coerced — they pass through as-is (LLM string-encoded numbers
-            // are handled at a different layer)
+            // String-encoded numbers are coerced later, by Parameters. See D_coerce_string_numbers.
             Map<String, Object> result = intTool().parse(Map.of("count", "42"));
             assertEquals("42", result.get("count"));
         }
@@ -454,7 +447,6 @@ class MCPParameterParserTest {
                     .build();
             schema.setRequired(null);
             MCPParameterParser p = new MCPParameterParser("tool", schema);
-            // "opt" present but not required — should pass
             Map<String, Object> result = p.parse(Map.of("opt", "val"));
             assertEquals("val", result.get("opt"));
         }

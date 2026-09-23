@@ -26,20 +26,6 @@ import javax.swing.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Headless tests for {@link SwingUtils#getTooltipAsText(Accessible)}.
- * <p>
- * Covers:
- * <ul>
- *   <li>Plain {@link JComponent} tooltip lookup</li>
- *   <li>{@link JTabbedPane} per-tab tooltip lookup via the page Accessible</li>
- *   <li>Disambiguation between a tab Accessible (PAGE_TAB role) and a
- *       JComponent that happens to live inside a JTabbedPane</li>
- *   <li>HTML cleanup: tag stripping, entity decoding, whitespace collapse</li>
- *   <li>Defensive cases: {@code null}, missing AccessibleContext,
- *       non-JComponent accessibles</li>
- * </ul>
- */
 class SwingUtilsGetTooltipTest {
 
     @BeforeAll
@@ -69,8 +55,7 @@ class SwingUtilsGetTooltipTest {
 
         @Test
         void buttonWithEmptyTooltip_returnsNull() {
-            // Blank tooltips normalize to null so callers need only one
-            // null check.
+            // Blank normalises to null, so a caller needs one null check.
             JButton button = new JButton("OK");
             button.setToolTipText("");
             assertNull(SwingUtils.getTooltipAsText(button));
@@ -99,8 +84,6 @@ class SwingUtilsGetTooltipTest {
 
         @Test
         void tabbedPaneItself_componentLevelTooltip_returnsIt() {
-            // The JTabbedPane itself (not a tab) goes through the JComponent
-            // branch — its own setToolTipText still works.
             JTabbedPane pane = new JTabbedPane();
             pane.setToolTipText("Section navigator");
             assertEquals("Section navigator", SwingUtils.getTooltipAsText(pane));
@@ -152,10 +135,8 @@ class SwingUtilsGetTooltipTest {
 
         @Test
         void tabContentJComponent_returnsItsOwnTooltip_notTheTabsTooltip() {
-            // Regression guard for the role check. A tab-content JComponent
-            // also reports the JTabbedPane as its accessible parent — without
-            // the PAGE_TAB role gate, getTooltipAsText would mistakenly look
-            // up the tab tooltip by the panel's index.
+            // Tab content also reports the JTabbedPane as its accessible parent; without
+            // the PAGE_TAB role gate, its index would fetch the tab's tooltip.
             JTabbedPane pane = new JTabbedPane();
             JPanel content = new JPanel();
             content.setToolTipText("Content tooltip");
@@ -167,8 +148,6 @@ class SwingUtilsGetTooltipTest {
 
         @Test
         void tabContentJComponentWithoutOwnTooltip_returnsNull_notTabTooltip() {
-            // Same guard as above, but the content has no tooltip of its own —
-            // the result must be null, not the tab's tooltip.
             JTabbedPane pane = new JTabbedPane();
             JPanel content = new JPanel();
             pane.addTab("General", content);
@@ -196,8 +175,6 @@ class SwingUtilsGetTooltipTest {
 
         @Test
         void htmlTooltip_brBecomesSpace_notMissing() {
-            // Tags must be replaced with a space so adjacent words don't
-            // collide: "Save<br>file" → "Save file", not "Savefile".
             JButton button = new JButton("OK");
             button.setToolTipText("<html>Save<br>file</html>");
             assertEquals("Save file", SwingUtils.getTooltipAsText(button));
@@ -222,8 +199,7 @@ class SwingUtilsGetTooltipTest {
 
         @Test
         void htmlTooltip_ampDecodedLast_preservesEscapedEntities() {
-            // Source text "&amp;lt;" represents the literal string "&lt;",
-            // not the character "<". This works because we decode &amp; LAST.
+            // "&amp;lt;" is the literal "&lt;", which holds only if &amp; is decoded last.
             JButton button = new JButton("OK");
             button.setToolTipText("<html>&amp;lt;</html>");
             assertEquals("&lt;", SwingUtils.getTooltipAsText(button));
@@ -231,8 +207,7 @@ class SwingUtilsGetTooltipTest {
 
         @Test
         void htmlTooltip_caseInsensitivePrefix() {
-            // Swing accepts <HTML> too — verify our prefix check is case-
-            // insensitive.
+            // Swing accepts <HTML> too.
             JButton button = new JButton("OK");
             button.setToolTipText("<HTML><b>Bold</b></HTML>");
             assertEquals("Bold", SwingUtils.getTooltipAsText(button));
@@ -240,7 +215,6 @@ class SwingUtilsGetTooltipTest {
 
         @Test
         void htmlTooltip_emptyAfterStrip_returnsNull() {
-            // HTML that strips down to nothing is also blank → null.
             JButton button = new JButton("OK");
             button.setToolTipText("<html></html>");
             assertNull(SwingUtils.getTooltipAsText(button));
@@ -255,9 +229,7 @@ class SwingUtilsGetTooltipTest {
 
         @Test
         void nonHtmlTooltipWithAngleBrackets_passesThroughVerbatim() {
-            // Swing renders as HTML only when the string starts with <html>.
-            // A literal tooltip like "List<String>" must NOT have its angle
-            // brackets stripped.
+            // Swing renders HTML only when the string starts with <html>.
             JButton button = new JButton("OK");
             button.setToolTipText("List<String>");
             assertEquals("List<String>", SwingUtils.getTooltipAsText(button));
@@ -265,8 +237,6 @@ class SwingUtilsGetTooltipTest {
 
         @Test
         void nonHtmlTooltipWithEntities_passesThroughVerbatim() {
-            // Entities are only decoded when the tooltip is HTML. A plain
-            // tooltip mentioning "&amp;" should keep its literal text.
             JButton button = new JButton("OK");
             button.setToolTipText("Look up &amp; in the docs");
             assertEquals("Look up &amp; in the docs",
@@ -288,16 +258,13 @@ class SwingUtilsGetTooltipTest {
 
         @Test
         void accessibleWithNoContext_returnsNull() {
-            // An Accessible that returns null from getAccessibleContext()
-            // and is not a JComponent — must not crash, must return null.
             Accessible a = () -> null;
             assertNull(SwingUtils.getTooltipAsText(a));
         }
 
         @Test
         void nonJComponentAccessibleWithContext_returnsNull() {
-            // A custom Accessible that isn't a JComponent and isn't a
-            // PAGE_TAB — there's nowhere to get a tooltip from.
+            // Neither a JComponent nor a PAGE_TAB: nowhere to read a tooltip from.
             Accessible a = new Accessible() {
                 @Override
                 public AccessibleContext getAccessibleContext() {

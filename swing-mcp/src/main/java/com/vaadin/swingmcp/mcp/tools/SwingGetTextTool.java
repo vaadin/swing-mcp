@@ -26,11 +26,15 @@ import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
 
 /**
- * MCP tool {@code swing_get_text}: reads the text content of a UI component by ref.
+ * MCP tool {@code swing_get_text}: a component's text by ref, capped at {@code MAX_TEXT_LENGTH}
+ * characters with a notice quoting the real length:
  *
- * <p>Looks up the component by ref, verifies it supports the {@code get_text} action,
- * then reads the text via the accessibility API.</p>
+ * <pre>
+ * &lt;first 1000 characters&gt;
+ * ... (truncated, 1100 total characters)
+ * </pre>
  *
+ * A password field is refused with its own message (D_password_not_readable).
  */
 public class SwingGetTextTool extends AbstractSwingTool {
 
@@ -42,44 +46,28 @@ public class SwingGetTextTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // ref is required integer
         int ref = params.getInt("ref");
-
-        // look up the accessible by ref (throws MCPServerException if not found)
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // D_password_not_readable. Ordered before the generic support check so the AI gets
-        // the specific rule rather than "does not support swing_get_text".
         if (SwingUtils.hasPasswordRole(accessible)) {
             throw new MCPErrorResponseException(
                     "JPasswordField content is not readable. Use swing_set_text if you need to write a known value.");
         }
 
-        // check get_text support
         if (!SwingUtils.supportsGetText(accessible)) {
             throw new MCPErrorResponseException(
                     ComponentClassResolver.resolveClassName(accessible)
                             + " does not support swing_get_text. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
-        // all access happens on EDT (guaranteed by SwingMCP.registerTool)
-        // Total character count, needed independently of the read itself so the
-        // truncation notice can quote the real total rather than the capped one.
         AccessibleContext ac = accessible.getAccessibleContext();
         int len = ac.getAccessibleText().getCharCount();
-
-        // empty text returns explicit empty string
         if (len == 0) {
             return MCPProtocol.Content.text("");
         }
 
-        // Shared read path with snapshot inline preview (D_inline_value_preview):
-        // SwingUtils.readText caps at MAX_TEXT_LENGTH and handles both the
-        // primary AccessibleEditableText.getTextRange path and the
-        // AccessibleText.getAtIndex fallback.
+        // The same read as the snapshot's inline preview (D_inline_value_preview).
         String text = SwingUtils.readText(accessible, MAX_TEXT_LENGTH);
-
-        // append truncation notice if needed
         if (len > MAX_TEXT_LENGTH) {
             text = text + "\n... (truncated, " + len + " total characters)";
         }
@@ -89,7 +77,6 @@ public class SwingGetTextTool extends AbstractSwingTool {
 
     @Override
     public boolean isMutation() {
-        // read-only tool, ref map is NOT cleared
         return false;
     }
 }

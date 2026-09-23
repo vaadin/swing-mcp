@@ -180,8 +180,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         table.setRowSelectionAllowed(false);
         table.setColumnSelectionAllowed(true);
         snapshot(table);
-        // JTable in column mode has no selection action, but may still have a ref
-        // if truncated. Force a ref for testing the error path.
+        // No selection action in column mode, so a forced ref reaches the refusal.
         context.putRef(99, table);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getSelection(99));
@@ -249,7 +248,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         root.add(new DefaultMutableTreeNode("A"));
         JTree tree = new JTree(root);
         snapshot(tree);
-        // JTree itself has no ref (selection suppressed). Force a ref.
+        // No ref: its selection is suppressed (D_no_jtree_selection).
         context.putRef(99, tree);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getSelection(99));
@@ -268,7 +267,6 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         snapshot(list);
         int ref = context.getRefOf(list);
 
-        // Call twice — ref map should not be cleared (read-only tool)
         String json1 = getSelection(ref);
         String json2 = getSelection(ref);
         assertEquals(json1, json2);
@@ -290,7 +288,6 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
 
     @Test
     void truncation_whenSelectionExceedsMax() throws Exception {
-        // Create a JList with more items than MAX_SELECTION_ITEMS and select all
         int count = SwingGetSelectionTool.MAX_SELECTION_ITEMS + 5;
         String[] items = new String[count];
         int[] allIndices = new int[count];
@@ -333,11 +330,9 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         list.setSelectedIndex(2);
         snapshot(list);
 
-        // Verify the index from get_selection matches isAccessibleChildSelected
         AccessibleContext ac = list.getAccessibleContext();
         assertTrue(ac.getAccessibleSelection().isAccessibleChildSelected(2));
 
-        // Clear and re-select using addAccessibleSelection with the same index
         ac.getAccessibleSelection().clearAccessibleSelection();
         ac.getAccessibleSelection().addAccessibleSelection(2);
         String json = getSelection(context.getRefOf(list));
@@ -351,7 +346,6 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         snapshot(combo);
 
         AccessibleContext ac = combo.getAccessibleContext();
-        // Verify item index round-trips through addAccessibleSelection
         ac.getAccessibleSelection().addAccessibleSelection(0);
         String json = getSelection(context.getRefOf(combo));
         assertEquals("{\"selectedCount\":1,\"selected\":[{\"index\":0,\"name\":\"Red\"}]}", json);
@@ -366,7 +360,6 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         tp.setSelectedIndex(0);
         snapshot(tp);
 
-        // Select tab 2 via AccessibleSelection API
         tp.getAccessibleContext().getAccessibleSelection().addAccessibleSelection(2);
         String json = getSelection(context.getRefOf(tp));
         assertEquals("{\"selectedCount\":1,\"selected\":[{\"index\":2,\"name\":\"Tab2\"}]}", json);
@@ -557,7 +550,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         root.add(new DefaultMutableTreeNode("A"));
         JTree tree = new JTree(root);
         snapshot(tree);
-        // JTree has no ref (selection suppressed). Force a ref for testing.
+        // No ref: its selection is suppressed (D_no_jtree_selection).
         context.putRef(99, tree);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getSelection(99));

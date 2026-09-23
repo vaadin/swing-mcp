@@ -24,10 +24,6 @@ import javax.swing.table.DefaultTableModel;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Headless tests for {@link SwingUtils#supportsSelection(javax.accessibility.Accessible)}.
- * Covers every component in the verification component matrix.
- */
 class SwingUtilsSupportsSelectionTest {
 
     @BeforeAll

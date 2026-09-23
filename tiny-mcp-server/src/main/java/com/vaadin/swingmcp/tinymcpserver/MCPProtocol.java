@@ -32,8 +32,8 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * MCP Protocol JSON POJOs and serialization utilities.
- * All MCP message types are represented as inner POJO classes.
+ * The MCP wire format: one GSON-mapped POJO per message type, and the GSON
+ * instance that maps them.
  *
  * @implNote {@code @NullUnmarked}, against the package default: these are wire
  * DTOs populated reflectively by GSON, and which fields may be absent is the MCP
@@ -44,6 +44,7 @@ import java.util.Set;
 @NullUnmarked
 public class MCPProtocol {
 
+    /** An untyped number — a tool argument, say — parses as a {@code Long} if it can, else a {@code Double}. */
     private static final Gson GSON = new GsonBuilder()
             .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
             .create();
@@ -66,10 +67,7 @@ public class MCPProtocol {
         }
     }
 
-    /**
-     * Base class for all MCP POJOs. Provides toString, equals, and hashCode
-     * implementations based on JSON serialization.
-     */
+    /** {@code toString}, {@code equals} and {@code hashCode} all go through the JSON form. */
     public static abstract class McpPojo implements IsJson {
         @Override
         public String toString() {
@@ -115,10 +113,8 @@ public class MCPProtocol {
         }
 
         /**
-         * Returns the {@code params._meta} object from the JSON-RPC envelope.
-         * MCP uses {@code _meta} to carry cross-cutting fields such as
-         * {@code progressToken}; handlers that forward requests upstream
-         * typically pass it through verbatim.
+         * Returns {@code params._meta}, where MCP carries cross-cutting fields
+         * such as {@code progressToken}.
          *
          * @return the {@code _meta} object, or {@code null} if the request has
          * no params, the params are not a JSON object, {@code _meta} is absent,
@@ -239,7 +235,6 @@ public class MCPProtocol {
         public ResourceContents getResource() { return resource; }
         public void setResource(ResourceContents resource) { this.resource = resource; }
 
-        /** Creates a text content item. */
         public static Content text(String text) {
             Content c = new Content();
             c.setType("text");
@@ -248,20 +243,16 @@ public class MCPProtocol {
         }
 
         /**
-         * Creates a text content item whose text is the JSON serialization of {@code value}.
-         * Useful for returning JSON arrays ({@code List}) or objects ({@code Map}).
-         *
-         * @param value the value to serialize (e.g. a {@code List<Object>} or {@code Map<String,Object>})
+         * Returns a text item holding {@code value} serialized as JSON — a
+         * {@code List} or {@code Map}, typically.
          */
         public static Content json(Object value) {
             return text(MCPProtocol.toJson(value));
         }
 
         /**
-         * Creates an image content item.
-         *
-         * @param data     base64-encoded image data
-         * @param mimeType the MIME type of the image (e.g. "image/png")
+         * @param data     base64-encoded
+         * @param mimeType e.g. {@code "image/png"}
          */
         public static Content image(String data, String mimeType) {
             Content c = new Content();
@@ -271,13 +262,7 @@ public class MCPProtocol {
             return c;
         }
 
-        /**
-         * Creates an image content item from a {@link java.awt.image.BufferedImage},
-         * encoding it as a base64 PNG.
-         *
-         * @param image the image to encode
-         * @return a Content item with type "image" and mimeType "image/png"
-         */
+        /** Returns an image item holding {@code image} as a base64 PNG. */
         public static Content image(java.awt.image.BufferedImage image) {
             try {
                 java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
@@ -290,10 +275,8 @@ public class MCPProtocol {
         }
 
         /**
-         * Creates an audio content item.
-         *
-         * @param data     base64-encoded audio data
-         * @param mimeType the MIME type of the audio (e.g. "audio/wav")
+         * @param data     base64-encoded
+         * @param mimeType e.g. {@code "audio/wav"}
          */
         public static Content audio(String data, String mimeType) {
             Content c = new Content();
@@ -303,11 +286,6 @@ public class MCPProtocol {
             return c;
         }
 
-        /**
-         * Creates an embedded resource content item.
-         *
-         * @param resource the resource contents to embed
-         */
         public static Content resource(ResourceContents resource) {
             Content c = new Content();
             c.setType("resource");
@@ -449,11 +427,8 @@ public class MCPProtocol {
         public List<String> getRequired() { return required; }
         public void setRequired(List<String> required) { this.required = required; }
 
-        // D_structural_schema_equality: structural equals/hashCode. `properties` is a Map, so its
-        // own equals already ignores iteration order (and PropertySchema has
-        // its own structural equals below). `required` is compared as a Set
-        // — JSON Schema says required is set-valued, but the JSON wire form
-        // is an array whose order varies across producers.
+        // D_structural_schema_equality: order-insensitive — Map equality
+        // already ignores property order, and `required` compares as a set.
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
@@ -493,10 +468,9 @@ public class MCPProtocol {
         public Number getMaximum() { return maximum; }
         public void setMaximum(Number maximum) { this.maximum = maximum; }
 
-        // D_structural_schema_equality: structural equals/hashCode. enum is an ordered list per
-        // JSON Schema semantics; numeric bounds compare semantically (so
-        // Integer(0) and Long(0) — same JSON value, different boxed types
-        // after a GSON round-trip — compare equal).
+        // D_structural_schema_equality. `enum` stays ordered; the bounds
+        // compare by value, because a GSON round-trip changes their boxed
+        // Number type.
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
@@ -518,9 +492,7 @@ public class MCPProtocol {
         private static boolean numberEquals(Number a, Number b) {
             if (a == null && b == null) return true;
             if (a == null || b == null) return false;
-            // Compare as doubles — sufficient for JSON-Schema numeric
-            // bounds (no risk of precision loss outside the int53 range
-            // we'd ever put in a tool schema).
+            // Lossy past 2^53, far beyond any bound a tool schema declares.
             return Double.compare(a.doubleValue(), b.doubleValue()) == 0;
         }
 
@@ -599,7 +571,6 @@ public class MCPProtocol {
         public String getBlob() { return blob; }
         public void setBlob(String blob) { this.blob = blob; }
 
-        /** Creates a text resource contents item. */
         public static ResourceContents text(String uri, String mimeType, String text) {
             ResourceContents c = new ResourceContents();
             c.setUri(uri);
@@ -608,11 +579,7 @@ public class MCPProtocol {
             return c;
         }
 
-        /**
-         * Creates a binary resource contents item.
-         *
-         * @param blob base64-encoded binary data
-         */
+        /** @param blob base64-encoded */
         public static ResourceContents blob(String uri, String mimeType, String blob) {
             ResourceContents c = new ResourceContents();
             c.setUri(uri);

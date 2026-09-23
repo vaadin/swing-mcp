@@ -16,9 +16,6 @@
  */
 package com.vaadin.swingmcp.tinymcpserver;
 
-/**
- * Stateless utility methods used by HttpMCPServer.
- */
 class ServerUtils {
 
     private ServerUtils() {}

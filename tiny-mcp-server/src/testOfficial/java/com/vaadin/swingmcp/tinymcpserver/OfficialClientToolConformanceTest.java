@@ -24,13 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * The same conformance suite driven by the official MCP SDK — the authority
- * leg. A disagreement between this class and {@code TinyClientToolConformanceTest}
- * is either a bug in this server or a bug in this project's own client, and
- * neither would show up if the suite only ever ran against itself.
- *
- * <p>Java 17+ only: the SDK publishes no Java 11 build, which is why this lives
- * in {@code src/testOfficial} rather than beside the suite it runs.
+ * The conformance suite driven by the official MCP SDK — the authority leg,
+ * Java 17+ only. See D_conformance_two_clients.
  */
 class OfficialClientToolConformanceTest extends AbstractToolConformanceTest {
 

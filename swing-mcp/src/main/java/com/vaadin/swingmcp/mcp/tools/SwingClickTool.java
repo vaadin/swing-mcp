@@ -26,12 +26,8 @@ import javax.accessibility.Accessible;
 import javax.swing.SwingUtilities;
 
 /**
- * MCP tool {@code swing_click}: clicks a UI component identified by ref.
- *
- * <p>Looks up the component by ref, verifies it supports the click action
- * and is effectively enabled, then invokes the click via the {@link Runnable}
- * returned by {@link SwingUtils#supportsClick(Accessible)}.</p>
- *
+ * MCP tool {@code swing_click}: clicks a component by ref, running the click
+ * {@link SwingUtils#supportsClick} finds for it. Refuses a disabled component.
  */
 public class SwingClickTool extends AbstractSwingTool {
 
@@ -41,13 +37,9 @@ public class SwingClickTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // ref is required integer
         int ref = params.getInt("ref");
-
-        // look up the accessible by ref (throws MCPServerException if not found)
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // check click support (Tier 1: AccessibleAction, Tier 2: MouseListener)
         Runnable click = SwingUtils.supportsClick(accessible);
         if (click == null) {
             throw new MCPErrorResponseException(
@@ -55,15 +47,12 @@ public class SwingClickTool extends AbstractSwingTool {
                             + " does not support swing_click. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
-        // check effectively enabled
         if (!SwingUtils.isEffectivelyEnabled(accessible)) {
             throw new MCPErrorResponseException(
                     "Component is disabled and cannot be clicked");
         }
 
-        // fire the click action asynchronously (fire-and-forget)
         SwingUtilities.invokeLater(click);
-        // D_dispatched_echo success echo
         return echo(ref);
     }
 

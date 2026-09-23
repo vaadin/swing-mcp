@@ -29,12 +29,9 @@ import javax.accessibility.AccessibleState;
 import javax.swing.SwingUtilities;
 
 /**
- * MCP tool {@code swing_set_text}: replaces the full text content of a UI component by ref.
- *
- * <p>Looks up the component by ref, verifies it supports {@code set_text}, is effectively
- * enabled, and is editable, then delegates to
- * {@link AccessibleEditableText#setTextContents(String)}.</p>
- *
+ * MCP tool {@code swing_set_text}: replaces a component's whole text by ref, through
+ * {@link AccessibleEditableText#setTextContents(String)}. Refuses a disabled or non-editable
+ * component, each with its own message.
  */
 public class SwingSetTextTool extends AbstractSwingTool {
 
@@ -44,37 +41,30 @@ public class SwingSetTextTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // both params required
         int ref = params.getInt("ref");
         String text = params.getString("text");
 
-        // ref lookup
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // set_text structural support check
         if (!SwingUtils.hasEditableText(accessible)) {
             throw new MCPErrorResponseException(
                     ComponentClassResolver.resolveClassName(accessible)
                             + " does not support swing_set_text. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
-        // effectively enabled check
         if (!SwingUtils.isEffectivelyEnabled(accessible)) {
             throw new MCPErrorResponseException(
                     "Component is disabled and cannot be edited");
         }
 
-        // editable state check
         AccessibleContext ac = accessible.getAccessibleContext();
         if (!ac.getAccessibleStateSet().contains(AccessibleState.EDITABLE)) {
             throw new MCPErrorResponseException("Component is not editable");
         }
 
-        // fire the text replacement asynchronously (fire-and-forget)
         AccessibleEditableText aet = ac.getAccessibleEditableText();
         SwingUtilities.invokeLater(() -> aet.setTextContents(text));
-        // D_dispatched_echo success echo — same format for all text components
-        // including password fields (the agent already supplied the value).
+        // A password is echoed too: the agent supplied it, so nothing is revealed.
         return echo(ref, renderEchoString(text));
     }
 

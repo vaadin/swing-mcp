@@ -102,10 +102,6 @@ class SwingSelectAllScreenTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JDialog
-    // ══════════════════════════════════════════════════════════════════════════
-
-    // ══════════════════════════════════════════════════════════════════════════
     // JInternalFrame
     // ══════════════════════════════════════════════════════════════════════════
 
@@ -160,7 +156,6 @@ class SwingSelectAllScreenTest extends AbstractScreenTest {
         snapshot(frame);
         selectAll(context.getRefOf(table));
 
-        // Re-snapshot to get fresh refs
         snapshot(frame);
         String json = getSelection(context.getRefOf(table));
         assertEquals(

@@ -34,10 +34,6 @@ import static com.vaadin.swingmcp.mcp.JdkCapabilities.SLIDER_HAS_ACCESSIBLE_ACTI
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Screen-mode tests for {@code swing_decrement} — JFrame/JDialog coverage.
- * Happy-path tests live here per the component matrix in design/snapshot-format.md.
- */
 class SwingDecrementScreenTest extends AbstractScreenTest {
 
     private SwingSnapshotTool snapshotTool;
@@ -167,7 +163,6 @@ class SwingDecrementScreenTest extends AbstractScreenTest {
     void componentMatrix_JFrame() throws Exception {
         JFrame frame = new JFrame("Test");
         snapshot(frame);
-        // JFrame itself has no decrement action — it has no ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(frame));
     }
 
@@ -176,7 +171,6 @@ class SwingDecrementScreenTest extends AbstractScreenTest {
         JDialog dialog = new JDialog();
         dialog.setTitle("Test");
         snapshot(dialog);
-        // JDialog itself has no decrement action — it has no ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(dialog));
     }
 
@@ -188,7 +182,6 @@ class SwingDecrementScreenTest extends AbstractScreenTest {
                 null, new Object[]{"OK"}, "OK");
         dialog.setContentPane(optionPane);
         snapshot(dialog);
-        // JOptionPane itself has no decrement action — it has no ref
         assertThrows(IllegalStateException.class, () -> context.getRefOf(optionPane));
     }
 }

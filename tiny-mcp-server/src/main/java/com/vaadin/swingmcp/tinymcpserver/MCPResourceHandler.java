@@ -24,18 +24,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Owns the resource registry and handles {@code resources/list} and
- * {@code resources/read} JSON-RPC methods. Parallel to {@link MCPToolHandler}
- * and {@link MCPPromptHandler}.
- * <p>
- * Resources are keyed by their URI. Registration captures a static descriptor
- * (name, description, mimeType) exposed via {@code resources/list}; the
- * {@link ResourceFunction} is invoked for {@code resources/read}
- * and returns the current contents.
- * <p>
- * The {@code handle*} methods are transport-agnostic: they consume parsed
- * JSON-RPC requests and return the corresponding result POJO. The caller
- * (HTTP or stdio transport) writes the response.
+ * The resource registry behind {@link MCPHandler}, keyed by URI, and its
+ * {@code resources/list} and {@code resources/read} dispatch. The listed
+ * descriptor is fixed at registration; the contents come from the
+ * {@link ResourceFunction} on every read.
  */
 class MCPResourceHandler {
 
@@ -59,15 +51,10 @@ class MCPResourceHandler {
     private final Map<String, RegisteredResource> resources = new LinkedHashMap<>();
 
     /**
-     * Registers a resource. Must be called before the server is started.
-     *
-     * @param uri         the resource URI; not null, not blank; used as the
-     *                    lookup key for {@code resources/read}
-     * @param name        human-readable resource name; not null, not blank
-     * @param description human-readable description; may be null
-     * @param mimeType    the resource MIME type; may be null
-     * @param function    the handler to invoke for {@code resources/read};
-     *                    not null
+     * @param uri         the {@code resources/read} lookup key; not blank
+     * @param name        not blank
+     * @param description may be null
+     * @param mimeType    may be null
      * @throws IllegalArgumentException if {@code uri}, {@code name}, or
      *                                  {@code function} is null/blank
      * @throws IllegalStateException    if a resource with the same URI is
@@ -101,12 +88,9 @@ class MCPResourceHandler {
     }
 
     /**
-     * Dispatches {@code resources/read}. Resource handlers have no
-     * tool-layer "isError" channel (D_three_error_layers layer 3 is tools-only), so any
-     * failure becomes a JSON-RPC protocol error.
-     *
-     * @param request          the parsed JSON-RPC request envelope
-     * @param transportHeaders headers from the underlying transport
+     * Dispatches {@code resources/read}. A resource has no {@code isError}
+     * channel, so every failure is a JSON-RPC protocol error
+     * (D_three_error_layers); an unknown URI is {@code INVALID_PARAMS}.
      */
     MCPProtocol.ReadResourceResult handleResourcesRead(MCPProtocol.JsonRpcRequest request,
             Map<String, String> transportHeaders) {

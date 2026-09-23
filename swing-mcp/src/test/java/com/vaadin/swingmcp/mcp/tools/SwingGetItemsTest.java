@@ -125,7 +125,6 @@ class SwingGetItemsTest extends AbstractHeadlessTest {
     void jList_lengthExceedsRemaining() throws Exception {
         JList<String> list = new JList<>(new String[]{"A", "B", "C"});
         snapshot(list);
-        // Request more items than available from offset 1
         String json = getItems(context.getRefOf(list), 1, 100);
         assertEquals("{\"totalCount\":3,\"items\":["
                 + "{\"index\":1,\"name\":\"B\"},"
@@ -134,10 +133,7 @@ class SwingGetItemsTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JTabbedPane — dropped as a supported target per P-001 Wave A.
-    // The three former positive tests (all-tabs, disabled-tab, enabled-tab)
-    // are replaced by a single regression guard below + componentMatrix_JTabbedPane.
-    // Tabs are now read inline from the snapshot per design/snapshot-format.md.
+    // JTabbedPane — refused: the snapshot already lists every tab inline
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -212,8 +208,7 @@ class SwingGetItemsTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JTable — all selection modes succeed (design/snapshot-format.md decouples read path
-    // from the row-selection gate that swing_set_selection still enforces)
+    // JTable — every selection mode reads; only swing_set_selection demands row selection
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
@@ -340,7 +335,6 @@ class SwingGetItemsTest extends AbstractHeadlessTest {
         JList<String> list = new JList<>(new String[]{"A", "B"});
         snapshot(list);
         int ref = context.getRefOf(list);
-        // Call twice with same ref — should not fail
         String json1 = getItems(ref, 0, 2);
         String json2 = getItems(ref, 0, 2);
         assertEquals(json1, json2);
@@ -367,15 +361,12 @@ class SwingGetItemsTest extends AbstractHeadlessTest {
         snapshot(list);
         int ref = context.getRefOf(list);
 
-        // Get items to learn indices
         String itemsJson = getItems(ref, 0, 3);
         assertTrue(itemsJson.contains("{\"index\":1,\"name\":\"Beta\"}"));
 
-        // Select index 1 directly (fire-and-forget from swing_set_selection
-        // may not execute in headless mode without an EDT pump)
+        // Selected directly, not through swing_set_selection: only get_items' indices are under test.
         list.setSelectedIndex(1);
 
-        // Verify via swing_get_selection that the index from get_items works
         MCPProtocol.Content selResult = getSelectionTool.execute(
                 new Parameters(Map.of("ref", ref)), context);
         String selJson = selResult.getText();
@@ -394,7 +385,6 @@ class SwingGetItemsTest extends AbstractHeadlessTest {
         snapshot(list);
         int ref = context.getRefOf(list);
 
-        // Different pages should all report totalCount: 100
         assertTrue(getItems(ref, 0, 10).contains("\"totalCount\":100"));
         assertTrue(getItems(ref, 50, 10).contains("\"totalCount\":100"));
         assertTrue(getItems(ref, 99, 1).contains("\"totalCount\":100"));
@@ -416,7 +406,7 @@ class SwingGetItemsTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JTabbedPane() throws Exception {
-        // Dropped per P-001 — JTabbedPane is no longer a supported target.
+        // Refused: the snapshot lists every tab inline.
         JTabbedPane tp = new JTabbedPane();
         tp.addTab("First", new JPanel());
         tp.addTab("Second", new JPanel());

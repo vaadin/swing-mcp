@@ -88,8 +88,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
     @Test
     void readCustomPasswordRoleComponentReturnsDr011Error() throws Exception {
-        // A custom JTextField subclass that claims AccessibleRole.PASSWORD_TEXT without
-        // extending JPasswordField. D_password_not_readable's gate is role-based, so the refusal applies.
+        // D_password_not_readable gates on the PASSWORD_TEXT role, not the JPasswordField class.
         JTextField field = new JTextField("secret") {
             @Override
             public javax.accessibility.AccessibleContext getAccessibleContext() {
@@ -153,7 +152,6 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         snapshot(field);
         int ref = context.getRefOf(field);
 
-        // Call get_text twice with same ref — should succeed both times (map not cleared)
         assertEquals("preserved", getText(ref));
         assertEquals("preserved", getText(ref));
     }
@@ -178,7 +176,6 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         assertTrue(result.contains("truncated"), "Result should contain truncation notice");
         assertTrue(result.contains(String.valueOf(SwingGetTextTool.MAX_TEXT_LENGTH + 100)),
                 "Result should mention total character count");
-        // The actual text part should be exactly MAX_TEXT_LENGTH chars
         int newlineIdx = result.indexOf('\n');
         assertTrue(newlineIdx > 0);
         assertEquals(SwingGetTextTool.MAX_TEXT_LENGTH, newlineIdx);
@@ -207,8 +204,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JPasswordField() throws Exception {
-        // D_password_not_readable: JPasswordField fails with a dedicated error, distinct from the
-        // generic "does not support swing_get_text".
+        // D_password_not_readable: a dedicated error, not the generic "does not support".
         JPasswordField field = new JPasswordField("pass");
         snapshot(field);
         int ref = context.getRefOf(field);
@@ -274,8 +270,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JSpinner() throws Exception {
-        // JSpinner.AccessibleJSpinner implements AccessibleText (delegates to inner editor),
-        // so get_text succeeds and returns the spinner's formatted value.
+        // AccessibleJSpinner delegates AccessibleText to its editor, so get_text succeeds.
         JSpinner spinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 1));
         snapshot(spinner);
         String result = getText(context.getRefOf(spinner));
@@ -293,7 +288,6 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         JPanel panel = new JPanel();
         panel.setName("TestPanel");
         snapshot(panel);
-        // JPanel has no ref — cannot call get_text (no actions)
         assertThrows(IllegalStateException.class, () -> context.getRefOf(panel));
     }
 
@@ -336,10 +330,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
     @Test
     void dr015_plainJLabel_returnsGenericGetTextError() throws Exception {
-        // D_label_not_readable: a plain JLabel has no ref in normal snapshots (no actions),
-        // but if a caller holds a stale ref or injects one, swing_get_text
-        // must refuse with the generic error — not succeed by reading the
-        // underlying AccessibleText (which plain JLabels don't expose anyway).
+        // D_label_not_readable. A JLabel never gets a ref, so one is injected.
         JLabel label = new JLabel("Hello");
         context.putRef(99, (javax.accessibility.Accessible) label);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
@@ -350,10 +341,8 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
     @Test
     void dr015_htmlJLabel_returnsGenericGetTextError() throws Exception {
-        // D_label_not_readable behaviour change: before this DR, an HTML JLabel exposed
-        // AccessibleText via the JDK's HTML view, so swing_get_text
-        // succeeded and returned the rendered text. After D_label_not_readable, the
-        // LABEL-role exclusion fires first and the tool refuses.
+        // An HTML JLabel does expose AccessibleText (AccessibleHTMLTextSupport); the
+        // LABEL-role gate of D_label_not_readable refuses it anyway.
         JLabel html = new JLabel("<html>Hello <b>world</b></html>");
         context.putRef(99, (javax.accessibility.Accessible) html);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
@@ -364,14 +353,9 @@ class SwingGetTextTest extends AbstractHeadlessTest {
 
     @Test
     void dr015_jListCell_returnsGenericGetTextError() throws Exception {
-        // D_label_not_readable role-based gate covers JList.AccessibleJListChild (role LABEL).
-        // Cell ref is legitimately assigned via `click`, but swing_get_text
-        // must refuse — the cell's content is read from the snapshot name slot.
-        //
-        // Lookup by LABEL role rather than by identity: AccessibleJListChild
-        // is virtual and JList.AccessibleJList.getAccessibleChild(i) may return
-        // a fresh instance on each call — the ref map stores the instance
-        // captured during the snapshot walk.
+        // A list cell has a real ref (from click) and role LABEL, so D_label_not_readable refuses it.
+        // Found by role, not identity: getAccessibleChild(i) may return a fresh instance per
+        // call, while the ref map holds the one the snapshot walk captured.
         DefaultListModel<String> model = new DefaultListModel<>();
         model.addElement("alpha");
         JList<String> list = new JList<>(model);

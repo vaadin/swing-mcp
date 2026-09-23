@@ -28,17 +28,24 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * A minimal in-process MCP server using Java's built-in HttpServer.
- * Binds to 127.0.0.1 only.
- * <p>
- * This class is the HTTP transport: it owns the {@link HttpServer},
- * routes incoming POST/DELETE requests, validates the
- * {@code Mcp-Session-Id} header, and writes JSON-RPC responses to the
- * wire. All protocol logic — registries, session lifecycle, dispatch of
- * {@code initialize}/{@code ping}/session-scoped methods — lives in the
- * {@link MCPHandler} supplied at construction. Configure the handler
- * (tools/resources/prompts, optional session-cap predicate, optional
- * close callback) before calling {@link #start()}.
+ * The HTTP transport: serves a configured {@link MCPHandler} over POST and
+ * DELETE on {@code 127.0.0.1} (D_localhost_no_auth), routing each request to
+ * its session by the {@code Mcp-Session-Id} header.
+ *
+ * <pre>{@code
+ * MCPHandler handler = new MCPHandler()
+ *         .setOnSessionClosed(s -> closedIds.add(s.getId()));
+ * handler.addTool("echo", "Echo tool",
+ *         new InputSchemaBuilder().requiredString("msg", "message").build(),
+ *         request -> MCPProtocol.Content.text((String) request.arguments().raw().get("msg")));
+ * HttpMCPServer server = new HttpMCPServer(0, "/mcp", handler);  // 0 = any free port
+ * server.start();
+ * URI uri = URI.create(server.getUrl());
+ * }</pre>
+ *
+ * <p>Configure the handler completely before {@link #start()}; the server
+ * adds no configuration of its own. Its threads are daemons, so a running
+ * server does not keep the JVM alive.
  */
 public class HttpMCPServer {
 
@@ -47,35 +54,31 @@ public class HttpMCPServer {
     public static final int DEFAULT_PORT = 18088;
     public static final String DEFAULT_CONTEXT_PATH = "/mcp";
 
-    /**
-     * The port requested in the constructor. May be {@code 0}, meaning
-     * "let the OS pick an ephemeral port at bind time". After {@link #start()},
-     * the actual bound port is available via {@link #getPort()}.
-     */
+    /** As requested; {@code 0} asks the OS for an ephemeral port. */
     private final int port;
     private final String contextPath;
     private final MCPHandler handler;
     private HttpServer httpServer;
-    /** Populated by {@link #start()} once the OS has assigned a port. */
+    /** The port actually bound by {@link #start()}; {@code -1} when not running. */
     private volatile int boundPort = -1;
 
-    /** Convenience: default port and context path, fresh empty handler. */
+    /** {@link #DEFAULT_PORT}, {@link #DEFAULT_CONTEXT_PATH}, and an empty handler. */
     public HttpMCPServer() {
         this(DEFAULT_PORT, DEFAULT_CONTEXT_PATH, new MCPHandler());
     }
 
-    /** Convenience: caller-supplied port/context, fresh empty handler. */
+    /** An empty handler, to be configured through {@link #getHandler()}. */
     public HttpMCPServer(int port, String contextPath) {
         this(port, contextPath, new MCPHandler());
     }
 
     /**
-     * @param port        the TCP port to bind to, or {@code 0} to let the OS pick a free
-     *                    ephemeral port. After {@link #start()}, {@link #getPort()} returns
-     *                    the actual bound port.
-     * @param contextPath the URL context path; must start with a slash
-     * @param handler     the configured {@link MCPHandler}; not null. Tools and other
-     *                    registrations should be added before {@link #start()}.
+     * @param port        0–65535; {@code 0} lets the OS pick a free port, which
+     *                    {@link #getPort()} reports after {@link #start()}
+     * @param contextPath must start with a slash
+     * @param handler     configured before {@link #start()}
+     * @throws IllegalArgumentException if {@code port} is out of range or
+     *                                  {@code contextPath} lacks the leading slash
      */
     public HttpMCPServer(int port, String contextPath, MCPHandler handler) {
         if (port < 0 || port > 65535) {
@@ -94,6 +97,11 @@ public class HttpMCPServer {
         return "http://127.0.0.1:" + getPort() + contextPath;
     }
 
+    /**
+     * Binds the port and starts serving; returns once the listener is up.
+     *
+     * @throws TransportIOException if the port cannot be bound
+     */
     public void start() {
         try {
             httpServer = HttpServer.create(
@@ -101,7 +109,6 @@ public class HttpMCPServer {
         } catch (IOException e) {
             throw new TransportIOException("Failed to bind HTTP server on port " + port, e);
         }
-        // If port was 0, the OS assigned an ephemeral port; capture the actual port.
         boundPort = httpServer.getAddress().getPort();
         httpServer.setExecutor(Executors.newCachedThreadPool(r -> {
             Thread t = new Thread(r);
@@ -136,18 +143,13 @@ public class HttpMCPServer {
         }
     }
 
-    /**
-     * Returns the {@link MCPHandler} this server delegates protocol dispatch to.
-     */
     public MCPHandler getHandler() {
         return handler;
     }
 
     /**
-     * Returns the port this server is bound to. Before {@link #start()} (or after
-     * {@link #stop()}), returns the port requested in the constructor — which may be
-     * {@code 0}, meaning the OS will pick an ephemeral port at bind time. After
-     * {@code start()}, returns the actual bound port.
+     * Returns the bound port while running; otherwise the requested one, which
+     * may be {@code 0}.
      */
     public int getPort() {
         return boundPort > 0 ? boundPort : port;
@@ -201,7 +203,7 @@ public class HttpMCPServer {
     }
 
     private void handlePost(JsonRpcExchange rpc) {
-        // Session ID header validation: if present, must match a known session
+        // D_session_gate_two_stage: a stale id is rejected before the body is read.
         String incomingSessionId = rpc.getHttpExchange().getRequestHeaders()
                 .getFirst("Mcp-Session-Id");
         if (incomingSessionId != null && handler.getSession(incomingSessionId) == null) {
@@ -216,7 +218,6 @@ public class HttpMCPServer {
 
         String rpcMethod = request.getMethod();
 
-        // Server-level methods (no session required)
         if ("initialize".equals(rpcMethod)) {
             MCPHandler.InitializeOutcome outcome = handler.dispatchInitialize(request);
             rpc.setSessionId(outcome.sessionId());
@@ -228,7 +229,6 @@ public class HttpMCPServer {
             return;
         }
 
-        // Session-scoped methods — require Mcp-Session-Id header
         if (incomingSessionId == null) {
             LOG.warning("Rejecting '" + rpcMethod + "': no Mcp-Session-Id header");
             throw new MCPServerException(400,
@@ -265,10 +265,7 @@ public class HttpMCPServer {
         rpc.sendPlain(200, "");
     }
 
-    /**
-     * Test hook: synchronously runs the idle-session cleanup tick. Used by
-     * {@code SessionCleanupTest}; package-private.
-     */
+    /** Test hook: runs the idle-cleanup tick synchronously. */
     void cleanupIdleSessions() {
         handler.cleanupIdleSessions();
     }

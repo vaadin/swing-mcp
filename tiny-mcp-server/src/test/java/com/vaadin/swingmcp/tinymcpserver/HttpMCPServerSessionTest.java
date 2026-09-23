@@ -31,8 +31,8 @@ import java.net.http.HttpResponse;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for MCP session lifecycle gate (see D_session_gate_two_stage in {@code design/decisions.md}).
- * Uses raw HTTP requests for precise control over the {@code Mcp-Session-Id} header.
+ * The session gate, over raw HTTP so each test controls the {@code Mcp-Session-Id}
+ * header exactly. See D_session_gate_two_stage.
  */
 class HttpMCPServerSessionTest {
 
@@ -94,10 +94,7 @@ class HttpMCPServerSessionTest {
         }
     }
 
-    /**
-     * Terminates all active sessions before each test so every test
-     * starts with a clean slate.
-     */
+    /** A DELETE without {@code Mcp-Session-Id} terminates every session. */
     @BeforeEach
     void resetSession() throws Exception {
         http.send(HttpRequest.newBuilder(serverUri).DELETE().build(),
@@ -134,9 +131,7 @@ class HttpMCPServerSessionTest {
                 + ",\"method\":\"tools/call\",\"params\":{\"name\":\"echo\",\"arguments\":{\"msg\":\"hi\"}}}";
     }
 
-    /**
-     * Sends an initialize request and returns the session ID from the response header.
-     */
+    /** @return the new session's {@code Mcp-Session-Id}, or {@code null} if the header is absent */
     private String initialize() throws Exception {
         HttpResponse<String> resp = post(jsonRpc("initialize", 1), null);
         assertEquals(200, resp.statusCode(), "initialize should succeed");
@@ -228,7 +223,6 @@ class HttpMCPServerSessionTest {
 
     @Test
     void unknownSessionIdWhenNoActiveSessionReturns404() throws Exception {
-        // No init — no sessions. Any Mcp-Session-Id is unknown.
         HttpResponse<String> resp = post(jsonRpc("initialize", 1), "some-random-id");
         assertJsonRpcError(resp, 404, -32002, "Session not found.");
     }
@@ -255,26 +249,21 @@ class HttpMCPServerSessionTest {
         String sessionA = initialize();
         String sessionB = initialize();
 
-        // Session A can list tools
         HttpResponse<String> respA = post(jsonRpc("tools/list", 10), sessionA);
         assertEquals(200, respA.statusCode());
         JsonObject bodyA = MCPProtocol.fromJson(respA.body(), JsonObject.class);
         assertNotNull(bodyA.get("result"), "session A should get a result");
 
-        // Session B can list tools
         HttpResponse<String> respB = post(jsonRpc("tools/list", 11), sessionB);
         assertEquals(200, respB.statusCode());
         JsonObject bodyB = MCPProtocol.fromJson(respB.body(), JsonObject.class);
         assertNotNull(bodyB.get("result"), "session B should get a result");
 
-        // Delete session A
         delete(sessionA);
 
-        // Session A no longer works
         HttpResponse<String> respA2 = post(jsonRpc("tools/list", 12), sessionA);
         assertJsonRpcError(respA2, 404, -32002, "Session not found.");
 
-        // Session B still works
         HttpResponse<String> respB2 = post(jsonRpc("tools/list", 13), sessionB);
         assertEquals(200, respB2.statusCode());
     }
@@ -306,8 +295,7 @@ class HttpMCPServerSessionTest {
 
     @Test
     void getCurrentThrowsOnTestThreadOutsideDispatch() {
-        // handlePost binds/unbinds the ThreadLocal on the HTTP dispatch thread.
-        // The test thread never ran a dispatch, so no session is bound here.
+        // The binding lives only on the HTTP dispatch thread.
         assertThrows(NullPointerException.class, MCPSession::getCurrent);
     }
 
@@ -316,7 +304,6 @@ class HttpMCPServerSessionTest {
         String sessionId = initialize();
         HttpResponse<String> resp = post(jsonRpcToolsCall(2, "whoami", "{}"), sessionId);
         assertEquals(200, resp.statusCode());
-        // After the dispatch returns, the test thread still sees no binding.
         assertThrows(NullPointerException.class, MCPSession::getCurrent);
     }
 
@@ -438,7 +425,6 @@ class HttpMCPServerSessionTest {
         try {
             URI uri = URI.create(singleSessionServer.getUrl());
 
-            // First initialize succeeds
             HttpResponse<String> resp1 = http.send(
                     HttpRequest.newBuilder(uri)
                             .header("Content-Type", "application/json")
@@ -448,7 +434,6 @@ class HttpMCPServerSessionTest {
                     HttpResponse.BodyHandlers.ofString());
             assertEquals(200, resp1.statusCode());
 
-            // Second initialize rejected
             HttpResponse<String> resp2 = http.send(
                     HttpRequest.newBuilder(uri)
                             .header("Content-Type", "application/json")

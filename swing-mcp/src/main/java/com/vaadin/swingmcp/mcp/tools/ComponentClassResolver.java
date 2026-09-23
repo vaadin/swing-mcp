@@ -27,29 +27,22 @@ import java.lang.reflect.Modifier;
 import java.util.Set;
 
 /**
- * Resolves the component-identity slot for a snapshot line per
- * <b>design/snapshot-format.md</b>. The slot takes one of three forms:
+ * Names an accessible the way a person or model reads it: the snapshot's identity slot
+ * ({@code JButton (push_button)}, {@code SearchField -> JTextField (text)},
+ * {@code (page_tab)} — the three forms are owned by {@code design/snapshot-format.md}),
+ * and the bare class name that error messages use ({@code JButton}).
  *
- * <ul>
- *   <li><b>Case A (standard Swing component):</b>
- *       {@code JClass (role)} — e.g. {@code JButton (push_button)}.</li>
- *   <li><b>Case B (meaningful custom subclass):</b>
- *       {@code ConcreteSimpleName -> JClass (role)} — e.g.
- *       {@code SearchField -> JTextField (text)}.</li>
- *   <li><b>Case C (non-Component accessible):</b>
- *       {@code (role)} — e.g. {@code (page_tab)}. Applies to accessibles
- *       that do not descend from {@link Component} or {@link MenuComponent},
- *       such as {@code JTabbedPane.Page}, {@code JList.AccessibleJListChild},
- *       and {@code JTree.AccessibleJTreeNode}.</li>
- * </ul>
+ * <p>The resolution runs in two steps over the superclass chain:
+ * <ol>
+ *   <li>the <b>display class</b> — the first class {@link #shouldStrip} does not reject;</li>
+ *   <li>the <b>qualifying ancestor</b> — the first class from there up that
+ *       {@link #isQualifying} accepts. None means a non-{@link Component} accessible
+ *       ({@code JTabbedPane.Page}, {@code JList.AccessibleJListChild}), rendered as
+ *       {@code (role)} alone; a display class that is not the ancestor itself is a custom
+ *       subclass, rendered as {@code Concrete -> JClass (role)}.</li>
+ * </ol>
  *
- * <p>Parenthesised role is unconditional — even when the role is a
- * tautological lowercasing of the class ({@code JButton (push_button)}) —
- * so that a non-standard overridden role becomes a clean attention signal
- * for the AI (see design/snapshot-format.md rationale).</p>
- *
- * <p>{@code design/snapshot-format.md} owns where this slot sits in a snapshot line.
- * {@code ComponentClassResolverAuditTest} pins the qualifying-ancestor set against a
+ * <p>{@code ComponentClassResolverAuditTest} pins the qualifying-ancestor set against a
  * checked-in fixture, so a JDK that adds or removes a Swing class fails the build rather
  * than silently changing what every snapshot line says.</p>
  */
@@ -59,40 +52,26 @@ public final class ComponentClassResolver {
     }
 
     /**
-     * Returns the <b>display class</b> for the given accessible: the first class up the
-     * superclass chain of
-     * {@code accessible.getClass()} that is not anonymous, synthetic, local,
-     * a runtime proxy ({@code $$}-containing runtime classes with no
-     * enclosing class), a {@code javax.swing.plaf.*} L&amp;F internal, or a
-     * JDK-internal nested class.
+     * Returns the display class of {@code accessible} — the concrete-side identity alone,
+     * without the {@code -> JClass (role)} decoration, as the modal-stack header shows it
+     * (D_modal_stack_header).
      *
-     * <p>This is the concrete-side identity used by the modal-stack header
-     * (D_modal_stack_header), where only the concrete simple class name is
-     * shown (without the {@code -> JClass (role)} qualifying-ancestor
-     * decoration). For the full identity slot including the qualifying
-     * ancestor, see {@link #resolveIdentitySlot}.</p>
-     *
-     * @param accessible the accessible to resolve the display class for
-     * @return the display class — never {@code null}; for any pathological
-     *         chain the concrete class itself is returned as a fallback
+     * @return never {@code null}; {@code Object} when every class in the chain is stripped
      */
     public static Class<?> resolveDisplayClass(Accessible accessible) {
         return findDisplayClass(accessible.getClass());
     }
 
     /**
-     * Returns just the class-name portion of the identity slot, for use in
-     * error messages per the "class names everywhere else" convention
-     * (snapshot keeps the role parenthetical; tool descriptions and errors
-     * use class names only).
+     * Returns the qualifying ancestor's simple name, for error messages
+     * (D_role_in_snapshot_only):
      *
-     * <p>Resolution mirrors {@link #resolveIdentitySlot}: runs
-     * {@link #findDisplayClass} over the concrete class, then returns either
-     * the qualifying ancestor's simple name (Case A / Case B — standard or
-     * custom Swing component) or {@code "Component"} when no ancestor
-     * qualifies (Case C — non-Component accessibles such as
-     * {@code JTabbedPane.Page}) so the surrounding message degrades gracefully
-     * to {@code "Component does not support …"}.</p>
+     * <pre>{@code
+     * ComponentClassResolver.resolveClassName(accessible) + " does not support " + toolName
+     * }</pre>
+     *
+     * @return {@code "JTextField"} for a {@code SearchField}, too; {@code "Component"} for a
+     *         non-{@link Component} accessible such as {@code JTabbedPane.Page}
      */
     public static String resolveClassName(Accessible accessible) {
         Class<?> displayClass = findDisplayClass(accessible.getClass());
@@ -104,13 +83,10 @@ public final class ComponentClassResolver {
     }
 
     /**
-     * Returns the component-identity slot for the given accessible, including
-     * the surrounding parentheses around the role. The caller appends this
-     * directly after the list marker ({@code "- "}) of the snapshot line.
+     * Returns the snapshot line's identity slot, e.g. {@code SearchField -> JTextField (text)}.
      *
-     * <p>If the accessible has no {@link AccessibleContext} or its role cannot
-     * be resolved, the role falls back to {@code "unknown"} (same fallback
-     * used by {@link AccessibleNames#roleName}).</p>
+     * @return the role reads {@code unknown} when there is no {@link AccessibleContext} or
+     *         no role, as {@link AccessibleNames#roleName} does for an undeclared one
      */
     public static String resolveIdentitySlot(Accessible accessible) {
         AccessibleContext ctx = accessible.getAccessibleContext();
@@ -122,17 +98,14 @@ public final class ComponentClassResolver {
         Class<?> qualifying = findQualifyingAncestor(displayClass);
 
         if (qualifying == null) {
-            // Case C — non-Component accessible (no javax.swing/java.awt ancestor).
             return "(" + roleName + ")";
         }
 
         String ancestorName = qualifying.getSimpleName();
         if (displayClass == qualifying) {
-            // Case A — standard Swing / AWT component.
             return ancestorName + " (" + roleName + ")";
         }
 
-        // Case B — meaningful custom subclass.
         return displayClass.getSimpleName() + " -> " + ancestorName + " (" + roleName + ")";
     }
 
@@ -141,10 +114,9 @@ public final class ComponentClassResolver {
     // ══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Strips anonymous, synthetic, local, and runtime-proxy classes from the
-     * head of the superclass chain. Returns the first display-worthy class
-     * encountered. Every Java class chain terminates at {@link Object}, which
-     * is never stripped, so this method always returns a non-null class.
+     * Walks up from {@code concrete} past every class {@link #shouldStrip} rejects.
+     *
+     * @return never {@code null}; the walk stops at {@link Object}
      */
     static Class<?> findDisplayClass(Class<?> concrete) {
         Class<?> c = concrete;
@@ -155,12 +127,10 @@ public final class ComponentClassResolver {
     }
 
     /**
-     * Returns true for classes whose names carry no stable identity for the AI:
-     * anonymous, synthetic, local, runtime-generated proxies (CGLIB, Hibernate,
-     * ByteBuddy, Mockito, …), and Swing/AWT implementation internals
-     * ({@code javax.swing.plaf.*} L&amp;F classes like {@code MetalScrollButton},
-     * and nested classes inside {@code javax.swing.*}/{@code java.awt.*} such
-     * as {@code JScrollPane.ScrollBar}).
+     * True for a class whose name carries no stable identity for the model: anonymous,
+     * synthetic, local, a runtime-generated proxy (CGLIB, ByteBuddy, Mockito, …), or a
+     * Swing/AWT internal — an L&amp;F class like {@code MetalScrollButton}, or a nested
+     * class like {@code JScrollPane.ScrollBar}.
      */
     static boolean shouldStrip(Class<?> c) {
         return c.isAnonymousClass()
@@ -172,12 +142,8 @@ public final class ComponentClassResolver {
     }
 
     /**
-     * True when the class lives in {@code javax.swing.plaf} or a subpackage.
-     * L&amp;F implementation classes ({@code BasicArrowButton},
-     * {@code MetalScrollButton}, {@code BasicComboPopup}, …) are Swing
-     * implementation detail, not the widget vocabulary the LLM knows;
-     * walking past them lands on the real Swing widget ({@code JButton},
-     * {@code JComboBox}).
+     * True for a class in {@code javax.swing.plaf} or below: walking past a
+     * {@code BasicArrowButton} lands on the {@code JButton} the model knows.
      */
     static boolean isPlafClass(Class<?> c) {
         Package pkg = c.getPackage();
@@ -189,21 +155,18 @@ public final class ComponentClassResolver {
     }
 
     /**
-     * True when the class is a nested class declared inside a
-     * {@code javax.swing.*} or {@code java.awt.*} class — e.g.
-     * {@code JScrollPane.ScrollBar}, {@code JSpinner.DefaultEditor}. These
-     * are framework-internal components the end user did not write. User
-     * nested classes (enclosing class in user packages) are preserved.
-     */
-    /**
-     * Classes that are JDK-internal nested classes but should be preserved
-     * as display classes because they are first-class snapshot citizens
-     * (added to {@code SEMANTIC_ROLES}).
+     * JDK-nested classes that are display classes and qualifying ancestors anyway, because
+     * the snapshot renders them as themselves (D_desktop_icon_as_itself).
      */
     private static final Set<Class<?>> JDK_NESTED_CARVEOUTS = Set.of(
             javax.swing.JInternalFrame.JDesktopIcon.class
     );
 
+    /**
+     * True for a class nested inside a {@code javax.swing} or {@code java.awt} class
+     * ({@code JScrollPane.ScrollBar}, {@code JSpinner.DefaultEditor}), except the
+     * {@link #JDK_NESTED_CARVEOUTS}. A class nested in user code is kept.
+     */
     static boolean isJdkInternalNested(Class<?> c) {
         if (JDK_NESTED_CARVEOUTS.contains(c)) {
             return false;
@@ -224,11 +187,8 @@ public final class ComponentClassResolver {
     }
 
     /**
-     * Runtime-proxy heuristic: the class name contains two or more {@code $}
-     * characters <b>and</b> {@link Class#getEnclosingClass()} is {@code null}.
-     * Genuine nested classes (even {@code Outer$Inner$Deep}) have a non-null
-     * enclosing class and are preserved; runtime-generated proxy classes have
-     * no enclosing class by construction.
+     * True when the name holds two or more {@code $} and there is no enclosing class — a
+     * genuine {@code Outer$Inner$Deep} has one, a runtime-generated proxy never does.
      */
     static boolean isRuntimeProxy(Class<?> c) {
         if (c.getEnclosingClass() != null) {
@@ -239,11 +199,8 @@ public final class ComponentClassResolver {
     }
 
     /**
-     * Walks from {@code displayClass} up the superclass chain looking for a
-     * class that satisfies the qualifying-ancestor predicate.
-     *
-     * @return the first qualifying ancestor, or {@code null} when none
-     * qualifies — indicating a non-Component accessible, rendered as {@code (role)} alone
+     * @return the first class from {@code displayClass} up that {@link #isQualifying}
+     *         accepts, or {@code null} for a non-{@link Component} accessible
      */
     static @Nullable Class<?> findQualifyingAncestor(Class<?> displayClass) {
         Class<?> c = displayClass;
@@ -257,19 +214,10 @@ public final class ComponentClassResolver {
     }
 
     /**
-     * Qualifying-ancestor predicate per design/snapshot-format.md:
-     * <ul>
-     *   <li>public;</li>
-     *   <li>top-level (no enclosing class — excludes nested, inner, local,
-     *       anonymous);</li>
-     *   <li>package is {@code javax.swing}, a subpackage of {@code javax.swing}
-     *       other than {@code javax.swing.plaf} (and its subpackages), or
-     *       {@code java.awt};</li>
-     *   <li>assignable to {@link Component} or {@link MenuComponent}.</li>
-     * </ul>
-     * Abstract classes qualify — e.g. {@code AbstractButton},
-     * {@code JTextComponent} — because the AI recognises them even when not
-     * directly instantiable.
+     * True for a public, top-level {@link Component} or {@link MenuComponent} in
+     * {@code javax.swing}, a non-plaf subpackage of it, or {@code java.awt} (not its
+     * subpackages) — plus the {@link #JDK_NESTED_CARVEOUTS}. Abstract classes such as
+     * {@code AbstractButton} qualify: the model knows them by name.
      */
     static boolean isQualifying(Class<?> c) {
         if (JDK_NESTED_CARVEOUTS.contains(c)) {

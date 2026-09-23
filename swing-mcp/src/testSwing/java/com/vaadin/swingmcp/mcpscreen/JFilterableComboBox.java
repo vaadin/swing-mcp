@@ -23,11 +23,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A test helper: editable JComboBox that filters its items by a case-insensitive
- * starts-with match on the editor text. Used to verify that the AI client can
- * interact with filterable combo boxes via {@code set_text} on the editor child
- * followed by {@code get_items} / {@code get_item_count}
- * on the combo ref.
+ * An editable JComboBox that narrows its items to a case-insensitive prefix match of the
+ * editor text, one EDT turn after the text changes. An agent types into the editor child
+ * with {@code set_text}, then reads the combo with {@code get_items}.
  */
 public class JFilterableComboBox extends JComboBox<String> {
 
@@ -60,7 +58,6 @@ public class JFilterableComboBox extends JComboBox<String> {
         });
     }
 
-    /** Returns the current text in the editor field. */
     public String getFilterText() {
         return ((JTextField) getEditor().getEditorComponent()).getText();
     }

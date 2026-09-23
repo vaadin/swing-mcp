@@ -40,10 +40,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Exercises the supersede-on-conflict session policy (D_supersede_sessions): when a
- * caller registers an {@link SessionDecision.AcceptAndEvict} policy, a
- * new {@code initialize} replaces the existing session(s) and the
- * displaced client gets a tombstone-backed 404 on its next call.
+ * Session eviction and its tombstones: under {@link SessionDecision.AcceptAndEvict}
+ * a new {@code initialize} replaces the existing sessions, and a displaced client
+ * gets a 404 carrying the reason. See D_supersede_sessions.
  */
 class SessionSupersedeTest {
 
@@ -117,7 +116,6 @@ class SessionSupersedeTest {
             a.initialize();
             b.initialize();   // supersedes a → 1 close
             c.initialize();   // supersedes b → 1 close
-            // Don't close c — measure the supersede-induced closes only.
             assertEquals(2, closedIds.size(),
                     "two superseded sessions, two onSessionClosed firings");
         } finally {
@@ -223,8 +221,7 @@ class SessionSupersedeTest {
                 .build();
 
         List<String> idsInOrder = new ArrayList<>();
-        // 100 idle-evicted sessions vs cap=64 → at least the first 36 entries
-        // have rolled out of the LRU.
+        // 100 evictions against the 64-entry tombstone cap.
         for (int i = 0; i < 100; i++) {
             HttpResponse<String> r = http.send(initReq, HttpResponse.BodyHandlers.ofString());
             String id = r.headers().firstValue("Mcp-Session-Id").orElseThrow();
@@ -258,9 +255,7 @@ class SessionSupersedeTest {
             MCPSession firstSession = handler.getSession(firstId);
             assertNotNull(firstSession);
 
-            // Hold the first session's lock from another thread, simulating
-            // an in-flight request. The supersede path's blocking close()
-            // cannot fire onSessionClosed until the lock is released.
+            // The held lock stands in for an in-flight request on the first session.
             CountDownLatch holderHasLock = new CountDownLatch(1);
             CountDownLatch releaseHolder = new CountDownLatch(1);
             Thread holder = new Thread(() -> firstSession.runLocked(() -> {
@@ -287,8 +282,6 @@ class SessionSupersedeTest {
             initWorker.setDaemon(true);
             initWorker.start();
 
-            // Give the worker a moment to enter the supersede path. It must
-            // remain blocked on the held session lock.
             assertTrue(holder.isAlive(), "holder still owns the lock");
             Thread.sleep(200);
             assertEquals(1L, initFinished.getCount(),

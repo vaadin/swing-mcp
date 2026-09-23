@@ -23,14 +23,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A reusable test component: a JPanel that registers a MouseAdapter on itself
- * and records the mouse event sequence. Verifies internally that events arrive
- * in the correct order (MOUSE_PRESSED → MOUSE_RELEASED → MOUSE_CLICKED), all
- * with BUTTON1 and click count 1.
- * <p>
- * Tests assert via {@link #wasClicked()} — returns {@code true} only if the
- * full sequence was received correctly.
- *
+ * A {@code JPanel} whose own application {@code MouseListener} makes it a Tier 2 click target;
+ * {@link #wasClicked()} reports whether it received exactly
+ * MOUSE_PRESSED → MOUSE_RELEASED → MOUSE_CLICKED.
  */
 public class ClickRecordingPanel extends JPanel {
 
@@ -58,7 +53,6 @@ public class ClickRecordingPanel extends JPanel {
             public void mouseClicked(MouseEvent e) {
                 eventIds.add(e.getID());
                 validateEvent(e);
-                // Check the full sequence after the final event
                 if (eventIds.size() == 3
                         && eventIds.get(0) == MouseEvent.MOUSE_PRESSED
                         && eventIds.get(1) == MouseEvent.MOUSE_RELEASED
@@ -78,25 +72,14 @@ public class ClickRecordingPanel extends JPanel {
         });
     }
 
-    /**
-     * Returns {@code true} if the full mouse click event sequence was received
-     * correctly: MOUSE_PRESSED → MOUSE_RELEASED → MOUSE_CLICKED, all with
-     * BUTTON1 and click count 1.
-     */
     public boolean wasClicked() {
         return sequenceValid;
     }
 
-    /**
-     * Returns the recorded event IDs for detailed assertions.
-     */
     public List<Integer> getEventIds() {
         return new ArrayList<>(eventIds);
     }
 
-    /**
-     * Resets the recording state.
-     */
     public void reset() {
         eventIds.clear();
         sequenceValid = false;

@@ -37,10 +37,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Headless tests for {@code swing_increment}.
- * All happy-path cases can run headless; {@code doAccessibleAction} for increment
- * works correctly in headless mode for both {@code JSpinner} and {@code JSlider}
- * (see design/snapshot-format.md).
+ * {@code doAccessibleAction} works headless on both {@code JSpinner} and {@code JSlider}, so
+ * every happy path lives here rather than in a screen test.
  */
 class SwingIncrementTest extends AbstractHeadlessTest {
 
@@ -114,14 +112,13 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Boundary — value stays at maximum (design/snapshot-format.md — fire-and-forget no-op)
+    // Boundary — value stays at maximum; the dispatch still echoes
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void incrementSpinnerAtMaximumIsNoOp() throws Exception {
-        // Spinner already at max: the EDT action is a silent no-op
-        // (SpinnerNumberModel.getNextValue() returns null at max).
-        // The tool still returns the D_dispatched_echo echo because it only confirms dispatch.
+        // SpinnerNumberModel.getNextValue() returns null here, so the action is a silent no-op;
+        // the echo confirms only the dispatch (D_dispatched_echo).
         JSpinner spinner = new JSpinner(new SpinnerNumberModel(10, 0, 10, 1));
         snapshot(spinner);
         int ref = context.getRefOf(spinner);
@@ -185,7 +182,6 @@ class SwingIncrementTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(spinner);
         increment(ref);
 
-        // Ref map cleared — same ref should now be invalid
         assertThrows(MCPServerException.class, () -> increment(ref));
     }
 
@@ -308,7 +304,7 @@ class SwingIncrementTest extends AbstractHeadlessTest {
     @Test
     void componentMatrix_JScrollPane() throws Exception {
         snapshot(new JScrollPane(new JTextArea("content")));
-        // JScrollPane has no ref — no further action needed
+        // Nothing to assert: a JScrollPane gets no ref.
     }
 
     @Test

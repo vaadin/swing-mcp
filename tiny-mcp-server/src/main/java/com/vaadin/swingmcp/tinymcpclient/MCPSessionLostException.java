@@ -19,14 +19,11 @@ package com.vaadin.swingmcp.tinymcpclient;
 import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 
 /**
- * Thrown by {@link TinyMCPClient} when the server returns HTTP 404 in
- * response to a non-{@code initialize} call, signalling that the session
- * the client was bound to no longer exists (the server was restarted, or
- * the session was evicted by the idle-cleanup tick).
- *
- * <p>A typed exception rather than a generic protocol error, because session
- * loss has a specific recovery — call {@link MCPClient#initialize()} again —
- * and the client never takes it on the caller's behalf (D_no_auto_retry).
+ * The server answered HTTP 404 to a non-{@code initialize} call: the session
+ * is gone — the server restarted, evicted it as idle, or a newer session
+ * superseded it. The message is the server's reason when it sent one.
+ * Recover by calling {@link MCPClient#initialize()} again; the client never
+ * does that for you (D_no_auto_retry).
  */
 public class MCPSessionLostException extends MCPClientException {
 

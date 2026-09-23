@@ -85,8 +85,7 @@ class SwingGetItemCountScreenTest extends AbstractScreenTest {
 
     @Test
     void jTabbedPaneInsideJFrame_isRejected() throws Exception {
-        // Regression guard for P-001 Wave A — JTabbedPane dropped as a
-        // supported target; tab count is derivable from the snapshot (design/snapshot-format.md).
+        // Its tab count is already in the snapshot, one page_tab child per tab.
         JFrame frame = new JFrame("Test");
         JTabbedPane tp = new JTabbedPane();
         tp.addTab("Tab1", new JPanel());

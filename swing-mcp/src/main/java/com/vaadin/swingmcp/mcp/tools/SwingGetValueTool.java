@@ -28,11 +28,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * MCP tool {@code swing_get_value}: reads the numeric value of a UI component by ref.
- *
- * <p>Looks up the component by ref, verifies it supports the {@code get_value} action,
- * then reads the value via the accessibility API ({@link AccessibleValue}).</p>
- *
+ * MCP tool {@code swing_get_value}: a component's {@link AccessibleValue} by ref, as JSON —
+ * {@code {"current":42,"min":0,"max":100}}, each integer-when-whole; a missing bound is left
+ * out, meaning unbounded.
  */
 public class SwingGetValueTool extends AbstractSwingTool {
 
@@ -42,33 +40,22 @@ public class SwingGetValueTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // ref is required integer
         int ref = params.getInt("ref");
-
-        // look up the accessible by ref (throws MCPServerException if not found)
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // check get_value support
         if (!SwingUtils.supportsGetValue(accessible)) {
             throw new MCPErrorResponseException(
                     ComponentClassResolver.resolveClassName(accessible)
                             + " does not support swing_get_value. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
-        // all access happens on EDT (guaranteed by SwingMCP.registerTool)
-        // Step 4: read current value via the shared helper (D_inline_value_preview
-        // shared-read with snapshot inline preview). supportsGetValue already
-        // verified getCurrentAccessibleValue() is non-null so readValue
-        // succeeds here; the IllegalStateException branch is a gate-violation
-        // safety net.
+        // The same read as the snapshot's inline preview (D_inline_value_preview).
         Number current = SwingUtils.readValue(accessible);
 
-        // Steps 5-6: read optional min/max
         AccessibleValue av = accessible.getAccessibleContext().getAccessibleValue();
         Number min = av.getMinimumAccessibleValue();
         Number max = av.getMaximumAccessibleValue();
 
-        // Steps 7-8: build JSON via Content.json()
         Map<String, Number> result = new LinkedHashMap<>();
         result.put("current", SwingUtils.serializeNumber(current));
         if (min != null) {
@@ -83,7 +70,6 @@ public class SwingGetValueTool extends AbstractSwingTool {
 
     @Override
     public boolean isMutation() {
-        // read-only tool, ref map is NOT cleared
         return false;
     }
 }

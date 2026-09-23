@@ -24,35 +24,32 @@ import java.util.logging.Logger;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Java Instrumentation Agent that starts the Swing MCP server.
- * <p>
- * Usage: {@code java -javaagent:swing-mcp-agent.jar YourApp}
- * <p>
- * The MCP server is started on a daemon thread so it does not
- * prevent the JVM from shutting down.
- * <p>
- * The port defaults to the built-in MCP server default, but can be overridden via the
- * {@code swing.mcp.port} system property. A value of {@code 0} selects an OS-assigned
- * ephemeral port (useful for tests).
+ * A {@code -javaagent} that starts the Swing MCP server before the application's
+ * {@code main()}, so the application needs no code change:
+ *
+ * <pre>
+ * java -Dswing.mcp.port=20000 -javaagent:swing-mcp-agent.jar -jar your-app.jar
+ * </pre>
+ *
+ * Without {@value #PORT_PROPERTY} the server takes the default port; {@code 0} takes an
+ * ephemeral one, and an unparsable value logs a warning and falls back to the default. The path
+ * is always {@code /mcp}. A failed start is logged, never thrown into the application.
  */
 public final class Agent {
 
     private static final Logger LOG = Logger.getLogger(Agent.class.getName());
 
-    /** System property that overrides the MCP server port. */
     public static final String PORT_PROPERTY = "swing.mcp.port";
 
-    /**
-     * The started server instance, or {@code null} if startup has not completed yet
-     * (or failed). Package-private for test introspection.
-     */
+    /** The running server; {@code null} until the start completes, and forever if it fails. */
     static volatile @Nullable SwingMCP server;
 
     private Agent() {
     }
 
     /**
-     * Entry point called by the JVM before {@code main()}.
+     * Starts the server on a daemon thread and returns at once, so the start never delays
+     * {@code main()}.
      */
     public static void premain(@Nullable String agentArgs, Instrumentation inst) {
         Thread starter = new Thread(() -> {

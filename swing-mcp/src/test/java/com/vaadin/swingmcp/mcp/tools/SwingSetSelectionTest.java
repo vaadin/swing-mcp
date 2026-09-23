@@ -78,7 +78,6 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
         snapshot(list);
         int ref = context.getRefOf(list);
         setSelection(ref, List.of(1.0));
-        // Fire-and-forget: flush EDT
 
         assertEquals(1, list.getSelectedIndex());
         assertEquals("Beta", list.getSelectedValue());
@@ -141,7 +140,6 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
         snapshot(tp);
         // Empty JTabbedPane has no actions, so no ref. Force one.
         context.putRef(99, tp);
-        // Should not throw
         setSelection(99, List.of());
     }
 
@@ -378,7 +376,6 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
         list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         snapshot(list);
         int ref = context.getRefOf(list);
-        // No error expected
         setSelection(ref, List.of(1.0, 1.0, 2.0, 2.0));
 
         assertArrayEquals(new int[]{1, 2}, list.getSelectedIndices());
@@ -394,7 +391,6 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
         snapshot(list);
         int ref = context.getRefOf(list);
         setSelection(ref, List.of(0.0));
-        // Ref map should now be cleared — using old ref should fail
         MCPServerException ex = assertThrows(MCPServerException.class,
                 () -> setSelection(ref, List.of(0.0)));
         assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
@@ -409,7 +405,6 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
         assertThrows(MCPErrorResponseException.class,
                 () -> setSelectionTool.execute(
                         new Parameters(Map.of("ref", ref, "indices", List.of(0.0))), context));
-        // Validation error — ref map must still be intact so the AI can retry
         list.setEnabled(true);
         setSelection(ref, List.of(0.0));
         assertArrayEquals(new int[]{0}, list.getSelectedIndices());
@@ -427,7 +422,6 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(list);
         setSelection(ref, List.of(0.0, 2.0));
 
-        // Re-snapshot to get fresh refs
         snapshot(list);
         String json = getSelection(context.getRefOf(list));
         assertEquals(
@@ -438,8 +432,7 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
                 json);
     }
 
-    // JTable round-trip test is in SwingSetSelectionScreenTest
-    // (addAccessibleSelection is a no-op in headless mode)
+    // The JTable round-trip is in SwingSetSelectionScreenTest (see the JTable note above).
 
     // ══════════════════════════════════════════════════════════════════════════
     // Component matrix — supported
@@ -484,7 +477,7 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
         JTable table = new JTable(model);
         snapshot(table);
         int ref = context.getRefOf(table);
-        // addAccessibleSelection is a no-op in headless mode — just verify success
+        // A headless no-op (see the JTable note above), so only the echo is checked.
         MCPProtocol.Content result = setSelectionTool.execute(
                 new Parameters(Map.of("ref", ref, "indices", List.of(0.0))), context);
         assertEquals("Dispatched set-selection on ref=" + ref + " to [0] — call swing_snapshot to verify the outcome", result.getText());
@@ -670,7 +663,7 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
                         Map.of("ref", 1, "indices", List.of(0, 2)));
 
         assertNotEquals(Boolean.TRUE, result.getIsError(), "set_selection should succeed");
-        // D_dispatched_echo: mutation tools echo "Dispatched <action> on ref=<N> [to <value>]"
+        // The echo shape is D_dispatched_echo's.
         assertEquals(1, result.getContent().size(), "Mutation tools return a one-item echo");
         assertEquals("Dispatched set-selection on ref=1 to [0, 2] — call swing_snapshot to verify the outcome",
                 result.getContent().get(0).getText());

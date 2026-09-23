@@ -43,7 +43,6 @@ class HttpMCPServerTest {
         MCPProtocol.Implementation serverInfo = new MCPProtocol.Implementation();
         serverInfo.setName("Test Server");
         serverInfo.setVersion("1.0");
-        // Port 0 → OS-assigned ephemeral port, so parallel test runs don't collide.
         server = new HttpMCPServer(0, "/mcp", new MCPHandler(serverInfo, null));
         server.start();
 
@@ -107,8 +106,7 @@ class HttpMCPServerTest {
         assertDoesNotThrow(() -> client.ping());
     }
 
-    // ===== addTool() guard (descriptor validation: ToolDescriptorTest;
-    // registration validation: MCPToolHandlerTest) =====
+    // ===== addTool() guard =====
 
     @Test
     void addToolAfterStartThrows() throws Exception {
@@ -200,10 +198,8 @@ class HttpMCPServerTest {
 
     @Test
     void unexpectedRuntimeExceptionReturnsHttp500InternalError() throws Exception {
-        // An unhandled RuntimeException from inside the server (not MCPServerException,
-        // not TransportIOException) must return HTTP 500 with a JSON-RPC INTERNAL_ERROR
-        // body. Using the acceptNewSession predicate as the injection point — it runs
-        // under the try block in handleRequest but isn't normally expected to throw.
+        // The acceptNewSession predicate is the injection point: it runs inside
+        // handleRequest's try block, and nothing expects it to throw.
         MCPHandler crashingHandler = new MCPHandler()
                 .setAcceptNewSession(existing -> { throw new IllegalStateException("boom"); });
         HttpMCPServer crashingServer = new HttpMCPServer(0, "/mcp", crashingHandler);
@@ -233,8 +229,7 @@ class HttpMCPServerTest {
 
     @Test
     void toolRuntimeExceptionReturnsHttp200WithIsError() throws Exception {
-        // A tool throwing a plain RuntimeException must NOT surface as HTTP 500
-        // — the tool handler wraps it as an isError=true CallToolResult.
+        // A tool failure is a result the model reads, not a transport error. See D_three_error_layers.
         HttpMCPServer s = new HttpMCPServer(0, "/mcp");
         s.getHandler().addTool("boom", "Throws",
                 new InputSchemaBuilder().build(),
@@ -261,8 +256,7 @@ class HttpMCPServerTest {
 
     @Test
     void resourceRuntimeExceptionReturnsHttp200WithJsonRpcInternalError() throws Exception {
-        // A resource throwing RuntimeException is wrapped as MCPServerException(INTERNAL_ERROR)
-        // by the resource handler, then rendered as a JSON-RPC error at HTTP 200 (default).
+        // Unlike a tool, a resource has no isError channel: its failure is a JSON-RPC error.
         HttpMCPServer s = new HttpMCPServer(0, "/mcp");
         s.getHandler().addResource("file://boom", "boom", "throws", "text/plain",
                 request -> { throw new RuntimeException("kaboom"); });
@@ -287,7 +281,6 @@ class HttpMCPServerTest {
 
     @Test
     void promptRuntimeExceptionReturnsHttp200WithJsonRpcInternalError() throws Exception {
-        // Mirrors the resource case — prompts also get INTERNAL_ERROR at HTTP 200.
         HttpMCPServer s = new HttpMCPServer(0, "/mcp");
         s.getHandler().addPrompt("boom", "throws", new PromptArgumentsBuilder(),
                 request -> { throw new RuntimeException("kaboom"); });
@@ -340,8 +333,7 @@ class HttpMCPServerTest {
 
     @Test
     void batchRequestReturnsInvalidRequestError() throws Exception {
-        // A JSON-RPC batch is a JSON array — valid JSON, but we don't support it.
-        // Must return -32600 (Invalid Request), not -32700 (Parse error).
+        // A batch is valid JSON, so it is -32600 (Invalid Request), not -32700 (Parse error).
         String batchBody = "[{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":1},"
                 + "{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"id\":2}]";
         HttpClient http = HttpClient.newHttpClient();

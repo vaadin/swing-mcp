@@ -24,9 +24,6 @@ import javax.swing.table.DefaultTableModel;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Headless tests for {@link SwingUtils#getItemCount}.
- */
 class SwingUtilsGetItemCountTest {
 
     @BeforeAll

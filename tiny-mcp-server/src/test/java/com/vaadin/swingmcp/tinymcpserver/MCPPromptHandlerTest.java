@@ -26,10 +26,6 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Tests for {@link MCPPromptHandler} — registration validation and
- * direct handler dispatch (without going through HTTP).
- */
 class MCPPromptHandlerTest {
 
     // ===== Registration validation =====

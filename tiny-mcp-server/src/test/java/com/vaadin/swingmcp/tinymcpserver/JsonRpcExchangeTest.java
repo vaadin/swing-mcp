@@ -28,11 +28,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Covers {@link JsonRpcExchange}'s response helpers directly, in particular
- * the dead-socket paths: every {@link IOException} out of the underlying
- * {@link com.sun.net.httpserver.HttpExchange} must surface as
- * {@link TransportIOException} so {@code HttpMCPServer} knows to abandon the
- * response rather than try to write another one.
+ * Chiefly the dead-socket paths: every {@link IOException} out of the
+ * underlying exchange must surface as {@link TransportIOException}, so
+ * {@code HttpMCPServer} abandons the response rather than writing another.
  */
 class JsonRpcExchangeTest {
 

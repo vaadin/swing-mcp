@@ -35,11 +35,8 @@ import java.util.regex.Pattern;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Exercises idle-session cleanup and the shared scheduled executor.
- * <p>
- * Cleanup is tested by invoking {@link HttpMCPServer#cleanupIdleSessions()}
- * directly after backdating sessions via
- * {@link MCPSession#setLastAccessNanos(long)} — no real time is waited.
+ * Idle-session cleanup and the shared scheduled executor. Sessions are
+ * backdated with {@link MCPSession#setLastAccessNanos(long)}; no real time is waited.
  */
 class SessionCleanupTest {
 
@@ -48,12 +45,7 @@ class SessionCleanupTest {
         return System.nanoTime() - TimeUnit.HOURS.toNanos(1);
     }
 
-    /**
-     * Bundles a recording {@code onSessionClosed} consumer with the
-     * {@link HttpMCPServer} that drives it. Replaces the old
-     * {@code TinyMCPServer} subclass that overrode {@code onSessionClosed()};
-     * the consumer is now passed to {@link MCPHandler} directly.
-     */
+    /** An {@link HttpMCPServer} whose {@code onSessionClosed} records ids, and throws {@code closeThrow} if set. */
     private static class RecordingServer {
         final List<String> closedSessionIds = new ArrayList<>();
         RuntimeException closeThrow;
@@ -83,11 +75,7 @@ class SessionCleanupTest {
         return new RecordingServer();
     }
 
-    /**
-     * Initializes a session against a started HTTP server and returns the
-     * server-side {@link MCPSession} so tests can manipulate its state
-     * (e.g. backdate {@code lastAccessNanos}).
-     */
+    /** Initializes a session over HTTP and returns its server-side {@link MCPSession}. */
     private static MCPSession initAndGetSession(RecordingServer server) throws Exception {
         HttpClient http = HttpClient.newHttpClient();
         HttpRequest req = HttpRequest.newBuilder(URI.create(server.getUrl()))
@@ -124,7 +112,6 @@ class SessionCleanupTest {
             assertEquals(List.of(session.getId()), server.closedSessionIds,
                     "onSessionClosed should fire exactly once with the evicted id");
 
-            // A later dispatch on the same (now-closed) session throws 404.
             JsonRpcExchange rpc = new JsonRpcExchange(new FakeHttpExchange(
                     "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"));
             MCPProtocol.JsonRpcRequest req = rpc.parsePost();
@@ -142,7 +129,6 @@ class SessionCleanupTest {
         server.start();
         try {
             MCPSession session = initAndGetSession(server);
-            // do not backdate — timestamp is fresh
 
             server.cleanupIdleSessions();
 
@@ -178,15 +164,11 @@ class SessionCleanupTest {
 
             assertTrue(locked.await(2, TimeUnit.SECONDS), "holder thread should acquire lock");
 
-            // Cleanup runs while lock is held — tryClose returns false, session stays.
             server.cleanupIdleSessions();
             assertEquals(1, server.getSessionCount(), "in-use session must not be evicted");
             assertTrue(server.closedSessionIds.isEmpty());
 
-            // Release the lock and re-backdate — runLocked() refreshes
-            // lastAccessNanos on entry, so the holder thread's acquisition
-            // counts as "activity". After it exits, backdate again so the
-            // next cleanup tick sees a stale timestamp.
+            // Backdate again: the holder's runLocked refreshed lastAccessNanos on entry.
             release.countDown();
             holder.join(2000);
             session.setLastAccessNanos(ancient());
@@ -208,7 +190,6 @@ class SessionCleanupTest {
             long before = ancient();
             session.setLastAccessNanos(before);
 
-            // Dispatch any session-scoped request directly via MCPSession.
             FakeHttpExchange exchange = new FakeHttpExchange(
                     "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}");
             JsonRpcExchange rpc = new JsonRpcExchange(exchange);
@@ -228,9 +209,8 @@ class SessionCleanupTest {
         server.closeThrow = new RuntimeException("boom");
         server.start();
         try {
-            // Two sessions, both stale — a throw on the first must not
-            // prevent the second from being removed and reported. The default
-            // MCPHandler accepts unlimited sessions.
+            // The default MCPHandler accepts unlimited sessions, so the second
+            // initialize does not supersede the first.
             MCPSession s1 = initAndGetSession(server);
             HttpClient http = HttpClient.newHttpClient();
             HttpRequest req = HttpRequest.newBuilder(URI.create(server.getUrl()))
@@ -281,9 +261,8 @@ class SessionCleanupTest {
     }
 
     /**
-     * The other half of D_stdio_never_evicts: eviction is HTTP's job, so moving the tick
-     * off {@code MCPHandler.start()} must not have dropped it. Paired with
-     * {@code StdioMCPServerTest.idleCleanupTickIsNotScheduledForStdio}.
+     * The other half of D_stdio_never_evicts: eviction is HTTP's job, so HTTP
+     * must schedule the tick {@code MCPHandler.start()} does not.
      */
     @Test
     void httpSchedulesTheIdleCleanupTick() {

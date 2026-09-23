@@ -42,26 +42,23 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Logger;
 
 /**
- * MCP handler providing Swing-specific tools for UI inspection and interaction.
- * <p>
- * Composes an {@link MCPHandler} (configured with the single-session predicate
- * {@code count == 0} and Swing-specific server info and instructions) with an
- * {@link HttpMCPServer} that exposes it over HTTP, bound to {@code 127.0.0.1}.
- * <p>
- * Intended lifecycle: create, start (or {@link #startAndAutoStop()}), then let
- * the JVM terminate. No need to support repeated start/stop cycles.
+ * The Swing MCP server: every Swing tool, served over loopback HTTP to one client at a time
+ * (D_single_session). Start it once and let the JVM's exit stop it:
+ *
+ * <pre>{@code
+ * new SwingMCP().startAndAutoStop();   // http://127.0.0.1:18088/mcp
+ * }</pre>
+ *
+ * {@code new SwingMCP(0, "/mcp")} takes an ephemeral port instead; read it back with
+ * {@link #getUrl()} once started. One start and one stop per instance.
  */
 public class SwingMCP {
 
     private static final Logger LOG = Logger.getLogger(SwingMCP.class.getName());
 
     /**
-     * Tombstone reason returned to a displaced MCP client when a fresh
-     * one connects (D_single_session). The Swing MCP server only serves one
-     * client at a time, so a new {@code initialize} always supersedes
-     * the previous session. The text below is what the displaced client
-     * sees verbatim in the 404 body of its next call, so it explains
-     * the situation and suggests user-actionable next steps.
+     * What an evicted client reads, verbatim, in the 404 body of its next call once a new
+     * client connects (D_single_session).
      */
     static final String EVICTION_REASON =
             "This Swing application's MCP server only accepts one client at a time, "
@@ -76,17 +73,14 @@ public class SwingMCP {
     private final MCPHandler handler;
     private final HttpMCPServer server;
     private volatile @Nullable Thread shutdownHook;
-    /** Serialises all tool calls end-to-end (EDT phase + PostVerification polling). */
+    /** Held for a whole tool call, dispatch included (D_tool_call_wide_lock). */
     private final Lock toolLock = new ReentrantLock();
 
     public SwingMCP(int port, String contextPath) {
         MCPProtocol.Implementation serverInfo = new MCPProtocol.Implementation();
         serverInfo.setName(SwingTools.SERVER_NAME);
         serverInfo.setVersion(SwingTools.SERVER_VERSION);
-        // Single-session policy with new-wins supersede (D_single_session): a new
-        // initialize evicts any existing session, so a stale client that
-        // exited without closing its session can be replaced immediately
-        // by a fresh one.
+        // D_single_session: a new initialize evicts the existing session.
         this.handler = new MCPHandler(serverInfo, SwingTools.INSTRUCTIONS)
                 .setAcceptNewSession(existing -> new SessionDecision.AcceptAndEvict(existing, EVICTION_REASON));
         this.server = new HttpMCPServer(port, contextPath, handler);
@@ -129,20 +123,9 @@ public class SwingMCP {
     }
 
     /**
-     * Registers a Swing tool with the underlying MCP handler. The tool is
-     * wrapped so that every invocation:
-     * <ol>
-     *   <li>Acquires the SwingMCP-level lock, serialising all tool calls</li>
-     *   <li>Resolves the per-session {@link SwingToolContext} from the current
-     *       {@link MCPSession} (lazily creating one on first use); this must
-     *       happen on the dispatch thread where {@link MCPSession#getCurrent()}
-     *       is bound, before marshalling onto the EDT</li>
-     *   <li>Marshals onto the EDT via {@link #runInEDT(Callable)}</li>
-     *   <li>Retrieves the current considered components</li>
-     *   <li>Delegates to {@link AbstractSwingTool#execute}</li>
-     * </ol>
-     *
-     * @param tool the Swing tool to register
+     * Registers {@code tool} behind the shared wrapper — session context, {@code toolLock}, the
+     * EDT hop, and the ref-map clear after a mutation that returns normally. The steps and
+     * their order are {@code design/architecture.md} § Flows, "A tool call".
      */
     protected void registerTool(AbstractSwingTool tool) {
         handler.addTool(tool.getName(), tool.getDescription(), tool.getInputSchema(), request -> {
@@ -164,11 +147,9 @@ public class SwingMCP {
     }
 
     /**
-     * Returns the {@link SwingToolContext} attached to the currently-dispatching
-     * {@link MCPSession}, creating and attaching a fresh one on first access.
-     * <p>
-     * Must be called on the HTTP dispatch thread (where the session
-     * {@code ThreadLocal} is bound), not on the EDT.
+     * Returns the {@link SwingToolContext} of the dispatching {@link MCPSession}, attaching a
+     * fresh one on first use. Call it on the dispatch thread, not the EDT:
+     * {@link MCPSession#getCurrent()} is a thread-local bound only there.
      */
     private static SwingToolContext currentSessionContext() {
         MCPSession session = MCPSession.getCurrent();
@@ -180,18 +161,14 @@ public class SwingMCP {
         return context;
     }
 
-    /**
-     * Starts the MCP server.
-     */
     public void start() {
         server.start();
         LOG.info("SwingMCP started");
     }
 
     /**
-     * Stops the MCP server. Primarily intended for tests; production Swing
-     * applications should use {@link #startAndAutoStop()} and let the JVM
-     * terminate the server on shutdown.
+     * Stops the server and removes the shutdown hook {@link #startAndAutoStop()} registered.
+     * For tests; an application lets the JVM's exit stop it.
      */
     public void stop() {
         server.stop();
@@ -206,11 +183,7 @@ public class SwingMCP {
         LOG.info("SwingMCP stopped");
     }
 
-    /**
-     * Starts the MCP server and registers a JVM shutdown hook to stop it
-     * automatically when the application terminates. This is the recommended
-     * method for Swing applications.
-     */
+    /** {@link #start()}, plus a JVM shutdown hook that stops the server. */
     public void startAndAutoStop() {
         start();
         shutdownHook = new Thread(() -> {
@@ -228,27 +201,16 @@ public class SwingMCP {
         return server.getContextPath();
     }
 
-    /** Timeout for EDT tasks; exceeding it triggers deadlock detection. */
+    /** How long {@link #runInEDT} waits before reporting a blocked EDT. */
     static final long EDT_TIMEOUT_MS = 10_000;
 
     /**
-     * Executes the given block on the Event Dispatch Thread, waits for it
-     * to complete, and returns its result. Tools must use this method for
-     * all Swing interactions.
-     * <p>
-     * If the EDT does not complete the block within {@link #EDT_TIMEOUT_MS}
-     * milliseconds, an {@link com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException}
-     * is thrown with the EDT's current stack trace. This detects the common
-     * deadlock where an action listener shows a modal dialog (entering a
-     * secondary event loop), preventing the EDT task from ever returning.
-     * <p>
-     * Tests override this to run the block directly on the calling thread,
-     * since headless mode does not have a functioning EDT.
+     * Runs {@code block} on the EDT and waits for its result — the one way any Swing state is
+     * touched.
      *
-     * @param <T>   the return type of the block
-     * @param block the code to execute on the EDT
-     * @return the value returned by the block
-     * @throws Exception if the block throws an exception
+     * @throws com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException carrying the EDT's
+     *     stack trace, if the block has not finished within {@link #EDT_TIMEOUT_MS}
+     * @throws Exception whatever {@code block} throws
      */
     protected <T> T runInEDT(Callable<T> block) throws Exception {
         AtomicReference<T> result = new AtomicReference<>();
@@ -290,17 +252,11 @@ public class SwingMCP {
     }
 
     /**
-     * Returns the list of top-level components to consider for snapshots and
-     * screenshots. By default this returns the visible Swing windows, respecting
-     * modal window rules (see project-context.md &sect;5).
-     * <p>
-     * Tests override this method to provide their own component hierarchies
-     * (e.g. JPanels) since {@link Window} cannot be instantiated in headless mode.
-     *
-     * @return the components to inspect, never null
+     * Returns the roots every tool sees: the topmost visible modal dialog alone, or else every
+     * visible window except a redundant popup container (D_interactable_windows_only). A
+     * headless test overrides it; see {@code design/architecture.md} § Testing.
      */
     protected List<Component> getConsideredComponents() {
-        // If a modal dialog is showing, only consider that one
         Dialog modal = SwingUtils.getTopmostModalDialog();
         if (modal != null) {
             return Collections.singletonList(modal);

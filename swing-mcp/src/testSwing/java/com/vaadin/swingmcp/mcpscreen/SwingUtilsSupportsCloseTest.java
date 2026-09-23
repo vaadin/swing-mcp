@@ -35,11 +35,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Screen-mode tests for {@link SwingUtils#supportsClose}.
- * <p>
- * Most of the logic in {@code supportsClose} hinges on {@link Window#isShowing()},
- * which requires a real display, so these tests live alongside the other
- * screen-mode {@code SwingUtils} tests.
+ * {@link SwingUtils#supportsClose} hinges on {@link Window#isShowing()}, which needs a
+ * real display.
  */
 class SwingUtilsSupportsCloseTest extends AbstractScreenTest {
 
@@ -64,15 +61,9 @@ class SwingUtilsSupportsCloseTest extends AbstractScreenTest {
         });
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // Headline case — disabled windows can still be closed
-    // ══════════════════════════════════════════════════════════════════════════
-
     /**
-     * A disabled top-level window must still advertise {@code close}: the OS
-     * window decorations (the [×] button) remain functional regardless of
-     * {@code setEnabled(false)}, so the AI client must be able to close the
-     * window the same way a human user would.
+     * The OS [×] button stays live under {@code setEnabled(false)}, so a user can still
+     * close a disabled window.
      */
     @Test
     void disabledJFrame_stillSupportsClose() throws Exception {
@@ -124,13 +115,11 @@ class SwingUtilsSupportsCloseTest extends AbstractScreenTest {
 
     @Test
     void nonWindow_doesNotSupportClose() {
-        // Plain components are not windows; close has no meaning for them.
         assertFalse(SwingUtils.supportsClose(new JButton("OK")));
     }
 
     @Test
     void hiddenJFrame_doesNotSupportClose() {
-        // Never made visible — isShowing() is false.
         JFrame frame = new JFrame("Hidden");
         createdWindows.add(frame);
 
@@ -237,7 +226,7 @@ class SwingUtilsSupportsCloseTest extends AbstractScreenTest {
 
     private JInternalFrame.JDesktopIcon showIconifiedFrame(boolean closable, int defaultCloseOp) throws Exception {
         JInternalFrame iframe = showInternalFrame(closable, defaultCloseOp);
-        // Need iconifiable=true — recreate with full constructor
+        // showInternalFrame's frame is not iconifiable; swap in one that is
         JFrame host = (JFrame) SwingUtilities.getWindowAncestor(iframe);
         JDesktopPane desktop = (JDesktopPane) host.getContentPane();
         desktop.remove(iframe);

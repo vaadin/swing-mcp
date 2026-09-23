@@ -27,11 +27,8 @@ import javax.accessibility.AccessibleAction;
 import javax.swing.SwingUtilities;
 
 /**
- * MCP tool {@code swing_toggle_expand}: expands or collapses a JTree node by ref.
- *
- * <p>Looks up the node by ref, verifies it is enabled and supports the toggle-expand
- * action, then invokes the matching {@link AccessibleAction}.</p>
- *
+ * MCP tool {@code swing_toggle_expand}: expands or collapses a {@code JTree} node by ref, through
+ * its {@link AccessibleAction#TOGGLE_EXPAND} action. Refuses a disabled node.
  */
 public class SwingToggleExpandTool extends AbstractSwingTool {
 
@@ -41,19 +38,14 @@ public class SwingToggleExpandTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // ref is required integer
         int ref = params.getInt("ref");
-
-        // ref lookup
         Accessible accessible = context.getAccessibleByRef(ref);
 
-        // effectively enabled check (before the support check: disabled nodes may strip their actions)
         if (!SwingUtils.isEffectivelyEnabled(accessible)) {
             throw new MCPErrorResponseException(
                     "Component is disabled and cannot be interacted with");
         }
 
-        // toggle-expand support check
         int actionIndex = SwingUtils.supportsToggleExpand(accessible);
         if (actionIndex < 0) {
             throw new MCPErrorResponseException(
@@ -61,10 +53,8 @@ public class SwingToggleExpandTool extends AbstractSwingTool {
                             + " does not support swing_toggle_expand. Call swing_snapshot or swing_get_cells to verify the list of actions");
         }
 
-        // fire the action asynchronously (fire-and-forget)
         AccessibleAction aa = accessible.getAccessibleContext().getAccessibleAction();
         SwingUtilities.invokeLater(() -> aa.doAccessibleAction(actionIndex));
-        // D_dispatched_echo success echo
         return echo(ref);
     }
 

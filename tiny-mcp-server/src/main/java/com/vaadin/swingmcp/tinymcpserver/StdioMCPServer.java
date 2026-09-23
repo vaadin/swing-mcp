@@ -37,110 +37,79 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * MCP server transport speaking newline-delimited JSON-RPC over an
- * {@link InputStream}/{@link OutputStream} pair (typically
- * {@code System.in}/{@code System.out}). Sibling of {@link HttpMCPServer}:
- * both drive an {@link MCPHandler}, but only one transport is active per
- * handler instance.
- * <p>
- * Use case: a standalone process that an MCP client (e.g. Claude Code)
- * spawns as a subprocess. There is no port to coordinate, no other code in
- * the JVM writing to stdout, and exactly one session for the lifetime of
- * the process. See D_stdio_transport.
- * <p>
- * The session lives as long as the process and is never evicted: stdio
- * schedules no idle-cleanup tick, because the transport carries no session
- * id for a client to notice going stale, so a client would never
- * re-initialize and the process would be wedged for good (D_stdio_never_evicts).
- * <p>
- * Lifecycle:
- * <ol>
- *   <li>Build and configure an {@link MCPHandler} (tools/resources/prompts)</li>
- *   <li>{@code new StdioMCPServer(handler)}</li>
- *   <li>{@code runStdio(System.in, System.out)} — blocks until EOF on input</li>
- * </ol>
- * No repeated runs.
+ * The stdio transport: serves a configured {@link MCPHandler} as
+ * newline-delimited JSON-RPC, for a process an MCP client spawns as its
+ * subprocess (D_stdio_transport).
+ *
+ * <pre>{@code
+ * new StdioMCPServer(handler).runStdio(System.in, System.out);  // blocks until stdin EOF
+ * }</pre>
+ *
+ * <p>One run per instance. The process holds exactly one session, which is
+ * never idle-evicted (D_stdio_never_evicts).
  */
 public class StdioMCPServer {
 
     private static final Logger LOG = Logger.getLogger(StdioMCPServer.class.getName());
 
     /**
-     * Used for serializing JSON-RPC error envelopes. JSON-RPC 2.0 requires
-     * the {@code id} field to be present on every response, even when the
-     * server could not parse the id from the request (in which case it is
-     * sent as {@code null}). Default GSON drops nulls, so we keep a
-     * dedicated configured instance for error rendering.
+     * For error envelopes: JSON-RPC 2.0 requires {@code "id": null} when the
+     * request's id could not be parsed, and default GSON drops nulls.
      */
     private static final Gson GSON_WITH_NULLS = new GsonBuilder().serializeNulls().create();
 
     private final MCPHandler handler;
 
     /**
-     * The current (and only) active session, populated lazily when the
-     * client sends {@code initialize}. A second {@code initialize} replaces
-     * the session — the old one is removed from the handler's session map.
+     * Set by {@code initialize}; a second {@code initialize} replaces it and
+     * removes the old one from the handler's session map.
      */
     private MCPSession currentSession;
 
-    /**
-     * The protocol writer. Wraps the {@code out} stream passed to
-     * {@link #runStdio}. When {@code out == System.out}, this writer
-     * captures the original stdout reference; the global {@code System.out}
-     * is then redirected to {@code System.err} so stray prints from tools
-     * or libraries cannot corrupt the wire framing. See D_stdio_transport.
-     */
+    /** The only writer to {@code out}; see {@link #runStdio} for the stdout capture. */
     private BufferedWriter writer;
 
-    /** Convenience: builds a fresh empty handler. */
+    /** An empty handler, to be configured through {@link #getHandler()}. */
     public StdioMCPServer() {
         this(new MCPHandler());
     }
 
     /**
-     * @param handler the configured {@link MCPHandler}; not null. Tools and
-     *                other registrations should be added before
-     *                {@link #runStdio} is called. Stdio is single-session by
-     *                definition (one process = one session), so the
-     *                handler's {@code acceptNewSession} predicate is typically
-     *                left at default (always-accept).
+     * @param handler configured before {@link #runStdio}; its admission policy
+     *                always sees an empty session list, because a
+     *                re-{@code initialize} drops the old session first
      */
     public StdioMCPServer(MCPHandler handler) {
         this.handler = Objects.requireNonNull(handler, "handler");
     }
 
-    /**
-     * Returns the {@link MCPHandler} this server delegates protocol dispatch to.
-     */
     public MCPHandler getHandler() {
         return handler;
     }
 
     /**
-     * Reads newline-delimited JSON-RPC messages from {@code in}, dispatches
-     * each one through the embedded {@link MCPHandler}, and writes the
-     * response (if any) to {@code out}. Blocks the calling thread until
-     * {@code in} reaches EOF, then returns.
+     * Serves one JSON-RPC message per line of {@code in}, answering on
+     * {@code out}, until {@code in} reaches EOF; then closes every session,
+     * running {@code onSessionClosed}, and stops the handler.
      * <p>
-     * If {@code out} is the JVM's {@code System.out}, the writer captures
-     * the original reference and global {@code System.out} is redirected to
-     * {@code System.err} so stray {@code System.out.println} calls from
-     * tools or third-party libraries cannot corrupt the framing. See D_stdio_transport.
+     * When {@code out} is {@code System.out}, {@code System.out} is re-pointed
+     * at {@code System.err} for good, so a stray {@code println} from a tool
+     * or library cannot corrupt the framing (D_stdio_transport).
      * <p>
-     * Notifications (JSON-RPC requests with no {@code id}) produce no
-     * response. Malformed input, unknown methods, and other protocol errors
-     * are reported as JSON-RPC error envelopes on {@code out}; transport
-     * I/O failures abandon the response and exit the loop.
+     * Protocol errors answer with a JSON-RPC error envelope and the loop goes
+     * on; notifications get no answer. A read failure ends the loop as EOF
+     * does.
+     *
+     * @throws IllegalArgumentException if {@code in} or {@code out} is null
+     * @throws TransportIOException     if writing to {@code out} fails
      */
     public void runStdio(InputStream in, OutputStream out) {
         if (in == null || out == null) {
             throw new IllegalArgumentException("in and out must not be null");
         }
         if (out == System.out) {
-            // Capture the real stdout for the protocol writer, then divert
-            // System.out so accidental println calls hit stderr instead of
-            // the wire. Per D_stdio_transport, no auto-restore on shutdown — stdio-mode
-            // processes exit when stdin closes.
+            // The writer below keeps the real stdout. Never restored: the
+            // process exits when stdin closes (D_stdio_transport).
             System.setOut(new PrintStream(System.err, true, StandardCharsets.UTF_8));
         }
         this.writer = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
@@ -158,9 +127,8 @@ public class StdioMCPServer {
         } catch (IOException e) {
             LOG.log(Level.WARNING, "Stdio input I/O failed; exiting read loop", e);
         } finally {
-            // Cascade onSessionClosed so per-session resources are released
-            // before the executor goes away. handler.stop() alone only shuts
-            // the executor down.
+            // handler.stop() alone only shuts the executor down; release the
+            // per-session resources before it goes.
             handler.closeAllSessions();
             handler.stop();
             currentSession = null;
@@ -188,7 +156,6 @@ public class StdioMCPServer {
                 throw new MCPServerException(MCPServerException.INVALID_REQUEST, "Invalid Request", e);
             }
 
-            // Notifications (no id) produce no response per JSON-RPC 2.0.
             if (request.getId() == null) {
                 LOG.fine("Received notification: " + request.getMethod());
                 return;
@@ -201,8 +168,8 @@ public class StdioMCPServer {
             LOG.log(Level.FINE, "Request produced MCP error (code=" + e.getCode() + ")", e);
             writeError(requestId, e.getCode(), e.getMessage());
         } catch (TransportIOException e) {
-            // Already past the response — propagate up to the read loop's
-            // IOException catch via re-wrap so we exit cleanly.
+            // Ahead of the RuntimeException catch: the wire is dead, so leave
+            // runStdio rather than try to write an error frame.
             LOG.log(Level.WARNING, "Stdio output I/O failed", e);
             throw e;
         } catch (RuntimeException e) {
@@ -214,9 +181,8 @@ public class StdioMCPServer {
     private Object dispatch(MCPProtocol.JsonRpcRequest request) {
         String method = request.getMethod();
         if ("initialize".equals(method)) {
-            // Drop the previous session, if any — stdio is single-session,
-            // and a re-initialize replaces the old session rather than
-            // accumulating orphans in the handler's session map.
+            // Replace, not accumulate: a re-initialize would otherwise
+            // orphan the old session in the handler's map.
             if (currentSession != null) {
                 handler.removeSession(currentSession.getId());
                 currentSession = null;
@@ -233,11 +199,9 @@ public class StdioMCPServer {
                     "Server not initialized. Send 'initialize' first.");
         }
         if (currentSession.isClosed()) {
-            // Unreachable but for a shutdown-hook race at JVM teardown. Not
-            // an assert (-da disables it) and not an Error (escapes the
-            // RuntimeException catch below, killing the read loop): both
-            // would let the session's 404 tombstone reach a client that
-            // cannot act on it.
+            // Unreachable but for a shutdown-hook race at JVM teardown. Why
+            // an IllegalStateException, not an assert or an Error:
+            // D_stdio_never_evicts.
             throw new IllegalStateException("Stdio session " + currentSession.getId()
                     + " is closed but the read loop is still dispatching. A stdio session must"
                     + " live as long as its process; see D_stdio_never_evicts.");

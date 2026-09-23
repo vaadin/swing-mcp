@@ -219,7 +219,7 @@ class ParametersTest {
 
     @Test
     void getIntArrayReturnsValuesFromDoubles() {
-        // Gson deserializes JSON [1, 2, 3] as List<Double>
+        // A client that writes whole numbers as 1.0 delivers Doubles.
         var params = new Parameters(Map.of("indices", List.of(1.0, 2.0, 3.0)));
         assertEquals(List.of(1, 2, 3), params.getIntArray("indices"));
     }

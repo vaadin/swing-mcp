@@ -29,40 +29,24 @@ import java.util.Objects;
 import java.util.concurrent.Executor;
 
 /**
- * Contextual information passed to {@link AbstractSwingTool#execute} on every
- * invocation. Collects the data that the server resolves <em>before</em> the
- * tool runs (considered components, and in the future potentially more).
- * <p>
- * <b>Thread safety:</b> this class is not thread-safe. All mutation and
- * inspection must be serialised by the caller. In production
- * ({@code SwingMCP.registerTool}) every access happens on the Swing event
- * dispatch thread (inside {@code runInEDT}), which satisfies this
- * requirement. Tests may access the context off the EDT provided they use
- * a synchronous hand-off such as {@link javax.swing.SwingUtilities#invokeAndWait}
- * to establish happens-before between the test thread and the EDT; no
- * concurrent access from multiple threads is ever permitted.
+ * One MCP session's state across tool calls: the ref map that {@code swing_snapshot} and
+ * {@code swing_get_cells} fill and every other tool resolves refs against, plus the top-level
+ * components the current call may see, set before each call.
  */
 public class SwingToolContext {
 
     private List<Component> consideredComponents = Collections.emptyList();
     /**
-     * The {@link AbstractSwingTool#TOOL_SWING_SNAPSHOT} populates this map by assigning IDs to every accessible
-     * that the client MCP can interact with. Stored as {@link Accessible} rather than {@link Component} because
-     * virtual accessibility children (e.g. JTable cells, JTree nodes) are {@link Accessible} but not {@link Component}.
-     * The map is cleared after every successful mutation and needs to be re-populated by another call to SwingSnapshotTool.
-     * A pre-dispatch validation error does not clear the map.
+     * {@link Accessible} rather than {@link Component}: a virtual child such as a {@code JTree}
+     * node can have a ref but is no {@code Component}.
      */
     private final Map<Integer, Accessible> componentRefs = new HashMap<>();
-    /**
-     * Executor for background work spawned by tools (e.g. Robot-based drag in
-     * {@link SwingDragTool}, which cannot run on the EDT). Supplied at
-     * construction; production passes
-     * {@link com.vaadin.swingmcp.tinymcpserver.MCPHandler#getExecutor()}.
-     * Tests that do not exercise background dispatch may pass
-     * {@code Runnable::run}.
-     */
     private final Executor executor;
 
+    /**
+     * @param executor runs tool work that must stay off the EDT, such as a {@link java.awt.Robot}
+     *                 drag; {@code Runnable::run} will do for a test that never dispatches one
+     */
     public SwingToolContext(Executor executor) {
         this.executor = Objects.requireNonNull(executor, "executor");
     }
@@ -73,8 +57,8 @@ public class SwingToolContext {
     }
 
     /**
-     * @return the top-level components to inspect/interact with, never null.
-     * The components are independent: no component in this list is nested in another component in this list.
+     * @return the top-level components this call may inspect or act on; none is nested inside
+     *         another
      */
     public List<Component> getConsideredComponents() {
         return consideredComponents;
@@ -84,9 +68,6 @@ public class SwingToolContext {
         componentRefs.clear();
     }
 
-    /**
-     * Returns the executor supplied at construction. See {@link #executor}.
-     */
     public Executor getExecutor() {
         return executor;
     }
@@ -95,6 +76,10 @@ public class SwingToolContext {
         componentRefs.put(ref, accessible);
     }
 
+    /**
+     * @throws MCPServerException {@code INVALID_PARAMS} for an unknown ref, telling the model
+     *         whether the map is stale (empty after a mutation) or which refs are valid
+     */
     public Accessible getAccessibleByRef(int ref) {
         var result = componentRefs.get(ref);
         if (result == null) {
@@ -111,16 +96,10 @@ public class SwingToolContext {
     }
 
     /**
-     * Returns the ref assigned to the given component. For test use only.
-     * <p>
-     * Casts the component to {@link Accessible} and performs a reverse lookup
-     * in the ref map. Throws {@link IllegalStateException} if the component
-     * has no ref assigned (e.g. snapshot was not called, or the component has
-     * no actions).
+     * The ref assigned to {@code component} — a reverse lookup, for tests only.
      *
-     * @param component the component to look up
-     * @return the ref number (always positive)
-     * @throws IllegalStateException if no ref is assigned to this component
+     * @param component must be {@link Accessible}
+     * @throws IllegalStateException if it has no ref: no snapshot yet, or it has no actions
      */
     public int getRefOf(Component component) {
         Accessible accessible = (Accessible) component;

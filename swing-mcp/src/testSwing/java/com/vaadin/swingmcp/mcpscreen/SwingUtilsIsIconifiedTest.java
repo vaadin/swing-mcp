@@ -39,11 +39,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Screen-mode tests for {@link SwingUtils#isIconified}.
- * <p>
- * Frame and JInternalFrame iconification requires a real display
- * (the extended-state bits and {@code setIcon()} need a native peer),
- * so all tests live in the screen-mode source set.
+ * {@link SwingUtils#isIconified}: the extended-state bits and {@code setIcon()} need a
+ * native peer, hence a real display.
  */
 class SwingUtilsIsIconifiedTest extends AbstractScreenTest {
 
@@ -90,7 +87,6 @@ class SwingUtilsIsIconifiedTest extends AbstractScreenTest {
         SwingUtilities.invokeAndWait(() ->
                 frame.setExtendedState(Frame.MAXIMIZED_BOTH | Frame.ICONIFIED));
 
-        // Some WMs (e.g. Xvfb) don't support MAXIMIZED_BOTH | ICONIFIED combined state
         int state = frame.getExtendedState();
         Assumptions.assumeTrue((state & Frame.ICONIFIED) != 0 && (state & Frame.MAXIMIZED_BOTH) != 0,
                 "WM does not support MAXIMIZED_BOTH | ICONIFIED (state=" + state + "), skipping");
@@ -147,7 +143,7 @@ class SwingUtilsIsIconifiedTest extends AbstractScreenTest {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // JInternalFrame — positive case
+    // JInternalFrame
     // ══════════════════════════════════════════════════════════════════════════
 
     private JInternalFrame showInternalFrame(boolean iconifiable) throws Exception {
@@ -168,10 +164,9 @@ class SwingUtilsIsIconifiedTest extends AbstractScreenTest {
     }
 
     /**
-     * An iconified JInternalFrame is removed from the component tree and
-     * replaced by a JDesktopIcon (D_desktop_icon_as_itself), so {@code isShowing()} returns
-     * {@code false} — and a hidden frame is not considered iconified.
-     * The JDesktopIcon is the showing iconified representation.
+     * An iconified JInternalFrame leaves the tree for its JDesktopIcon
+     * (D_desktop_icon_as_itself), so it is not showing, and a frame that is not showing
+     * is not iconified.
      */
     @Test
     void iconifiedJInternalFrame_isNotIconifiedBecauseHidden() throws Exception {
@@ -185,10 +180,6 @@ class SwingUtilsIsIconifiedTest extends AbstractScreenTest {
         assertFalse(iframe.isShowing(), "precondition: iconified JInternalFrame is not showing");
         assertFalse(SwingUtils.isIconified(iframe));
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // JInternalFrame — negative case
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void normalJInternalFrame_isNotIconified() throws Exception {

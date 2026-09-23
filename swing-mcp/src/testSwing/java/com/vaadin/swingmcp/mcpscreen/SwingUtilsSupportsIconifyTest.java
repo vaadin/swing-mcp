@@ -36,11 +36,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Screen-mode tests for {@link SwingUtils#supportsIconify}.
- * <p>
- * Most of the logic in {@code supportsIconify} hinges on {@link Window#isShowing()},
- * which requires a real display, so these tests live alongside the other
- * screen-mode {@code SwingUtils} tests.
+ * {@link SwingUtils#supportsIconify} hinges on {@link Window#isShowing()}, which needs a
+ * real display.
  */
 class SwingUtilsSupportsIconifyTest extends AbstractScreenTest {
 
@@ -79,10 +76,8 @@ class SwingUtilsSupportsIconifyTest extends AbstractScreenTest {
     }
 
     /**
-     * A disabled JFrame must still advertise {@code iconify}: the OS
-     * window decorations (the minimize button) remain functional regardless of
-     * {@code setEnabled(false)}, so the AI client must be able to iconify the
-     * window the same way a human user would.
+     * The OS minimize button stays live under {@code setEnabled(false)}, so a user can
+     * still iconify a disabled frame.
      */
     @Test
     void disabledJFrame_stillSupportsIconify() throws Exception {
@@ -148,10 +143,6 @@ class SwingUtilsSupportsIconifyTest extends AbstractScreenTest {
     // JInternalFrame — positive cases
     // ══════════════════════════════════════════════════════════════════════════
 
-    /**
-     * Creates a JInternalFrame inside a JDesktopPane hosted by a JFrame.
-     * The 4th constructor arg controls {@code iconifiable}.
-     */
     private JInternalFrame showInternalFrame(boolean iconifiable) throws Exception {
         JFrame host = new JFrame("Host");
         host.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);

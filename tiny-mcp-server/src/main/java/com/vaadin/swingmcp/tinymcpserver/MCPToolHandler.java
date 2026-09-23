@@ -28,13 +28,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Owns the tool registry and handles {@code tools/list} and {@code tools/call}
- * JSON-RPC methods. Extracted from {@link MCPHandler} so that all
- * tool-related functionality lives in one place.
- * <p>
- * The {@code handle*} methods are transport-agnostic: they consume parsed
- * JSON-RPC requests and return the corresponding result POJO. The caller
- * (HTTP or stdio transport) writes the response.
+ * The tool registry behind {@link MCPHandler}, and its {@code tools/list} and
+ * {@code tools/call} dispatch.
  */
 class MCPToolHandler {
 
@@ -58,14 +53,6 @@ class MCPToolHandler {
     private final Map<String, RegisteredTool> tools = new LinkedHashMap<>();
 
     /**
-     * Registers a tool. Must be called before the server is started.
-     * Field-level validation (null, blank, name pattern) is performed by
-     * {@link ToolDescriptor}'s constructor; this method only enforces
-     * registration-level invariants.
-     *
-     * @param descriptor the tool descriptor; not null
-     * @param function   the handler to invoke when the tool is called; not null
-     * @throws NullPointerException  if {@code descriptor} or {@code function} is null
      * @throws IllegalStateException if a tool with the same name is already registered
      */
     void addTool(ToolDescriptor descriptor, ToolFunction function) {
@@ -88,15 +75,11 @@ class MCPToolHandler {
     }
 
     /**
-     * Dispatches {@code tools/call}. Tool-application errors
-     * ({@link MCPErrorResponseException} or any non-{@link MCPServerException}
-     * thrown by the tool function) are returned as {@code CallToolResult}
-     * with {@code isError=true} (D_three_error_layers layer 3). Protocol errors throw
-     * {@link MCPServerException}.
+     * Dispatches {@code tools/call}. Any exception but {@link MCPServerException}
+     * becomes an {@code isError: true} result (D_three_error_layers); an unknown
+     * tool is {@code METHOD_NOT_FOUND}.
      *
-     * @param request          the parsed JSON-RPC request envelope
-     * @param transportHeaders headers from the underlying transport (HTTP
-     *                         request headers; empty for stdio)
+     * @param transportHeaders empty over stdio
      */
     MCPProtocol.CallToolResult handleToolsCall(MCPProtocol.JsonRpcRequest request,
             Map<String, String> transportHeaders) {

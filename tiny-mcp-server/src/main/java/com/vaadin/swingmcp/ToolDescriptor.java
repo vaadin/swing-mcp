@@ -22,32 +22,24 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
- * In-memory contract type for an MCP tool: name, description, and input
- * schema. Distinct from the wire-shape POJO {@link MCPProtocol.Tool} —
- * that one is shaped for GSON serialization, this one is the
- * canonical descriptor passed around by callers (manifest declarations,
- * in-process registration).
+ * An MCP tool's contract — name, description, input schema — as callers
+ * declare and register it; {@link MCPProtocol.Tool} is the wire-shape POJO.
  *
  * <pre>{@code
  * new ToolDescriptor(
  *         "swing_click",
  *         "Click a UI component by ref. Requires a ref obtained from swing_snapshot or swing_get_cells.",
  *         new InputSchemaBuilder()
- *                 .requiredInteger("ref", "The element reference number from swing_snapshot")
+ *                 .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
  *                 .build());
  * }</pre>
  *
- * <p>Equality is structural: two descriptors compare equal iff their
- * names, descriptions, and input schemas are equal. Schema equality
- * follows {@link MCPProtocol.InputSchema#equals(Object)} (D_structural_schema_equality):
- * deep, set-semantics on {@code required}, order-insensitive on
- * {@code properties}, order-sensitive on {@code enum}. A manifest-coherence
- * test compares descriptors with it, so a false negative hides real drift
- * between a manifest and what the server registered.
+ * <p>Equality is structural over all three fields; schema equality is
+ * {@link MCPProtocol.InputSchema#equals(Object)} — set semantics on
+ * {@code required}, order-insensitive on {@code properties}, order-sensitive
+ * on {@code enum}. See D_structural_schema_equality.
  *
- * <p>See D_settable_listeners for the rationale of the type living in this parent
- * package alongside generic protocol types rather than under
- * {@code tinymcpserver} (which is the transport implementation).
+ * <p>Why it lives in this parent package: see D_vendored_namespace.
  *
  * <p>Immutable.
  */
@@ -61,8 +53,8 @@ public final class ToolDescriptor {
 
     /**
      * @param name        tool name; must match {@code [a-zA-Z_][a-zA-Z0-9_]*}
-     * @param description human-readable description; not blank
-     * @param inputSchema input parameter schema; usually built via
+     * @param description what the model reads; not blank
+     * @param inputSchema usually built by
      *                    {@link com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder}
      * @throws IllegalArgumentException if {@code name} is blank or malformed,
      *                                  or {@code description} is blank

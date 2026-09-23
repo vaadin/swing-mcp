@@ -34,17 +34,18 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * MCP tool {@code swing_get_selection}: reads the current selection of a UI
- * component by ref.
+ * MCP tool {@code swing_get_selection}: a component's selection by ref, as JSON:
  *
- * <p>Returns JSON with {@code selectedCount} and {@code selected} items
- * (0-based index + name). For JTable, index is the row index and name is a
- * pipe-separated summary of cell values.</p>
+ * <pre>{@code
+ * {"selectedCount":1,"selected":[{"index":1,"name":"Beta"}]}
+ * }</pre>
  *
+ * Past {@code MAX_SELECTION_ITEMS} it adds {@code "truncated":true}, and {@code selectedCount}
+ * counts only the items returned. A {@code JTable} selection is reported by row, named by a
+ * pipe-separated summary of its cells.
  */
 public class SwingGetSelectionTool extends AbstractSwingTool {
 
-    /** Maximum number of selected items returned before truncation. */
     static final int MAX_SELECTION_ITEMS = 100;
 
     public SwingGetSelectionTool() {
@@ -53,29 +54,22 @@ public class SwingGetSelectionTool extends AbstractSwingTool {
 
     @Override
     public MCPProtocol.Content execute(Parameters params, SwingToolContext context) throws Exception {
-        // ref is required integer
         int ref = params.getInt("ref");
-
-        // ref lookup (fail fast)
         Accessible accessible = context.getAccessibleByRef(ref);
-
-        // check selection support with JTable-specific error message
         requireSelectable(accessible, "swing_get_selection");
 
-        // all access on EDT (guaranteed by SwingMCP.registerTool)
         AccessibleContext ac = accessible.getAccessibleContext();
         AccessibleSelection as = ac.getAccessibleSelection();
 
         List<Map<String, Object>> selected;
         boolean truncated;
 
-        // Step 4: JTable row aggregation path
         if (accessible instanceof JTable) {
             AccessibleTable at = ac.getAccessibleTable();
             int cols = at.getAccessibleColumnCount();
             int selCount = as.getAccessibleSelectionCount();
 
-            // Collect unique row indices (insertion-ordered)
+            // A table selects cells, row-major (R_selection_index_spaces); fold them into rows.
             Set<Integer> rows = new LinkedHashSet<>();
             for (int i = 0; i < selCount; i++) {
                 Accessible cell = as.getAccessibleSelection(i);
@@ -97,7 +91,6 @@ public class SwingGetSelectionTool extends AbstractSwingTool {
                 count++;
             }
         } else {
-            // Step 5: generic path
             int selCount = as.getAccessibleSelectionCount();
             truncated = selCount > MAX_SELECTION_ITEMS;
             int limit = Math.min(selCount, MAX_SELECTION_ITEMS);
@@ -115,7 +108,6 @@ public class SwingGetSelectionTool extends AbstractSwingTool {
             }
         }
 
-        // Step 6: build JSON
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("selectedCount", selected.size());
         result.put("selected", selected);
@@ -128,7 +120,6 @@ public class SwingGetSelectionTool extends AbstractSwingTool {
 
     @Override
     public boolean isMutation() {
-        // read-only tool, ref map is NOT cleared
         return false;
     }
 }

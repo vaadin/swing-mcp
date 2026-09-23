@@ -28,107 +28,84 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Minimal MCP client surface, speaking the MCP HTTP transport from the
- * caller side.
+ * The caller side of the MCP HTTP transport: tools only (see D_embedded_client).
  *
- * <p>The surface is intentionally small: {@link #initialize()},
- * {@link #listTools()}, {@link #callTool(ToolRequest)}, and
- * {@link #close()}. Resources and prompts are not in the initial
- * surface; add when a use case asks for them. See D_embedded_client.
+ * <pre>{@code
+ * try (MCPClient client = new TinyMCPClient(URI.create(server.getUrl()))) {
+ *     client.initialize();
+ *     MCPProtocol.CallToolResult result = client.callTool("swing_set_value", Map.of("ref", 1, "value", 75));
+ * }
+ * }</pre>
  *
  * <h2>Errors</h2>
  * <ul>
- *   <li>{@link MCPClientException} — JSON-RPC protocol error from the
- *       server, or HTTP 4xx/5xx (other than 404) rendered as a synthetic
- *       JSON-RPC error.</li>
- *   <li>{@link MCPSessionLostException} (extends {@code MCPClientException})
- *       — HTTP 404 from a non-{@code initialize} call.</li>
- *   <li>{@link IOException} — transport failure (connection refused,
- *       timeout, broken pipe). The client itself does not retry transport
- *       errors; the caller decides.</li>
+ *   <li>{@link MCPClientException} — a JSON-RPC error from the server, or an
+ *       HTTP 4xx/5xx other than 404 rendered as a synthetic one.</li>
+ *   <li>{@link MCPSessionLostException}, its subclass — HTTP 404 from a
+ *       non-{@code initialize} call; recover by calling {@link #initialize()}
+ *       again (D_no_auto_retry).</li>
+ *   <li>{@link IOException} — transport failure; never retried.</li>
  * </ul>
  *
- * <p>{@link MCPProtocol.CallToolResult#getIsError()} = {@code true} is
- * <em>not</em> an exception — it is returned to the caller as a normal
- * result, mirroring the server's three-layer error model (D_three_error_layers).
+ * <p>A tool's own failure, {@link MCPProtocol.CallToolResult#getIsError()},
+ * is a normal result, not an exception (D_three_error_layers).
  */
 public interface MCPClient extends Closeable {
 
     /**
-     * Performs the JSON-RPC handshake, stores the {@code Mcp-Session-Id}
-     * returned by the server, and sends the {@code notifications/initialized}
-     * follow-up. Calling again starts a fresh session against the same URL.
+     * Performs the {@code initialize} handshake and sends
+     * {@code notifications/initialized}. Calling again starts a fresh session
+     * against the same URL.
      *
-     * @return the parsed {@code InitializeResult} from the server
-     * @throws MCPClientException if the server returns a JSON-RPC protocol
-     *                            error or a non-2xx HTTP status
-     * @throws IOException        if the underlying HTTP transport fails
+     * @throws MCPClientException if the server rejects the handshake
+     * @throws IOException        if the transport fails
      */
     MCPProtocol.InitializeResult initialize() throws IOException;
 
     /**
-     * Calls {@code tools/list} and returns the registered tools.
+     * Calls {@code tools/list}.
      *
-     * @return the list of tools advertised by the server; never {@code null}
-     * @throws MCPSessionLostException if the server returned HTTP 404
-     *                                 (session lost — re-initialize required)
-     * @throws MCPClientException      if the server returned any other
-     *                                 protocol error
-     * @throws IOException             if the underlying HTTP transport fails
+     * @throws MCPSessionLostException if the session is gone
+     * @throws MCPClientException      on any other protocol error
+     * @throws IOException             if the transport fails
      */
     List<MCPProtocol.Tool> listTools() throws IOException;
 
     /**
-     * Calls {@code tools/call}, forwarding the tool name, arguments, and
-     * JSON-RPC {@code _meta} from the supplied {@link ToolRequest} to the
-     * server. {@code _meta} (e.g. {@code progressToken}) is embedded into
-     * the outgoing request's {@code params._meta} (see D_request_records).
+     * Calls {@code tools/call} with the request's name, arguments and
+     * {@code _meta} (sent as {@code params._meta}).
      *
-     * <p>{@link ToolRequest#transportHeaders()} is <em>not</em> forwarded
-     * as outbound HTTP headers — they belong to the inbound transport and
-     * forwarding them would clobber session and content-type headers on
-     * the outgoing request. Implementations should ignore that field.
+     * <p>{@link ToolRequest#transportHeaders()} is <em>not</em> sent: those
+     * are inbound headers, and forwarding them would clobber the outgoing
+     * session and content-type headers.
      *
-     * <p>An application-level tool error is signalled by
-     * {@link MCPProtocol.CallToolResult#getIsError()} being {@code true};
-     * the call returns normally and the caller inspects the result.
-     *
-     * @param request the tool request bundle (name, arguments, transport
-     *                headers, JSON-RPC {@code _meta}); not null
-     * @return the {@code CallToolResult}; never {@code null}
-     * @throws MCPSessionLostException if the server returned HTTP 404
-     * @throws MCPClientException      if the server returned any other
-     *                                 protocol error
-     * @throws IOException             if the underlying HTTP transport fails
+     * @throws MCPSessionLostException if the session is gone
+     * @throws MCPClientException      on any other protocol error
+     * @throws IOException             if the transport fails
      */
     MCPProtocol.CallToolResult callTool(ToolRequest request) throws IOException;
 
     /**
-     * Convenience overload of {@link #callTool(ToolRequest)} for callers
-     * that don't have a {@link ToolRequest} on hand. Builds a request with
-     * empty transport headers and no {@code _meta}.
+     * Calls the tool with no {@code _meta}.
      *
-     * @param arguments the tool arguments; pass {@link Map#of()} for none
-     * @throws MCPSessionLostException if the server returned HTTP 404
-     * @throws MCPClientException      if the server returned any other
-     *                                 protocol error
-     * @throws IOException             if the underlying HTTP transport fails
+     * @param arguments pass {@link Map#of()} for none
+     * @throws MCPSessionLostException if the session is gone
+     * @throws MCPClientException      on any other protocol error
+     * @throws IOException             if the transport fails
      */
     default MCPProtocol.CallToolResult callTool(String name, Map<String, Object> arguments) throws IOException {
         return callTool(name, arguments, null);
     }
 
     /**
-     * Convenience overload of {@link #callTool(ToolRequest)} accepting an
-     * explicit JSON-RPC {@code _meta} object, such as a {@code progressToken}.
+     * Calls the tool with an explicit JSON-RPC {@code _meta}, such as a
+     * {@code progressToken}.
      *
-     * @param arguments the tool arguments; pass {@link Map#of()} for none
-     * @param meta      the JSON-RPC {@code _meta} object to forward, or
-     *                  {@code null} for "no meta"
-     * @throws MCPSessionLostException if the server returned HTTP 404
-     * @throws MCPClientException      if the server returned any other
-     *                                 protocol error
-     * @throws IOException             if the underlying HTTP transport fails
+     * @param arguments pass {@link Map#of()} for none
+     * @param meta      {@code null} for none
+     * @throws MCPSessionLostException if the session is gone
+     * @throws MCPClientException      on any other protocol error
+     * @throws IOException             if the transport fails
      */
     default MCPProtocol.CallToolResult callTool(String name, Map<String, Object> arguments,
             @Nullable JsonObject meta) throws IOException {
@@ -136,13 +113,11 @@ public interface MCPClient extends Closeable {
     }
 
     /**
-     * Sends an HTTP {@code DELETE} for the current session, releasing it
-     * server-side. The client is unusable afterwards. Idempotent: calling
-     * a second time is a no-op. If the session is already gone server-side
-     * (HTTP 404), {@code close()} returns normally — there is nothing left
-     * to release.
+     * Releases the session server-side with an HTTP {@code DELETE}; a 404
+     * (already gone) is not an error. Idempotent; the client is unusable
+     * afterwards.
      *
-     * @throws IOException if the HTTP transport fails
+     * @throws IOException if the transport fails
      */
     @Override
     void close() throws IOException;

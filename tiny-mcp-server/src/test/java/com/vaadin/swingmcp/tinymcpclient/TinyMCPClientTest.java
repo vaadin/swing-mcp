@@ -44,16 +44,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * End-to-end tests for {@link TinyMCPClient} against a local
- * {@link HttpMCPServer}. The point of these tests (vs the official-server
- * test) is to exercise the full parameter-passing matrix and the request
- * record fields ({@code _meta}, transport headers) — things the official
- * SDK test is too coarse to cover.
- *
- * <p>The {@code capture} tool is registered with one optional parameter
- * for every supported type; tests call it with various argument maps and
- * inspect the {@link ToolRequest} the server received. A second tool
- * ({@code echo}) covers the required-parameter path.
+ * {@link TinyMCPClient} against a local {@link HttpMCPServer}: the full
+ * parameter-type matrix and the request-record fields ({@code _meta}, transport
+ * headers), which the official-SDK leg is too coarse to cover.
  */
 class TinyMCPClientTest {
 
@@ -156,9 +149,8 @@ class TinyMCPClientTest {
 
     @Test
     void passesIntegerSentAsWholeJsonNumber() throws IOException {
-        // GSON serialises doubles whose value is integral as "1.0" — the
-        // server must still accept this for an integer-typed parameter
-        // (architecture.md: "1.0 is accepted as 1").
+        // GSON serialises an integral double as "1.0"; an integer parameter must
+        // still take it.
         callCaptureWith(Map.of("i", 1.0));
         assertEquals(1, capturedArgs().get("i"));
     }
@@ -202,8 +194,6 @@ class TinyMCPClientTest {
 
     @Test
     void passesAllParameterTypesInSingleCall() throws IOException {
-        // The schema declares all six types as optional; a single call with
-        // every one populated must round-trip every value.
         Map<String, Object> args = new LinkedHashMap<>();
         args.put("s", "hello");
         args.put("i", 7);
@@ -321,8 +311,6 @@ class TinyMCPClientTest {
 
     @Test
     void metaIsForwardedToServer() throws IOException {
-        // Cross-cutting fields like progressToken ride through params._meta
-        // on the outgoing request.
         JsonObject meta = new JsonObject();
         meta.add("progressToken", new JsonPrimitive("abc-123"));
         meta.addProperty("custom", 7);
@@ -352,11 +340,8 @@ class TinyMCPClientTest {
 
     @Test
     void transportHeadersOnToolRequestAreNotForwardedAsHttpHeaders() throws IOException {
-        // ToolRequest.transportHeaders belongs to the inbound transport;
-        // forwarding it as outbound HTTP headers would clobber session and
-        // content-type headers (per MCPClient javadoc). The client must
-        // ignore that field. Verify by stuffing a sentinel in and confirming
-        // it does not appear in the server-side transportHeaders snapshot.
+        // transportHeaders belongs to the inbound transport; forwarding it as
+        // outbound HTTP headers would clobber the session and content-type headers.
         Map<String, String> bogus = Map.of("X-Inbound-Sentinel", "should-not-leak");
         try (MCPClient client = newClient()) {
             ToolRequest req = new ToolRequest("capture",
@@ -376,13 +361,12 @@ class TinyMCPClientTest {
     void closeIsIdempotent() throws IOException {
         MCPClient client = newClient();
         client.close();
-        client.close(); // second close is a no-op, must not throw
+        client.close();
     }
 
     @Test
     void closeBeforeInitializeIsAllowed() throws IOException {
-        // No session id captured yet, so DELETE is skipped — close just
-        // flips the closed flag.
+        // No session id yet, so there is no DELETE to send.
         MCPClient client = new TinyMCPClient(URI.create(server.getUrl()));
         client.close();
         assertThrows(IllegalStateException.class, client::listTools);

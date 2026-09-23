@@ -25,13 +25,10 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Validates and coerces raw tool arguments against a tool's input schema.
- * Instances are immutable and created once per registered tool/prompt.
- * <p>
- * Internally stores the property map (name → {@link MCPProtocol.PropertySchema})
- * and the required-name set, derived either from a full tool
- * {@link MCPProtocol.InputSchema} or from a list of prompt
- * {@link MCPProtocol.PromptArgument}s.
+ * Validates the raw arguments of one registered tool or prompt against its
+ * declared parameters.
+ *
+ * <p>Immutable.
  */
 class MCPParameterParser {
 
@@ -51,10 +48,7 @@ class MCPParameterParser {
                 : new HashSet<>();
     }
 
-    /**
-     * Builds a parser for an MCP prompt. Every argument is modelled as a
-     * {@code string} property — MCP prompts do not support other types.
-     */
+    /** Every prompt argument is a {@code string}; MCP prompts have no other type. */
     MCPParameterParser(String promptName, List<MCPProtocol.PromptArgument> arguments) {
         Objects.requireNonNull(arguments, "arguments");
         this.name = "prompt '" + promptName + "'";
@@ -72,14 +66,21 @@ class MCPParameterParser {
     }
 
     /**
-     * Validates and coerces raw tool arguments against the tool's input schema.
+     * Validates {@code rawArgs} and narrows an {@code integer} parameter's JSON
+     * number to {@link Integer}. Every other value passes through as parsed,
+     * a string-encoded number included ({@link Parameters} coerces that,
+     * D_coerce_string_numbers).
      *
-     * @throws MCPErrorResponseException for unknown parameters (produces {@code isError: true})
-     * @throws MCPServerException        with {@code INVALID_PARAMS} for missing required
-     *                                   parameters or type coercion failures
+     * @return the declared parameters present, in declaration order; an absent
+     *         optional one is omitted and a {@code null} value counts as absent
+     * @throws MCPErrorResponseException for an unknown parameter, with a
+     *                                   did-you-mean hint
+     * @throws MCPServerException        with {@code INVALID_PARAMS} for a missing
+     *                                   required parameter, or an {@code integer}
+     *                                   one that is fractional or out of
+     *                                   {@code int} range
      */
     Map<String, Object> parse(Map<String, Object> rawArgs) {
-        // Reject unknown parameters with isError:true and did-you-mean hints
         List<String> unknownParams = new ArrayList<>();
         for (String key : rawArgs.keySet()) {
             if (!properties.containsKey(key)) {
@@ -122,7 +123,6 @@ class MCPParameterParser {
             throw new MCPErrorResponseException(msg.toString());
         }
 
-        // Validate and coerce known parameters
         Map<String, Object> callArgs = new LinkedHashMap<>();
         for (Map.Entry<String, MCPProtocol.PropertySchema> entry : properties.entrySet()) {
             String paramName = entry.getKey();
@@ -135,7 +135,6 @@ class MCPParameterParser {
                     throw new MCPServerException(MCPServerException.INVALID_PARAMS,
                             "Missing required parameter '" + paramName + "'");
                 }
-                // optional and absent: omit from callArgs
                 continue;
             }
 

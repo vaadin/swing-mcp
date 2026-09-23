@@ -19,13 +19,11 @@ package com.vaadin.swingmcp.tinymcpserver;
 import java.io.IOException;
 
 /**
- * Unchecked wrapper around {@link IOException} raised by a transport layer
- * (HTTP socket I/O in {@link JsonRpcExchange}, server bind in
- * {@link HttpMCPServer}, stdio I/O in {@link StdioMCPServer}). Signals that
- * the underlying connection is no longer usable — callers should log and
- * abandon rather than try to respond.
- * Handler code (tools, prompts, resources) must not throw this; wrap any
- * handler-side I/O failures in {@link MCPServerException} instead.
+ * A transport's {@link IOException}, unchecked: the socket or stream is
+ * unusable, so log and abandon rather than try to respond
+ * (D_three_error_layers). Handler
+ * code must not throw it — a handler-side I/O failure is an
+ * {@link MCPServerException}.
  */
 class TransportIOException extends RuntimeException {
 

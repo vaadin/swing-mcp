@@ -32,11 +32,9 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Verifies that the component ref map is cleared when a session is terminated
- * via HTTP DELETE. The {@link com.vaadin.swingmcp.mcp.tools.SwingToolContext}
- * (which owns the ref map) is stored as a per-session attribute on
- * {@link com.vaadin.swingmcp.tinymcpserver.MCPSession}, so removing the
- * session from the server's session map drops the ref map with it.
+ * The ref map lives in a {@link com.vaadin.swingmcp.mcp.tools.SwingToolContext} stored as a
+ * per-session attribute of {@link com.vaadin.swingmcp.tinymcpserver.MCPSession}, so an HTTP
+ * DELETE that drops the session drops the map with it.
  */
 class SessionCloseTest {
 
@@ -115,7 +113,6 @@ class SessionCloseTest {
     @SuppressWarnings("unchecked")
     @Test
     void sessionDeleteClearsRefMap() throws Exception {
-        // Session 1: initialize and snapshot to populate refs
         String session1 = initialize();
         assertNotNull(session1);
 
@@ -124,25 +121,18 @@ class SessionCloseTest {
         Map<String, Object> snapBody = parseJson(snapResp.body());
         assertNotNull(snapBody.get("result"), "snapshot should succeed");
 
-        // Verify a ref works in session 1
         HttpResponse<String> clickResp = click(1, session1);
         assertEquals(200, clickResp.statusCode());
         Map<String, Object> clickBody = parseJson(clickResp.body());
         assertNotNull(clickBody.get("result"), "click should succeed");
 
-        // Terminate session 1 — this should clear the ref map
         delete(session1);
 
-        // Session 2: initialize a new session
         String session2 = initialize();
         assertNotNull(session2);
         assertNotEquals(session1, session2);
 
-        // Try to use a ref without re-snapshotting — should fail because
-        // the previous session's ref map was dropped when its MCPSession
-        // was removed. The stale-ref check in SwingToolContext throws
-        // MCPServerException (INVALID_PARAMS), which HttpMCPServer renders
-        // as a JSON-RPC error.
+        // No snapshot in session 2: SwingToolContext's stale-ref check answers with a JSON-RPC error.
         HttpResponse<String> staleClickResp = click(1, session2);
         assertEquals(200, staleClickResp.statusCode());
         Map<String, Object> staleBody = parseJson(staleClickResp.body());

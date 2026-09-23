@@ -38,9 +38,6 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Screen-mode tests for {@link SwingUtils#supportsRestore}.
- */
 class SwingUtilsSupportsRestoreTest extends AbstractScreenTest {
 
     private final List<Window> createdWindows = new ArrayList<>();
@@ -103,7 +100,6 @@ class SwingUtilsSupportsRestoreTest extends AbstractScreenTest {
         SwingUtilities.invokeAndWait(() ->
                 frame.setExtendedState(Frame.MAXIMIZED_BOTH | Frame.ICONIFIED));
 
-        // Some WMs (e.g. Xvfb) don't support MAXIMIZED_BOTH | ICONIFIED combined state
         int state = frame.getExtendedState();
         Assumptions.assumeTrue((state & Frame.ICONIFIED) != 0 && (state & Frame.MAXIMIZED_BOTH) != 0,
                 "WM does not support MAXIMIZED_BOTH | ICONIFIED (state=" + state + "), skipping");
@@ -111,11 +107,7 @@ class SwingUtilsSupportsRestoreTest extends AbstractScreenTest {
         assertTrue(SwingUtils.supportsRestore(frame));
     }
 
-    /**
-     * A disabled JFrame must still advertise {@code restore}: the OS
-     * window decorations remain functional regardless of
-     * {@code setEnabled(false)}.
-     */
+    /** The OS window controls stay live under {@code setEnabled(false)}. */
     @Test
     void disabledIconifiedJFrame_stillSupportsRestore() throws Exception {
         JFrame frame = new JFrame("Disabled");

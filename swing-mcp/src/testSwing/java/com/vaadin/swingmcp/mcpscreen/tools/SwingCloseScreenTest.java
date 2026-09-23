@@ -68,22 +68,14 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         executeOnEDT(() -> snapshotTool.execute(new Parameters(Map.of()), context));
     }
 
-    /**
-     * Calls swing_close and drains the EDT so the fire-and-forget invokeLater has run.
-     * Returns the tool's success Content (D_dispatched_echo echo) so callers can assert on it.
-     */
+    /** Calls swing_close, then drains the EDT so its fire-and-forget action has run. */
     private MCPProtocol.Content close(int ref) throws Exception {
         MCPProtocol.Content result = executeOnEDT(
                 () -> closeTool.execute(new Parameters(Map.of("ref", ref)), context));
         context.clearRefMap();
-        // Drain the EDT: this no-op is queued after the fire-and-forget invokeLater
         executeOnEDT(() -> null);
         return result;
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // JFrame with DISPOSE_ON_CLOSE
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void jframeWithDisposeOnCloseIsDismissed() throws Exception {
@@ -107,7 +99,6 @@ class SwingCloseScreenTest extends AbstractScreenTest {
 
         snapshot(frame);
 
-        // Frame should have a ref (close action makes it ref-eligible)
         int ref = context.getRefOf(frame);
         assertTrue(ref > 0);
     }
@@ -179,10 +170,6 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         assertTrue(dialog.isShowing(), "dialog should still be showing — DO_NOTHING_ON_CLOSE");
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // Undecorated window
-    // ══════════════════════════════════════════════════════════════════════════
-
     @Test
     void undecoratedJframeReturnsMcpError() throws Exception {
         JFrame frame = new JFrame("Undecorated");
@@ -191,21 +178,16 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         currentWindow = frame;
         executeOnEDT(() -> { frame.setSize(200, 100); frame.setVisible(true); return null; });
 
-        // Undecorated frame has no close action → no ref in snapshot
         snapshot(frame);
         assertThrows(IllegalStateException.class, () -> context.getRefOf(frame),
                 "Undecorated frame should have no ref (no close action)");
 
-        // Force a ref into the map to test the error path directly
+        // No close action, so no ref: force one to reach the tool's own refusal.
         context.putRef(99, (Accessible) frame);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
         assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // EXIT_ON_CLOSE — never gets close action in snapshot
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void jframeWithExitOnCloseHasNoCloseActionInSnapshot() throws Exception {
@@ -216,17 +198,12 @@ class SwingCloseScreenTest extends AbstractScreenTest {
 
         snapshot(frame);
 
-        // Frame gets a ref (supportsIconify returns true), but close should still fail
         int ref = context.getRefOf(frame);
         assertTrue(ref > 0, "EXIT_ON_CLOSE frame should have a ref (iconify action)");
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", ref)), context)));
         assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // EXIT_ON_CLOSE — stale ref returns MCP error
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void jframeWithExitOnCloseViaStaleRefReturnsMcpError() throws Exception {
@@ -235,16 +212,11 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         currentWindow = frame;
         executeOnEDT(() -> { frame.setSize(200, 100); frame.setVisible(true); return null; });
 
-        // Manually force a ref to simulate a stale ref pointing at an EXIT_ON_CLOSE frame
         context.putRef(99, (Accessible) frame);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
         assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // Component matrix — JOptionPane (screen test; no ref by default)
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void componentMatrix_JOptionPane() throws Exception {
@@ -257,16 +229,11 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         executeOnEDT(() -> { dialog.setSize(200, 100); dialog.setVisible(true); return null; });
 
         snapshot(dialog);
-        // JOptionPane has no close action and no ref — force a ref to test error path
         context.putRef(99, (Accessible) optionPane);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
         assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // JDesktopPane component matrix
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void componentMatrix_JDesktopPane() throws Exception {
@@ -283,10 +250,6 @@ class SwingCloseScreenTest extends AbstractScreenTest {
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
         assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // JInternalFrame helpers
-    // ══════════════════════════════════════════════════════════════════════════
 
     private JInternalFrame showInternalFrame(boolean closable, int defaultCloseOp) throws Exception {
         JFrame host = new JFrame("Host");
@@ -307,10 +270,6 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         return iframe;
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // JInternalFrame with DISPOSE_ON_CLOSE
-    // ══════════════════════════════════════════════════════════════════════════
-
     @Test
     void jinternalFrameWithDisposeOnCloseIsDismissed() throws Exception {
         JInternalFrame iframe = showInternalFrame(true, WindowConstants.DISPOSE_ON_CLOSE);
@@ -320,10 +279,6 @@ class SwingCloseScreenTest extends AbstractScreenTest {
 
         assertTrue(iframe.isClosed(), "internal frame should be closed (disposed)");
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // JInternalFrame with DO_NOTHING_ON_CLOSE
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void jinternalFrameDoNothingOnCloseStaysShowing() throws Exception {
@@ -338,49 +293,30 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         assertTrue(iframe.isShowing(), "internal frame should still be showing — DO_NOTHING_ON_CLOSE");
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // JInternalFrame not closable
-    // ══════════════════════════════════════════════════════════════════════════
-
     @Test
     void nonClosableJInternalFrameReturnsMcpError() throws Exception {
         JInternalFrame iframe = showInternalFrame(false, WindowConstants.DISPOSE_ON_CLOSE);
 
-        // Non-closable internal frame has no close action → no ref in snapshot
         snapshot(SwingUtilities.getWindowAncestor(iframe));
 
-        // Force a ref to test the error path directly
         context.putRef(99, (Accessible) iframe);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
         assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // JInternalFrame EXIT_ON_CLOSE — stale ref returns MCP error
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void jinternalFrameWithExitOnCloseViaStaleRefReturnsMcpError() throws Exception {
         JInternalFrame iframe = showInternalFrame(true, WindowConstants.EXIT_ON_CLOSE);
 
-        // Manually force a ref to simulate a stale ref
         context.putRef(99, (Accessible) iframe);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
         assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // JDesktopIcon helpers
-    // ══════════════════════════════════════════════════════════════════════════
-
-    /**
-     * Creates a JInternalFrame inside a JDesktopPane, iconifies it, and returns
-     * the JDesktopIcon. The frame must be iconifiable (4th constructor arg).
-     */
+    /** Returns the desktop icon of an iconified JInternalFrame in a shown host frame. */
     private JInternalFrame.JDesktopIcon showIconifiedFrame(boolean closable, int defaultCloseOp) throws Exception {
-        // iconifiable=true is the 4th JInternalFrame constructor arg
         JFrame host = new JFrame("Host");
         host.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         JDesktopPane desktop = new JDesktopPane();
@@ -396,14 +332,9 @@ class SwingCloseScreenTest extends AbstractScreenTest {
             iframe.setVisible(true);
             return null;
         });
-        // Iconify
         executeOnEDT(() -> { iframe.setIcon(true); return null; });
         return iframe.getDesktopIcon();
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // JDesktopIcon with DISPOSE_ON_CLOSE
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void desktopIconWithDisposeOnCloseClosesUnderlyingFrame() throws Exception {
@@ -415,10 +346,6 @@ class SwingCloseScreenTest extends AbstractScreenTest {
 
         assertTrue(iframe.isClosed(), "underlying internal frame should be closed (disposed)");
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    // JDesktopIcon with DO_NOTHING_ON_CLOSE
-    // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void desktopIconDoNothingOnCloseIconStaysShowing() throws Exception {
@@ -433,30 +360,20 @@ class SwingCloseScreenTest extends AbstractScreenTest {
         assertTrue(icon.isShowing(), "desktop icon should still be showing — DO_NOTHING_ON_CLOSE");
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // JDesktopIcon not closable
-    // ══════════════════════════════════════════════════════════════════════════
-
     @Test
     void desktopIconNotClosableReturnsMcpError() throws Exception {
         JInternalFrame.JDesktopIcon icon = showIconifiedFrame(false, WindowConstants.DISPOSE_ON_CLOSE);
 
-        // Non-closable → no close action → no ref in snapshot; force a ref
         context.putRef(99, (Accessible) icon);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
         assertTrue(ex.getMessage().contains("does not support swing_close"));
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // JDesktopIcon EXIT_ON_CLOSE
-    // ══════════════════════════════════════════════════════════════════════════
-
     @Test
     void desktopIconExitOnCloseReturnsMcpError() throws Exception {
         JInternalFrame.JDesktopIcon icon = showIconifiedFrame(true, WindowConstants.EXIT_ON_CLOSE);
 
-        // EXIT_ON_CLOSE → no close action → no ref; force a ref
         context.putRef(99, (Accessible) icon);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> closeTool.execute(new Parameters(Map.of("ref", 99)), context)));
