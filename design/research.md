@@ -205,6 +205,19 @@ trims to its length — which is how long this file gets, so keep it short.
 - Consequence: a capability keyed on `getAccessibleAction()` is JDK-dependent for this one
   component, so a test that hardcodes either answer fails on the other side of the boundary.
 
+## R_ui_delegate_press_throws — Two UI delegates throw on a press no user could make
+
+- Headless, a press on a `JList` throws `HeadlessException`: `BasicListUI`'s handler asks
+  `BasicGraphicsUtils.isMenuShortcutKeyDown`, which asks the headless toolkit for the shortcut
+  mask. **[src]** **[verified 2026-09-23, Temurin 11.0.32 / 17.0.20]**
+- On Java 11 a press on a `JComboBox` that is not showing opens its popup anyway, and
+  `JPopupMenu.show` throws `IllegalComponentStateException` from `getLocationOnScreen`;
+  headless, `getScreenSize` throws `HeadlessException` first. **[src]** **[verified 2026-09-23, Temurin 11.0.32, Xvfb]**
+- Java 17 adds `!comboBox.isShowing()` to the handler's early return, so the press is
+  ignored. **[src]** **[verified 2026-09-23, Temurin 17.0.20]**
+- A listener added after the delegate's never sees an event the delegate threw on, since
+  `AWTEventMulticaster` calls them in order. **[src]**
+
 ## R_claude_code_http_lifecycle — What Claude Code does when an HTTP MCP server comes and goes
 
 - A server unreachable at client startup is marked `failed`, and its tools are absent for the

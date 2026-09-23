@@ -38,7 +38,9 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static com.vaadin.swingmcp.mcp.JdkCapabilities.COMBO_IGNORES_PRESS_WHILE_NOT_SHOWING;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class SwingDragScreenTest extends AbstractScreenTest {
 
@@ -169,6 +171,9 @@ class SwingDragScreenTest extends AbstractScreenTest {
 
     @Test
     void jComboBoxAsSourceReceivesTheWholeDrag() throws Exception {
+        assumeTrue(COMBO_IGNORES_PRESS_WHILE_NOT_SHOWING,
+                "below Java 17 the press opens the popup of a combo not showing, which throws"
+                        + " and aborts the drag (R_ui_delegate_press_throws)");
         JFrame frame = new JFrame("Drag Test");
         frame.setSize(400, 200);
         JComboBox<String> combo = new JComboBox<>(new String[]{"A", "B"});

@@ -20,6 +20,11 @@ numbers are from the commit after the pass.
   or the convention is wrong (`Q_unknown_ref_error`). An unknown ref is arguably a
   protocol-level bad parameter.
 
+- **`SwingUtils.createDragAction`** dispatches the whole drag from one `Runnable`, so a listener
+  that throws on the press aborts the drags and the release. A real mouse sends each event
+  separately, and the EDT carries on after one throws. This only affects the synthetic, headless
+  path. **Checked:** `R_ui_delegate_press_throws` has two delegates that do this.
+
 ## Tests that prove less than they claim
 
 - **Tests that assert nothing:**

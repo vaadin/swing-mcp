@@ -16,7 +16,10 @@
  */
 package com.vaadin.swingmcp.mcp;
 
+import javax.swing.JComboBox;
 import javax.swing.JSlider;
+import java.awt.event.InputEvent;
+import java.awt.event.MouseEvent;
 
 /**
  * Accessibility capabilities that differ across the JDK versions this project
@@ -40,6 +43,25 @@ public final class JdkCapabilities {
      */
     public static final boolean SLIDER_HAS_ACCESSIBLE_ACTIONS =
             new JSlider().getAccessibleContext().getAccessibleAction() != null;
+
+    /**
+     * Whether a press on a {@link JComboBox} that is not showing leaves its popup alone:
+     * {@code false} on Java 11, where opening the popup throws, {@code true} from Java 17.
+     * See R_ui_delegate_press_throws.
+     */
+    public static final boolean COMBO_IGNORES_PRESS_WHILE_NOT_SHOWING =
+            comboIgnoresPressWhileNotShowing();
+
+    private static boolean comboIgnoresPressWhileNotShowing() {
+        JComboBox<String> combo = new JComboBox<>(new String[]{"A"});
+        try {
+            combo.dispatchEvent(new MouseEvent(combo, MouseEvent.MOUSE_PRESSED, 0,
+                    InputEvent.BUTTON1_DOWN_MASK, 1, 1, 1, false, MouseEvent.BUTTON1));
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
 
     private JdkCapabilities() {
     }
