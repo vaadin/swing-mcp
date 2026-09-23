@@ -32,12 +32,6 @@ numbers are from the commit after the pass.
   or the convention is wrong (`Q_unknown_ref_error`). An unknown ref is arguably a
   protocol-level bad parameter.
 
-## Possible code bugs — tiny-mcp-server
-
-- **`JsonRpcExchange`**: only tests call `sendResponseRaw` (`:84`), and it builds JSON by string
-  concatenation, against the POJO mapping everything else uses. Nothing calls
-  `sendError(int, String)` (`:89`). Both look like dead code.
-
 ## Tests that prove less than they claim
 
 - **Tests that assert nothing:**
