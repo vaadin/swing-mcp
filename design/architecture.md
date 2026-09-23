@@ -81,9 +81,11 @@ comment), the module map (`AGENTS.md`).
 1. Match the `AccessibleAction` description — against `AccessibleAction.CLICK` for AWT, and
    against the `UIManager` lookup for Swing, which is localized (`R_accessible_action_impls`).
 2. Failing that, look for an application-installed `MouseListener` on the underlying
-   `Component`, skipping listeners from `javax.swing.*`, `java.awt.*`, `sun.*` and `com.sun.*`,
-   and skipping components whose role is already interactive — a `MouseListener` on a `JButton`
-   is look-and-feel plumbing, not application behaviour.
+   `Component`, skipping listeners from `javax.swing.*`, `java.awt.*`, `sun.*`, `com.sun.*` and
+   `com.apple.*` (the JDK's Aqua look and feel, whose `JInternalFrame` and `JDesktopPane`
+   delegates install mouse listeners), and skipping components whose role is already
+   interactive — a `MouseListener` on a `JButton` is look-and-feel plumbing, not application
+   behaviour.
 3. Either way the result is a `Runnable` that performs the click, so no caller branches on which
    tier matched. Tier 2 synthesizes a press/release/click event sequence through
    `dispatchEvent`, which goes through the real AWT pipeline including any `processMouseEvent`

@@ -158,7 +158,8 @@ public final class SwingUtils {
                 if (!cls.startsWith("javax.swing.")
                         && !cls.startsWith("java.awt.")
                         && !cls.startsWith("sun.")
-                        && !cls.startsWith("com.sun.")) {
+                        && !cls.startsWith("com.sun.")
+                        && !cls.startsWith("com.apple.")) {
                     return () -> {
                         int x = c.getWidth() / 2;
                         int y = c.getHeight() / 2;
