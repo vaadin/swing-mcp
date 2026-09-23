@@ -404,7 +404,7 @@ public final class SwingUtils {
             if (iframe.getDefaultCloseOperation() == WindowConstants.EXIT_ON_CLOSE) return false;
             return true;
         }
-        // The iconified frame itself is not showing (R_iconified_windows), so ask the icon.
+        // A frame its icon replaced is not showing (R_iconified_windows), so ask the icon.
         if (a instanceof JInternalFrame.JDesktopIcon) {
             JInternalFrame.JDesktopIcon icon = (JInternalFrame.JDesktopIcon) a;
             if (!icon.isShowing()) return false;
@@ -444,6 +444,9 @@ public final class SwingUtils {
      * Returns {@code true} if {@code a} is a showing {@link Frame} or {@link JInternalFrame} in
      * the iconified state. A {@code JDesktopIcon} is the icon, not an iconified frame, so it
      * returns {@code false}.
+     *
+     * @apiNote Only an internal frame iconified in place can pass: one its icon replaced is not
+     *     showing (R_iconified_windows).
      */
     public static boolean isIconified(Accessible a) {
         if (a instanceof Frame) {

@@ -10,11 +10,6 @@ numbers are from the commit after the pass.
 
 ## Possible code bugs — swing-mcp
 
-- **`SwingUtils.isIconified`** (`SwingUtils.java:446`): the `JInternalFrame` branch requires
-  `iframe.isShowing() && iframe.isIcon()`. `R_iconified_windows` says an iconified internal
-  frame is not showing, so the branch may never return true. The desktop icon covers restore,
-  so this could be dead code rather than a bug.
-  **Checked:** the code has that shape.
 - **`SwingUtils.resolveComponentAndPoint`** (`:867`): it treats a virtual child's `getBounds()` as
   relative to the first `Component` ancestor. For a nested `JTree` node the bounds may be
   relative to the virtual parent instead. Unverified.

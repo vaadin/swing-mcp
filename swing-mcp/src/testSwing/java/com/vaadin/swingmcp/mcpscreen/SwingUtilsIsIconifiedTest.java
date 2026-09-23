@@ -27,6 +27,7 @@ import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JInternalFrame;
 import javax.swing.JLabel;
+import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
@@ -179,6 +180,29 @@ class SwingUtilsIsIconifiedTest extends AbstractScreenTest {
         assertTrue(iframe.isIcon(), "precondition: frame is iconified");
         assertFalse(iframe.isShowing(), "precondition: iconified JInternalFrame is not showing");
         assertFalse(SwingUtils.isIconified(iframe));
+    }
+
+    /** Outside a JDesktopPane the frame is iconified in place, still showing (R_iconified_windows). */
+    @Test
+    void jInternalFrameIconifiedInPlace_isIconified() throws Exception {
+        JFrame host = new JFrame("Host");
+        host.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        JLayeredPane layeredPane = new JLayeredPane();
+        host.setContentPane(layeredPane);
+        JInternalFrame iframe = new JInternalFrame("Doc", false, true, false, true);
+        iframe.setBounds(10, 10, 150, 80);
+        layeredPane.add(iframe);
+        createdWindows.add(host);
+        SwingUtilities.invokeAndWait(() -> {
+            host.setSize(400, 300);
+            host.setVisible(true);
+            iframe.setVisible(true);
+            try { iframe.setIcon(true); }
+            catch (java.beans.PropertyVetoException e) { throw new RuntimeException(e); }
+        });
+
+        assertTrue(iframe.isShowing(), "precondition: iconified in place, still showing");
+        assertTrue(SwingUtils.isIconified(iframe));
     }
 
     @Test

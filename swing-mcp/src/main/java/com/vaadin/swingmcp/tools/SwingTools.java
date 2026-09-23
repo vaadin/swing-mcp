@@ -195,7 +195,7 @@ public final class SwingTools {
 
     public static final ToolDescriptor SWING_RESTORE = new ToolDescriptor(
             "swing_restore",
-            "Restore (de-iconify) an iconified Frame (including JFrame) or JDesktopIcon (iconified JInternalFrame) by ref. Frame is restored from the OS taskbar; JDesktopIcon is replaced by its JInternalFrame on the JDesktopPane. The resulting window state depends on the pre-iconification state and the platform window manager — the window may be restored to normal or maximized. Requires a ref obtained from swing_snapshot or swing_get_cells.",
+            "Restore (de-iconify) an iconified Frame (including JFrame), JDesktopIcon (iconified JInternalFrame) or iconified JInternalFrame by ref. Frame is restored from the OS taskbar; JDesktopIcon is replaced by its JInternalFrame on the JDesktopPane. The resulting window state depends on the pre-iconification state and the platform window manager — the window may be restored to normal or maximized. Requires a ref obtained from swing_snapshot or swing_get_cells.",
             new InputSchemaBuilder()
                     .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
                     .build());

@@ -178,6 +178,76 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
         assertTrue(text.contains("\"B\""), "snapshot should show button in second iframe");
     }
 
+    /**
+     * Outside a JDesktopPane, iconifying leaves the frame in place, children on screen
+     * (R_iconified_windows): [iconified] and restore, but no placeholder.
+     */
+    @Test
+    void jInternalFrameIconifiedInPlace_showsIconifiedStateAndChildren() throws Exception {
+        JFrame host = newUnfocusableFrame("Host");
+        JLayeredPane layeredPane = new JLayeredPane();
+        host.setContentPane(layeredPane);
+        JInternalFrame iframe = new JInternalFrame("Doc", false, false, false, true);
+        iframe.getContentPane().add(new JButton("OK"));
+        iframe.setBounds(10, 10, 150, 80);
+        layeredPane.add(iframe);
+        try {
+            executeOnEDT(() -> {
+                host.setSize(400, 300);
+                host.setVisible(true);
+                iframe.setVisible(true);
+                iframe.setIcon(true);
+                return null;
+            });
+
+            assertEquals(
+                    "- JFrame (frame) \"Host\" [ref=1] actions: close, iconify\n"
+                    + "  - JInternalFrame (internal_frame) \"Doc\" [ref=2, iconified] actions: restore\n"
+                    + "    - JButton (push_button) \"OK\" [ref=3] actions: click",
+                    snapshot(host));
+        } finally {
+            executeOnEDT(() -> { host.dispose(); return null; });
+        }
+    }
+
+    /**
+     * A DesktopManager that keeps the frame in place, shrunk to its title bar: the
+     * never-added JDesktopIcon stays out, and so does the button the shrink hid.
+     */
+    @Test
+    void jInternalFrameIconifiedByCustomDesktopManager_showsIconifiedStateNoIcon() throws Exception {
+        JFrame host = newUnfocusableFrame("Host");
+        JDesktopPane desktop = new JDesktopPane();
+        desktop.setDesktopManager(new DefaultDesktopManager() {
+            @Override
+            public void iconifyFrame(JInternalFrame f) {
+                f.setSize(f.getWidth(), 25);
+            }
+        });
+        host.setContentPane(desktop);
+        JInternalFrame iframe = new JInternalFrame("Doc", false, false, false, true);
+        iframe.getContentPane().add(new JButton("OK"));
+        iframe.setBounds(10, 10, 150, 80);
+        desktop.add(iframe);
+        try {
+            executeOnEDT(() -> {
+                host.setSize(400, 300);
+                host.setVisible(true);
+                iframe.setVisible(true);
+                iframe.setIcon(true);
+                return null;
+            });
+
+            assertEquals(
+                    "- JFrame (frame) \"Host\" [ref=1] actions: close, iconify\n"
+                    + "  - JDesktopPane (desktop_pane)\n"
+                    + "    - JInternalFrame (internal_frame) \"Doc\" [ref=2, iconified] actions: restore",
+                    snapshot(host));
+        } finally {
+            executeOnEDT(() -> { host.dispose(); return null; });
+        }
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // JDialog tests
     // ══════════════════════════════════════════════════════════════════════════

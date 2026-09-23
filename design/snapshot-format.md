@@ -65,8 +65,9 @@ Three are synthesized rather than read from `AccessibleStateSet`:
   snapshot shows `[disabled]`, a mutation tool refuses; if it does not, the tool accepts.
 - `read_only` — a text component exposing `AccessibleEditableText` but lacking `EDITABLE`. Its
   absence means editable, so no `editable` flag is ever emitted.
-- `iconified` — a `Frame` whose extended state has `ICONIFIED`; the JDK never puts it in the
-  state set (`R_iconified_windows`, `D_synthetic_iconified_state`).
+- `iconified` — a `Frame` whose extended state has `ICONIFIED`, or a `JInternalFrame` iconified
+  in place, whose `isIcon()` holds; the JDK never puts it in the state set
+  (`R_iconified_windows`, `D_synthetic_iconified_state`).
 
 Never shown, as noise or as always-true for a node that survived pruning: `visible`, `showing`,
 `enabled`, `editable`, `opaque`, `resizable`, `armed`, `transient`, `manages_descendants`.

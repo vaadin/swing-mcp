@@ -629,8 +629,8 @@ superseding that entry explicitly, not amending this one.
 
 ## D_desktop_icon_as_itself — Why is a `JDesktopIcon` rendered as itself rather than resolved back to its frame?
 
-When a `JInternalFrame` is iconified, Swing removes it from the component and accessibility trees
-entirely and a `JDesktopIcon` takes its place as a child of the desktop pane
+When a `JInternalFrame` in a `JDesktopPane` is iconified, Swing removes it from the component and
+accessibility trees entirely and a `JDesktopIcon` takes its place as a child of the desktop pane
 (`R_iconified_windows`). The snapshot renders that icon as what it is: class `JDesktopIcon`, role
 `desktop_icon`, named through a three-step fallback that lands on the frame's title, with its own
 children hard-excluded. `swing_close` on it resolves to the internal frame.
@@ -684,9 +684,13 @@ never see it at all. This is not a question of preferring one source; one source
 minimized is exactly what tells the agent to restore it before trying to interact, and
 `D_iconified_children_hidden` makes that signal actionable.
 
-**Why not synthesize it for `JInternalFrame` too, from `isIcon()`.** Not needed rather than
-rejected: an iconified internal frame is represented by a `JDesktopIcon`
-(`D_desktop_icon_as_itself`), so there is no frame node left in the tree to annotate.
+**A `JInternalFrame` gets it too, from `isIcon()`.** Usually there is no frame node left to
+annotate, because its `JDesktopIcon` took its place (`D_desktop_icon_as_itself`). But outside a
+`JDesktopPane`, or under a custom `DesktopManager`, the frame is iconified in place and stays
+showing (`R_iconified_windows`). It then advertises `restore`, and without `[iconified]` nothing
+would explain why. Its children stay listed, unlike a `Frame`'s (`D_iconified_children_hidden`):
+they are still on screen and still clickable. A custom manager that hides them by shrinking the
+frame leaves them zero-sized, and the visibility check drops them anyway.
 
 **Restoring clears only that bit.** `setExtendedState(getExtendedState() & ~Frame.ICONIFIED)`
 preserves other extended-state bits, so an iconified-maximized frame comes back maximized.
