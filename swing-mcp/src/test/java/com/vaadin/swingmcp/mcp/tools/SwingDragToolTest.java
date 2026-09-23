@@ -555,7 +555,7 @@ class SwingDragToolTest extends AbstractHeadlessTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
-    void virtualChildAsSourceResolvesToHostComponent() throws Exception {
+    void jListAsSourceDragsWithoutError() throws Exception {
         JList<String> list = new JList<>(new String[]{"Item A", "Item B", "Item C"});
         list.setSize(100, 90);
 

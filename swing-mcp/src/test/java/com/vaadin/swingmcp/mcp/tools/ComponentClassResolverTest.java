@@ -237,7 +237,7 @@ class ComponentClassResolverTest {
     }
 
     @Test
-    void isRuntimeProxy_trueForNullEnclosingAndMultipleDollars() {
+    void isRuntimeProxy_falseForNestedAndStandardClasses() {
         // Negatives only: the positive case needs a generated class, which
         // SwingSnapshotToolTest builds with ByteBuddy.
         assertFalse(ComponentClassResolver.isRuntimeProxy(FancyButton.class),

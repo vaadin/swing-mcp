@@ -46,17 +46,13 @@ numbers are from the commit after the pass.
   - `SwingClickToolTest.componentMatrix_JTabbedPane`
   - `componentMatrix_JScrollPane` in `SwingDecrementTest`, `SwingIncrementTest`,
     `SwingToggleExpandTest` and `SwingTogglePopupTest`
+  - `SwingDragToolTest.jListAsSourceDragsWithoutError` and
+    `virtualChildItemAsSourceResolvesToHostJList` pass as long as the drag does not throw
 - **Tests that assert `getRefOf` throws.** architecture.md § Testing calls that testing the
   harness, not the tool. They are in many headless tests, and in the JFrame / JDialog /
   JOptionPane matrix rows of the TogglePopup, Increment, Decrement and ToggleExpand screen tests.
   `SwingGetSelectionTest`, `SwingGetTextTest` and `SwingSetValueTest` are done: their
   not-supported helper registers the component under ref 99 and asserts the whole refusal.
-- **Names that contradict their bodies:**
-  - `SwingDragToolTest.virtualChildAsSourceResolvesToHostComponent` drags the JList itself,
-    not a child.
-  - `ComponentClassResolverTest.isRuntimeProxy_trueFor…` asserts only false cases.
-  - `SwingUtilsGetEffectiveAccessibleNameTest.desktopIcon_step3_…` exercises step 2.
-  - `…emptyTitle_…_returnsNull` asserts `""`, not null.
 - **`SwingUtilsSupportsTextTest.customLabelRoleComponent…`** uses a JLabel subclass, so it does
   not show the gate works for a component that isn't a JLabel.
 - **`SessionCloseTest`**: session 2 always gets a fresh context, whatever happened to session 1's
