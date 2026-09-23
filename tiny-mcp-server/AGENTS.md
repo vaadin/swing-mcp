@@ -47,6 +47,7 @@ Every fact lives in exactly one of these; the others link to it.
 - **Diagnostics go to `java.util.logging`**, never to `System.out`; two audiences, two channels — the LLM reads the `isError` body, the operator reads stderr.
 - **Transports compose, never inherit.** A transport takes a configured `MCPHandler`; nothing extends a transport to configure it.
 - **One handler, one transport, one lifecycle cycle.** No restart, no reuse, no sharing.
+- **Every `.java` and `.gradle.kts` file opens with the Apache-2.0 Vaadin header**, verbatim; the full text is `LICENSE` beside this file.
 - **Pre-1.0: break APIs freely** — the two consumers live in this repository and are rebuilt together.
 
 ## Commands

@@ -49,3 +49,11 @@ transport binds to `127.0.0.1` and nothing else.
 This is a separate product that happens to live here: it is host-agnostic, nothing in it
 names Swing, and it is expected to move to a repository of its own with its own release
 cadence. See `AGENTS.md` beside this file for the rules that keep it that way.
+
+## License
+
+Copyright 2000-2026 Vaadin Ltd.
+
+Licensed under the [Apache License, Version 2.0](LICENSE). Every source file
+carries the corresponding header; contributions are accepted under the same
+license.
