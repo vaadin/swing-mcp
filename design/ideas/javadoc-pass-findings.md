@@ -20,14 +20,6 @@ numbers are from the commit after the pass.
   or the convention is wrong (`Q_unknown_ref_error`). An unknown ref is arguably a
   protocol-level bad parameter.
 
-## Possible code bugs — tiny-mcp-server
-
-- **`HttpMCPServer.stop()`** (`:136`) never runs `onSessionClosed` for the live sessions either.
-  This is now documented on `handler.stop()`; decide whether that is intended.
-- **`JsonRpcExchange`**: only tests call `sendResponseRaw` (`:84`), and it builds JSON by string
-  concatenation, against the POJO mapping everything else uses. Nothing calls
-  `sendError(int, String)` (`:89`). Both look like dead code.
-
 ## Tests that prove less than they claim
 
 - **Tests that assert nothing:**
@@ -71,8 +63,6 @@ numbers are from the commit after the pass.
 - **The preview-cap rules** live only in `SnapshotNode` comments: the cap is counted after quote
   escaping, with no dangling backslash and no trailing space before `…`. They belong in
   `snapshot-format.md` or `D_inline_value_preview`.
-- **`tiny-mcp-server/design/architecture.md`**: step 5 of the stdio flow doesn't mention that
-  `closeAllSessions` runs at EOF.
 - **`tiny-mcp-server/design/research.md` candidates**, now kept only in javadoc:
   - MCP 2025-03-26: `content` has no `minItems`, so an empty array is valid (in `ToolFunction`).
   - `MCP-Protocol-Version` is required from 2025-06-18 (in `TinyMCPClient`).

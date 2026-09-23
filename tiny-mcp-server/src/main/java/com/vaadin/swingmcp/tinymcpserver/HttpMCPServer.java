@@ -133,14 +133,20 @@ public class HttpMCPServer {
         LOG.info("HttpMCPServer started on " + getUrl());
     }
 
+    /**
+     * Stops listening, then closes every live session, running
+     * {@code onSessionClosed} on each, and stops the handler. Blocks until
+     * each session's in-flight request, if any, finishes.
+     */
     public void stop() {
-        handler.stop();
         if (httpServer != null) {
             httpServer.stop(0);
             httpServer = null;
             boundPort = -1;
-            LOG.info("HttpMCPServer stopped");
         }
+        handler.closeAllSessions();
+        handler.stop();
+        LOG.info("HttpMCPServer stopped");
     }
 
     public MCPHandler getHandler() {

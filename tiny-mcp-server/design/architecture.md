@@ -53,8 +53,8 @@ the `R_`), one symbol's behaviour (its doc comment), the package map (`AGENTS.md
    the same feature handlers as the HTTP path.
 4. `dispatch` throws `IllegalStateException` if the pinned session is ever closed — an invariant
    assertion, not a recovery path (`D_stdio_never_evicts`).
-5. Each response is written as one UTF-8 line to the private writer. EOF on stdin ends the loop
-   and `stop()`s the handler in a `finally`.
+5. Each response is written as one UTF-8 line to the private writer. EOF on stdin ends the loop;
+   a `finally` closes the session, firing `onSessionClosed`, and `stop()`s the handler.
 
 **Session admission and eviction:**
 
@@ -70,6 +70,9 @@ the `R_`), one symbol's behaviour (its doc comment), the package map (`AGENTS.md
    cleanup never blocks on a live request (`D_idle_eviction`).
 5. Both paths write a tombstone and fire `onSessionClosed`, so an explicit DELETE, a supersede
    and an idle timeout are indistinguishable to a listener and distinguishable to a client.
+6. Stopping either transport fires `onSessionClosed` for every session still live, so no
+   listener-held resource outlives the server. `HttpMCPServer.stop()` first closes the listener,
+   so no new session can arrive, then waits on each session's lock as a supersede does.
 
 ## Where to start reading
 
