@@ -153,8 +153,8 @@ class TinyMCPClientErrorPathTest {
     @Test
     void notFoundOnInitializeIsAPlainProtocolErrorNotSessionLoss() throws IOException {
         // initialize carries no session id, so a 404 there cannot mean the
-        // session vanished — mapping it to MCPSessionLostException would send
-        // AutoRetryMCPClient into a pointless re-initialize.
+        // session vanished — mapping it to MCPSessionLostException would tell
+        // the caller to re-initialize, which cannot help.
         start((method, body) -> isInitialize(body)
                 ? json(404, errorEnvelope(-32601, "no such endpoint"))
                 : defaultReply(method, body));

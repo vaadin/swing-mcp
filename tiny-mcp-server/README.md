@@ -1,8 +1,8 @@
 # tiny-mcp-server
 
 A minimal Model Context Protocol server in pure Java, built to be embedded in someone else's
-application. HTTP and stdio transports, tools, resources and prompts, plus the `MCPProxy`
-forwarding machinery — over the JDK's `HttpServer` and GSON, with no framework underneath.
+application. HTTP and stdio transports, tools, resources and prompts, plus a small HTTP client
+to call one — over the JDK's `HttpServer` and GSON, with no framework underneath.
 It implements the protocol and knows nothing about what the tools do.
 
 ## Why it exists
@@ -30,10 +30,6 @@ new HttpMCPServer(18088, "/mcp", handler).start();
 // or as a standalone process an MCP client spawns:
 new StdioMCPServer(handler).runStdio(System.in, System.out);
 ```
-
-To put a stdio face on an MCP server that is already running over HTTP somewhere else,
-`MCPProxy.newHandler(tools, upstreamUri, messages)` returns a handler that forwards every
-`tools/call` upstream and answers `tools/list` from the manifest you supply.
 
 ## What it does not do
 

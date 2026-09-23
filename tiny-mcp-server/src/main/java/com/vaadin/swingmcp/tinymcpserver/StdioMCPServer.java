@@ -158,10 +158,9 @@ public class StdioMCPServer {
         } catch (IOException e) {
             LOG.log(Level.WARNING, "Stdio input I/O failed; exiting read loop", e);
         } finally {
-            // Cascade onSessionClosed so per-session resources (e.g.
-            // MCPProxy's upstream TinyMCPClient) are released before the
-            // executor goes away. handler.stop() alone only shuts the
-            // executor down.
+            // Cascade onSessionClosed so per-session resources are released
+            // before the executor goes away. handler.stop() alone only shuts
+            // the executor down.
             handler.closeAllSessions();
             handler.stop();
             currentSession = null;

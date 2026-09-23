@@ -97,10 +97,11 @@ independent class would either duplicate all of it or force a shared base class 
 more churn than a second thin shell over the same handler. This is what `D_handler_transport_split`
 made cheap.
 
-**Why not build stdio in the consuming module instead**, leaving this server HTTP-only. Rejected
-— the consumer would have to re-implement JSON-RPC framing, session routing and the registries,
-with GSON already sitting on this classpath. This module is the natural home; putting it anywhere
-else duplicates the protocol.
+**Why keep it with no consumer in this repository.** Its one user here, a stdio proxy, was
+removed in 2026-09. An MCP server library that a client cannot spawn lacks the transport most MCP
+servers use, and the shell costs little because the handler does the work. Built in a consumer
+instead, it would re-implement JSON-RPC framing, session routing and the registries, with GSON
+already sitting on this classpath.
 
 **Why not LSP-style `Content-Length` framing.** Rejected — the MCP specification prescribes
 newline-delimited JSON-RPC for stdio (`R_mcp_stdio_framing`). Conforming is not negotiable, and
@@ -167,19 +168,19 @@ no gain, and transport-driven lifecycle pairs naturally with the one-handler-one
 `setAcceptNewSession`, `setOnSessionStarted` and `setOnSessionClosed` are fluent setters with
 no-op defaults, settable until the first session is accepted and locked thereafter.
 
-**Why setters at all.** Factories. `MCPProxy.newHandler` builds a handler and *then* layers
-per-session lifecycle onto it, which a fat constructor cannot express without every caller passing
-nulls for the parts it does not care about. This replaced a design that made the listeners
-non-null constructor parameters — which works for a direct caller who knows all its callbacks up
-front, and blocks every caller who does not.
+**Why setters at all.** Most callers set one of the three and leave the others at their
+defaults: `new MCPHandler(info, instructions).setAcceptNewSession(…)`, then tools, then a
+transport. A constructor taking all three makes every caller pass nulls for the parts it does not
+care about, and it blocks a caller that builds a handler first and layers per-session lifecycle
+onto it afterwards.
 
 **Why the one-shot lockdown.** Listener semantics changing mid-flight is a footgun: a session
 admitted under one policy and closed under another, with no way to reason about which applied.
 The lockdown costs one boolean and preserves exactly the guarantee the constructor form was
 reaching for. Pre-flight reconfiguration is the legitimate case; mid-flight is not.
 
-**Why not keep the non-null constructor enforcement.** Rejected — it blocks factory wiring, which
-is the case that motivated the change. The defaults are sensible (accept everything, do nothing),
+**Why not non-null constructor parameters.** Rejected — they force every callback on every
+caller, and block build-then-configure wiring. The defaults are sensible (accept everything, do nothing),
 and a caller who forgets to override one sees the consequence — unlimited sessions, no per-session
 setup — in their first integration test rather than in production.
 
@@ -189,8 +190,8 @@ it would mean every reader has to consider whether it happened.
 
 **Why `onSessionStarted` exists.** There was a hook for a session ending and none for one
 beginning. Without it, per-session resource setup has to be lazy-initialized inside every
-registered `ToolFunction`, scattering one concern across N registrations. `MCPProxy` uses it to
-allocate its per-session upstream state in one place.
+registered `ToolFunction`, scattering one concern across N registrations. Today only the tests
+use it, to observe a session starting.
 
 ## D_three_error_layers — Why three error layers rather than one?
 
@@ -391,14 +392,13 @@ ever closed.
   "client went quiet", so it times out. Over stdio the transport answers that question directly —
   the client *is* the parent process holding the pipe, and EOF on stdin is a definitive death
   notice. There is nothing to reclaim, so the timer can only destroy a live conversation.
-- **The failure was unrecoverable, not merely wasteful.** A proxy process sat idle for
-  thirty-two minutes, its own handler evicted its own stdio session, and every later `tools/call`
-  returned "Session expired" without a byte ever reaching upstream. Nothing short of restarting
+- **The failure was unrecoverable, not merely wasteful.** A stdio server process — a forwarding
+  proxy, since removed — sat idle for thirty-two minutes, its own handler evicted its own stdio
+  session, and every later `tools/call` returned "Session expired". Nothing short of restarting
   the MCP client recovered it, because the stdio transport has no session concept at all: no id on
   the wire, no 404 for a client to interpret, and therefore no reason for any client to
   re-initialize (`R_mcp_stdio_framing`). The transport also pins the session in a field, so the
-  process stays bricked. The proxy's own session-loss machinery did not help either — that handles
-  the *upstream* session dying, and the dead session here was the downstream one.
+  process stays bricked.
 - **Structural beats configurable.** Moving the schedule call to the transport that needs it makes
   the invariant hold by construction, which is what permits the assertion in `dispatch`.
 
@@ -409,8 +409,8 @@ path in milliseconds by backdating the stamp, so the knob would earn nothing the
 
 **Why not make stdio recover instead**, re-initializing and replaying on a closed session.
 Rejected, though it was the obvious defensive move. It papers over an eviction that should never
-happen, and it would silently discard session-scoped state — the proxy's per-session upstream
-client — in the middle of a conversation. The `IllegalStateException` is the same insight
+happen, and it would silently discard session-scoped state — whatever `onSessionStarted` set up —
+in the middle of a conversation. The `IllegalStateException` is the same insight
 expressed as a loud invariant rather than quiet repair.
 
 **Why not refresh the stamp on `ping`.** Rejected — it makes the failure depend on client
@@ -428,8 +428,8 @@ change and no longer load-bearing now that the eviction cannot happen.
 
 ## D_embedded_client — Why ship our own MCP client rather than reuse the SDK's?
 
-`MCPProxy` needs to call an upstream MCP server, so this module ships a small client in a package
-beside the server: same jar, same `MCPProtocol` POJOs, same exception conventions,
+The test suites need a client that runs on Java 11 (`D_conformance_two_clients`), so this module
+ships a small one in a package beside the server: same jar, same `MCPProtocol` POJOs, same exception conventions,
 `java.net.http.HttpClient` underneath, no new runtime dependency. The surface is `initialize`,
 `listTools`, `callTool`, `close`.
 
@@ -443,26 +443,22 @@ cross-module coordination than it earns in cohesion. The consequence is a module
 `tiny-mcp-server` that also hosts a client; that is a naming wart, not a design one, and renaming
 the module is a bigger change than it is worth.
 
-**Why HTTP only, with no stdio client.** The proxy forwards *from* stdio (server side) *to* HTTP
-(client side), so a stdio client would exist purely to test the stdio server. The loopback test
-instead drives an HTTP client wrapped by a stdio server, which exercises the same paths in a more
-realistic shape.
+**Why HTTP only, with no stdio client.** A stdio client would exist purely to test the stdio
+server, and those tests already write JSON-RPC lines into its streams and read the replies back,
+which is the whole of what a stdio client does.
 
 **Why such a small surface.** Resources and prompts are deliberately absent: no caller has asked,
 and adding them speculatively means maintaining and testing a surface nobody drives. Add when a
 use case appears.
 
-**Why building it here was worth it at all.** Beyond the dependency argument: it makes a
-self-contained loopback test possible — a stdio server wrapping an HTTP server through this client
-— validating the whole transport-and-routing pipeline without any host application or external
-SDK in the picture.
+**Why it ships in the main source set** although only tests use it. It is part of the library's
+surface, and tests in other modules build against it. As a test fixture it would take
+`java.net.http` out of the shipped jar; that has not been worth a separate artifact so far.
 
 ## D_no_auto_retry — Why does a lost session surface as an exception rather than being retried?
 
 `TinyMCPClient` throws `MCPSessionLostException` on an HTTP 404 from a non-`initialize` call and
-lets the caller decide. Retry is opt-in, through a decorator obtained from
-`MCPClient.autoRetry()`, which re-initializes once and replays the call exactly once; a second
-failure in the replay surfaces.
+lets the caller decide; recovering means calling `initialize()` again.
 
 **Why failure is the default.** MCP sessions can hold state that a fresh `initialize` silently
 discards. The canonical case is a per-session map of handles handed out by an earlier call: after
@@ -472,35 +468,26 @@ in-progress builders, transaction handles — loses it. For a stateful caller **
 information**: a clear "your session is gone, re-orient" beats a call that appears to work against
 state nobody intended.
 
-**Why the proxy does not opt in.** It catches the exception and hands the model a recovery hint
-as a tool-layer error, so the model recovers deliberately rather than being lied to.
-
-**Why a decorator rather than making it a subclass** overriding one protected method. Rejected —
-composition over inheritance. A decorator composes with future wrappers (logging, telemetry,
-rate-limiting); a subclass forces a single linear hierarchy and picks the order for everyone.
-
-**Why a default method on the interface rather than a static factory** on the concrete class.
-Rejected — the interface default means any future `MCPClient` implementation gets retry-wrapping
-for free, and it chains left to right at the call site. A static factory binds the convenience to
-one class.
+**Why no opt-in retry either.** A decorator that re-initialized and replayed once was removed
+in 2026-09: it had no caller, and a one-call opt-in to the silent re-initialize argued against
+above undercuts the argument.
 
 **Why not retry on `IOException` too.** Rejected — a transport failure may have been delivered and
 acted upon, and the caller knows its operation's idempotency while the client does not.
 
 **Why `isError: true` is not an exception.** It comes back as a normal result, mirroring the
-server's own three-layer model (`D_three_error_layers`). The proxy then re-wraps it on its own
-server side, message preserved verbatim.
+server's own three-layer model (`D_three_error_layers`).
 
 ## D_request_records — Why do handler callbacks take a bundle type rather than positional arguments?
 
 `ToolFunction` and its siblings receive one immutable object bundling the identity slot — tool name, prompt
 name, resource URI — with the arguments, the transport headers, and the JSON-RPC `_meta` object.
 
-**Why, immediately.** Two things needed it at once. A single forwarding lambda registered once per
-upstream tool has to know which tool was actually invoked, and previously the lambda's own
-identity was the only carrier — workable, and ugly when many tools share one implementation. And
-`_meta` carries cross-cutting fields such as `progressToken` that should survive a hop through a
-proxy; without it they are silently dropped.
+**Why.** A single lambda registered under several tool names has to know which one was invoked,
+and without the bundle the lambda's own identity is the only carrier — workable, and ugly when
+many tools share one implementation. And `_meta` carries cross-cutting fields such as
+`progressToken` that a handler must be able to see; without a slot for it they are silently
+dropped.
 
 **Why, durably.** JSON-RPC envelopes gain fields over time — `_meta` itself is one such addition.
 A bundle absorbs a new optional field without touching a single call site; a positional signature
@@ -524,91 +511,24 @@ shortcut — symmetry across tools, prompts and resources is worth one extra typ
 **Transport headers are empty over stdio**, since newline-delimited JSON carries no out-of-band
 metadata. Both maps are unmodifiable.
 
-## D_forwarding_proxy — Why does the proxy answer `tools/list` from a static manifest rather than from upstream?
-
-`MCPProxy.newHandler(tools, upstreamUrl, messages)` returns a fully wired handler whose tool
-functions forward `tools/call` upstream and whose `tools/list` is answered from the supplied
-manifest — always, even before upstream has ever been contacted, even after a drift failure has
-been cached.
-
-**Why.** An MCP client dispatches `tools/list` once at startup and drops a server that errors
-there for the whole session (`R_claude_code_tools_list`). A proxy that asks upstream first
-therefore disappears entirely whenever the host application is not running yet — which is the
-normal state of affairs when a developer starts their editor before their application. Answering
-locally keeps the proxy registered, and the first `tools/call` returns a readable `isError`
-explaining what to start.
-
-**Why the drift probe.** Once the manifest is static, drift between it and the real upstream
-becomes a genuine failure mode. At the first successful upstream `initialize` the proxy compares
-its manifest against `listTools()`, set-keyed by name and structurally on each entry
-(`D_structural_schema_equality`), and hard-fails symmetrically: extra on either side, or the same
-name with different fields, is drift. A mismatched deployment can mean different argument
-semantics on a shared tool, so treating it as a failure is the whole point.
-
-**Why the failure is cached for the session.** Drift is a deployment condition, not a transient
-one; re-probing on every call would spend three round trips to learn the same thing. A
-re-`initialize` opens a fresh session and walks the probe again.
-
-**Why not have `tools/list` trigger init and the probe.** Rejected — `tools/list` fires at client
-init time, and an error there causes the client to drop the server entirely, defeating the entire
-point of a proxy that survives upstream being down.
-
-**Why not return an empty tool list once drift is cached.** Rejected — the client reads an empty
-list as a broken server and stops calling it. That is strictly worse than a full list plus a clear
-`isError` body on the first call, which at least tells the user what to fix.
-
-**Why not soft-fail on drift and forward anyway** with a warning. Rejected — the probe exists to
-catch deployment mismatches, and a drifted manifest can mean different argument semantics or
-different return shapes. Forwarding produces silently wrong results, which is the failure mode
-hardest to notice and most expensive to debug.
-
-**Why not auto-retry on session loss.** Rejected — silent state loss, for the same reasons as
-`D_no_auto_retry`. The proxy's session-lost message tells the model exactly how to recover, which
-beats fake success against a stale session.
-
-**Why not an async drift probe at session start.** Rejected — it introduces a race between the
-probe and the first `tools/call`. Paying three round trips on the first call of a session is the
-simplest and most predictable shape, and only the first call pays.
-
-**Why a `URI` rather than a `Supplier<MCPClient>`.** This was accepted and then walked back. The
-supplier was meant to enable mock injection; in practice the tests use HTTP loopback for the
-client surface anyway, so it earned no testing benefit while adding a failure mode of its own —
-the supplier itself throwing. A direct construction from the URI is simpler and validates once at
-startup. Add an overload if a non-HTTP transport ever needs proxying.
-
-**Why a static factory and no instance.** All per-session state lives on the session's attribute
-bag, so an instance would hold nothing. The factory shape also makes the wiring rule visible at
-the call site: it returns a configured handler, and the caller wraps it in a transport.
-
-**Why `ProxyMessages` is template-free.** The four strings are pre-formatted by the caller and
-emitted verbatim; this module interpolates nothing. The caller is the one that knows its target's
-identity — a URL, a product name — and this module is generic. Diagnostic detail goes to JUL at
-WARNING on stderr instead: two audiences, two channels.
-
-**The server description is load-bearing.** Because `tools/list` always answers, a client can be
-fully registered against an upstream that is not running. The proxy's own server-info description
-has to explain that model — this is a proxy; if the upstream is not up, every call fails with an
-explanation; tell the user to start it — or the model has no way to interpret the first failure.
-Treat it as a first-class artifact, not boilerplate.
-
-## D_structural_schema_equality — Why does `InputSchema` implement structural equality rather than the proxy comparing fields?
+## D_structural_schema_equality — Why does `InputSchema` implement structural equality rather than each caller comparing fields?
 
 `MCPProtocol.InputSchema` and the property descriptors it references implement deep structural
 `equals` and `hashCode`: two schemas are equal when they describe the same JSON Schema document
 modulo property order, with `required` compared as a **set** because that is its JSON Schema
 semantics.
 
-**Why on the type rather than at the call site.** `D_forwarding_proxy`'s drift probe is the
-consumer, and a bug in that predicate surfaces either as drift errors that are not drift, or —
-far worse — as missed drift, and from there as silently wrong forwarded calls. Centralising the
-predicate on the type gives one place to audit, one place to test, and free reuse for any future
-comparison.
+**Why on the type rather than at the call site.** The consumer is a manifest-coherence test,
+comparing a static tool manifest against what the server's `tools/list` returns. A bug in the
+predicate surfaces either as drift that is not drift, or — far worse — as missed drift, and from
+there as a model reading a schema the server does not honour. Centralising the predicate on the
+type gives one place to audit, one place to test, and free reuse for any future comparison.
 
 **Why order-insensitivity is part of the contract.** Schemas are produced by a builder and also
 round-tripped through GSON, and both paths must compare equal for the same logical schema. Field
 order is not part of what a schema means.
 
-**Why not a comparator inside `MCPProxy`.** Rejected — the next caller writes a second one, and a
+**Why not a comparator inside the test.** Rejected — the next caller writes a second one, and a
 fix to either does not reach the other. Equality is a property of the value, not of one use of it.
 
 **Why not serialize both to JSON and compare strings.** Rejected for three reasons: GSON's

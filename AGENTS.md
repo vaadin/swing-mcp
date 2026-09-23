@@ -35,16 +35,13 @@ Every fact lives in exactly one of these; the others link to it.
 - **Tools see only windows the user can interact with.** A ref that addresses a blocked window is a mutation that silently does nothing. See `D_interactable_windows_only`.
 - **A successful mutation clears the session's ref map; a rejected one leaves it intact** — nothing was dispatched, so the model can retry without re-snapshotting.
 - **Every quoted slot in a snapshot line is sanitized before emission.** One embedded newline corrupts the tree structure for every reader below it. See `D_quoted_slot_sanitizing`.
-- **A tool never declares its own name, description or schema** — it binds a `ToolDescriptor` from `swing-mcp-tool-defs`, so the two transports cannot drift. See `D_shared_tool_manifest`.
-- **`swing-mcp-proxy` must not depend on `swing-mcp`.** It runs in its own JVM; a dependency would drag the whole Swing stack into it.
+- **A tool never declares its own name, description or schema** — it binds a `ToolDescriptor` from `SwingTools`, so the manifest and the registered tools cannot drift. See `D_shared_tool_manifest`.
 
 ## Module map
 
-- `tiny-mcp-server` — a separate product vendored here: the MCP protocol, both transports, the proxy machinery. Rules: `tiny-mcp-server/AGENTS.md`
-- `swing-mcp-tool-defs` — the shared contract: server identity, the tool manifest, the session-lost message.
-- `swing-mcp` — the Swing tools themselves: the snapshot, the screenshot, and every interaction tool.
+- `tiny-mcp-server` — a separate product vendored here: the MCP protocol, both transports, a small HTTP client. Rules: `tiny-mcp-server/AGENTS.md`
+- `swing-mcp` — the Swing tools themselves: the snapshot, the screenshot, every interaction tool, and the manifest the model reads.
 - `swing-mcp-agent` — a `-javaagent` that starts the server before `main()`, so the host application needs no code change.
-- `swing-mcp-proxy` — the stdio process an MCP client spawns, forwarding to the in-process server over loopback.
 - `test-apps` — demo Swing applications and the screen-mode integration tests.
 
 ## Conventions

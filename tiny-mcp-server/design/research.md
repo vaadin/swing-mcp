@@ -60,11 +60,3 @@ later one trims to its length — which is how long this file gets, so keep it s
   Resources and prompts are one-shot content producers. **[docs]**
 - Consequence: a failing resource or prompt handler has only the JSON-RPC error envelope as a
   structured channel back to the client. **[docs]**
-
-## R_claude_code_tools_list — Claude Code drops an MCP server that errors on `tools/list`
-
-- Claude Code dispatches `tools/list` once at MCP-initialization time, and a server that
-  answers it with an error is dropped for the whole session rather than retried. **[unverified]**
-- `D_forwarding_proxy` is built on this claim: it is the reason the proxy answers `tools/list`
-  from a static manifest instead of asking upstream. If the claim is wrong, that decision is
-  merely redundant rather than harmful — worth re-checking before anyone simplifies it away.

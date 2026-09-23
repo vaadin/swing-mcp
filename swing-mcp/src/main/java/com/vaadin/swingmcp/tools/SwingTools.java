@@ -22,19 +22,20 @@ import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
 import java.util.List;
 
 /**
- * Shared contract artifact for the Swing MCP server.
+ * Everything the model reads about this server, in one place: the server
+ * identity, the instructions, and one {@link ToolDescriptor} per tool. A tool
+ * binds its descriptor rather than declaring its own name, description and
+ * schema:
  *
- * <p>Hosts the canonical server identity (name, version, instructions),
- * the full tool manifest as {@link ToolDescriptor} constants, and the
- * shared session-lost message. Both {@code swing-mcp} (the in-process
- * HTTP transport) and {@code swing-mcp-proxy} (the stdio forwarding
- * transport) consume these constants, so anything Claude sees is
- * bit-identical across the two transports.
+ * <pre>{@code
+ * public SwingClickTool() {
+ *     super(SwingTools.SWING_CLICK);
+ * }
+ * }</pre>
  *
- * <p>Pure data — no Swing classes, no resources, no reflection. The
- * {@link #ALL} list is the manifest the proxy uses to answer
- * {@code tools/list} and to drift-check upstream's {@code listTools()}
- * response.
+ * <p>{@link #ALL} is the manifest: every descriptor, each of which must be
+ * registered by the server. {@code SwingToolsCoherenceTest} holds the two
+ * together (D_shared_tool_manifest).
  */
 public final class SwingTools {
 
@@ -46,11 +47,7 @@ public final class SwingTools {
     /** Server version advertised in {@code initialize.serverInfo.version}. */
     public static final String SERVER_VERSION = "0.0.1";
 
-    /**
-     * Multi-paragraph instructions advertised in
-     * {@code initialize.instructions}. First-person as Swing-MCP — the
-     * proxy is invisible to the client.
-     */
+    /** Multi-paragraph instructions advertised in {@code initialize.instructions}. */
     public static final String INSTRUCTIONS =
             "This server provides tools to inspect and interact with a running Java Swing application.\n" +
             "The MCP server runs in-process with the Swing application: if the application exits, this\n" +
@@ -71,15 +68,6 @@ public final class SwingTools {
             "- `ref` values may change after UI transitions (dialogs opening/closing, navigation). Re-snapshot after significant state changes before using stale refs.\n" +
             "- Do not call mutation tools in parallel — each successful mutation clears the ref map, so the second call will fail with a stale-ref error. Issue tool calls sequentially.\n" +
             "- `swing_close` on a window with unsaved changes may trigger a confirmation dialog — snapshot afterward to detect it.";
-
-    /**
-     * Session-lost error message — emitted by both the in-process server
-     * and the proxy whenever upstream evicted the active session. Sourced
-     * from one place so both transports speak with one voice
-     * (D_shared_tool_manifest).
-     */
-    public static final String SESSION_LOST_MESSAGE =
-            "Swing application session was lost — call swing_snapshot to re-orient and retry.";
 
     // ===== Tool descriptors (alphabetical by constant name) =====
 

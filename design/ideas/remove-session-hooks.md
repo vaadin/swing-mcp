@@ -1,7 +1,6 @@
 # Remove `MCPHandler.setOnSessionStarted` / `setOnSessionClosed`
 
-Split out of `remove-swing-mcp-proxy.md` on 2026-09-23. The proxy removal keeps both hooks; this
-idea removes them afterwards.
+Split out of the proxy removal on 2026-09-23, which kept both hooks. This idea removes them.
 
 ## Why
 

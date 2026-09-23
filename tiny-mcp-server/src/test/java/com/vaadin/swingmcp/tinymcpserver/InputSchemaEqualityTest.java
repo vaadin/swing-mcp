@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * D_structural_schema_equality: InputSchema and PropertySchema implement deep structural equality.
- * Drift detection in MCPProxy compares descriptors via these methods, so this
+ * Manifest-coherence tests compare descriptors via these methods, so this
  * is the contract test for the underlying equality predicate.
  */
 class InputSchemaEqualityTest {
@@ -146,8 +146,8 @@ class InputSchemaEqualityTest {
     void roundTripThroughGsonPreservesEquality() {
         // The schema produced by InputSchemaBuilder must compare equal to
         // the schema deserialized from its own JSON — this is the exact
-        // shape MCPProxy's drift probe sees (one side from a static
-        // descriptor, the other from upstream's listTools wire response).
+        // shape a coherence test sees (one side from a static descriptor,
+        // the other from the server's listTools wire response).
         InputSchema original = new InputSchemaBuilder()
                 .requiredInteger("ref", "the element ref")
                 .optionalString("value", "optional value")

@@ -10,16 +10,16 @@ comment), the module map (`AGENTS.md`).
 
 ## Wiring
 
-- Dependencies point one way: `swing-mcp` and `swing-mcp-proxy` → `swing-mcp-tool-defs` →
-  `tiny-mcp-server`. Nothing depends on `swing-mcp`, and the proxy must never do so — it runs in
-  a JVM with no UI in it.
+- Dependencies point one way: `swing-mcp-agent` and `test-apps` → `swing-mcp` →
+  `tiny-mcp-server`. An MCP client talks to `SwingMCP` over loopback HTTP directly; there is no
+  process in between (`D_direct_http_only`).
 - `SwingMCP` owns the `MCPHandler`, the `HttpMCPServer` wrapping it, and `toolLock`. It composes
   the transport rather than extending it, and registers every tool through one shared wrapper.
 - Per-session state — the ref map above all — lives on a `SwingToolContext` attached to the
   `MCPSession`, not on `SwingMCP`. It is resolved on the dispatch thread before anything hops to
   the EDT, because `MCPSession.getCurrent()` is a thread-local and is not bound over there.
-- Every tool extends `AbstractSwingTool` and binds a `ToolDescriptor` from
-  `swing-mcp-tool-defs` at construction; `getName` / `getDescription` / `getInputSchema` are
+- Every tool extends `AbstractSwingTool` and binds a `ToolDescriptor` from `SwingTools` at
+  construction; `getName` / `getDescription` / `getInputSchema` are
   final and delegate to it (`D_shared_tool_manifest`).
 - `getConsideredComponents()` is the single seam that decides what any tool can see. It returns
   `List<Component>`, not `List<Window>`, precisely so a headless test can substitute a panel

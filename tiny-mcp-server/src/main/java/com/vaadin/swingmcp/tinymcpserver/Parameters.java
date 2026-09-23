@@ -40,11 +40,7 @@ public final class Parameters {
         this.raw = Objects.requireNonNull(raw, "raw");
     }
 
-    /**
-     * Returns the underlying raw {@code Map<String, Object>}. Useful for
-     * forwarding-proxy use cases that need to pass the arguments through
-     * unchanged.
-     */
+    /** Returns the underlying map, for passing the arguments on unchanged. */
     public Map<String, Object> raw() {
         return raw;
     }

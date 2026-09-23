@@ -60,8 +60,7 @@ import java.util.logging.Logger;
  * the first session is accepted, then locked — calling any setter
  * afterwards throws {@link IllegalStateException}. This matches the
  * "one handler, one transport, one lifecycle cycle" rule while letting
- * factories (e.g. {@link MCPProxy#newHandler}) wire listeners
- * post-construction.
+ * a caller configure the handler fluently after construction.
  */
 public class MCPHandler {
 
@@ -195,8 +194,8 @@ public class MCPHandler {
     /**
      * Sets the listener invoked the moment a fresh session has been added
      * to the session map (after {@code acceptNewSession} returned true,
-     * before the {@code initialize} response is built). Used by
-     * {@link MCPProxy} to allocate per-session upstream-client state.
+     * before the {@code initialize} response is built) — the one place to
+     * allocate per-session state.
      * <p>
      * Default: no-op.
      *
@@ -496,7 +495,7 @@ public class MCPHandler {
      * <p>Intended for transport-driven shutdown paths (stdio EOF, JVM
      * shutdown hook) where the process is about to exit and live
      * sessions need their close listeners run to release per-session
-     * resources (e.g. {@code MCPProxy}'s upstream {@code TinyMCPClient}).
+     * resources.
      */
     public void closeAllSessions() {
         for (MCPSession s : removeAllSessions()) {

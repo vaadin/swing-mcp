@@ -3,8 +3,8 @@
 ## What this is
 
 A minimal Model Context Protocol server in pure Java, built to be embedded in someone else's
-application. HTTP and stdio transports, tools, resources and prompts, plus the `MCPProxy`
-forwarding machinery — over the JDK's `HttpServer` and GSON, with no framework underneath.
+application. HTTP and stdio transports, tools, resources and prompts, plus a small HTTP client
+to call one — over the JDK's `HttpServer` and GSON, with no framework underneath.
 It implements the protocol and knows nothing about what the tools do.
 
 ## Promises
@@ -32,12 +32,11 @@ Every fact lives in exactly one of these; the others link to it.
 - **Every dispatched request passes through `MCPSession.runLocked`** — the one place that refreshes last-access and fails a closed session. See `D_idle_eviction`.
 - **Only the framing layer writes to the captured stdout.** Anything else printing there corrupts the stdio wire. See `D_stdio_transport`.
 - **Idle cleanup is scheduled by `HttpMCPServer.start()`, never by `MCPHandler.start()`.** A stdio session evicted on a timer bricks its process. See `D_stdio_never_evicts`.
-- **`ProxyMessages` strings are emitted verbatim.** No templating happens in this module — interpolation is the caller's, which is what keeps the module host-agnostic.
 
 ## Package map
 
-- `com.vaadin.swingmcp.tinymcpserver` — protocol dispatch, the session map, both transports, the `MCPProxy` factory.
-- `com.vaadin.swingmcp.tinymcpclient` — the minimal HTTP MCP client the proxy forwards through.
+- `com.vaadin.swingmcp.tinymcpserver` — protocol dispatch, the session map, both transports.
+- `com.vaadin.swingmcp.tinymcpclient` — the minimal HTTP MCP client that drives the test suites.
 - `com.vaadin.swingmcp` — `ToolDescriptor`, the in-memory tool-contract type. Shared with this repository's other modules; it is the one package name that still records the vendoring. See `D_vendored_namespace`.
 
 ## Conventions
@@ -48,7 +47,7 @@ Every fact lives in exactly one of these; the others link to it.
 - **Transports compose, never inherit.** A transport takes a configured `MCPHandler`; nothing extends a transport to configure it.
 - **One handler, one transport, one lifecycle cycle.** No restart, no reuse, no sharing.
 - **Every `.java` and `.gradle.kts` file opens with the Apache-2.0 Vaadin header**, verbatim; the full text is `LICENSE` beside this file.
-- **Pre-1.0: break APIs freely** — the two consumers live in this repository and are rebuilt together.
+- **Pre-1.0: break APIs freely** — its one consumer lives in this repository and is rebuilt with it.
 
 ## Commands
 
