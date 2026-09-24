@@ -17,8 +17,10 @@
 package com.vaadin.swingmcp.mcp;
 
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
-import org.junit.jupiter.api.AfterAll;
+import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.*;
@@ -32,23 +34,27 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * The ref map lives in a {@link com.vaadin.swingmcp.mcp.tools.SwingToolContext} stored as a
- * per-session attribute of {@link com.vaadin.swingmcp.tinymcpserver.MCPSession}, so an HTTP
- * DELETE that drops the session drops the map with it.
+ * The ref map lives in a {@link com.vaadin.swingmcp.mcp.tools.SwingToolContext} attached to each
+ * {@link com.vaadin.swingmcp.tinymcpserver.MCPSession}, never in {@link SwingMCP} itself: a client
+ * that connects after another never resolves the refs the earlier client's snapshot handed out,
+ * whether that session was deleted or evicted (D_single_session).
  */
 class SessionCloseTest {
 
-    private static FakeSwingMCP server;
-    private static HttpClient http;
-    private static URI serverUri;
+    private static final String EMPTY_REF_MAP =
+            "Component with ref 1 invalid — the ref map is empty: no swing_snapshot yet, or a successful mutation cleared it. Call swing_snapshot to rebuild it.";
+
+    private FakeSwingMCP server;
+    private HttpClient http;
+    private URI serverUri;
 
     @BeforeAll
     static void checkHeadless() {
         assertEquals("true", System.getProperty("java.awt.headless"));
     }
 
-    @BeforeAll
-    static void startServer() throws Exception {
+    @BeforeEach
+    void startServer() throws Exception {
         server = new FakeSwingMCP(0, "/mcp", false);
         server.setConsideredComponents(List.of(new JButton("Test")));
         server.start();
@@ -56,8 +62,8 @@ class SessionCloseTest {
         serverUri = URI.create(server.getUrl());
     }
 
-    @AfterAll
-    static void stopServer() {
+    @AfterEach
+    void stopServer() {
         if (server != null) {
             server.stop();
         }
@@ -80,21 +86,25 @@ class SessionCloseTest {
         String body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\"}";
         HttpResponse<String> resp = post(body, null);
         assertEquals(200, resp.statusCode());
-        return resp.headers().firstValue("Mcp-Session-Id").orElse(null);
+        String sessionId = resp.headers().firstValue("Mcp-Session-Id").orElse(null);
+        assertNotNull(sessionId);
+        return sessionId;
     }
 
     private void delete(String sessionId) throws Exception {
-        HttpRequest.Builder builder = HttpRequest.newBuilder(serverUri).DELETE();
-        if (sessionId != null) {
-            builder.header("Mcp-Session-Id", sessionId);
-        }
-        http.send(builder.build(), HttpResponse.BodyHandlers.discarding());
+        HttpRequest request = HttpRequest.newBuilder(serverUri).DELETE()
+                .header("Mcp-Session-Id", sessionId)
+                .build();
+        assertEquals(200, http.send(request, HttpResponse.BodyHandlers.discarding()).statusCode());
     }
 
-    private HttpResponse<String> snapshot(String sessionId) throws Exception {
+    /** Snapshots without mutating, so the session's ref map is left holding ref 1. */
+    private void snapshot(String sessionId) throws Exception {
         String body = "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\","
                 + "\"params\":{\"name\":\"swing_snapshot\",\"arguments\":{}}}";
-        return post(body, sessionId);
+        HttpResponse<String> resp = post(body, sessionId);
+        assertEquals(200, resp.statusCode());
+        assertEquals("- JButton (push_button) \"Test\" [ref=1] actions: click", resultText(resp));
     }
 
     private HttpResponse<String> click(int ref, String sessionId) throws Exception {
@@ -103,43 +113,54 @@ class SessionCloseTest {
         return post(body, sessionId);
     }
 
+    /** Asserts {@code resp} is a tool refusal, and returns its text. */
+    @SuppressWarnings("unchecked")
+    private static String refusalText(HttpResponse<String> resp) {
+        assertEquals(200, resp.statusCode());
+        Map<String, Object> result = (Map<String, Object>) parseJson(resp.body()).get("result");
+        assertEquals(true, result.get("isError"), resp.body());
+        return resultText(resp);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static String resultText(HttpResponse<String> resp) {
+        Map<String, Object> result = (Map<String, Object>) parseJson(resp.body()).get("result");
+        assertNotNull(result, resp.body());
+        List<Map<String, Object>> content = (List<Map<String, Object>>) result.get("content");
+        return (String) content.get(0).get("text");
+    }
+
     @SuppressWarnings("unchecked")
     private static Map<String, Object> parseJson(String json) {
         return MCPProtocol.fromJson(json, Map.class);
     }
 
-    // ===== Test =====
+    // ===== Tests =====
 
-    @SuppressWarnings("unchecked")
     @Test
-    void sessionDeleteClearsRefMap() throws Exception {
+    void sessionAfterDeleteDoesNotInheritRefs() throws Exception {
         String session1 = initialize();
-        assertNotNull(session1);
-
-        HttpResponse<String> snapResp = snapshot(session1);
-        assertEquals(200, snapResp.statusCode());
-        Map<String, Object> snapBody = parseJson(snapResp.body());
-        assertNotNull(snapBody.get("result"), "snapshot should succeed");
-
-        HttpResponse<String> clickResp = click(1, session1);
-        assertEquals(200, clickResp.statusCode());
-        Map<String, Object> clickBody = parseJson(clickResp.body());
-        assertNotNull(clickBody.get("result"), "click should succeed");
-
+        snapshot(session1);
         delete(session1);
 
         String session2 = initialize();
-        assertNotNull(session2);
         assertNotEquals(session1, session2);
+        assertEquals(EMPTY_REF_MAP, refusalText(click(1, session2)));
+    }
 
-        // No snapshot in session 2: its ref map is empty, so the click is refused as isError.
-        HttpResponse<String> staleClickResp = click(1, session2);
-        assertEquals(200, staleClickResp.statusCode());
-        Map<String, Object> staleBody = parseJson(staleClickResp.body());
-        Map<String, Object> result = (Map<String, Object>) staleBody.get("result");
-        assertEquals(true, result.get("isError"));
-        List<Map<String, Object>> content = (List<Map<String, Object>>) result.get("content");
-        assertEquals("Component with ref 1 invalid — the ref map is empty: no swing_snapshot yet, or a successful mutation cleared it. Call swing_snapshot to rebuild it.",
-                content.get(0).get("text"));
+    @SuppressWarnings("unchecked")
+    @Test
+    void newClientEvictsTheOldOneAndDoesNotInheritItsRefs() throws Exception {
+        String session1 = initialize();
+        snapshot(session1);
+
+        String session2 = initialize();
+        assertEquals(EMPTY_REF_MAP, refusalText(click(1, session2)));
+
+        HttpResponse<String> evicted = click(1, session1);
+        assertEquals(404, evicted.statusCode());
+        Map<String, Object> error = (Map<String, Object>) parseJson(evicted.body()).get("error");
+        assertEquals(MCPServerException.SERVER_NOT_INITIALIZED, ((Number) error.get("code")).intValue());
+        assertEquals(SwingMCP.EVICTION_REASON, error.get("message"));
     }
 }

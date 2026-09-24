@@ -19,8 +19,6 @@ numbers are from the commit after the pass.
 
 ## Tests that prove less than they claim
 
-- **`SessionCloseTest`**: session 2 always gets a fresh context, whatever happened to session 1's
-  map, so the test may not prove anything.
 - **`SwingIconifyScreenTest`**:
   - `jframeIsIconified` checks `text.contains("actions: ") && text.contains("iconify")`,
     which is weak.
