@@ -262,19 +262,29 @@ trims to its length — which is how long this file gets, so keep it short.
 - `/mcp` → the server → **Reconnect** brings that server's tools in without restarting the
   client. **[verified 2026-09-23, Claude Code 2.1.280, interactive]**
 - A server restarted mid-session is recovered at the next tool call. The client sends the old
-  `Mcp-Session-Id`, gets a 404, re-initializes and succeeds, and the model sees no error.
-  **[verified 2026-09-23, Claude Code 2.1.280]**
+  `Mcp-Session-Id`, gets a 404, re-initializes and retries the call.
+  **[verified 2026-09-24, Claude Code 2.1.281]**
+- The 404 starts two recoveries at once, the transport's reconnect and the tool call's retry,
+  each with its own `initialize`; reconnect attempt 2 sends a third a second later, and the
+  client keeps that one. None of the three is DELETEd. Reported as anthropics/claude-code#96733.
+  **[verified 2026-09-24, Claude Code 2.1.281, client `--debug-file` and a multi-session server]**
+- Against `SwingMCP` the two concurrent initializes supersede each other, and the retried call
+  fails with `MCP server "swing" is not connected` — 2 of 2 restarts; the call after it runs on
+  attempt 2's session. On 2.1.280 the retried call succeeded in every run.
+  **[verified 2026-09-24, Claude Code 2.1.281]**
 - While a server is down, its tools stay listed and each call returns `isError` with
   `ECONNREFUSED: Unable to connect. Is the computer able to access the url?`. The first call
   after it is back succeeds. **[verified 2026-09-23, Claude Code 2.1.280]**
-- On a reconnect it initializes more than once in quick succession, so a one-session server
-  supersedes its own new sessions a couple of times before settling. It settled every time.
-  **[verified 2026-09-23, Claude Code 2.1.280]**
-- Before `initialize` it POSTs `server/discover` without a session header, and falls back to
-  `initialize` when that is rejected. **[verified 2026-09-23, Claude Code 2.1.280]**
+- Before each `initialize` it POSTs `server/discover` without a session header, and falls back
+  to `initialize` when that is rejected. **[verified 2026-09-24, Claude Code 2.1.281]**
+- An `initialize` result whose `serverInfo` lacks `name` and `version` makes the client drop the
+  server without a word: no tools, and nothing in the debug log past the connectivity check.
+  **[verified 2026-09-24, Claude Code 2.1.281]**
 - Recipe: register the endpoint in a JSON file (`{"mcpServers":{"swing":{"type":"http","url":…}}}`)
   and run `claude -p --mcp-config <file> --strict-mcp-config --output-format stream-json
   --verbose`, prompting the child to start and stop the application through Bash (allow its
   script with `--allowedTools`) between tool calls. Launch the application under
   `xvfb-run -a java -javaagent:swing-mcp-agent.jar …`; its JUL log (`unknown Mcp-Session-Id`,
-  `Session superseded`) shows what the client actually sent.
+  `Session superseded`, and every POST body at FINE on `com.vaadin.swingmcp.tinymcpserver`)
+  shows what the client actually sent, and `--debug-file <path>` shows why. A stdlib Python
+  server with the same session rules, needing no build, is in #96733.

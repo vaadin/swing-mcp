@@ -67,6 +67,23 @@ class MCPHandlerDispatchTest {
         assertEquals(LATEST, result.getProtocolVersion());
     }
 
+    // ===== serverInfo =====
+
+    @Test
+    void theDefaultServerInfoNamesThisLibraryAtItsBuildVersion() {
+        MCPProtocol.Implementation info = initializeWith(new JsonPrimitive(LATEST)).getServerInfo();
+        assertEquals("TinyMCPServer " + System.getProperty("tinymcpserver.expectedVersion"),
+                info.getName() + " " + info.getVersion());
+    }
+
+    @Test
+    void aServerInfoWithoutANameOrVersionIsRefused() {
+        assertThrows(NullPointerException.class,
+                () -> new MCPHandler(new MCPProtocol.Implementation(null, "1"), null));
+        assertThrows(NullPointerException.class,
+                () -> new MCPHandler(new MCPProtocol.Implementation("n", null), null));
+    }
+
     // ===== Session lookup =====
 
     @Test

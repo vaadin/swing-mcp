@@ -911,7 +911,8 @@ over loopback. There is no process in between.
 **Why.** A proxy was built for two moments when the in-process server is not there: the
 application restarting mid-session, and the application not running yet when the client starts.
 Claude Code covers both (`R_claude_code_http_lifecycle`). A restart is recovered at the next tool
-call without the model noticing. A server that was down at startup comes back with one `/mcp`
+call, though on 2.1.281 that one call can fail once while the client races itself, and the call
+after it works. A server that was down at startup comes back with one `/mcp`
 Reconnect once the application is up. What a proxy costs does not shrink. It is a second artifact
 to build, ship, register and keep in version step with the server, plus a manifest check between
 the two. And it is a stdio process that can wedge on its own: one expired its own session after

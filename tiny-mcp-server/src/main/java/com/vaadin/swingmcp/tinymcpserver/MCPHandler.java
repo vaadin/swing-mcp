@@ -19,10 +19,13 @@ package com.vaadin.swingmcp.tinymcpserver;
 import com.vaadin.swingmcp.ToolDescriptor;
 import org.jspecify.annotations.Nullable;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -113,18 +116,49 @@ public class MCPHandler {
     /** Lives from {@link #start()} to {@link #stop()}; see {@link #getExecutor()}. */
     private ScheduledExecutorService executor;
 
-    /** Advertises an empty {@code serverInfo} and no instructions. */
+    /** The {@code serverInfo.name} the no-argument constructor advertises. */
+    public static final String DEFAULT_SERVER_NAME = "TinyMCPServer";
+
+    /**
+     * This library's version, which the build writes to {@code version.properties} beside this
+     * class; {@code "unknown"} when the sources were compiled without that step.
+     */
+    static final String VERSION = readVersion();
+
+    private static String readVersion() {
+        try (InputStream in = MCPHandler.class.getResourceAsStream("version.properties")) {
+            if (in == null) {
+                return "unknown";
+            }
+            Properties properties = new Properties();
+            properties.load(in);
+            return properties.getProperty("version", "unknown");
+        } catch (IOException e) {
+            LOG.log(Level.WARNING, "Could not read version.properties", e);
+            return "unknown";
+        }
+    }
+
+    /**
+     * Advertises {@code serverInfo} {@value #DEFAULT_SERVER_NAME} at this library's version, and
+     * no instructions.
+     */
     public MCPHandler() {
-        this(new MCPProtocol.Implementation(), null);
+        this(new MCPProtocol.Implementation(DEFAULT_SERVER_NAME, VERSION), null);
     }
 
     /**
      * @param serverInfo   advertised in {@code initialize.serverInfo}
      * @param instructions advertised in {@code initialize.instructions};
      *                     {@code null} advertises none
+     * @throws NullPointerException if {@code serverInfo}, or its name or version, is null — the
+     *                              MCP schema requires both, and a client may drop a server
+     *                              that omits them without saying why
      */
     public MCPHandler(MCPProtocol.Implementation serverInfo, @Nullable String instructions) {
         this.serverInfo = Objects.requireNonNull(serverInfo, "serverInfo");
+        Objects.requireNonNull(serverInfo.getName(), "serverInfo.name");
+        Objects.requireNonNull(serverInfo.getVersion(), "serverInfo.version");
         this.instructions = instructions;
     }
 

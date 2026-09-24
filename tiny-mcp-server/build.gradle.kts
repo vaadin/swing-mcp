@@ -74,6 +74,20 @@ if (java17Available) {
     )
 }
 
+// ── The advertised version ───────────────────────────────────────────────────
+// A resource rather than a manifest entry: tests and the IDE run from the class
+// directories, where no manifest exists.
+val versionProperties by tasks.registering(WriteProperties::class) {
+    destinationFile = layout.buildDirectory.file("generated/version/version.properties")
+    property("version", project.version.toString())
+}
+tasks.processResources {
+    from(versionProperties) { into("com/vaadin/swingmcp/tinymcpserver") }
+}
+tasks.withType<Test>().configureEach {
+    systemProperty("tinymcpserver.expectedVersion", project.version.toString())
+}
+
 @Suppress("UNCHECKED_CAST")
 val configureMavenCentral = ext["configureMavenCentral"] as (artifactId: String) -> Unit
 configureMavenCentral("tiny-mcp-server")
