@@ -867,8 +867,11 @@ public final class SwingUtils {
      * Resolves {@code a} to the centre of where it sits: a component's own centre, or a virtual
      * child's centre within its nearest {@link Component} ancestor.
      *
-     * @return the point, or {@code null} if a virtual child has no bounds or no
-     *     {@code Component} ancestor
+     * @implNote A virtual child's bounds are relative to its accessible parent, which may itself
+     *     be virtual — a nested {@code JTree} node's are relative to its parent node
+     *     (R_virtual_child_bounds) — so each virtual ancestor's offset is added on the way up.
+     * @return the point, or {@code null} if a virtual child or one of its virtual ancestors has no
+     *     bounds, or it has no {@code Component} ancestor
      */
     public static @Nullable ComponentAndPoint resolveComponentAndPoint(Accessible a) {
         if (a instanceof Component) {
@@ -876,29 +879,34 @@ public final class SwingUtils {
             return new ComponentAndPoint(c, c.getWidth() / 2, c.getHeight() / 2);
         }
 
+        java.awt.Rectangle bounds = accessibleBounds(a);
+        if (bounds == null) return null;
+        int x = bounds.x + bounds.width / 2;
+        int y = bounds.y + bounds.height / 2;
+
+        Accessible parent = a.getAccessibleContext().getAccessibleParent();
+        while (parent != null) {
+            if (parent instanceof Component) {
+                return new ComponentAndPoint((Component) parent, x, y);
+            }
+            java.awt.Rectangle parentBounds = accessibleBounds(parent);
+            if (parentBounds == null) return null;
+            x += parentBounds.x;
+            y += parentBounds.y;
+            parent = parent.getAccessibleContext().getAccessibleParent();
+        }
+        return null;
+    }
+
+    /**
+     * @return {@code a}'s bounds relative to its accessible parent, or {@code null} if it has no
+     *     {@code AccessibleComponent} or no bounds — a {@code JTree} node that is not showing
+     */
+    private static java.awt.@Nullable Rectangle accessibleBounds(Accessible a) {
         AccessibleContext ac = a.getAccessibleContext();
         if (ac == null) return null;
-
-        AccessibleComponent accessibleComponent = ac.getAccessibleComponent();
-        if (accessibleComponent != null) {
-            java.awt.Rectangle bounds = accessibleComponent.getBounds();
-            if (bounds != null) {
-                int childCenterX = bounds.x + bounds.width / 2;
-                int childCenterY = bounds.y + bounds.height / 2;
-
-                Accessible parent = ac.getAccessibleParent();
-                while (parent != null) {
-                    if (parent instanceof Component) {
-                        return new ComponentAndPoint((Component) parent, childCenterX, childCenterY);
-                    }
-                    AccessibleContext parentAc = parent.getAccessibleContext();
-                    if (parentAc == null) break;
-                    parent = parentAc.getAccessibleParent();
-                }
-            }
-        }
-
-        return null;
+        AccessibleComponent component = ac.getAccessibleComponent();
+        return component == null ? null : component.getBounds();
     }
 
     /**

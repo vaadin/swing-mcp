@@ -30,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.*;
+import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.util.Arrays;
@@ -245,5 +246,41 @@ class SwingDragScreenTest extends AbstractScreenTest {
                 events.get(6).getPoint(), "release: Item C's center");
         // BasicListUI moves the selection with a drag, so it ends on the drop cell.
         assertEquals(2, (int) executeOnEDT(list::getSelectedIndex));
+    }
+
+    @Test
+    void nestedJTreeNodeAsSourceDragsFromItsCenter() throws Exception {
+        // A node's bounds are relative to its parent node, not the JTree (R_virtual_child_bounds).
+        JFrame frame = new JFrame("Drag Test");
+        frame.setSize(400, 300);
+        DefaultMutableTreeNode root = new DefaultMutableTreeNode("Root");
+        DefaultMutableTreeNode parent = new DefaultMutableTreeNode("Parent");
+        DefaultMutableTreeNode child = new DefaultMutableTreeNode("Child");
+        root.add(parent);
+        parent.add(child);
+        // A leaf has no actions, hence no ref: the grandchild gives Child one.
+        child.add(new DefaultMutableTreeNode("Grandchild"));
+        JTree tree = new JTree(root);
+        tree.setBounds(0, 0, 300, 250);
+        frame.getContentPane().setLayout(null);
+        frame.getContentPane().add(tree);
+        executeOnEDT(() -> {
+            tree.expandRow(0);
+            tree.expandRow(1);
+            return null;
+        });
+
+        snapshot(frame);
+        assertEquals("Child", executeOnEDT(
+                () -> context.getAccessibleByRef(3).getAccessibleContext().getAccessibleName()));
+        MouseEventRecorder recorder = executeOnEDT(() -> MouseEventRecorder.attachTo(tree));
+        drag(3, 1); // Child onto Root
+
+        assertEquals(MouseEventRecorder.SYNTHETIC_DRAG, recorder.getEventIds());
+        List<MouseEvent> events = recorder.getEvents();
+        assertEquals(executeOnEDT(() -> centerOf(tree.getRowBounds(2))),
+                events.get(0).getPoint(), "press: Child's center");
+        assertEquals(executeOnEDT(() -> centerOf(tree.getRowBounds(0))),
+                events.get(6).getPoint(), "release: Root's center");
     }
 }

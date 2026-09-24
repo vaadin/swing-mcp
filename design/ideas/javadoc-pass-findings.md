@@ -10,9 +10,6 @@ numbers are from the commit after the pass.
 
 ## Possible code bugs — swing-mcp
 
-- **`SwingUtils.resolveComponentAndPoint`** (`:867`): it treats a virtual child's `getBounds()` as
-  relative to the first `Component` ancestor. For a nested `JTree` node the bounds may be
-  relative to the virtual parent instead. Unverified.
 - **`SwingGetSelectionTool`**: `selectedCount` is `selected.size()`, so it undercounts when the
   result is truncated or holds null entries. It is documented as-is for now.
 - **`SwingToolContext.getAccessibleByRef`** throws `MCPServerException(INVALID_PARAMS)`, not the

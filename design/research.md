@@ -146,6 +146,15 @@ trims to its length — which is how long this file gets, so keep it short.
 - An interactive cell **editor** does appear in the tree, but only while that cell is actively
   being edited — it cannot be reached by walking. **[verified 2026-04-13, Java 21]**
 
+## R_virtual_child_bounds — A virtual child's bounds are relative to its accessible parent
+
+- `AccessibleComponent.getBounds()` is relative to the object's accessible parent, which for a
+  virtual child need not be a `Component`. **[docs]**
+- A `JTree` node below the top level has another node as its parent, and `AccessibleJTreeNode`
+  subtracts that node's position in the tree: with Root → Parent → Child expanded, Child's
+  row is at (40,36) but its bounds read (20,18). A node that is not showing has `null` bounds. **[src]**
+  **[verified 2026-09-24, Temurin 17.0.20, Metal, Xvfb]**
+
 ## R_iconified_windows — What iconifying does to the accessibility tree
 
 - `AccessibleJFrame` never reports `ICONIFIED`. After `setState(Frame.ICONIFIED)`, `getState()`
