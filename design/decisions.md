@@ -815,6 +815,38 @@ component is recoverable; a confident wrong answer is not.
 it is a different index space from the integer offsets every other selection tool speaks, and no
 migration has needed it yet. `get_cells` already reaches the visible nodes for interaction.
 
+## D_tabs_not_enumerated — Why does a `JTabbedPane` carry `single-selection` yet refuse `get_items`, `get_item_count` and `clear_selection`?
+
+A tabbed pane advertises `single-selection`, and `swing_get_selection` and `swing_set_selection`
+work on it. `SwingUtils.supportsGetItems` rejects it, so `swing_get_items` and
+`swing_get_item_count` refuse it, and `swing_clear_selection` refuses a pane that has tabs.
+
+**Why no enumeration.** The enumerate tools exist for collections whose size is bounded by data,
+not by layout. `JList` items, `JComboBox` items and `JTable` rows come from a model, often a
+database, and can run to thousands; tabs, split panes, menus and toolbars are capped by what a
+person can navigate, essentially never past twenty. "What caps the count" is the test, because
+"structure versus data" invites category arguments. And the snapshot already carries everything
+the tool would return: each tab renders as `- (page_tab) N "title"` with its 0-based index and
+its `[selected]` or `[disabled]` state, so the model passes `[N]` straight to
+`swing_set_selection`. Paging over twenty items is pure overhead.
+
+**Why `clear_selection` refuses.** A tabbed pane has no empty selection to reach:
+`clearAccessibleSelection()` leaves the selected tab selected (`R_accessible_selection_writes`).
+Reporting success would claim a state the user never sees.
+
+**Why keep `single-selection` anyway.** `swing_set_selection` is the only way the model can
+switch tabs — a tab page has no `AccessibleAction`, so `swing_click` refuses it — and the label is
+how the model learns that selection tools apply. Dropping it hides the only way to switch tabs.
+
+**Why not a label of its own, such as `tab-selection`.** Rejected — it adds a word to the
+snapshot's vocabulary for one component, which the model must learn from the manifest, to save an
+exception the refusals already explain.
+
+**Why not enumerate tabs too, for uniformity.** Rejected — it would duplicate the snapshot, and
+the item JSON would need an `enabled` field for tabs alone. Revisit if an application turns up a layout-bounded
+container that grows with data, such as a `JMenu` used as a recent-files list with hundreds of
+entries.
+
 ## D_no_jtable_cells — Why doesn't `JTable` advertise `get_cells` / `get_cell_count`?
 
 Those two tools are advertised on a truncated `JList` or `JTree` only. Row-level access to a

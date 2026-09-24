@@ -18,8 +18,6 @@ numbers are from the commit after the pass.
 ## Design docs out of step with the code
 
 - **`snapshot-format.md`**:
-  - It says `single-selection` implies `swing_get_items` and `swing_get_item_count`, but a
-    JTabbedPane advertises `single-selection` and both tools refuse it.
   - It claims to own `swing_get_cells` output, but the header line
     (`Showing N children from offset O (total T) for <role> [ref=1]`) and the `- null`
     placeholder exist only in code and in the `SwingGetCellsTool` javadoc.

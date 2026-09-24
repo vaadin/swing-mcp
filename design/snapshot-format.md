@@ -91,7 +91,8 @@ cannot be matched statically, and an agent filling a form wants `set_text`, not 
 **`single-selection` and `multi-selection` are group labels, not callable actions.** They tell
 the model which selection tools apply: `single-selection` means `swing_get_selection`,
 `swing_set_selection`, `swing_clear_selection`, `swing_get_items` and `swing_get_item_count`;
-`multi-selection` means those plus `swing_select_all`. Those tool names never appear in an
+`multi-selection` means those plus `swing_select_all`. On a `JTabbedPane`, `single-selection`
+means only `swing_get_selection` and `swing_set_selection` (`D_tabs_not_enumerated`). Those tool names never appear in an
 `actions:` slot — the model learns them from the manifest, once, at session start.
 
 `get_cells` / `get_cell_count` appear only on a `JList` or `JTree` whose children the snapshot

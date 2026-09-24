@@ -300,7 +300,8 @@ public final class SwingUtils {
      *
      * @implNote A table passes in any mode because reading rows needs no working selection
      *     model, and with no cell tools on a table (D_no_jtable_cells) these are its only paged
-     *     read. Tabs are rejected because the snapshot already lists each with its index.
+     *     read. Tabs are rejected because the snapshot already lists each with its index
+     *     (D_tabs_not_enumerated).
      */
     public static boolean supportsGetItems(Accessible a) {
         if (a instanceof JTabbedPane) {
