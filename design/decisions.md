@@ -362,7 +362,8 @@ reachable through `swing_get_description`.
 
 A node that can report text carries `text="…"`, capped at 15 characters; a node with a numeric
 value carries `value=N` bare — or `value=<current>/<max>` for a progress bar, where the
-denominator is the entire point of looking at one. Exactly one of the two may appear. Both read
+denominator is the entire point of looking at one. Each appears when its own gate passes, so a
+node passing both carries both, text first. Both read
 through the same helpers that `swing_get_text` and `swing_get_value` use, so a preview and a
 tool call can never disagree: a `text="abc…"` preview structurally guarantees the tool returns a
 string starting `abc`.
@@ -381,6 +382,13 @@ string starting `abc`.
 - **Closer to Playwright, not further.** The original "no field values" rule cited consistency
   with Playwright MCP; in fact Playwright's snapshot does surface values for textboxes, sliders
   and progressbars.
+
+**Why both on a node that passes both gates, rather than one winning.** The stock case is a
+numeric `JSpinner`: its text is the formatted display, its value the raw number, and they differ
+as soon as the editor has a pattern — `text="12%" value=0.12`, `text="1,000" value=1000`. Side
+by side they show whether the formatter renders the number correctly and whether Swing parses it
+back, which is exactly what a migration has to reproduce. Dropping either hides one half: the
+text alone loses the scale `set_value` takes, the value alone loses what the user sees.
 
 **Why not a `include_values` flag on `swing_snapshot`.** Rejected — the hidden cost is a per-call
 decision. Either the agent always sets it, which is this behaviour with extra ceremony, or it

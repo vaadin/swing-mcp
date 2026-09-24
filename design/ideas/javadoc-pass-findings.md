@@ -17,9 +17,6 @@ numbers are from the commit after the pass.
 
 ## Design docs out of step with the code
 
-- **`D_inline_value_preview`** says exactly one of `text=` and `value=` may appear. A JSpinner
-  line shows both, and so does a custom widget that passes both gates. Rewrite the entry, or
-  fix the code.
 - **`snapshot-format.md`**:
   - It says `single-selection` implies `swing_get_items` and `swing_get_item_count`, but a
     JTabbedPane advertises `single-selection` and both tools refuse it.
