@@ -19,7 +19,6 @@ package com.vaadin.swingmcp.mcp.tools;
 import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
-import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -66,8 +65,7 @@ class SwingTogglePopupTest extends AbstractHeadlessTest {
         JComboBox<String> combo = new JComboBox<>(new String[]{"A", "B"});
         snapshot(combo);
 
-        MCPServerException ex = assertThrows(MCPServerException.class, () -> togglePopup(999));
-        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> togglePopup(999));
         assertEquals("Component with ref 999 does not exist (valid refs: 1\u20131).", ex.getMessage());
     }
 

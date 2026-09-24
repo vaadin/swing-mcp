@@ -20,7 +20,6 @@ import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
-import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -93,8 +92,7 @@ class SwingSetValueTest extends AbstractHeadlessTest {
         JSlider slider = new JSlider(0, 100, 50);
         snapshot(slider);
 
-        MCPServerException ex = assertThrows(MCPServerException.class, () -> setValue(999, 50.0));
-        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> setValue(999, 50.0));
         assertEquals("Component with ref 999 does not exist (valid refs: 1\u20131).", ex.getMessage());
     }
 
@@ -192,9 +190,9 @@ class SwingSetValueTest extends AbstractHeadlessTest {
 
         setValue(ref, 75.0);
 
-        MCPServerException ex = assertThrows(MCPServerException.class,
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> setValue(ref, 80.0));
-        assertTrue(ex.getMessage().contains("swing_snapshot"));
+        assertEquals("Component with ref " + ref + " invalid \u2014 the ref map is empty: no swing_snapshot yet, or a successful mutation cleared it. Call swing_snapshot to rebuild it.", ex.getMessage());
     }
 
     @Test

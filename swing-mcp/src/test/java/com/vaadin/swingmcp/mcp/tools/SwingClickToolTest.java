@@ -21,7 +21,6 @@ import com.vaadin.swingmcp.mcp.ClickRecordingPanel;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
-import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -91,8 +90,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         JButton button = new JButton("OK");
         snapshot(button);
 
-        MCPServerException ex = assertThrows(MCPServerException.class, () -> click(999));
-        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(999));
         assertEquals("Component with ref 999 does not exist (valid refs: 1\u20131).", ex.getMessage());
     }
 
@@ -137,9 +135,8 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(button);
         click(ref);
 
-        MCPServerException ex = assertThrows(MCPServerException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("swing_snapshot"),
-                "Error should suggest calling swing_snapshot after invalidation");
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
+        assertEquals("Component with ref " + ref + " invalid \u2014 the ref map is empty: no swing_snapshot yet, or a successful mutation cleared it. Call swing_snapshot to rebuild it.", ex.getMessage());
     }
 
     @Test

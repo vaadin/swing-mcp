@@ -20,7 +20,6 @@ import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
-import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -246,9 +245,8 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
     void invalidRef_returnsMcpError() throws Exception {
         JList<String> list = new JList<>(new String[]{"A"});
         snapshot(list);
-        MCPServerException ex = assertThrows(MCPServerException.class,
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> selectAll(999));
-        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
         assertEquals("Component with ref 999 does not exist (valid refs: 1\u20132).", ex.getMessage());
     }
 
@@ -305,9 +303,9 @@ class SwingSelectAllTest extends AbstractHeadlessTest {
         snapshot(list);
         int ref = context.getRefOf(list);
         selectAll(ref);
-        MCPServerException ex = assertThrows(MCPServerException.class,
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> selectAll(ref));
-        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        assertEquals("Component with ref " + ref + " invalid \u2014 the ref map is empty: no swing_snapshot yet, or a successful mutation cleared it. Call swing_snapshot to rebuild it.", ex.getMessage());
     }
 
     @Test

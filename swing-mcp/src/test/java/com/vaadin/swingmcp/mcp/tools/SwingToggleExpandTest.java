@@ -20,7 +20,6 @@ import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
-import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -109,8 +108,7 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
         JTree tree = new JTree(root);
         snapshot(tree);
 
-        MCPServerException ex = assertThrows(MCPServerException.class, () -> toggleExpand(999));
-        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> toggleExpand(999));
         assertEquals("Component with ref 999 does not exist (valid refs: 1\u20131).", ex.getMessage());
     }
 
@@ -180,8 +178,8 @@ class SwingToggleExpandTest extends AbstractHeadlessTest {
 
         toggleExpand(1); // succeeds, clears ref map
 
-        MCPServerException ex = assertThrows(MCPServerException.class, () -> toggleExpand(1));
-        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> toggleExpand(1));
+        assertEquals("Component with ref " + 1 + " invalid \u2014 the ref map is empty: no swing_snapshot yet, or a successful mutation cleared it. Call swing_snapshot to rebuild it.", ex.getMessage());
     }
 
     // ══════════════════════════════════════════════════════════════════════════

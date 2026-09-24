@@ -51,7 +51,7 @@ Every fact lives in exactly one of these; the others link to it.
 - **Every tool test walks the component matrix** — a correct refusal is as much a result as a success; the matrix is in `design/architecture.md` § Testing.
 - **Diagnostics go to `java.util.logging`**, never to `System.out`; the LLM reads the error body, the developer reads stderr.
 - **Assert against the whole string**, not `contains` / `startsWith` — a snapshot diff is the readable failure.
-- **A tool-level failure is `MCPErrorResponseException`** carrying a recovery hint the model can act on, never a bare exception.
+- **A tool-level failure is `MCPErrorResponseException`** carrying a recovery hint the model can act on, never a bare exception. That includes a well-formed ref that addresses nothing; `INVALID_PARAMS` is only for a malformed argument.
 - **Component identity is the Swing class name** in everything a person or model reads; the accessibility role appears in the snapshot only. See `D_role_in_snapshot_only`.
 - **Every `.java` and `.gradle.kts` file opens with the Apache-2.0 Vaadin header**, verbatim; the full text is `LICENSE`.
 - **Pre-1.0: break APIs freely** — every consumer is in this repository.

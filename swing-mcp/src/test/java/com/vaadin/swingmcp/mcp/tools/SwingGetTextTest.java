@@ -20,7 +20,6 @@ import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
-import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -129,8 +128,7 @@ class SwingGetTextTest extends AbstractHeadlessTest {
         JTextField field = new JTextField("text");
         snapshot(field);
 
-        MCPServerException ex = assertThrows(MCPServerException.class, () -> getText(999));
-        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> getText(999));
         assertEquals("Component with ref 999 does not exist (valid refs: 1\u20131).", ex.getMessage());
     }
 

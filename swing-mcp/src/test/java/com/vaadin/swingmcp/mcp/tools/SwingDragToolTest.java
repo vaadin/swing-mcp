@@ -272,11 +272,9 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         JButton button = new JButton("OK");
         snapshot(button);
 
-        MCPServerException ex = assertThrows(MCPServerException.class,
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> dragToRef(999, 1));
-        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
-        assertTrue(ex.getMessage().contains("does not exist"),
-                "Error should mention ref does not exist, got: " + ex.getMessage());
+        assertEquals("Component with ref 999 does not exist (valid refs: 1\u20131).", ex.getMessage());
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -293,10 +291,9 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         snapshot(root);
         int sourceRef = context.getRefOf(source);
 
-        MCPServerException ex = assertThrows(MCPServerException.class,
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> dragToRef(sourceRef, 999));
-        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
-        assertTrue(ex.getMessage().contains("does not exist"));
+        assertEquals("Component with ref 999 does not exist (valid refs: 1\u20131).", ex.getMessage());
     }
 
     @Test
@@ -614,12 +611,11 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         int targetRef = context.getRefOf(target);
         dragToRef(sourceRef, targetRef);
 
-        MCPServerException ex = assertThrows(MCPServerException.class,
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> dragTool.execute(
                         new Parameters(Map.of("source_ref", sourceRef, "target_ref", targetRef)),
                         context));
-        assertTrue(ex.getMessage().contains("swing_snapshot"),
-                "Error should suggest swing_snapshot after invalidation, got: " + ex.getMessage());
+        assertEquals("Component with ref " + sourceRef + " invalid \u2014 the ref map is empty: no swing_snapshot yet, or a successful mutation cleared it. Call swing_snapshot to rebuild it.", ex.getMessage());
     }
 
     @Test
@@ -891,7 +887,7 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         snapshot(root);
         int ref = context.getRefOf(panel);
 
-        MCPServerException ex = assertThrows(MCPServerException.class, () -> {
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> {
             try {
                 dragTool.execute(
                         new Parameters(Map.of(
@@ -902,8 +898,7 @@ class SwingDragToolTest extends AbstractHeadlessTest {
                 context.clearRefMap();
             }
         });
-        assertTrue(ex.getMessage().contains("does not exist"),
-                "Error should mention ref does not exist, got: " + ex.getMessage());
+        assertEquals("Component with ref 999 does not exist (valid refs: 1\u20131).", ex.getMessage());
     }
 
     @Test

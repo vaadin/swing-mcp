@@ -12,11 +12,6 @@ numbers are from the commit after the pass.
 
 - **`SwingGetSelectionTool`**: `selectedCount` is `selected.size()`, so it undercounts when the
   result is truncated or holds null entries. It is documented as-is for now.
-- **`SwingToolContext.getAccessibleByRef`** throws `MCPServerException(INVALID_PARAMS)`, not the
-  `MCPErrorResponseException` that `AGENTS.md` asks for on a tool-level failure. Either the code
-  or the convention is wrong (`Q_unknown_ref_error`). An unknown ref is arguably a
-  protocol-level bad parameter.
-
 - **`SwingUtils.createDragAction`** dispatches the whole drag from one `Runnable`, so a listener
   that throws on the press aborts the drags and the release. A real mouse sends each event
   separately, and the EDT carries on after one throws. This only affects the synthetic, headless

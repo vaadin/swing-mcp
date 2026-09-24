@@ -132,14 +132,14 @@ class SessionCloseTest {
         assertNotNull(session2);
         assertNotEquals(session1, session2);
 
-        // No snapshot in session 2: SwingToolContext's stale-ref check answers with a JSON-RPC error.
+        // No snapshot in session 2: its ref map is empty, so the click is refused as isError.
         HttpResponse<String> staleClickResp = click(1, session2);
         assertEquals(200, staleClickResp.statusCode());
         Map<String, Object> staleBody = parseJson(staleClickResp.body());
-        Map<String, Object> error = (Map<String, Object>) staleBody.get("error");
-        assertNotNull(error, "should get a JSON-RPC error for stale ref");
-        String errorMessage = (String) error.get("message");
-        assertTrue(errorMessage.contains("stale"),
-                "error should mention stale ref map, got: " + errorMessage);
+        Map<String, Object> result = (Map<String, Object>) staleBody.get("result");
+        assertEquals(true, result.get("isError"));
+        List<Map<String, Object>> content = (List<Map<String, Object>>) result.get("content");
+        assertEquals("Component with ref 1 invalid — the ref map is empty: no swing_snapshot yet, or a successful mutation cleared it. Call swing_snapshot to rebuild it.",
+                content.get(0).get("text"));
     }
 }

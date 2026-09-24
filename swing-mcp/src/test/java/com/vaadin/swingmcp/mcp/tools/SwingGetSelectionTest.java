@@ -20,7 +20,6 @@ import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
-import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -224,9 +223,8 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
     void invalidRef_returnsMcpError() throws Exception {
         JList<String> list = new JList<>(new String[]{"A"});
         snapshot(list);
-        MCPServerException ex = assertThrows(MCPServerException.class,
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getSelection(999));
-        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
         assertEquals("Component with ref 999 does not exist (valid refs: 1\u20132).", ex.getMessage());
     }
 

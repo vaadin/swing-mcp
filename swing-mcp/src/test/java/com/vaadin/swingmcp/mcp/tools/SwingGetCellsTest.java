@@ -258,8 +258,9 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         // Offset past the end: no children, yet the ref map is still replaced.
         getCells(listRef, 100, 5);
 
-        assertThrows(MCPServerException.class,
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> context.getAccessibleByRef(2));
+        assertEquals("Component with ref 2 does not exist (valid refs: 1\u20131).", ex.getMessage());
         assertSame(list, context.getAccessibleByRef(1));
     }
 
@@ -312,15 +313,7 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
     void invalidRef_returnsError() throws Exception {
         JList<String> list = new JList<>(new String[]{"A"});
         snapshot(list);
-        assertThrows(MCPServerException.class,
-                () -> getCells(9999, 0, 5));
-    }
-
-    @Test
-    void invalidRef_messagesSuggestSnapshot() throws Exception {
-        JList<String> list = new JList<>(new String[]{"A"});
-        snapshot(list);
-        MCPServerException ex = assertThrows(MCPServerException.class,
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getCells(9999, 0, 5));
         assertEquals("Component with ref 9999 does not exist (valid refs: 1\u20132).", ex.getMessage());
     }

@@ -17,7 +17,7 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
-import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
+import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 
 import javax.accessibility.Accessible;
 import java.awt.Component;
@@ -77,19 +77,20 @@ public class SwingToolContext {
     }
 
     /**
-     * @throws MCPServerException {@code INVALID_PARAMS} for an unknown ref, telling the model
-     *         whether the map is stale (empty after a mutation) or which refs are valid
+     * @throws MCPErrorResponseException for an unknown ref, telling the model whether the map is
+     *         empty (no snapshot yet, or cleared by a mutation) or which refs are valid. Not a
+     *         protocol error: the argument is well-formed, it just addresses nothing right now.
      */
     public Accessible getAccessibleByRef(int ref) {
         var result = componentRefs.get(ref);
         if (result == null) {
             if (componentRefs.isEmpty()) {
-                throw new MCPServerException(MCPServerException.INVALID_PARAMS,
-                        "Component with ref " + ref + " invalid — the ref map is stale (empty). It is cleared after every successful mutation. Call swing_snapshot to rebuild it.");
+                throw new MCPErrorResponseException(
+                        "Component with ref " + ref + " invalid — the ref map is empty: no swing_snapshot yet, or a successful mutation cleared it. Call swing_snapshot to rebuild it.");
             }
             int min = Collections.min(componentRefs.keySet());
             int max = Collections.max(componentRefs.keySet());
-            throw new MCPServerException(MCPServerException.INVALID_PARAMS,
+            throw new MCPErrorResponseException(
                     "Component with ref " + ref + " does not exist (valid refs: " + min + "–" + max + ").");
         }
         return result;

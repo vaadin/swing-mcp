@@ -21,6 +21,7 @@ import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.mcp.tools.SwingTogglePopupTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
+import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -120,8 +121,10 @@ class SwingTogglePopupScreenTest extends AbstractScreenTest {
             int ref = context.getRefOf(combo);
             togglePopup(ref);
 
-            assertThrows(com.vaadin.swingmcp.tinymcpserver.MCPServerException.class,
+            MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                     () -> togglePopup(ref));
+            assertEquals("Component with ref " + ref + " invalid — the ref map is empty: no swing_snapshot yet, or a successful mutation cleared it. Call swing_snapshot to rebuild it.",
+                    ex.getMessage());
         } finally {
             frame.dispose();
         }

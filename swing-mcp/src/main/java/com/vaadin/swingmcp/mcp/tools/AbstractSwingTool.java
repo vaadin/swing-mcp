@@ -91,7 +91,7 @@ public abstract class AbstractSwingTool {
      * @throws MCPErrorResponseException a refusal the model can act on: {@code isError=true} with
      *         this message
      * @throws com.vaadin.swingmcp.tinymcpserver.MCPServerException a JSON-RPC protocol error, e.g.
-     *         {@code INVALID_PARAMS} for a malformed parameter or an unknown ref
+     *         {@code INVALID_PARAMS} for a malformed parameter
      * @throws Exception on an unexpected failure
      */
     public abstract MCPProtocol.Content execute(Parameters params,

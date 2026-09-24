@@ -20,7 +20,6 @@ import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
-import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -137,8 +136,7 @@ class SwingIncrementTest extends AbstractHeadlessTest {
         JSpinner spinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 1));
         snapshot(spinner);
 
-        MCPServerException ex = assertThrows(MCPServerException.class, () -> increment(999));
-        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> increment(999));
         assertEquals("Component with ref 999 does not exist (valid refs: 1\u20132).", ex.getMessage());
     }
 
@@ -182,7 +180,8 @@ class SwingIncrementTest extends AbstractHeadlessTest {
         int ref = context.getRefOf(spinner);
         increment(ref);
 
-        assertThrows(MCPServerException.class, () -> increment(ref));
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> increment(ref));
+        assertEquals("Component with ref " + ref + " invalid \u2014 the ref map is empty: no swing_snapshot yet, or a successful mutation cleared it. Call swing_snapshot to rebuild it.", ex.getMessage());
     }
 
     // ══════════════════════════════════════════════════════════════════════════

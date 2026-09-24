@@ -258,9 +258,8 @@ class SwingGetItemsTest extends AbstractHeadlessTest {
     void invalidRef_returnsMcpError() throws Exception {
         JList<String> list = new JList<>(new String[]{"A"});
         snapshot(list);
-        MCPServerException ex = assertThrows(MCPServerException.class,
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> getItems(999, 0, 10));
-        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
         assertEquals("Component with ref 999 does not exist (valid refs: 1\u20132).", ex.getMessage());
     }
 
