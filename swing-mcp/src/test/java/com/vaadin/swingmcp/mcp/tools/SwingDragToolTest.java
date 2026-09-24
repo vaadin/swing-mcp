@@ -29,7 +29,9 @@ import org.junit.jupiter.api.Test;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.InputEvent;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -546,6 +548,44 @@ class SwingDragToolTest extends AbstractHeadlessTest {
                     "Event " + i + " should be DRAGGED");
         }
         assertEquals(MouseEvent.MOUSE_RELEASED, (int) ids.get(6), "Last event should be RELEASED");
+    }
+
+    /** As a real mouse: a throw on the press loses the press only (R_ui_delegate_press_throws). */
+    @Test
+    void listenerThrowingOnPressStillLetsTheDragAndReleaseThrough() throws Exception {
+        JPanel source = new JPanel();
+        source.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                throw new IllegalStateException("press rejected");
+            }
+        });
+        MouseEventRecorder recorder = MouseEventRecorder.attachTo(source);
+        DragRecordingPanel target = new DragRecordingPanel();
+
+        JPanel root = new JPanel(null);
+        root.setSize(300, 100);
+        source.setBounds(0, 0, 100, 50);
+        target.setBounds(200, 0, 100, 50);
+        root.add(source);
+        root.add(target);
+
+        snapshot(root);
+        List<Throwable> thrownOnEdt = new ArrayList<>();
+        Thread.UncaughtExceptionHandler[] previous = new Thread.UncaughtExceptionHandler[1];
+        SwingUtilities.invokeAndWait(() -> {
+            previous[0] = Thread.currentThread().getUncaughtExceptionHandler();
+            Thread.currentThread().setUncaughtExceptionHandler((t, e) -> thrownOnEdt.add(e));
+        });
+        try {
+            dragToRef(context.getRefOf(source), context.getRefOf(target));
+        } finally {
+            SwingUtilities.invokeAndWait(
+                    () -> Thread.currentThread().setUncaughtExceptionHandler(previous[0]));
+        }
+
+        assertEquals("[java.lang.IllegalStateException: press rejected]", thrownOnEdt.toString());
+        assertEquals(MouseEventRecorder.SYNTHETIC_DRAG.subList(1, 7), recorder.getEventIds());
     }
 
     // ══════════════════════════════════════════════════════════════════════════

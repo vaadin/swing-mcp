@@ -244,6 +244,16 @@ trims to its length — which is how long this file gets, so keep it short.
 - A listener added after the delegate's never sees an event the delegate threw on, since
   `AWTEventMulticaster` calls them in order. **[src]**
 
+## R_drag_events_coalesce — The event queue merges pending drags on one component
+
+- `EventQueue.postEvent` of a `MOUSE_DRAGGED` whose source component already has one queued
+  replaces that queued event's payload instead of enqueuing, so N drags posted back to back
+  reach the listeners as one, at the last point. `MOUSE_MOVED` and paints coalesce the same way.
+  **[src]**
+- `InvocationEvent`s never coalesce, so `invokeLater` per event delivers every one. **[src]**
+- An exception from one EDT task goes to the EDT's uncaught-exception handler and the loop
+  carries on with the next task. **[src]** (`EventDispatchThread.processException`, Java 11 and 21)
+
 ## R_claude_code_http_lifecycle — What Claude Code does when an HTTP MCP server comes and goes
 
 - A server unreachable at client startup is marked `failed`, and its tools are absent for the

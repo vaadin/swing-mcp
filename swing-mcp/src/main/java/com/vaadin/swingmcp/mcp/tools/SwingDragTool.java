@@ -41,7 +41,8 @@ import java.util.logging.Logger;
  * <p>With a display and a showing source it drives a {@link java.awt.Robot} off the EDT, on the
  * context's executor: real OS mouse events, which serve Java's DnD framework as well as a
  * {@code MouseListener}-based drag. Otherwise it posts synthetic events with
- * {@link Component#dispatchEvent}, every one of them to the source component.
+ * {@link Component#dispatchEvent}, every one of them to the source component and each in its
+ * own EDT task, so a listener that throws on one loses that event only.
  */
 public class SwingDragTool extends AbstractSwingTool {
 
@@ -200,9 +201,11 @@ public class SwingDragTool extends AbstractSwingTool {
                 SwingUtils.getComponentClassName(source.component),
                 source.x, source.y, waypoints.size(), localTargetX, localTargetY));
 
-        Runnable dragAction = SwingUtils.createDragAction(
-                source.component, source.x, source.y, localTargetX, localTargetY, localWaypoints);
-        SwingUtilities.invokeLater(dragAction);
+        // All posted now, not chained: FIFO keeps the next tool call's EDT turn behind the release.
+        for (Runnable step : SwingUtils.createDragSteps(
+                source.component, source.x, source.y, localTargetX, localTargetY, localWaypoints)) {
+            SwingUtilities.invokeLater(step);
+        }
     }
 
     @Override

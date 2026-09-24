@@ -911,48 +911,57 @@ public final class SwingUtils {
     }
 
     /**
-     * Returns a {@link Runnable} that drags with synthesized mouse events, all dispatched to
-     * {@code source}: a press, drag events interpolated through each waypoint to the target
-     * (5 steps with no waypoints, 3 per segment with them), 16 ms apart, then a release.
-     * Every coordinate is {@code source}-local.
+     * Returns a drag as synthesized mouse events, one {@link Runnable} per event, each
+     * dispatching to {@code source}: a press, drag events interpolated through each waypoint to
+     * the target (5 steps with no waypoints, 3 per segment with them), 16 ms apart, then a
+     * release. Every coordinate is {@code source}-local. Post each step as its own EDT task:
+     *
+     * <pre>{@code
+     * for (Runnable step : SwingUtils.createDragSteps(list, 50, 10, 250, 10, List.of())) {
+     *     SwingUtilities.invokeLater(step);   // a press that throws still lets the rest run
+     * }
+     * }</pre>
      *
      * @param waypoints each an {@code int[]{x, y}}; may be empty
+     * @implNote Not {@code EventQueue.postEvent}, which would be closer to a real mouse: it
+     *     coalesces every queued {@code MOUSE_DRAGGED} on one component into the last, so the
+     *     interpolated path collapses to a single jump. See R_drag_events_coalesce.
      */
-    public static Runnable createDragAction(Component source, int pressX, int pressY,
-                                            int targetX, int targetY,
-                                            java.util.List<int[]> waypoints) {
-        return () -> {
-            long now = System.currentTimeMillis();
+    public static java.util.List<Runnable> createDragSteps(Component source, int pressX, int pressY,
+                                                           int targetX, int targetY,
+                                                           java.util.List<int[]> waypoints) {
+        long start = System.currentTimeMillis();
+        java.util.List<Runnable> steps = new java.util.ArrayList<>();
 
-            source.dispatchEvent(new MouseEvent(source, MouseEvent.MOUSE_PRESSED,
-                    now, InputEvent.BUTTON1_DOWN_MASK,
-                    pressX, pressY, 0, false, MouseEvent.BUTTON1));
+        steps.add(() -> source.dispatchEvent(new MouseEvent(source, MouseEvent.MOUSE_PRESSED,
+                start, InputEvent.BUTTON1_DOWN_MASK,
+                pressX, pressY, 0, false, MouseEvent.BUTTON1)));
 
-            int fromX = pressX, fromY = pressY;
+        int fromX = pressX, fromY = pressY;
 
-            java.util.List<int[]> segments = new java.util.ArrayList<>(waypoints);
-            segments.add(new int[]{targetX, targetY});
+        java.util.List<int[]> segments = new java.util.ArrayList<>(waypoints);
+        segments.add(new int[]{targetX, targetY});
 
-            int stepsPerSegment = waypoints.isEmpty() ? 5 : 3;
-            for (int[] seg : segments) {
-                int toX = seg[0], toY = seg[1];
-                for (int i = 1; i <= stepsPerSegment; i++) {
-                    int x = fromX + (toX - fromX) * i / stepsPerSegment;
-                    int y = fromY + (toY - fromY) * i / stepsPerSegment;
-                    now += 16;
-                    source.dispatchEvent(new MouseEvent(source, MouseEvent.MOUSE_DRAGGED,
-                            now, InputEvent.BUTTON1_DOWN_MASK,
-                            x, y, 0, false, MouseEvent.NOBUTTON));
-                }
-                fromX = toX;
-                fromY = toY;
+        int stepsPerSegment = waypoints.isEmpty() ? 5 : 3;
+        for (int[] seg : segments) {
+            int toX = seg[0], toY = seg[1];
+            for (int i = 1; i <= stepsPerSegment; i++) {
+                int x = fromX + (toX - fromX) * i / stepsPerSegment;
+                int y = fromY + (toY - fromY) * i / stepsPerSegment;
+                long when = start + 16L * steps.size();
+                steps.add(() -> source.dispatchEvent(new MouseEvent(source,
+                        MouseEvent.MOUSE_DRAGGED, when, InputEvent.BUTTON1_DOWN_MASK,
+                        x, y, 0, false, MouseEvent.NOBUTTON)));
             }
+            fromX = toX;
+            fromY = toY;
+        }
 
-            now += 16;
-            source.dispatchEvent(new MouseEvent(source, MouseEvent.MOUSE_RELEASED,
-                    now, 0,
-                    targetX, targetY, 0, false, MouseEvent.BUTTON1));
-        };
+        long end = start + 16L * steps.size();
+        steps.add(() -> source.dispatchEvent(new MouseEvent(source, MouseEvent.MOUSE_RELEASED,
+                end, 0,
+                targetX, targetY, 0, false, MouseEvent.BUTTON1)));
+        return steps;
     }
 
     /**

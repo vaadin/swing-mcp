@@ -167,14 +167,14 @@ class SwingDragScreenTest extends AbstractScreenTest {
 
     // ══════════════════════════════════════════════════════════════════════════
     // The drag matrix's JList and JComboBox rows — here, not in SwingDragToolTest: headless,
-    // their UI delegate's press handler throws HeadlessException, which aborts the drag.
+    // their UI delegate's press handler throws HeadlessException, so no press reaches the recorder.
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void jComboBoxAsSourceReceivesTheWholeDrag() throws Exception {
         assumeTrue(COMBO_IGNORES_PRESS_WHILE_NOT_SHOWING,
                 "below Java 17 the press opens the popup of a combo not showing, which throws"
-                        + " and aborts the drag (R_ui_delegate_press_throws)");
+                        + " before the press reaches the recorder (R_ui_delegate_press_throws)");
         JFrame frame = new JFrame("Drag Test");
         frame.setSize(400, 200);
         JComboBox<String> combo = new JComboBox<>(new String[]{"A", "B"});
