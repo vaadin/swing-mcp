@@ -160,7 +160,7 @@ public final class SwingTools {
 
     public static final ToolDescriptor SWING_GET_SELECTION = new ToolDescriptor(
             "swing_get_selection",
-            "Read the current selection of a UI component by ref. Returns JSON with selectedCount and selected items (0-based index + name). For JTable, index is the row index (not cell index) and name is a pipe-separated summary of cell values. Requires a ref obtained from swing_snapshot or swing_get_cells.",
+            "Read the current selection of a UI component by ref. Returns JSON with selectedCount and selected items (0-based index + name). selectedCount is the whole selection; past 100 items the list stops and \"truncated\":true is added. For JTable, index is the row index (not cell index) and name is a pipe-separated summary of cell values. For a JComboBox showing a value that is not one of its items (typed into an editable combo), index is -1 and name is that value. Requires a ref obtained from swing_snapshot or swing_get_cells.",
             new InputSchemaBuilder()
                     .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
                     .build());

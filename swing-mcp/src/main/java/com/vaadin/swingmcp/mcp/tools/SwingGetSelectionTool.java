@@ -25,6 +25,7 @@ import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
 import javax.accessibility.AccessibleSelection;
 import javax.accessibility.AccessibleTable;
+import javax.swing.JComboBox;
 import javax.swing.JTable;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -40,9 +41,14 @@ import java.util.Set;
  * {"selectedCount":1,"selected":[{"index":1,"name":"Beta"}]}
  * }</pre>
  *
- * Past {@code MAX_SELECTION_ITEMS} it adds {@code "truncated":true}, and {@code selectedCount}
- * counts only the items returned. A {@code JTable} selection is reported by row, named by a
- * pipe-separated summary of its cells.
+ * {@code selectedCount} is the whole selection; past {@code MAX_SELECTION_ITEMS} the list stops
+ * and {@code "truncated":true} is added. A {@code JTable} selection is reported by row, named by
+ * a pipe-separated summary of its cells. A {@code JComboBox} showing a value outside its model,
+ * typed into an editable one, is reported as index -1:
+ *
+ * <pre>{@code
+ * {"selectedCount":1,"selected":[{"index":-1,"name":"Magenta"}]}
+ * }</pre>
  */
 public class SwingGetSelectionTool extends AbstractSwingTool {
 
@@ -62,9 +68,16 @@ public class SwingGetSelectionTool extends AbstractSwingTool {
         AccessibleSelection as = ac.getAccessibleSelection();
 
         List<Map<String, Object>> selected;
+        int selectedCount;
         boolean truncated;
 
-        if (accessible instanceof JTable) {
+        if (isValueOutsideModel(accessible)) {
+            // Swing counts this value but yields a null selection (R_selection_null_entries).
+            Object value = ((JComboBox<?>) accessible).getSelectedItem();
+            selected = List.of(item(-1, String.valueOf(value)));
+            selectedCount = 1;
+            truncated = false;
+        } else if (accessible instanceof JTable) {
             AccessibleTable at = ac.getAccessibleTable();
             int cols = at.getAccessibleColumnCount();
             int selCount = as.getAccessibleSelectionCount();
@@ -78,38 +91,29 @@ public class SwingGetSelectionTool extends AbstractSwingTool {
                 rows.add(cellIndex / cols);
             }
 
-            truncated = rows.size() > MAX_SELECTION_ITEMS;
+            selectedCount = rows.size();
+            truncated = selectedCount > MAX_SELECTION_ITEMS;
             selected = new ArrayList<>();
-            int count = 0;
             for (int row : rows) {
-                if (count >= MAX_SELECTION_ITEMS) break;
-                String name = SwingUtils.buildTableRowText(at, row, cols);
-                Map<String, Object> item = new LinkedHashMap<>();
-                item.put("index", row);
-                item.put("name", name);
-                selected.add(item);
-                count++;
+                if (selected.size() >= MAX_SELECTION_ITEMS) break;
+                selected.add(item(row, SwingUtils.buildTableRowText(at, row, cols)));
             }
         } else {
-            int selCount = as.getAccessibleSelectionCount();
-            truncated = selCount > MAX_SELECTION_ITEMS;
-            int limit = Math.min(selCount, MAX_SELECTION_ITEMS);
+            selectedCount = as.getAccessibleSelectionCount();
+            truncated = selectedCount > MAX_SELECTION_ITEMS;
+            int limit = Math.min(selectedCount, MAX_SELECTION_ITEMS);
             selected = new ArrayList<>();
             for (int i = 0; i < limit; i++) {
                 Accessible child = as.getAccessibleSelection(i);
+                // Null for an index past a model that shrank silently (R_selection_null_entries).
                 if (child == null) continue;
                 AccessibleContext childCtx = child.getAccessibleContext();
-                int itemIndex = childCtx.getAccessibleIndexInParent();
-                String name = childCtx.getAccessibleName();
-                Map<String, Object> item = new LinkedHashMap<>();
-                item.put("index", itemIndex);
-                item.put("name", name);
-                selected.add(item);
+                selected.add(item(childCtx.getAccessibleIndexInParent(), childCtx.getAccessibleName()));
             }
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("selectedCount", selected.size());
+        result.put("selectedCount", selectedCount);
         result.put("selected", selected);
         if (truncated) {
             result.put("truncated", true);
@@ -117,6 +121,22 @@ public class SwingGetSelectionTool extends AbstractSwingTool {
         return MCPProtocol.Content.json(result);
     }
 
+    /**
+     * Returns {@code true} for a {@code JComboBox} whose selected item is in none of its rows —
+     * typed into an editable combo, or set on its model directly.
+     */
+    private static boolean isValueOutsideModel(Accessible accessible) {
+        if (!(accessible instanceof JComboBox)) return false;
+        JComboBox<?> combo = (JComboBox<?>) accessible;
+        return combo.getSelectedIndex() == -1 && combo.getSelectedItem() != null;
+    }
+
+    private static Map<String, Object> item(int index, String name) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("index", index);
+        item.put("name", name);
+        return item;
+    }
 
     @Override
     public boolean isMutation() {

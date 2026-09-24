@@ -10,8 +10,6 @@ numbers are from the commit after the pass.
 
 ## Possible code bugs — swing-mcp
 
-- **`SwingGetSelectionTool`**: `selectedCount` is `selected.size()`, so it undercounts when the
-  result is truncated or holds null entries. It is documented as-is for now.
 - **`SwingUtils.createDragAction`** dispatches the whole drag from one `Runnable`, so a listener
   that throws on the press aborts the drags and the release. A real mouse sends each event
   separately, and the EDT carries on after one throws. This only affects the synthetic, headless

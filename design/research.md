@@ -206,6 +206,18 @@ trims to its length — which is how long this file gets, so keep it short.
 - Consequence: a type-to-filter combo box needs no special handling, because its editor is
   already an ordinary text node in the tree. **[verified 2026-04-08, Java 21]**
 
+## R_selection_null_entries — `AccessibleSelection` can count an entry it returns as null
+
+- A `JComboBox` whose selected item is none of its rows reports `getAccessibleSelectionCount()`
+  1, yet `getAccessibleSelection(0)` is null and `getSelectedIndex()` is -1. It gets there by
+  typing into an editable combo, or by `getModel().setSelectedItem` on any combo. The combo
+  still shows the value. **[verified 2026-09-24, Java 11 and 17]**
+- A `JList` whose `ListModel` shrinks without firing `intervalRemoved` keeps the stale selected
+  indices: the count includes them and `getAccessibleSelection(i)` is null for each index past
+  the end. **[verified 2026-09-24, Java 11 and 17]**
+- Consequence: counting the non-null entries undercounts. The combo case is ordinary use; the
+  `JList` case is a bug in the host's model. **[verified 2026-09-24, Java 11 and 17]**
+
 ## R_jslider_actions_since_17 — `JSlider` gained increment/decrement actions after Java 11
 
 - On Java 11 `AccessibleJSlider` is declared `implements Serializable, AccessibleComponent,

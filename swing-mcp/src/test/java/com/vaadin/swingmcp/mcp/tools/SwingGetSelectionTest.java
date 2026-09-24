@@ -81,6 +81,22 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
     }
 
     @Test
+    void jList_staleIndexPastShrunkModel_isCountedButNotListed() throws Exception {
+        // R_selection_null_entries: the model shrinks without firing intervalRemoved.
+        String[] data = {"A", "B", "C"};
+        int[] size = {3};
+        JList<String> list = new JList<>(new AbstractListModel<String>() {
+            @Override public int getSize() { return size[0]; }
+            @Override public String getElementAt(int i) { return data[i]; }
+        });
+        list.setSelectedIndices(new int[]{0, 2});
+        size[0] = 2;
+        context.putRef(99, list);
+        String json = getSelection(99);
+        assertEquals("{\"selectedCount\":2,\"selected\":[{\"index\":0,\"name\":\"A\"}]}", json);
+    }
+
+    @Test
     void jList_multipleSelectedItems() throws Exception {
         JList<String> list = new JList<>(new String[]{"Alpha", "Beta", "Gamma", "Delta"});
         list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
@@ -124,12 +140,33 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         assertEquals("{\"selectedCount\":1,\"selected\":[{\"index\":2,\"name\":\"Blue\"}]}", json);
     }
 
+
     @Test
     void jComboBox_empty() throws Exception {
         JComboBox<String> combo = new JComboBox<>();
         snapshot(combo);
         String json = getSelection(context.getRefOf(combo));
         assertEquals("{\"selectedCount\":0,\"selected\":[]}", json);
+    }
+
+    @Test
+    void editableJComboBox_typedValueOutsideModel_isIndexMinusOne() throws Exception {
+        // R_selection_null_entries: Swing counts the value but returns no selected child.
+        JComboBox<String> combo = new JComboBox<>(new String[]{"Red", "Green", "Blue"});
+        combo.setEditable(true);
+        combo.setSelectedItem("Magenta");
+        snapshot(combo);
+        String json = getSelection(context.getRefOf(combo));
+        assertEquals("{\"selectedCount\":1,\"selected\":[{\"index\":-1,\"name\":\"Magenta\"}]}", json);
+    }
+
+    @Test
+    void jComboBox_modelValueOutsideItems_isIndexMinusOne() throws Exception {
+        JComboBox<String> combo = new JComboBox<>(new String[]{"Red", "Green", "Blue"});
+        combo.getModel().setSelectedItem("Magenta");
+        context.putRef(99, combo);
+        String json = getSelection(99);
+        assertEquals("{\"selectedCount\":1,\"selected\":[{\"index\":-1,\"name\":\"Magenta\"}]}", json);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -300,10 +337,32 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         snapshot(list);
 
         String json = getSelection(context.getRefOf(list));
-        assertTrue(json.contains("\"truncated\":true"),
-                "Response should contain truncated:true, got: " + json);
-        assertTrue(json.contains("\"selectedCount\":" + SwingGetSelectionTool.MAX_SELECTION_ITEMS),
-                "selectedCount should be capped at MAX_SELECTION_ITEMS, got: " + json);
+        assertEquals(expectedTruncated(count, i -> "Item" + i), json);
+    }
+
+    @Test
+    void jTableTruncation_countsEveryRow() throws Exception {
+        int count = SwingGetSelectionTool.MAX_SELECTION_ITEMS + 5;
+        Object[][] rows = new Object[count][];
+        for (int i = 0; i < count; i++) {
+            rows[i] = new Object[]{"Row" + i};
+        }
+        JTable table = new JTable(new DefaultTableModel(rows, new Object[]{"Name"}));
+        table.setRowSelectionInterval(0, count - 1);
+        snapshot(table);
+
+        String json = getSelection(context.getRefOf(table));
+        assertEquals(expectedTruncated(count, i -> "Row" + i), json);
+    }
+
+    /** The JSON for {@code count} selected items, truncated to the first MAX_SELECTION_ITEMS. */
+    private static String expectedTruncated(int count, java.util.function.IntFunction<String> name) {
+        StringBuilder sb = new StringBuilder("{\"selectedCount\":" + count + ",\"selected\":[");
+        for (int i = 0; i < SwingGetSelectionTool.MAX_SELECTION_ITEMS; i++) {
+            if (i > 0) sb.append(',');
+            sb.append("{\"index\":").append(i).append(",\"name\":\"").append(name.apply(i)).append("\"}");
+        }
+        return sb.append("],\"truncated\":true}").toString();
     }
 
     @Test
@@ -314,9 +373,8 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         snapshot(list);
 
         String json = getSelection(context.getRefOf(list));
-        assertFalse(json.contains("truncated"),
-                "Response should not contain truncated field, got: " + json);
-        assertTrue(json.contains("\"selectedCount\":3"), "selectedCount should be 3");
+        assertEquals("{\"selectedCount\":3,\"selected\":["
+                + "{\"index\":0,\"name\":\"A\"},{\"index\":1,\"name\":\"B\"},{\"index\":2,\"name\":\"C\"}]}", json);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -374,8 +432,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         list.setSelectedIndex(0);
         snapshot(list);
         String json = getSelection(context.getRefOf(list));
-        assertTrue(json.contains("\"selectedCount\":1"));
-        assertTrue(json.contains("\"name\":\"A\""));
+        assertEquals("{\"selectedCount\":1,\"selected\":[{\"index\":0,\"name\":\"A\"}]}", json);
     }
 
     @Test
@@ -385,8 +442,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         tp.addTab("Second", new JPanel());
         snapshot(tp);
         String json = getSelection(context.getRefOf(tp));
-        assertTrue(json.contains("\"selectedCount\":1"));
-        assertTrue(json.contains("\"name\":\"First\""));
+        assertEquals("{\"selectedCount\":1,\"selected\":[{\"index\":0,\"name\":\"First\"}]}", json);
     }
 
     @Test
@@ -395,8 +451,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         combo.setSelectedIndex(0);
         snapshot(combo);
         String json = getSelection(context.getRefOf(combo));
-        assertTrue(json.contains("\"selectedCount\":1"));
-        assertTrue(json.contains("\"name\":\"X\""));
+        assertEquals("{\"selectedCount\":1,\"selected\":[{\"index\":0,\"name\":\"X\"}]}", json);
     }
 
     @Test
@@ -407,8 +462,7 @@ class SwingGetSelectionTest extends AbstractHeadlessTest {
         table.setRowSelectionInterval(0, 0);
         snapshot(table);
         String json = getSelection(context.getRefOf(table));
-        assertTrue(json.contains("\"selectedCount\":1"));
-        assertTrue(json.contains("\"name\":\"A | 1\""));
+        assertEquals("{\"selectedCount\":1,\"selected\":[{\"index\":0,\"name\":\"A | 1\"}]}", json);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
