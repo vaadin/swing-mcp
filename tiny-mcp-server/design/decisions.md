@@ -188,10 +188,29 @@ setup — in their first integration test rather than in production.
 above. There is no use case for changing a session policy while sessions are live, and permitting
 it would mean every reader has to consider whether it happened.
 
-**Why `onSessionStarted` exists.** There was a hook for a session ending and none for one
-beginning. Without it, per-session resource setup has to be lazy-initialized inside every
-registered `ToolFunction`, scattering one concern across N registrations. Today only the tests
-use it, to observe a session starting.
+## D_session_hooks — Why keep `onSessionStarted` / `onSessionClosed` when only the tests call them?
+
+`MCPProxy`, their one production caller, is gone; `SwingMCP` sets only the admission policy. The
+hooks stay anyway, because they are the other half of `MCPSession`'s attributes: an embedder that
+holds a per-session resource — a database connection, an upstream client — opens it when the
+session starts, stores it as an attribute, and closes it when the session ends. That is the usual
+lifecycle for a session-scoped server, and this one is built to be embedded.
+
+**Why not remove both.** Rejected — `setAttribute` would survive with no release point. A session
+leaves by DELETE, supersede, idle eviction, a stdio re-`initialize` or `closeAllSessions()`, and
+the tool code that stored the attribute sees none of them, so every resource held in one leaks
+with its session. Removing the hooks honestly would mean removing attributes too.
+
+**Why not keep `onSessionClosed` and drop `onSessionStarted`.** Rejected — lazy setup inside tool
+code can allocate, but it scatters one concern across every registered `ToolFunction`, and it
+loses the fail-fast: a throwing `onSessionStarted` withdraws the session and fails `initialize`,
+so an unreachable database surfaces at the handshake instead of as the model's first confusing
+tool error.
+
+**Why not treat an uncalled hook as a pre-1.0 guess.** Rejected — what the hooks cost is already
+paid and tested: the lockdown in `D_settable_listeners`, the exception containment on every close
+path, and the test that a throwing close listener does not wedge eviction or `closeAllSessions`.
+Removing them saves little, and the first embedder with a resource to release would put them back.
 
 ## D_three_error_layers — Why three error layers rather than one?
 

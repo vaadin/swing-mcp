@@ -128,7 +128,7 @@ public class MCPHandler {
         this.instructions = instructions;
     }
 
-    // ===== Session-lifecycle listener setters (D_settable_listeners) =====
+    // ===== Session-lifecycle listener setters (D_settable_listeners, D_session_hooks) =====
 
     /**
      * Sets the admission policy run on every {@code initialize}; the default
