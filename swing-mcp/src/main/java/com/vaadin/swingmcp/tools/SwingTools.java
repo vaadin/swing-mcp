@@ -101,7 +101,7 @@ public final class SwingTools {
 
     public static final ToolDescriptor SWING_DRAG = new ToolDescriptor(
             "swing_drag",
-            "Drag a UI component to another location. Dispatches mouse drag events (PRESSED → DRAGGED → RELEASED). Source: source_ref identifies the component; by default drags from its center. Provide optional source_x/source_y (component-relative pixel offsets) to start from a specific point within the component (e.g. a painted node on a canvas). Target: target_ref identifies the drop component; by default drops at its center. Provide optional target_x/target_y (component-relative pixel offsets) to drop at a specific point within the target component. Optional via: flat array of [ref, x, y, ...] triplets defining intermediate waypoints the drag passes through (e.g. for self-edges that must exit and re-enter a node). Refs are obtained from swing_snapshot or swing_get_cells.",
+            "Drag a UI component to another location. Dispatches mouse drag events (PRESSED → DRAGGED → RELEASED). Source: source_ref identifies the component; by default drags from its center. Provide optional source_x/source_y (component-relative pixel offsets) to start from a specific point within the component (e.g. a painted node on a canvas). Target: target_ref identifies the drop component; by default drops at its center. Provide optional target_x/target_y (component-relative pixel offsets) to drop at a specific point within the target component. Optional via: flat array of [ref, x, y, ...] triplets defining intermediate waypoints the drag passes through (e.g. for self-edges that must exit and re-enter a node). Refs are obtained from swing_snapshot or swing_get_cells. A drag source or drop target with no actions, such as a JTree leaf or a JLabel, has no ref by default: call swing_snapshot with all_refs=true first.",
             new InputSchemaBuilder()
                     .requiredInteger("source_ref",
                             "The element reference number of the component to drag from. By default drags from the component's center.")
@@ -133,6 +133,8 @@ public final class SwingTools {
                     .requiredInteger("ref", "The element reference number from swing_snapshot or swing_get_cells")
                     .requiredInteger("offset", "0-based start index for paging").withMinimum(0)
                     .requiredInteger("length", "Number of children to return").withMinimum(0)
+                    .optionalBoolean("all_refs",
+                            "If true, every node on the page gets a ref, not just the ones with actions, as in swing_snapshot.")
                     .build());
 
     public static final ToolDescriptor SWING_GET_DESCRIPTION = new ToolDescriptor(
@@ -245,6 +247,8 @@ public final class SwingTools {
             new InputSchemaBuilder()
                     .optionalString("filter_substring",
                             "If provided, returns a pruned tree: nodes whose text contains the substring (case-insensitive) are included together with their ancestors (for context) and all descendants (e.g. table rows, list items). Non-matching sibling branches are dropped.")
+                    .optionalBoolean("all_refs",
+                            "If true, every node gets a ref, not just the ones with actions. Use it before swing_drag, whose source, target or waypoint may have no actions, such as a JTree leaf or a JLabel. Default false.")
                     .build());
 
     public static final ToolDescriptor SWING_TOGGLE_EXPAND = new ToolDescriptor(

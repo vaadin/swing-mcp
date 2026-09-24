@@ -62,9 +62,8 @@ localized (`D_role_in_snapshot_only`).
 | `Concrete -> JClass (role)` | a custom subclass worth naming | `SearchField -> JTextField (text)` |
 | `(role)` | an accessible that is not a `Component` | `(page_tab)`, `(label)` |
 
-The parenthesised role is unconditional, even when it merely lowercases the class
-(`JButton (push_button)`), so that a role override (`JButton (button_with_dropdown)`) reads as a
-signal.
+The parenthesised role is unconditional, even when it merely lowercases the class:
+`JButton (push_button)`.
 
 ### States
 
@@ -172,7 +171,8 @@ semantic role, an accessible name, at least one action, `AccessibleText` content
 - **Roots** are separated by a `---` line. Each root is a window the user could interact with
   right now (`D_interactable_windows_only`).
 - **Refs** are integers from 1, assigned depth-first across all roots in one sequence, to every
-  node carrying at least one action. They are valid until the next successful mutation.
+  node carrying at least one action, or to every node but a `JTable` row with `all_refs`
+  (`D_opt_in_all_refs`). They are valid until the next successful mutation.
 - **A modal root** whose owner chain has a visible ancestor gets one header line above it:
   `[modal stack (N, topmost first): Class0 "Name0" / Class1 "Name1"]`. Suppressed below two
   entries; the separator is ` / ` because `->` already means something in the identity slot
@@ -217,6 +217,6 @@ Showing 3 children from offset 5 (total 20) for list [ref=1]
   identity slot. `[ref=1]` is the component, so the next page needs no snapshot.
 - **Each child** starts at column 0 as a snapshot subtree, pruned below by *What survives*. Its
   own line is always kept, even with no action and no name.
-- **Refs** run from 2, depth-first, on every node with an action.
+- **Refs** run from 2, depth-first, numbered as in the snapshot.
 - **A null child** renders as `- null` in its place.
 - **An empty page** (`offset` at or past the total, or `length` 0) is the header alone.

@@ -774,6 +774,40 @@ notation for something the indent already expresses, and still leaves matched co
 filtered snapshot is indistinguishable from a small application. The notice is what tells the
 agent to re-snapshot unfiltered when it needs the whole picture.
 
+## D_opt_in_all_refs — Why does a node with no action get a ref only when `all_refs` asks for one?
+
+By default a ref marks a node the model can act on. `swing_snapshot` and `swing_get_cells` take
+`all_refs: true` to number every node that survives pruning. The exceptions are `JTable` rows,
+which mirror no accessible, and the children of an iconified frame (`D_iconified_children_hidden`).
+The flag is there for `swing_drag`: a user drags a `JTree` leaf, and drops onto a `JLabel`, and
+neither has an action. `swing_drag` takes any ref, so the flag is the whole fix.
+
+**Why not a ref on every node, always.** Rejected — every snapshot grows, and every agent pays
+for it, most of which never drag. And the ref stops meaning "something you can act on", which is
+the one thing the model reads from it at a glance.
+
+**Why not a ref on whatever the host lets a user drag or select.** Rejected — "can a user drag
+this?" has no static answer. A `TransferHandler` or `setDragEnabled(true)` says so, but a drag
+built on a plain `MouseMotionListener` carries no flag at all. With the flag, the model says it is
+about to drag, so nothing has to guess.
+
+**Why not advertise `click` on a tree node, as on a `JList` item.** Not a fix for drag: it gives
+a tree node a ref, but a drop target is as often a label or a panel with nothing to click. Whether
+a tree node should be clickable, for selecting it, is its own question.
+
+**Why not let `target_ref` and `via` take a tree path.** Rejected — it is a second way to address
+a node, beside the ref, in one tool only, and it still leaves a drag source with no ref.
+
+**Why the flag changes refs but not pruning.** An unnamed layout panel stays pruned, even when it
+is a drop zone. Turning pruning off would lengthen the output a lot for little gain, since the
+window root now takes a ref and any point stays reachable as an ancestor's ref plus
+`target_x` / `target_y`.
+
+**Why per call, not a mode.** The first successful mutation clears the ref map anyway, so the next
+plain snapshot is back to the default. A sticky mode would be session state that the model has to
+remember to turn off. With `filter_substring` beside it, the extra snapshot a drag costs stays
+small: refs are assigned before the filter runs, so the leaf keeps its ref in the short output.
+
 ## D_select_all_standalone — Why does `swing_select_all` call select-all directly rather than delegating to `swing_set_selection` with every index?
 
 `swing_clear_selection` is a thin delegate to `swing_set_selection` with an empty array, and the

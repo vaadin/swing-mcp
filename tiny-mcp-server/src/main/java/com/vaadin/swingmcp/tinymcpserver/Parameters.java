@@ -211,6 +211,33 @@ public final class Parameters {
         return num.intValue();
     }
 
+    /**
+     * Returns an optional boolean parameter, or {@code null} if absent. Takes the strings
+     * {@code "true"} and {@code "false"} too (D_coerce_string_numbers).
+     */
+    @Nullable
+    public Boolean getBooleanOrNull(String key) {
+        Object value = raw.get(key);
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+        if ("true".equals(value)) {
+            return true;
+        }
+        if ("false".equals(value)) {
+            return false;
+        }
+        if (value instanceof String) {
+            throw new MCPServerException(MCPServerException.INVALID_PARAMS,
+                    "Parameter '" + key + "' must be a boolean, got '" + value + "'");
+        }
+        throw new MCPServerException(MCPServerException.INVALID_PARAMS,
+                "Parameter '" + key + "' must be a boolean, got " + value.getClass().getSimpleName());
+    }
+
     @Override
     public boolean equals(@Nullable Object o) {
         if (this == o) return true;

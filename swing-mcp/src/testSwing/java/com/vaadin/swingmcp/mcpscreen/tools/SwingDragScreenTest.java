@@ -249,38 +249,41 @@ class SwingDragScreenTest extends AbstractScreenTest {
     }
 
     @Test
-    void nestedJTreeNodeAsSourceDragsFromItsCenter() throws Exception {
+    void nestedJTreeLeafDragsFromItsCenterOntoALabel() throws Exception {
         // A node's bounds are relative to its parent node, not the JTree (R_virtual_child_bounds).
         JFrame frame = new JFrame("Drag Test");
         frame.setSize(400, 300);
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("Root");
         DefaultMutableTreeNode parent = new DefaultMutableTreeNode("Parent");
-        DefaultMutableTreeNode child = new DefaultMutableTreeNode("Child");
         root.add(parent);
-        parent.add(child);
-        // A leaf has no actions, hence no ref: the grandchild gives Child one.
-        child.add(new DefaultMutableTreeNode("Grandchild"));
+        parent.add(new DefaultMutableTreeNode("Child"));
         JTree tree = new JTree(root);
         tree.setBounds(0, 0, 300, 250);
+        JLabel trash = new JLabel("Trash");
+        trash.setBounds(320, 0, 60, 30);
         frame.getContentPane().setLayout(null);
         frame.getContentPane().add(tree);
+        frame.getContentPane().add(trash);
         executeOnEDT(() -> {
             tree.expandRow(0);
             tree.expandRow(1);
             return null;
         });
 
-        snapshot(frame);
+        // Neither the leaf nor the label has an action: only all_refs gives them a ref.
+        context.setConsideredComponents(List.of(frame));
+        executeOnEDT(() -> snapshotTool.execute(new Parameters(Map.of("all_refs", true)), context));
+        // JFrame 1, JTree 2, Root 3, Parent 4, Child 5.
         assertEquals("Child", executeOnEDT(
-                () -> context.getAccessibleByRef(3).getAccessibleContext().getAccessibleName()));
+                () -> context.getAccessibleByRef(5).getAccessibleContext().getAccessibleName()));
         MouseEventRecorder recorder = executeOnEDT(() -> MouseEventRecorder.attachTo(tree));
-        drag(3, 1); // Child onto Root
+        drag(5, context.getRefOf(trash));
 
         assertEquals(MouseEventRecorder.SYNTHETIC_DRAG, recorder.getEventIds());
         List<MouseEvent> events = recorder.getEvents();
         assertEquals(executeOnEDT(() -> centerOf(tree.getRowBounds(2))),
                 events.get(0).getPoint(), "press: Child's center");
-        assertEquals(executeOnEDT(() -> centerOf(tree.getRowBounds(0))),
-                events.get(6).getPoint(), "release: Root's center");
+        // The label's center, in tree-local coordinates.
+        assertEquals(new Point(350, 15), events.get(6).getPoint(), "release: the label's center");
     }
 }

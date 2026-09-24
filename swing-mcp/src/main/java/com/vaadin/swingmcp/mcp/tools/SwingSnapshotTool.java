@@ -50,6 +50,7 @@ public class SwingSnapshotTool extends AbstractSwingTool {
     @Override
     public MCPProtocol.Content execute(Parameters params,
                                        SwingToolContext context) throws Exception {
+        boolean allRefs = Boolean.TRUE.equals(params.getBooleanOrNull("all_refs"));
         context.clearRefMap();
 
         List<Component> components = context.getConsideredComponents();
@@ -67,7 +68,7 @@ public class SwingSnapshotTool extends AbstractSwingTool {
 
         int nextRef = 1;
         for (SnapshotNode root : roots) {
-            nextRef = root.assignRefs(nextRef, context);
+            nextRef = root.assignRefs(nextRef, allRefs, context);
         }
 
         StringBuilder sb = new StringBuilder();

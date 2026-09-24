@@ -61,6 +61,7 @@ public class SwingGetCellsTool extends AbstractSwingTool {
         int ref = params.getInt("ref");
         int offset = params.getInt("offset");
         int length = params.getInt("length");
+        boolean allRefs = Boolean.TRUE.equals(params.getBooleanOrNull("all_refs"));
         if (offset < 0) {
             throw new MCPErrorResponseException("offset must be non-negative, got " + offset);
         }
@@ -106,7 +107,7 @@ public class SwingGetCellsTool extends AbstractSwingTool {
 
         int nextRef = 2;
         for (SnapshotNode root : childRoots) {
-            nextRef = root.assignRefs(nextRef, context);
+            nextRef = root.assignRefs(nextRef, allRefs, context);
         }
 
         int shown = end - offset;

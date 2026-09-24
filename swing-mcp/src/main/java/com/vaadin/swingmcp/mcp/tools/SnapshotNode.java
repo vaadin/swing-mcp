@@ -40,7 +40,7 @@ import org.jspecify.annotations.Nullable;
  * <pre>{@code
  * SnapshotNode root = SnapshotNode.build(window);
  * root.pruneChildren();
- * nextRef = root.assignRefs(nextRef, context);
+ * nextRef = root.assignRefs(nextRef, allRefs, context);
  * root.render(0, sb);                  // or renderFiltered(filterLower, 0, sb)
  * }</pre>
  *
@@ -440,10 +440,11 @@ class SnapshotNode {
      * Numbers every node with an action depth-first, from {@code nextRef}, and registers each in
      * {@code context}. An override must still set {@link #ref} on every node it covers.
      *
+     * @param allRefs number every node, action or not (D_opt_in_all_refs)
      * @return the next free ref
      */
-    int assignRefs(int nextRef, SwingToolContext context) {
-        if (hasAnyAction()) {
+    int assignRefs(int nextRef, boolean allRefs, SwingToolContext context) {
+        if (allRefs || hasAnyAction()) {
             ref = nextRef;
             context.putRef(nextRef, accessible);
             nextRef++;
@@ -456,7 +457,7 @@ class SnapshotNode {
             return nextRef;
         }
         for (SnapshotNode child : children) {
-            nextRef = child.assignRefs(nextRef, context);
+            nextRef = child.assignRefs(nextRef, allRefs, context);
         }
         return nextRef;
     }
@@ -936,7 +937,7 @@ class SnapshotNode {
         }
 
         @Override
-        int assignRefs(int nextRef, SwingToolContext context) {
+        int assignRefs(int nextRef, boolean allRefs, SwingToolContext context) {
             ref = 0;
             return nextRef;
         }

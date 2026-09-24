@@ -57,7 +57,8 @@ comment), the module map (`AGENTS.md`).
    outright; `JDesktopIcon` children are never constructed at all (`D_desktop_icon_as_itself`).
 2. **Prune** — transparent containers (`JRootPane`, `JLayeredPane`, `JViewport`, unnamed
    `JPanel`) promote their children into the parent; semantic roles are always kept.
-3. **Assign refs** — every node with at least one action takes the next integer, starting at 1.
+3. **Assign refs** — every node with at least one action takes the next integer, starting at 1;
+   with `all_refs`, every node does (`D_opt_in_all_refs`).
    Children of an iconified frame are skipped entirely (`D_iconified_children_hidden`).
 4. **Render** — one line per node, `JClass (role) "name" [states] text="…" actions: …`
    (`D_role_in_snapshot_only`, `D_inline_value_preview`). Every quoted slot is sanitized exactly

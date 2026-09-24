@@ -408,6 +408,50 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
                 getCells(99, 0, 3));
     }
 
+    @Test
+    void allRefs_numbersChildWithoutAction() throws Exception {
+        JPanel panel = new JPanel();
+        JList<String> list = listWithChildAt1(panel);
+        context.putRef(99, list);
+        assertEquals(
+                "Showing 3 children from offset 0 (total 3) for list [ref=1]\n"
+                + "- (label) \"A\" [ref=2] actions: click\n"
+                + "- JPanel (panel) [ref=3]\n"
+                + "- (label) \"C\" [ref=4] actions: click",
+                tool.execute(new Parameters(Map.of("ref", 99, "offset", 0, "length", 3,
+                        "all_refs", true)), context).getText());
+        assertSame(panel, context.getAccessibleByRef(3));
+    }
+
+    @Test
+    void allRefs_numbersTruncatedJTreeLeaves() throws Exception {
+        DefaultMutableTreeNode root = new DefaultMutableTreeNode("Root");
+        for (int i = 0; i < 10; i++) {
+            root.add(new DefaultMutableTreeNode("Node-" + i));
+        }
+        JTree tree = new JTree(root);
+        tree.setRootVisible(false);
+        tree.setSize(200, 400);
+        tree.expandRow(0);
+        snapshot(tree);
+        assertEquals(
+                "Showing 2 children from offset 7 (total 10) for tree [ref=1]\n"
+                + "- (label) \"Node-7\" [ref=2, collapsed]\n"
+                + "- (label) \"Node-8\" [ref=3, collapsed]",
+                tool.execute(new Parameters(Map.of("ref", context.getRefOf(tree),
+                        "offset", 7, "length", 2, "all_refs", true)), context).getText());
+    }
+
+    @Test
+    void allRefs_malformed_leavesRefMapIntact() throws Exception {
+        JList<String> list = new JList<>(new String[]{"A", "B"});
+        snapshot(list);
+        int ref = context.getRefOf(list);
+        assertThrows(MCPServerException.class, () -> tool.execute(new Parameters(Map.of(
+                "ref", ref, "offset", 0, "length", 2, "all_refs", "yes")), context));
+        assertSame(list, context.getAccessibleByRef(ref));
+    }
+
     /** A three-item list whose accessible child 1 is {@code child} instead of item "B". */
     private static JList<String> listWithChildAt1(javax.accessibility.Accessible child) {
         return new JList<>(new String[]{"A", "B", "C"}) {

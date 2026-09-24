@@ -20,6 +20,7 @@ import com.vaadin.swingmcp.mcp.AbstractHeadlessTest;
 import com.vaadin.swingmcp.mcp.ClickRecordingPanel;
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -1849,6 +1850,108 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
                 + "  - JPanel (panel) \"Right\"\n"
                 + "    - JButton (push_button) \"Target\" [ref=2] actions: click",
                 output);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // all_refs (D_opt_in_all_refs)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private String snapshotAllRefs(Component... roots) throws Exception {
+        context.setConsideredComponents(Arrays.asList(roots));
+        return tool.execute(new Parameters(Map.of("all_refs", true)), context).getText();
+    }
+
+    @Test
+    void allRefs_numbersNodesWithoutActions() throws Exception {
+        JPanel panel = new JPanel();
+        JLabel label = new JLabel("Status: OK");
+        panel.add(label);
+        panel.add(new JButton("Go"));
+
+        assertEquals(
+                "- JPanel (panel) [ref=1]\n"
+                + "  - JLabel (label) \"Status: OK\" [ref=2]\n"
+                + "  - JButton (push_button) \"Go\" [ref=3] actions: click",
+                snapshotAllRefs(panel));
+        assertSame(panel, context.getAccessibleByRef(1));
+        assertSame(label, context.getAccessibleByRef(2));
+    }
+
+    @Test
+    void allRefs_numbersJTreeAndItsLeaves() throws Exception {
+        JPanel panel = new JPanel();
+        javax.swing.tree.DefaultMutableTreeNode root = new javax.swing.tree.DefaultMutableTreeNode("Root");
+        root.add(new javax.swing.tree.DefaultMutableTreeNode("A"));
+        root.add(new javax.swing.tree.DefaultMutableTreeNode("B"));
+        JTree tree = new JTree(root);
+        panel.add(tree);
+
+        assertEquals(
+                "- JPanel (panel) [ref=1]\n"
+                + "  - JTree (tree) [ref=2]\n"
+                + "    - (label) \"Root\" [ref=3, expanded] actions: toggle_expand, single-selection\n"
+                + "      - (label) \"A\" [ref=4, collapsed]\n"
+                + "      - (label) \"B\" [ref=5, collapsed]",
+                snapshotAllRefs(panel));
+        assertSame(tree, context.getAccessibleByRef(2));
+    }
+
+    @Test
+    void allRefs_jTableRowsTakeNoRef() throws Exception {
+        JTable table = new JTable(new DefaultTableModel(
+                new Object[][]{{"1", "Alice"}, {"2", "Bob"}}, new Object[]{"ID", "Name"}));
+        JPanel root = new JPanel();
+        root.add(table);
+
+        assertEquals(
+                "- JPanel (panel) [ref=1]\n"
+                + "  - JTable (table) [ref=2] actions: multi-selection\n"
+                + "    - row 0: 1 | Alice\n"
+                + "    - row 1: 2 | Bob",
+                snapshotAllRefs(root));
+    }
+
+    @Test
+    void allRefs_false_isTheDefault() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JLabel("Status: OK"));
+        panel.add(new JButton("Go"));
+        context.setConsideredComponents(List.of(panel));
+
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JLabel (label) \"Status: OK\"\n"
+                + "  - JButton (push_button) \"Go\" [ref=1] actions: click",
+                tool.execute(new Parameters(Map.of("all_refs", false)), context).getText());
+    }
+
+    @Test
+    void allRefs_composesWithFilter() throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JButton("Go"));
+        panel.add(new JLabel("Drop here"));
+        context.setConsideredComponents(List.of(panel));
+
+        String output = tool.execute(
+                new Parameters(Map.of("all_refs", true, "filter_substring", "drop")), context).getText();
+
+        assertEquals(
+                filterHeader("drop") + "\n"
+                + "- JPanel (panel) [ref=1]\n"
+                + "  - JLabel (label) \"Drop here\" [ref=3]",
+                output);
+    }
+
+    @Test
+    void allRefs_malformed_leavesRefMapIntact() throws Exception {
+        JButton button = new JButton("Go");
+        snapshot(button);
+
+        MCPServerException ex = assertThrows(MCPServerException.class,
+                () -> tool.execute(new Parameters(Map.of("all_refs", "yes")), context));
+
+        assertEquals("Parameter 'all_refs' must be a boolean, got 'yes'", ex.getMessage());
+        assertSame(button, context.getAccessibleByRef(1));
     }
 
     // ══════════════════════════════════════════════════════════════════════════

@@ -223,6 +223,42 @@ class ParametersTest {
         assertEquals("Parameter 'offset' must be an integer, got 10.5", ex.getMessage());
     }
 
+    // ── getBooleanOrNull ─────────────────────────────────────────────────────
+
+    @Test
+    void getBooleanOrNullReturnsValueFromBoolean() {
+        var params = new Parameters(Map.of("all_refs", true));
+        assertEquals(true, params.getBooleanOrNull("all_refs"));
+    }
+
+    @Test
+    void getBooleanOrNullReturnsNullWhenMissing() {
+        var params = new Parameters(Map.of());
+        assertNull(params.getBooleanOrNull("all_refs"));
+    }
+
+    @Test
+    void getBooleanOrNullReturnsValueFromString() {
+        assertEquals(true, new Parameters(Map.of("all_refs", "true")).getBooleanOrNull("all_refs"));
+        assertEquals(false, new Parameters(Map.of("all_refs", "false")).getBooleanOrNull("all_refs"));
+    }
+
+    @Test
+    void getBooleanOrNullThrowsWhenOtherString() {
+        var params = new Parameters(Map.of("all_refs", "yes"));
+        var ex = assertThrows(MCPServerException.class, () -> params.getBooleanOrNull("all_refs"));
+        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        assertEquals("Parameter 'all_refs' must be a boolean, got 'yes'", ex.getMessage());
+    }
+
+    @Test
+    void getBooleanOrNullThrowsWhenWrongType() {
+        var params = new Parameters(Map.of("all_refs", 1.0));
+        var ex = assertThrows(MCPServerException.class, () -> params.getBooleanOrNull("all_refs"));
+        assertEquals(MCPServerException.INVALID_PARAMS, ex.getCode());
+        assertEquals("Parameter 'all_refs' must be a boolean, got Double", ex.getMessage());
+    }
+
     // ── getIntArray ──────────────────────────────────────────────────────────
 
     @Test

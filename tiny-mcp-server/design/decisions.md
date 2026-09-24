@@ -614,6 +614,9 @@ request and costs a well-behaved client nothing.
 where an integer is required, both fail with `INVALID_PARAMS` naming the parameter and what was
 expected. This widens the accepted input without widening what counts as valid.
 
+**Booleans likewise.** `getBooleanOrNull` takes `"true"` and `"false"`, and nothing else a string
+can say.
+
 ## D_vendored_namespace — Why does a host-agnostic server live under `com.vaadin.swingmcp`?
 
 Because extraction is deferred, not because the coupling is real. This module is a separate

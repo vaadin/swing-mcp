@@ -645,6 +645,30 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
     }
 
     @Test
+    void sc8_iconifiedJFrame_allRefsStillSkipsChildren() throws Exception {
+        JFrame frame = newUnfocusableFrame("App");
+        JLabel label = new JLabel("Status");
+        frame.getContentPane().add(label);
+        try {
+            executeOnEDT(() -> { frame.setSize(300, 200); frame.setVisible(true); return null; });
+            executeOnEDT(() -> { frame.setExtendedState(Frame.ICONIFIED); return null; });
+            awaitExtendedState(frame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
+
+            context.setConsideredComponents(List.of(frame));
+            MCPProtocol.Content result = executeOnEDT(() -> tool.execute(
+                    new Parameters(Map.of("all_refs", true)), context));
+
+            assertEquals(
+                    "- JFrame (frame) \"App\" [ref=1, iconified] actions: close, restore\n"
+                    + "  - [Contents hidden — window is iconified. Call swing_restore to interact with this window.]",
+                    result.getText());
+            assertThrows(IllegalStateException.class, () -> context.getRefOf(label));
+        } finally {
+            executeOnEDT(() -> { frame.dispose(); return null; });
+        }
+    }
+
+    @Test
     void sc8_restoredJFrame_childrenReappear() throws Exception {
         JFrame frame = newUnfocusableFrame("App");
         frame.getContentPane().add(new JButton("OK"));
