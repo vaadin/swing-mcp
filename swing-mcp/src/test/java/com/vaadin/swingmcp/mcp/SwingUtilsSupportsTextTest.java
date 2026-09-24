@@ -21,7 +21,9 @@ import org.junit.jupiter.api.Test;
 
 import javax.accessibility.Accessible;
 import javax.accessibility.AccessibleContext;
+import javax.accessibility.AccessibleRole;
 import javax.swing.*;
+import javax.swing.tree.DefaultMutableTreeNode;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -141,41 +143,30 @@ class SwingUtilsSupportsTextTest {
     }
 
     @Test
-    void customLabelRoleComponent_doesNotSupportGetText_dr015() {
-        // D_label_not_readable: a LABEL-role accessible is excluded even when it exposes AccessibleText.
-        JLabel custom = new JLabel("x") {
-            @Override
-            public javax.accessibility.AccessibleContext getAccessibleContext() {
-                if (accessibleContext == null) {
-                    accessibleContext = new AccessibleJLabel() {
-                        @Override
-                        public javax.accessibility.AccessibleRole getAccessibleRole() {
-                            return javax.accessibility.AccessibleRole.LABEL;
-                        }
+    void htmlJListChild_doesNotSupportGetText() {
+        // D_label_not_readable keys on the role, not on JLabel: an HTML list item gains
+        // AccessibleText from its renderer (R_html_label_accessible_text).
+        JList<String> list = new JList<>(new String[]{"<html>Hello <b>world</b></html>"});
+        Accessible child = list.getAccessibleContext().getAccessibleChild(0);
+        assertNonJLabelWithLabelRoleAndText(child);
+        assertFalse(SwingUtils.supportsGetText(child));
+    }
 
-                        @Override
-                        public javax.accessibility.AccessibleText getAccessibleText() {
-                            return new javax.accessibility.AccessibleText() {
-                                @Override public int getIndexAtPoint(java.awt.Point p) { return -1; }
-                                @Override public java.awt.Rectangle getCharacterBounds(int i) { return null; }
-                                @Override public int getCharCount() { return 1; }
-                                @Override public int getCaretPosition() { return 0; }
-                                @Override public String getAtIndex(int part, int index) { return "x"; }
-                                @Override public String getAfterIndex(int part, int index) { return ""; }
-                                @Override public String getBeforeIndex(int part, int index) { return ""; }
-                                @Override public javax.swing.text.AttributeSet getCharacterAttribute(int i) { return null; }
-                                @Override public int getSelectionStart() { return 0; }
-                                @Override public int getSelectionEnd() { return 0; }
-                                @Override public String getSelectedText() { return null; }
-                            };
-                        }
-                    };
-                }
-                return accessibleContext;
-            }
-        };
-        assertFalse(SwingUtils.supportsGetText(custom),
-                "Custom LABEL-role component must not support get_text (D_label_not_readable)");
+    @Test
+    void htmlJTreeNode_doesNotSupportGetText() {
+        JTree tree = new JTree(new DefaultMutableTreeNode("<html>Root <b>x</b></html>"));
+        Accessible node = tree.getAccessibleContext().getAccessibleChild(0);
+        assertNonJLabelWithLabelRoleAndText(node);
+        assertFalse(SwingUtils.supportsGetText(node));
+    }
+
+    /** Without this precondition a JDK that stopped exposing the text would pass the test vacuously. */
+    private static void assertNonJLabelWithLabelRoleAndText(Accessible a) {
+        assertNotNull(a);
+        assertFalse(a instanceof JLabel, a.getClass().getName());
+        AccessibleContext ac = a.getAccessibleContext();
+        assertEquals(AccessibleRole.LABEL, ac.getAccessibleRole());
+        assertNotNull(ac.getAccessibleText());
     }
 
     @Test

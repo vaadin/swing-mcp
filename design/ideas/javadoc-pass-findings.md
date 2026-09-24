@@ -19,8 +19,6 @@ numbers are from the commit after the pass.
 
 ## Tests that prove less than they claim
 
-- **`SwingUtilsSupportsTextTest.customLabelRoleComponent…`** uses a JLabel subclass, so it does
-  not show the gate works for a component that isn't a JLabel.
 - **`SessionCloseTest`**: session 2 always gets a fresh context, whatever happened to session 1's
   map, so the test may not prove anything.
 - **`SwingIconifyScreenTest`**:

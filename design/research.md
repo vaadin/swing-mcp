@@ -183,6 +183,11 @@ trims to its length — which is how long this file gets, so keep it short.
   side effect of how HTML rendering is plumbed into accessibility. **[verified 2026-04-15, Java 21]**
 - The two labels are indistinguishable to a user and carry the same role, so any capability
   keyed on `getAccessibleText() != null` diverges on an invisible authoring choice. **[verified 2026-04-15, Java 21]**
+- The same side effect reaches `JList` items and `JTree` nodes through their `JLabel` renderer.
+  `AccessibleJListChild` and `AccessibleJTreeNode` have role `LABEL` and no `AccessibleText` for
+  a plain string; for an `<html>` string they expose the renderer's `AccessibleJLabel` as their
+  `AccessibleText`. They are not `JLabel`s, and their name carries the rendered text
+  (`Hello world`). **[verified 2026-09-24, Java 11 and 17]**
 
 ## R_password_echo_chars — A password field reads back as echo characters, not as nothing
 
