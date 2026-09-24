@@ -17,11 +17,6 @@ numbers are from the commit after the pass.
   separately, and the EDT carries on after one throws. This only affects the synthetic, headless
   path. **Checked:** `R_ui_delegate_press_throws` has two delegates that do this.
 
-## Tests that prove less than they claim
-
-- **`InputSchemaEqualityTest.propertyEnumOrderMatters`** pins a choice that tiny-mcp-server's
-  structural-schema-equality decision does not cover: whether enum order matters.
-
 ## Design docs out of step with the code
 
 - **`D_inline_value_preview`** says exactly one of `text=` and `value=` may appear. A JSpinner

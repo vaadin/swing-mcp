@@ -528,6 +528,15 @@ type gives one place to audit, one place to test, and free reuse for any future 
 round-tripped through GSON, and both paths must compare equal for the same logical schema. Field
 order is not part of what a schema means.
 
+**Why `enum` is compared in order, unlike `required` and property order.** The consumer asks
+whether the model reads what the server serves, so the line is what is guaranteed to reach the
+model unchanged. A JSON array keeps its order through every JSON library, so an `enum` arrives as
+authored. A JSON object is unordered (RFC 8259), and an MCP client may re-serialise the schema
+before the model sees it, so the server cannot promise property order. Enum order also carries
+the author's intent: a default listed first, or a natural scale such as `small, medium, large`,
+and models lean towards earlier options. `required` is an array too, but it only names the
+properties; its order tells the reader nothing, so it compares as a set.
+
 **Why not a comparator inside the test.** Rejected — the next caller writes a second one, and a
 fix to either does not reach the other. Equality is a property of the value, not of one use of it.
 
