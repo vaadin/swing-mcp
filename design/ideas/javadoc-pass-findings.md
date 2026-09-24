@@ -17,10 +17,6 @@ numbers are from the commit after the pass.
 
 ## Design docs out of step with the code
 
-- **`snapshot-format.md`**:
-  - It claims to own `swing_get_cells` output, but the header line
-    (`Showing N children from offset O (total T) for <role> [ref=1]`) and the `- null`
-    placeholder exist only in code and in the `SwingGetCellsTool` javadoc.
 - **The preview-cap rules** live only in `SnapshotNode` comments: the cap is counted after quote
   escaping, with no dangling backslash and no trailing space before `…`. They belong in
   `snapshot-format.md` or `D_inline_value_preview`.

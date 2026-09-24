@@ -38,7 +38,8 @@ import java.util.List;
  * - (label) "Item-7" [ref=4] actions: click
  * </pre>
  *
- * A {@code null} child renders as {@code - null}; a {@code JTable} is refused (D_no_jtable_cells).
+ * The format is owned by {@code design/snapshot-format.md}; a {@code JTable} is refused
+ * (D_no_jtable_cells).
  *
  * <p>Read-only, yet it <b>replaces the ref map</b>: the parent becomes ref 1, so the model can
  * page on without a new snapshot.

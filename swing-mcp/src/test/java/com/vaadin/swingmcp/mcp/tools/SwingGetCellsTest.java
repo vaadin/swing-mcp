@@ -376,6 +376,56 @@ class SwingGetCellsTest extends AbstractHeadlessTest {
         assertEquals("Showing 3 children from offset 5 (total 20) for list [ref=1]", firstLine);
     }
 
+    @Test
+    void offsetPastTotal_isHeaderAlone() throws Exception {
+        JList<String> list = new JList<>(new String[]{"A", "B", "C"});
+        snapshot(list);
+        assertEquals("Showing 0 children from offset 7 (total 3) for list [ref=1]",
+                getCells(context.getRefOf(list), 7, 2));
+    }
+
+    @Test
+    void nullChild_rendersAsNullInItsPlace() throws Exception {
+        JList<String> list = listWithChildAt1(null);
+        context.putRef(99, list);
+        assertEquals(
+                "Showing 3 children from offset 0 (total 3) for list [ref=1]\n"
+                + "- (label) \"A\" [ref=2] actions: click\n"
+                + "- null\n"
+                + "- (label) \"C\" [ref=3] actions: click",
+                getCells(99, 0, 3));
+    }
+
+    @Test
+    void childWithoutActionOrName_isStillListed() throws Exception {
+        JList<String> list = listWithChildAt1(new JPanel());
+        context.putRef(99, list);
+        assertEquals(
+                "Showing 3 children from offset 0 (total 3) for list [ref=1]\n"
+                + "- (label) \"A\" [ref=2] actions: click\n"
+                + "- JPanel (panel)\n"
+                + "- (label) \"C\" [ref=3] actions: click",
+                getCells(99, 0, 3));
+    }
+
+    /** A three-item list whose accessible child 1 is {@code child} instead of item "B". */
+    private static JList<String> listWithChildAt1(javax.accessibility.Accessible child) {
+        return new JList<>(new String[]{"A", "B", "C"}) {
+            @Override
+            public javax.accessibility.AccessibleContext getAccessibleContext() {
+                if (accessibleContext == null) {
+                    accessibleContext = new AccessibleJList() {
+                        @Override
+                        public javax.accessibility.Accessible getAccessibleChild(int i) {
+                            return i == 1 ? child : super.getAccessibleChild(i);
+                        }
+                    };
+                }
+                return accessibleContext;
+            }
+        };
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // Component matrix — expected to succeed
     // ══════════════════════════════════════════════════════════════════════════

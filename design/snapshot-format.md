@@ -189,3 +189,28 @@ unaffected — filtering happens after they are assigned. An iconified `Frame` i
 with its placeholder and never its children, whether it matches or not
 (`D_iconified_children_hidden`). No match, and no iconified frame, returns
 `No lines matched filter_substring 'X'`.
+
+## `swing_get_cells` output
+
+A header line, then one subtree per child on the page (`offset=5, length=3`):
+
+```
+Showing 3 children from offset 5 (total 20) for list [ref=1]
+- (label) "Item-5" [ref=2] actions: click
+- (label) "Item-6" [ref=3] actions: click
+- (label) "Item-7" [ref=4] actions: click
+```
+
+- **The header** is `Showing <shown> children from offset <offset> (total <total>) for <role>
+  [ref=1]`. `<shown>` counts the children on this page, `<total>` every accessible child, and
+  `<role>` is the component's role as the identity slot spells it (`list`, `tree`). `[ref=1]` is
+  the component itself, so the next page needs no snapshot; the map it replaces is
+  `architecture.md`'s ref lifecycle.
+- **Each child** starts at column 0 and renders as a snapshot subtree: the node-line grammar,
+  with the three stages of *What survives* applied below it. The child's own line is always
+  kept, even with no action and no name, so a page lists exactly the children it counts.
+- **Refs** run from 2, depth-first through the page, on every node carrying an action.
+- **A child that is null** — `getAccessibleChild(i)` returned nothing — renders as `- null` in
+  its place.
+- **An empty page** — `offset` at or past the total, or `length` 0 — is the header alone, with
+  `<shown>` 0.
