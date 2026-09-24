@@ -188,19 +188,27 @@ class SwingGetTextScreenTest extends AbstractScreenTest {
     // Component matrix — JFrame and JDialog themselves (not their children)
     // ══════════════════════════════════════════════════════════════════════════
 
+    /** A component with no ref is registered under ref 99, so every row reaches the refusal itself. */
+    private void assertGetTextNotSupported(java.awt.Component component) throws Exception {
+        context.putRef(99, (javax.accessibility.Accessible) component);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> getText(99));
+        assertEquals(component.getClass().getSimpleName()
+                        + " does not support swing_get_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                ex.getMessage());
+    }
+
     @Test
     void componentMatrix_JFrame() throws Exception {
         JFrame frame = new JFrame("Test");
-        snapshot(frame);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(frame));
+        assertGetTextNotSupported(frame);
     }
 
     @Test
     void componentMatrix_JDialog() throws Exception {
         JDialog dialog = new JDialog();
         dialog.setTitle("Test");
-        snapshot(dialog);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(dialog));
+        assertGetTextNotSupported(dialog);
     }
 
     @Test
@@ -210,7 +218,6 @@ class SwingGetTextScreenTest extends AbstractScreenTest {
                 "Test", JOptionPane.PLAIN_MESSAGE, JOptionPane.DEFAULT_OPTION,
                 null, new Object[]{"OK"}, "OK");
         dialog.setContentPane(optionPane);
-        snapshot(dialog);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(optionPane));
+        assertGetTextNotSupported(optionPane);
     }
 }

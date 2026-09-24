@@ -237,19 +237,14 @@ class SwingGetCellCountTest extends AbstractHeadlessTest {
     // Component matrix — not supported
     // ══════════════════════════════════════════════════════════════════════════
 
+    /** A component with no ref is registered under ref 99, so every row reaches the refusal itself. */
     private void assertNotSupported(Component component) throws Exception {
-        snapshot(component);
-        int ref;
-        try {
-            ref = context.getRefOf(component);
-        } catch (IllegalStateException e) {
-            return; // No ref — acceptable
-        }
+        context.putRef(99, (javax.accessibility.Accessible) component);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getCount(ref));
-        assertTrue(ex.getMessage().contains("does not support swing_get_cell_count"),
-                "Expected not-supported error for " + component.getClass().getSimpleName()
-                        + ", got: " + ex.getMessage());
+                () -> getCount(99));
+        assertEquals(component.getClass().getSimpleName()
+                        + " does not support swing_get_cell_count. Call swing_snapshot or swing_get_cells to verify the list of actions.",
+                ex.getMessage());
     }
 
     @Test void componentMatrix_JButton() throws Exception { assertNotSupported(new JButton("OK")); }
@@ -282,14 +277,11 @@ class SwingGetCellCountTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenu() throws Exception {
-        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
+        // D_jmenu_not_clickable
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
-        context.putRef(99, (javax.accessibility.Accessible) menu);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getCount(99));
-        assertTrue(ex.getMessage().contains("does not support swing_get_cell_count"));
+        assertNotSupported(menu);
     }
 
     @Test
@@ -299,18 +291,12 @@ class SwingGetCellCountTest extends AbstractHeadlessTest {
         JMenuItem item = new JMenuItem("Open");
         menu.add(item);
         mb.add(menu);
-        snapshot(mb);
-        int ref = context.getRefOf(item);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getCount(ref));
-        assertTrue(ex.getMessage().contains("does not support swing_get_cell_count"));
+        assertNotSupported(item);
     }
 
     @Test
     void componentMatrix_JDesktopPane() throws Exception {
-        JDesktopPane desktop = new JDesktopPane();
-        context.putRef(99, desktop);
-        assertThrows(MCPErrorResponseException.class, () -> getCount(99));
+        assertNotSupported(new JDesktopPane());
     }
 
     @Test
@@ -320,8 +306,7 @@ class SwingGetCellCountTest extends AbstractHeadlessTest {
         iframe.setSize(150, 80);
         iframe.setVisible(true);
         desktop.add(iframe);
-        context.putRef(99, iframe);
-        assertThrows(MCPErrorResponseException.class, () -> getCount(99));
+        assertNotSupported(iframe);
     }
 
     // ══════════════════════════════════════════════════════════════════════════

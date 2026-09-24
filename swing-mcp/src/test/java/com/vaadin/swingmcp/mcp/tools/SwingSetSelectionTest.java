@@ -485,23 +485,14 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
     // Component matrix — not supported
     // ══════════════════════════════════════════════════════════════════════════
 
+    /** A component with no ref is registered under ref 99, so every row reaches the refusal itself. */
     private void assertSetSelectionNotSupported(Component component) throws Exception {
-        snapshot(component);
-        int ref;
-        try {
-            ref = context.getRefOf(component);
-        } catch (IllegalStateException e) {
-            // No ref — force one for testing
-            context.putRef(99, (javax.accessibility.Accessible) component);
-            ref = 99;
-        }
-        int finalRef = ref;
+        context.putRef(99, (javax.accessibility.Accessible) component);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> setSelection(finalRef, List.of(0.0)));
-        assertTrue(ex.getMessage().contains("does not support swing_set_selection")
-                        || ex.getMessage().contains("row-selection mode"),
-                "Expected not-supported error for " + component.getClass().getSimpleName()
-                        + ", got: " + ex.getMessage());
+                () -> setSelection(99, List.of(0.0)));
+        assertEquals(component.getClass().getSimpleName()
+                        + " does not support swing_set_selection. Call swing_snapshot or swing_get_cells to verify the list of actions.",
+                ex.getMessage());
     }
 
     @Test
@@ -579,14 +570,11 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenu() throws Exception {
-        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
+        // D_jmenu_not_clickable
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
-        context.putRef(99, (javax.accessibility.Accessible) menu);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> setSelection(99, List.of(0.0)));
-        assertTrue(ex.getMessage().contains("does not support swing_set_selection"));
+        assertSetSelectionNotSupported(menu);
     }
 
     @Test
@@ -596,42 +584,27 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
         JMenuItem item = new JMenuItem("Open");
         menu.add(item);
         mb.add(menu);
-        snapshot(mb);
-        int ref = context.getRefOf(item);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> setSelection(ref, List.of(0.0)));
-        assertTrue(ex.getMessage().contains("does not support swing_set_selection"));
+        assertSetSelectionNotSupported(item);
     }
 
     @Test
     void componentMatrix_JToolBar() throws Exception {
         JToolBar tb = new JToolBar();
-        JButton btn = new JButton("Tool");
-        tb.add(btn);
-        snapshot(tb);
-        int ref = context.getRefOf(btn);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> setSelection(ref, List.of(0.0)));
-        assertTrue(ex.getMessage().contains("does not support swing_set_selection"));
+        JButton button = new JButton("Tool");
+        tb.add(button);
+        assertSetSelectionNotSupported(button);
     }
 
     @Test
     void componentMatrix_JTree() throws Exception {
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("Root");
         root.add(new DefaultMutableTreeNode("A"));
-        JTree tree = new JTree(root);
-        snapshot(tree);
-        context.putRef(99, tree);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> setSelection(99, List.of(0.0)));
-        assertTrue(ex.getMessage().contains("does not support swing_set_selection"));
+        assertSetSelectionNotSupported(new JTree(root));
     }
 
     @Test
     void componentMatrix_JDesktopPane() throws Exception {
-        JDesktopPane desktop = new JDesktopPane();
-        context.putRef(99, desktop);
-        assertThrows(MCPErrorResponseException.class, () -> setSelection(99, List.of(0.0)));
+        assertSetSelectionNotSupported(new JDesktopPane());
     }
 
     @Test
@@ -641,8 +614,7 @@ class SwingSetSelectionTest extends AbstractHeadlessTest {
         iframe.setSize(150, 80);
         iframe.setVisible(true);
         desktop.add(iframe);
-        context.putRef(99, iframe);
-        assertThrows(MCPErrorResponseException.class, () -> setSelection(99, List.of(0.0)));
+        assertSetSelectionNotSupported(iframe);
     }
 
     // ══════════════════════════════════════════════════════════════════════════

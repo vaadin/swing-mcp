@@ -194,20 +194,14 @@ class SwingGetValueTest extends AbstractHeadlessTest {
     // Component matrix — not supported
     // ══════════════════════════════════════════════════════════════════════════
 
+    /** A component with no ref is registered under ref 99, so every row reaches the refusal itself. */
     private void assertGetValueNotSupported(Component component) throws Exception {
-        snapshot(component);
-        int ref;
-        try {
-            ref = context.getRefOf(component);
-        } catch (IllegalStateException e) {
-            // Component has no ref (no actions) — cannot call get_value, skip
-            return;
-        }
+        context.putRef(99, (javax.accessibility.Accessible) component);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getValue(ref));
-        assertTrue(ex.getMessage().contains("does not support swing_get_value"),
-                "Expected get_value not supported for " + component.getClass().getSimpleName()
-                        + ", got: " + ex.getMessage());
+                () -> getValue(99));
+        assertEquals(component.getClass().getSimpleName()
+                        + " does not support swing_get_value. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                ex.getMessage());
     }
 
     @Test
@@ -257,24 +251,17 @@ class SwingGetValueTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JLabel() throws Exception {
-        JLabel label = new JLabel("Hello");
-        snapshot(label);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(label));
+        assertGetValueNotSupported(new JLabel("Hello"));
     }
 
     @Test
     void componentMatrix_JPanel() throws Exception {
-        JPanel panel = new JPanel();
-        panel.setName("TestPanel");
-        snapshot(panel);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(panel));
+        assertGetValueNotSupported(new JPanel());
     }
 
     @Test
     void componentMatrix_JScrollPane() throws Exception {
-        JScrollPane sp = new JScrollPane(new JTextArea("content"));
-        snapshot(sp);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(sp));
+        assertGetValueNotSupported(new JScrollPane(new JTextArea("content")));
     }
 
     @Test
@@ -282,39 +269,21 @@ class SwingGetValueTest extends AbstractHeadlessTest {
         JTabbedPane tp = new JTabbedPane();
         tp.addTab("Tab1", new JPanel());
         tp.addTab("Tab2", new JPanel());
-        snapshot(tp);
-        try {
-            int ref = context.getRefOf(tp);
-            MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                    () -> getValue(ref));
-            assertTrue(ex.getMessage().contains("does not support swing_get_value"));
-        } catch (IllegalStateException e) {
-            // No ref assigned — acceptable
-        }
+        assertGetValueNotSupported(tp);
     }
 
     @Test
     void componentMatrix_JMenuBar() throws Exception {
-        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
-        JMenuBar mb = new JMenuBar();
-        JMenu menu = new JMenu("File");
-        mb.add(menu);
-        context.putRef(99, (javax.accessibility.Accessible) menu);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getValue(99));
-        assertTrue(ex.getMessage().contains("does not support swing_get_value"));
+        assertGetValueNotSupported(new JMenuBar());
     }
 
     @Test
     void componentMatrix_JMenu() throws Exception {
-        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
+        // D_jmenu_not_clickable
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
-        context.putRef(99, (javax.accessibility.Accessible) menu);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getValue(99));
-        assertTrue(ex.getMessage().contains("does not support swing_get_value"));
+        assertGetValueNotSupported(menu);
     }
 
     @Test
@@ -324,11 +293,7 @@ class SwingGetValueTest extends AbstractHeadlessTest {
         JMenuItem item = new JMenuItem("Open");
         menu.add(item);
         mb.add(menu);
-        snapshot(mb);
-        int ref = context.getRefOf(item);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getValue(ref));
-        assertTrue(ex.getMessage().contains("does not support swing_get_value"));
+        assertGetValueNotSupported(item);
     }
 
     @Test
@@ -336,28 +301,17 @@ class SwingGetValueTest extends AbstractHeadlessTest {
         JToolBar tb = new JToolBar();
         JButton button = new JButton("Tool");
         tb.add(button);
-        snapshot(tb);
-        int ref = context.getRefOf(button);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getValue(ref));
-        assertTrue(ex.getMessage().contains("does not support swing_get_value"));
+        assertGetValueNotSupported(button);
     }
 
     @Test
     void componentMatrix_JList() throws Exception {
-        JList<String> list = new JList<>(new String[]{"A", "B", "C"});
-        snapshot(list);
-        int ref = context.getRefOf(list);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> getValue(ref));
-        assertTrue(ex.getMessage().contains("does not support swing_get_value"));
+        assertGetValueNotSupported(new JList<>(new String[]{"A", "B", "C"}));
     }
 
     @Test
     void componentMatrix_JDesktopPane() throws Exception {
-        JDesktopPane desktop = new JDesktopPane();
-        context.putRef(99, desktop);
-        assertThrows(MCPErrorResponseException.class, () -> getValue(99));
+        assertGetValueNotSupported(new JDesktopPane());
     }
 
     @Test
@@ -367,8 +321,7 @@ class SwingGetValueTest extends AbstractHeadlessTest {
         iframe.setSize(150, 80);
         iframe.setVisible(true);
         desktop.add(iframe);
-        context.putRef(99, iframe);
-        assertThrows(MCPErrorResponseException.class, () -> getValue(99));
+        assertGetValueNotSupported(iframe);
     }
 
     // ══════════════════════════════════════════════════════════════════════════

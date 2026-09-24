@@ -17,6 +17,7 @@
 package com.vaadin.swingmcp.mcpscreen.tools;
 
 import com.vaadin.swingmcp.tinymcpserver.Parameters;
+import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.mcp.tools.SwingClickTool;
 import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
@@ -209,19 +210,27 @@ class SwingClickScreenTest extends AbstractScreenTest {
     // Component matrix — JFrame and JDialog themselves (not their children)
     // ══════════════════════════════════════════════════════════════════════════
 
+    /** A component with no ref is registered under ref 99, so every row reaches the refusal itself. */
+    private void assertClickNotSupported(java.awt.Component component) throws Exception {
+        context.putRef(99, (javax.accessibility.Accessible) component);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
+                () -> click(99));
+        assertEquals(component.getClass().getSimpleName()
+                        + " does not support swing_click. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                ex.getMessage());
+    }
+
     @Test
     void componentMatrix_JFrame() throws Exception {
         JFrame frame = new JFrame("Test");
-        snapshot(frame);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(frame));
+        assertClickNotSupported(frame);
     }
 
     @Test
     void componentMatrix_JDialog() throws Exception {
         JDialog dialog = new JDialog();
         dialog.setTitle("Test");
-        snapshot(dialog);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(dialog));
+        assertClickNotSupported(dialog);
     }
 
     @Test
@@ -231,7 +240,6 @@ class SwingClickScreenTest extends AbstractScreenTest {
                 "Test", JOptionPane.PLAIN_MESSAGE, JOptionPane.DEFAULT_OPTION,
                 null, new Object[]{"OK"}, "OK");
         dialog.setContentPane(optionPane);
-        snapshot(dialog);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(optionPane));
+        assertClickNotSupported(optionPane);
     }
 }

@@ -69,230 +69,144 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
     // Component matrix — non-window components all return MCP error
     // ══════════════════════════════════════════════════════════════════════════
 
+    /** A component with no ref is registered under ref 99, so every row reaches the refusal itself. */
+    private void assertCloseNotSupported(Component component) throws Exception {
+        context.putRef(99, (javax.accessibility.Accessible) component);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> close(99));
+        assertEquals(component.getClass().getSimpleName()
+                        + " does not support swing_close. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                ex.getMessage());
+    }
+
     @Test
     void componentMatrix_JButton() throws Exception {
-        JButton button = new JButton("OK");
-        snapshot(button);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> close(context.getRefOf(button)));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JButton("OK"));
     }
 
     @Test
     void componentMatrix_JCheckBox() throws Exception {
-        JCheckBox cb = new JCheckBox("Accept");
-        snapshot(cb);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> close(context.getRefOf(cb)));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JCheckBox("Accept"));
     }
 
     @Test
     void componentMatrix_JTextField() throws Exception {
-        JTextField field = new JTextField("text");
-        snapshot(field);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> close(context.getRefOf(field)));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JTextField("text"));
     }
 
     @Test
     void componentMatrix_JTextArea() throws Exception {
-        JTextArea area = new JTextArea("text");
-        snapshot(area);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> close(context.getRefOf(area)));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JTextArea("text"));
     }
 
     @Test
     void componentMatrix_JSlider() throws Exception {
-        JSlider slider = new JSlider(0, 100, 50);
-        snapshot(slider);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> close(context.getRefOf(slider)));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JSlider(0, 100, 50));
     }
 
     @Test
     void componentMatrix_JSpinner() throws Exception {
-        JSpinner spinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 1));
-        snapshot(spinner);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> close(context.getRefOf(spinner)));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JSpinner(new SpinnerNumberModel(5, 0, 10, 1)));
     }
 
     @Test
     void componentMatrix_JComboBox() throws Exception {
-        JComboBox<String> combo = new JComboBox<>(new String[]{"A", "B"});
-        snapshot(combo);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> close(context.getRefOf(combo)));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JComboBox<>(new String[]{"A", "B"}));
     }
 
     @Test
     void componentMatrix_JProgressBar() throws Exception {
-        JProgressBar pb = new JProgressBar(0, 100);
-        pb.setValue(50);
-        snapshot(pb);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> close(context.getRefOf(pb)));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JProgressBar(0, 100));
     }
 
     @Test
     void componentMatrix_JSplitPane() throws Exception {
-        JSplitPane sp = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JPanel(), new JPanel());
-        snapshot(sp);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> close(context.getRefOf(sp)));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JPanel(), new JPanel()));
     }
 
     @Test
     void componentMatrix_JPasswordField() throws Exception {
-        JPasswordField field = new JPasswordField("secret");
-        snapshot(field);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> close(context.getRefOf(field)));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JPasswordField("secret"));
     }
 
     @Test
     void componentMatrix_JRadioButton() throws Exception {
         JRadioButton rb = new JRadioButton("Option A");
-        snapshot(rb);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> close(context.getRefOf(rb)));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        new ButtonGroup().add(rb);
+        assertCloseNotSupported(rb);
     }
 
     @Test
     void componentMatrix_JToggleButton() throws Exception {
-        JToggleButton tb = new JToggleButton("Toggle");
-        snapshot(tb);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> close(context.getRefOf(tb)));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JToggleButton("Toggle"));
     }
 
     @Test
     void componentMatrix_JPanel() throws Exception {
-        JPanel panel = new JPanel();
-        panel.add(new JLabel("inside"));
-        // JPanel has no actions → no ref in snapshot; force one to test error path
-        context.putRef(99, (javax.accessibility.Accessible) panel);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JPanel());
     }
 
     @Test
     void componentMatrix_JScrollPane() throws Exception {
-        JScrollPane sp = new JScrollPane(new JTextArea("text"));
-        // JScrollPane has no actions → no ref in snapshot; force one to test error path
-        context.putRef(99, (javax.accessibility.Accessible) sp);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JScrollPane(new JTextArea("text")));
     }
 
     @Test
     void componentMatrix_JTabbedPane() throws Exception {
         JTabbedPane tp = new JTabbedPane();
         tp.addTab("Tab1", new JPanel());
-        snapshot(tp);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> close(context.getRefOf(tp)));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(tp);
     }
 
     @Test
     void componentMatrix_JLabel() throws Exception {
-        JLabel label = new JLabel("Hello");
-        // JLabel has no actions → no ref in snapshot; force one to test error path
-        context.putRef(99, (javax.accessibility.Accessible) label);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JLabel("Hello"));
     }
 
     @Test
     void componentMatrix_JMenuBar() throws Exception {
-        JMenuBar mb = new JMenuBar();
-        mb.add(new JMenu("File"));
-        // JMenuBar has no actions → no ref in snapshot; force one to test error path
-        context.putRef(99, (javax.accessibility.Accessible) mb);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JMenuBar());
     }
 
     @Test
     void componentMatrix_JMenu() throws Exception {
-        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
+        // D_jmenu_not_clickable
+        JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         menu.add(new JMenuItem("Open"));
-        context.putRef(99, (javax.accessibility.Accessible) menu);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        mb.add(menu);
+        assertCloseNotSupported(menu);
     }
 
     @Test
     void componentMatrix_JMenuItem() throws Exception {
-        JMenuItem item = new JMenuItem("Open");
-        snapshot(item);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> close(context.getRefOf(item)));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JMenuItem("Open"));
     }
 
     @Test
     void componentMatrix_JToolBar() throws Exception {
         JToolBar tb = new JToolBar();
         tb.add(new JButton("B"));
-        // JToolBar has no actions → no ref in snapshot; force one to test error path
-        context.putRef(99, (javax.accessibility.Accessible) tb);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(tb);
     }
 
     @Test
     void componentMatrix_JList() throws Exception {
-        JList<String> list = new JList<>(new String[]{"A", "B", "C"});
-        snapshot(list);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> close(context.getRefOf(list)));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JList<>(new String[]{"A", "B", "C"}));
     }
 
     @Test
     void componentMatrix_JTree() throws Exception {
-        JTree tree = new JTree();
-        snapshot(tree);
-        // JTree itself has no actions (selection suppressed, not truncated) — no ref
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(tree));
+        assertCloseNotSupported(new JTree());
     }
 
     @Test
     void componentMatrix_JOptionPane() throws Exception {
-        JOptionPane optionPane = new JOptionPane("Test");
-        // JOptionPane has no close action — force a ref to test the error path
-        context.putRef(99, (javax.accessibility.Accessible) optionPane);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> closeTool.execute(new Parameters(Map.of("ref", 99)), context));
-        assertTrue(ex.getMessage().contains("does not support swing_close"));
+        assertCloseNotSupported(new JOptionPane("Test"));
     }
 
     @Test
     void componentMatrix_JDesktopPane() throws Exception {
-        JDesktopPane desktop = new JDesktopPane();
-        context.putRef(99, desktop);
-        assertThrows(MCPErrorResponseException.class, () -> close(99));
+        assertCloseNotSupported(new JDesktopPane());
     }
 
     @Test
@@ -302,7 +216,6 @@ class SwingCloseToolTest extends AbstractHeadlessTest {
         iframe.setSize(150, 80);
         iframe.setVisible(true);
         desktop.add(iframe);
-        context.putRef(99, iframe);
-        assertThrows(MCPErrorResponseException.class, () -> close(99));
+        assertCloseNotSupported(iframe);
     }
 }

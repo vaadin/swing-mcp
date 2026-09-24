@@ -244,20 +244,13 @@ class SwingSetTextTest extends AbstractHeadlessTest {
     // Component matrix — not supported
     // ══════════════════════════════════════════════════════════════════════════
 
+    /** A component with no ref is registered under ref 99, so every row reaches the refusal itself. */
     private void assertSetTextNotSupported(Component component) throws Exception {
-        snapshot(component);
-        int ref;
-        try {
-            ref = context.getRefOf(component);
-        } catch (IllegalStateException e) {
-            // No ref (no actions) — cannot call set_text, skip
-            return;
-        }
+        context.putRef(99, (javax.accessibility.Accessible) component);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> setText(ref, "value"));
-        String expectedClass = ComponentClassResolver.resolveClassName((javax.accessibility.Accessible) component);
-        assertEquals(
-                expectedClass + " does not support swing_set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                () -> setText(99, "value"));
+        assertEquals(component.getClass().getSimpleName()
+                        + " does not support swing_set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -300,16 +293,12 @@ class SwingSetTextTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JPanel() throws Exception {
-        JPanel panel = new JPanel();
-        snapshot(panel);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(panel));
+        assertSetTextNotSupported(new JPanel());
     }
 
     @Test
     void componentMatrix_JScrollPane() throws Exception {
-        JScrollPane sp = new JScrollPane(new JTextArea("content"));
-        snapshot(sp);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(sp));
+        assertSetTextNotSupported(new JScrollPane(new JTextArea("content")));
     }
 
     @Test
@@ -317,17 +306,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         JTabbedPane tp = new JTabbedPane();
         tp.addTab("Tab1", new JPanel());
         tp.addTab("Tab2", new JPanel());
-        snapshot(tp);
-        try {
-            int ref = context.getRefOf(tp);
-            MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                    () -> setText(ref, "value"));
-            assertEquals(
-                    "JTabbedPane does not support swing_set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
-                    ex.getMessage());
-        } catch (IllegalStateException e) {
-            // No ref assigned — acceptable
-        }
+        assertSetTextNotSupported(tp);
     }
 
     @Test
@@ -338,9 +317,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JLabel() throws Exception {
-        JLabel label = new JLabel("Hello");
-        snapshot(label);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(label));
+        assertSetTextNotSupported(new JLabel("Hello"));
     }
 
     @Test
@@ -350,30 +327,16 @@ class SwingSetTextTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenuBar() throws Exception {
-        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
-        JMenuBar mb = new JMenuBar();
-        JMenu menu = new JMenu("File");
-        mb.add(menu);
-        context.putRef(99, (javax.accessibility.Accessible) menu);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> setText(99, "value"));
-        assertEquals(
-                "JMenu does not support swing_set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
-                ex.getMessage());
+        assertSetTextNotSupported(new JMenuBar());
     }
 
     @Test
     void componentMatrix_JMenu() throws Exception {
-        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
+        // D_jmenu_not_clickable
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
-        context.putRef(99, (javax.accessibility.Accessible) menu);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> setText(99, "value"));
-        assertEquals(
-                "JMenu does not support swing_set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
-                ex.getMessage());
+        assertSetTextNotSupported(menu);
     }
 
     @Test
@@ -383,13 +346,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         JMenuItem item = new JMenuItem("Open");
         menu.add(item);
         mb.add(menu);
-        snapshot(mb);
-        int ref = context.getRefOf(item);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> setText(ref, "value"));
-        assertEquals(
-                "JMenuItem does not support swing_set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
-                ex.getMessage());
+        assertSetTextNotSupported(item);
     }
 
     @Test
@@ -397,13 +354,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         JToolBar tb = new JToolBar();
         JButton button = new JButton("Tool");
         tb.add(button);
-        snapshot(tb);
-        int ref = context.getRefOf(button);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> setText(ref, "value"));
-        assertEquals(
-                "JButton does not support swing_set_text. Call swing_snapshot or swing_get_cells to verify the list of actions",
-                ex.getMessage());
+        assertSetTextNotSupported(button);
     }
 
     @Test
@@ -418,9 +369,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JDesktopPane() throws Exception {
-        JDesktopPane desktop = new JDesktopPane();
-        context.putRef(99, desktop);
-        assertThrows(MCPErrorResponseException.class, () -> setText(99, "x"));
+        assertSetTextNotSupported(new JDesktopPane());
     }
 
     @Test
@@ -430,8 +379,7 @@ class SwingSetTextTest extends AbstractHeadlessTest {
         iframe.setSize(150, 80);
         iframe.setVisible(true);
         desktop.add(iframe);
-        context.putRef(99, iframe);
-        assertThrows(MCPErrorResponseException.class, () -> setText(99, "x"));
+        assertSetTextNotSupported(iframe);
     }
 
     // ══════════════════════════════════════════════════════════════════════════

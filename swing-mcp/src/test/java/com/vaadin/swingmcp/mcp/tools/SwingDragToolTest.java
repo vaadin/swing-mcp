@@ -740,7 +740,11 @@ class SwingDragToolTest extends AbstractHeadlessTest {
         root.add(target);
 
         snapshot(root);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(tree));
+        // The JTree itself gets no ref; a test ref reaches the drag itself.
+        context.putRef(99, tree);
+        MouseEventRecorder recorder = MouseEventRecorder.attachTo(tree);
+        dragToRef(99, context.getRefOf(target));
+        assertEquals(MouseEventRecorder.SYNTHETIC_DRAG, recorder.getEventIds());
     }
 
     @Test
