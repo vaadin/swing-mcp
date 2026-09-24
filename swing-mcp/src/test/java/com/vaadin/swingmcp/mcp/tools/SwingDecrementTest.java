@@ -249,19 +249,13 @@ class SwingDecrementTest extends AbstractHeadlessTest {
     // Component matrix — unsupported components (no decrement support)
     // ══════════════════════════════════════════════════════════════════════════
 
+    /** A component with no ref is registered under ref 99, so every row reaches the refusal itself. */
     private void assertDecrementNotSupported(Component component) throws Exception {
-        snapshot(component);
-        int ref;
-        try {
-            ref = context.getRefOf(component);
-        } catch (IllegalStateException e) {
-            return; // no ref (no actions) — cannot call decrement
-        }
+        context.putRef(99, (javax.accessibility.Accessible) component);
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> decrement(ref));
-        String expectedClass = ComponentClassResolver.resolveClassName((javax.accessibility.Accessible) component);
+                () -> decrement(99));
         assertEquals(
-                expectedClass + " does not support swing_decrement. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                component.getClass().getSimpleName() + " does not support swing_decrement. Call swing_snapshot or swing_get_cells to verify the list of actions",
                 ex.getMessage());
     }
 
@@ -309,15 +303,12 @@ class SwingDecrementTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JPanel() throws Exception {
-        JPanel panel = new JPanel();
-        snapshot(panel);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(panel));
+        assertDecrementNotSupported(new JPanel());
     }
 
     @Test
     void componentMatrix_JScrollPane() throws Exception {
-        snapshot(new JScrollPane(new JTextArea("content")));
-        // Nothing to assert: a JScrollPane gets no ref.
+        assertDecrementNotSupported(new JScrollPane(new JTextArea("content")));
     }
 
     @Test
@@ -335,9 +326,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JLabel() throws Exception {
-        JLabel label = new JLabel("Hello");
-        snapshot(label);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(label));
+        assertDecrementNotSupported(new JLabel("Hello"));
     }
 
     @Test
@@ -347,24 +336,15 @@ class SwingDecrementTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenuBar() throws Exception {
-        // D_jmenu_not_clickable: JMenu has no ref; register under a test ref to exercise the tool error path.
-        JMenuBar mb = new JMenuBar();
-        JMenu menu = new JMenu("File");
-        mb.add(menu);
-        context.putRef(99, (javax.accessibility.Accessible) menu);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
-                () -> decrement(99));
-        assertEquals(
-                "JMenu does not support swing_decrement. Call swing_snapshot or swing_get_cells to verify the list of actions",
-                ex.getMessage());
+        assertDecrementNotSupported(new JMenuBar());
     }
 
     @Test
     void componentMatrix_JMenu() throws Exception {
+        // D_jmenu_not_clickable
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
-        snapshot(mb);
         assertDecrementNotSupported(menu);
     }
 
@@ -409,9 +389,7 @@ class SwingDecrementTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JDesktopPane() throws Exception {
-        JDesktopPane desktop = new JDesktopPane();
-        context.putRef(99, desktop);
-        assertThrows(MCPErrorResponseException.class, () -> decrement(99));
+        assertDecrementNotSupported(new JDesktopPane());
     }
 
     @Test
@@ -421,7 +399,6 @@ class SwingDecrementTest extends AbstractHeadlessTest {
         iframe.setSize(150, 80);
         iframe.setVisible(true);
         desktop.add(iframe);
-        context.putRef(99, iframe);
-        assertThrows(MCPErrorResponseException.class, () -> decrement(99));
+        assertDecrementNotSupported(iframe);
     }
 }

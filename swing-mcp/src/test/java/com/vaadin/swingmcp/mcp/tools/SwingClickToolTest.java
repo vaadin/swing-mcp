@@ -204,6 +204,15 @@ class SwingClickToolTest extends AbstractHeadlessTest {
                 "Click on a button inside a disabled panel must still fire (Swing semantics)");
     }
 
+    /** A component with no ref is registered under ref 99, so every row reaches the refusal itself. */
+    private void assertClickNotSupported(Component component) throws Exception {
+        context.putRef(99, (javax.accessibility.Accessible) component);
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(99));
+        assertEquals(component.getClass().getSimpleName()
+                        + " does not support swing_click. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                ex.getMessage());
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // Component matrix — Interactive / Form inputs
     // ══════════════════════════════════════════════════════════════════════════
@@ -221,33 +230,18 @@ class SwingClickToolTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JTextField() throws Exception {
-        JTextField field = new JTextField("text");
-
-        snapshot(field);
         // JTextField has dynamic text actions, not click
-        int ref = context.getRefOf(field);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support swing_click"));
+        assertClickNotSupported(new JTextField("text"));
     }
 
     @Test
     void componentMatrix_JPasswordField() throws Exception {
-        JPasswordField field = new JPasswordField("secret");
-
-        snapshot(field);
-        int ref = context.getRefOf(field);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support swing_click"));
+        assertClickNotSupported(new JPasswordField("secret"));
     }
 
     @Test
     void componentMatrix_JTextArea() throws Exception {
-        JTextArea area = new JTextArea("text");
-
-        snapshot(area);
-        int ref = context.getRefOf(area);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support swing_click"));
+        assertClickNotSupported(new JTextArea("text"));
     }
 
     @Test
@@ -274,13 +268,8 @@ class SwingClickToolTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JComboBox() throws Exception {
-        JComboBox<String> combo = new JComboBox<>(new String[]{"A", "B"});
-
-        snapshot(combo);
         // JComboBox has toggle_popup, not click
-        int ref = context.getRefOf(combo);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support swing_click"));
+        assertClickNotSupported(new JComboBox<>(new String[]{"A", "B"}));
     }
 
     @Test
@@ -295,24 +284,14 @@ class SwingClickToolTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JSpinner() throws Exception {
-        JSpinner spinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 1));
-
-        snapshot(spinner);
         // JSpinner has increment/decrement, not click
-        int ref = context.getRefOf(spinner);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support swing_click"));
+        assertClickNotSupported(new JSpinner(new SpinnerNumberModel(5, 0, 10, 1)));
     }
 
     @Test
     void componentMatrix_JSlider() throws Exception {
-        JSlider slider = new JSlider(0, 100, 50);
-
-        snapshot(slider);
         // JSlider has increment/decrement, not click
-        int ref = context.getRefOf(slider);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support swing_click"));
+        assertClickNotSupported(new JSlider(0, 100, 50));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -321,21 +300,12 @@ class SwingClickToolTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JPanel() throws Exception {
-        JPanel panel = new JPanel();
-        panel.setName("TestPanel");
-
-        snapshot(panel);
-        // No actions, so no ref.
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(panel));
+        assertClickNotSupported(new JPanel());
     }
 
     @Test
     void componentMatrix_JScrollPane() throws Exception {
-        JScrollPane sp = new JScrollPane(new JTextArea("content"));
-
-        snapshot(sp);
-        // Structural, so no ref.
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(sp));
+        assertClickNotSupported(new JScrollPane(new JTextArea("content")));
     }
 
     @Test
@@ -343,21 +313,21 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         JTabbedPane tp = new JTabbedPane();
         tp.addTab("Tab1", new JPanel());
         tp.addTab("Tab2", new JPanel());
+        assertClickNotSupported(tp);
 
-        snapshot(tp);
-        // Nothing to assert: a JTabbedPane.Page has no AccessibleAction, so no tab gets a
-        // click ref; switching tabs goes through the selection tools.
+        // A JTabbedPane.Page has no AccessibleAction either; switching tabs goes through the
+        // selection tools.
+        context.putRef(99, (javax.accessibility.Accessible) tp.getAccessibleContext().getAccessibleChild(1));
+        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(99));
+        assertEquals("Component does not support swing_click. Call swing_snapshot or swing_get_cells to verify the list of actions",
+                ex.getMessage());
+        assertEquals(0, tp.getSelectedIndex());
     }
 
     @Test
     void componentMatrix_JSplitPane() throws Exception {
-        JSplitPane sp = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JPanel(), new JPanel());
-
-        snapshot(sp);
         // JSplitPane has AccessibleValue (get_value/set_value) but no click
-        int ref = context.getRefOf(sp);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support swing_click"));
+        assertClickNotSupported(new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JPanel(), new JPanel()));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -366,23 +336,13 @@ class SwingClickToolTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JLabel() throws Exception {
-        JLabel label = new JLabel("Hello");
-
-        snapshot(label);
-        // No actions, so no ref.
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(label));
+        assertClickNotSupported(new JLabel("Hello"));
     }
 
     @Test
     void componentMatrix_JProgressBar() throws Exception {
-        JProgressBar pb = new JProgressBar(0, 100);
-        pb.setValue(50);
-
-        snapshot(pb);
         // JProgressBar has get_value but no click
-        int ref = context.getRefOf(pb);
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(ref));
-        assertTrue(ex.getMessage().contains("does not support swing_click"));
+        assertClickNotSupported(new JProgressBar(0, 100));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -391,30 +351,16 @@ class SwingClickToolTest extends AbstractHeadlessTest {
 
     @Test
     void componentMatrix_JMenuBar() throws Exception {
-        // D_jmenu_not_clickable: JMenuBar is structural; the JMenu inside it does NOT get a click ref.
-        JMenuBar mb = new JMenuBar();
-        JMenu menu = new JMenu("File");
-        mb.add(menu);
-
-        snapshot(mb);
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(menu),
-                "JMenu must not receive a click ref per D_jmenu_not_clickable");
+        assertClickNotSupported(new JMenuBar());
     }
 
     @Test
     void componentMatrix_JMenu() throws Exception {
-        // D_jmenu_not_clickable. The snapshot gives the JMenu no ref, so a test ref reaches
-        // the swing_click refusal itself (design/architecture.md § Testing).
+        // D_jmenu_not_clickable
         JMenuBar mb = new JMenuBar();
         JMenu menu = new JMenu("File");
         mb.add(menu);
-
-        snapshot(mb);
-        context.putRef(99, menu);
-
-        MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class, () -> click(99));
-        assertEquals("JMenu does not support swing_click. Call swing_snapshot or swing_get_cells to verify the list of actions",
-                ex.getMessage());
+        assertClickNotSupported(menu);
     }
 
     @Test
@@ -440,19 +386,19 @@ class SwingClickToolTest extends AbstractHeadlessTest {
     void componentMatrix_JToolBar() throws Exception {
         JToolBar tb = new JToolBar();
         JButton button = new JButton("Tool");
+        AtomicBoolean clicked = new AtomicBoolean(false);
+        button.addActionListener(e -> clicked.set(true));
         tb.add(button);
 
         snapshot(tb);
         click(context.getRefOf(button));
+        assertTrue(clicked.get());
     }
 
     @Test
     void componentMatrix_JTree() throws Exception {
-        JTree tree = new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root"));
-
-        snapshot(tree);
-        // JTree itself has no actions (selection suppressed, not truncated) — no ref
-        assertThrows(IllegalStateException.class, () -> context.getRefOf(tree));
+        // The JTree itself, not a node.
+        assertClickNotSupported(new JTree(new javax.swing.tree.DefaultMutableTreeNode("Root")));
     }
 
     @Test
@@ -470,13 +416,12 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         // JList children have click action — ref is listRef + 1
         int childRef = listRef + 1;
         click(childRef);
+        assertEquals(0, list.getSelectedIndex());
     }
 
     @Test
     void componentMatrix_JDesktopPane() throws Exception {
-        JDesktopPane desktop = new JDesktopPane();
-        context.putRef(99, desktop);
-        assertThrows(MCPErrorResponseException.class, () -> click(99));
+        assertClickNotSupported(new JDesktopPane());
     }
 
     @Test
@@ -486,8 +431,7 @@ class SwingClickToolTest extends AbstractHeadlessTest {
         iframe.setSize(150, 80);
         iframe.setVisible(true);
         desktop.add(iframe);
-        context.putRef(99, iframe);
-        assertThrows(MCPErrorResponseException.class, () -> click(99));
+        assertClickNotSupported(iframe);
     }
 
     // ══════════════════════════════════════════════════════════════════════════

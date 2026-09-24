@@ -19,15 +19,13 @@ numbers are from the commit after the pass.
 
 ## Tests that prove less than they claim
 
-- **Tests that assert nothing:**
-  - `SwingClickToolTest.componentMatrix_JTabbedPane`
-  - `componentMatrix_JScrollPane` in `SwingDecrementTest`, `SwingIncrementTest`,
-    `SwingToggleExpandTest` and `SwingTogglePopupTest`
 - **Tests that assert `getRefOf` throws.** architecture.md § Testing calls that testing the
-  harness, not the tool. They are in many headless tests, and in the JFrame / JDialog /
-  JOptionPane matrix rows of the TogglePopup, Increment, Decrement and ToggleExpand screen tests.
-  `SwingGetSelectionTest`, `SwingGetTextTest` and `SwingSetValueTest` are done: their
-  not-supported helper registers the component under ref 99 and asserts the whole refusal.
+  harness, not the tool. A not-supported helper that returns early when `getRefOf` throws is
+  the same thing, only quieter: the row passes without calling the tool. Still in the headless
+  Close, Drag, GetCellCount, GetItemCount, GetItems, GetValue, SetSelection and SetText tests,
+  and in the screen tests. Done: Click, Decrement, GetSelection, GetText, Increment, SetValue,
+  ToggleExpand and TogglePopup, where the helper registers the component under ref 99 and asserts
+  the whole refusal.
 - **`SwingUtilsSupportsTextTest.customLabelRoleComponent…`** uses a JLabel subclass, so it does
   not show the gate works for a component that isn't a JLabel.
 - **`SessionCloseTest`**: session 2 always gets a fresh context, whatever happened to session 1's
