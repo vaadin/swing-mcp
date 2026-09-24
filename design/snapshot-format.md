@@ -27,8 +27,8 @@ omitted when empty:
   omitted when there is neither.
 - **`<extra>`** — component-specific, after the bracket and before `actions:`. Two producers:
   `columns: [ID, Name, City]` on a `JTable` whose header is visible, and the inline value
-  preview `text="…"` (15-char cap) or `value=N` (`D_inline_value_preview`). `columns:` comes
-  first if both ever co-occur.
+  preview `text="…"` or `value=N` (*The inline value preview*, below). `columns:` comes first
+  if both ever co-occur.
 - **`actions:`** — comma-separated. A **mutation** action that would fail validation right now
   carries a `!` prefix (`!click`, `!set_text`); read actions and the selection group labels are
   never prefixed.
@@ -36,6 +36,19 @@ omitted when empty:
 Every quoted slot passes through `SwingUtils.sanitizeForQuotedSlot` exactly once, before any
 cap, so a newline can never break the one-line-per-node rule that the indent structure depends
 on (`D_quoted_slot_sanitizing`).
+
+### The inline value preview
+
+Each appears when its own gate passes, `text=` first (`D_inline_value_preview`).
+
+- **`text=`** is the sanitized content, capped at **15 characters after escaping** (`\"` counts
+  two); `text=""` is an empty field.
+- **Over the cap**: the first 14 characters, minus trailing spaces and any `\` left by a split
+  `\"`, then `…`.
+- **`…` means more follows**: only 64 characters are read, so content that collapses to fit but
+  may continue still ends in `…`.
+- **`value=`** is `swing_get_value`'s number, whole ones without a fraction (`value=3`,
+  `value=2.5`); a progress bar adds its maximum, `value=40/100`.
 
 ### The identity slot
 
@@ -51,7 +64,7 @@ localized (`D_role_in_snapshot_only`).
 
 The parenthesised role is unconditional, even when it merely lowercases the class
 (`JButton (push_button)`), so that a role override (`JButton (button_with_dropdown)`) reads as a
-signal rather than as noise.
+signal.
 
 ### States
 
@@ -84,16 +97,15 @@ advertises and what a tool accepts cannot diverge:
 `get_cell_count` · `close` · `iconify` · `restore` · `get_description`, only when the
 description hit its cap.
 
-A text component's dynamic `AccessibleAction` descriptions — `cut-to-clipboard`, `select-all`
-and the rest — are deliberately ignored: they are derived from `Action.NAME` at runtime, so they
-cannot be matched statically, and an agent filling a form wants `set_text`, not the clipboard.
+A text component's dynamic `AccessibleAction` descriptions (`cut-to-clipboard`, `select-all`, …)
+are ignored: derived from `Action.NAME` at runtime, they cannot be matched statically.
 
 **`single-selection` and `multi-selection` are group labels, not callable actions.** They tell
 the model which selection tools apply: `single-selection` means `swing_get_selection`,
 `swing_set_selection`, `swing_clear_selection`, `swing_get_items` and `swing_get_item_count`;
 `multi-selection` means those plus `swing_select_all`. On a `JTabbedPane`, `single-selection`
-means only `swing_get_selection` and `swing_set_selection` (`D_tabs_not_enumerated`). Those tool names never appear in an
-`actions:` slot — the model learns them from the manifest, once, at session start.
+means only `swing_get_selection` and `swing_set_selection` (`D_tabs_not_enumerated`). Those tool
+names never appear in an `actions:` slot — the model learns them from the manifest.
 
 `get_cells` / `get_cell_count` appear only on a `JList` or `JTree` whose children the snapshot
 actually truncated, never on a `JTable` (`D_no_jtable_cells`). They address the accessible-child
@@ -172,7 +184,7 @@ semantic role, an accessible name, at least one action, `AccessibleText` content
   goes straight to a selection tool — not one node per cell (`D_no_jtable_cells`).
 - **A `JTabbedPane` tab** renders as `- (page_tab) N "title"`, `N` 0-based, so the model can
   pass it to `swing_set_selection` without enumerating first. Only the selected tab's content
-  is walked, because that is all Swing exposes.
+  is walked: Swing exposes no other.
 - **An iconified `Frame`** renders its own line, then one placeholder line in place of every
   child: `[Contents hidden — window is iconified. Call swing_restore to interact with this
   window.]`. The children take no refs (`D_iconified_children_hidden`).
@@ -192,7 +204,7 @@ with its placeholder and never its children, whether it matches or not
 
 ## `swing_get_cells` output
 
-A header line, then one subtree per child on the page (`offset=5, length=3`):
+A header, then one subtree per child on the page (`offset=5, length=3`):
 
 ```
 Showing 3 children from offset 5 (total 20) for list [ref=1]
@@ -201,16 +213,10 @@ Showing 3 children from offset 5 (total 20) for list [ref=1]
 - (label) "Item-7" [ref=4] actions: click
 ```
 
-- **The header** is `Showing <shown> children from offset <offset> (total <total>) for <role>
-  [ref=1]`. `<shown>` counts the children on this page, `<total>` every accessible child, and
-  `<role>` is the component's role as the identity slot spells it (`list`, `tree`). `[ref=1]` is
-  the component itself, so the next page needs no snapshot; the map it replaces is
-  `architecture.md`'s ref lifecycle.
-- **Each child** starts at column 0 and renders as a snapshot subtree: the node-line grammar,
-  with the three stages of *What survives* applied below it. The child's own line is always
-  kept, even with no action and no name, so a page lists exactly the children it counts.
-- **Refs** run from 2, depth-first through the page, on every node carrying an action.
-- **A child that is null** — `getAccessibleChild(i)` returned nothing — renders as `- null` in
-  its place.
-- **An empty page** — `offset` at or past the total, or `length` 0 — is the header alone, with
-  `<shown>` 0.
+- **The header** counts this page, then every accessible child; the role is spelled as in the
+  identity slot. `[ref=1]` is the component, so the next page needs no snapshot.
+- **Each child** starts at column 0 as a snapshot subtree, pruned below by *What survives*. Its
+  own line is always kept, even with no action and no name.
+- **Refs** run from 2, depth-first, on every node with an action.
+- **A null child** renders as `- null` in its place.
+- **An empty page** (`offset` at or past the total, or `length` 0) is the header alone.

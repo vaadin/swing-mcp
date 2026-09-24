@@ -14,12 +14,3 @@ numbers are from the commit after the pass.
   that throws on the press aborts the drags and the release. A real mouse sends each event
   separately, and the EDT carries on after one throws. This only affects the synthetic, headless
   path. **Checked:** `R_ui_delegate_press_throws` has two delegates that do this.
-
-## Design docs out of step with the code
-
-- **The preview-cap rules** live only in `SnapshotNode` comments: the cap is counted after quote
-  escaping, with no dangling backslash and no trailing space before `…`. They belong in
-  `snapshot-format.md` or `D_inline_value_preview`.
-- **`tiny-mcp-server/design/research.md` candidates**, now kept only in javadoc:
-  - MCP 2025-03-26: `content` has no `minItems`, so an empty array is valid (in `ToolFunction`).
-  - `MCP-Protocol-Version` is required from 2025-06-18 (in `TinyMCPClient`).

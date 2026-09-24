@@ -60,3 +60,17 @@ later one trims to its length — which is how long this file gets, so keep it s
   Resources and prompts are one-shot content producers. **[docs]**
 - Consequence: a failing resource or prompt handler has only the JSON-RPC error envelope as a
   structured channel back to the client. **[docs]**
+
+## R_mcp_empty_content — A tool result's `content` may be an empty array
+
+- `CallToolResult.content` is required and typed `array`, with no `minItems`, so
+  `"content": []` is a valid result. **[docs, schema 2025-03-26]**
+
+## R_mcp_protocol_version_header — HTTP requests carry the negotiated protocol version
+
+- From 2025-06-18 a Streamable HTTP client MUST send `MCP-Protocol-Version: <version>` on every
+  request after `initialize`, and SHOULD send the version negotiated there. **[docs, spec 2025-06-18]**
+- A server that receives none, and cannot tell the version otherwise, SHOULD assume
+  `2025-03-26`. **[docs, spec 2025-06-18]**
+- A server that receives an invalid or unsupported version MUST answer `400 Bad Request`.
+  **[docs, spec 2025-06-18]**

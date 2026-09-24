@@ -151,8 +151,8 @@ public final class TinyMCPClient implements MCPClient {
     }
 
     /**
-     * Adds {@code Mcp-Session-Id} and {@code MCP-Protocol-Version} (required
-     * by the MCP spec from 2025-06-18 onward); each is omitted until
+     * Adds {@code Mcp-Session-Id} and {@code MCP-Protocol-Version}
+     * (R_mcp_protocol_version_header); each is omitted until
      * {@code initialize} has set it.
      */
     private void addSessionHeaders(HttpRequest.Builder builder) {

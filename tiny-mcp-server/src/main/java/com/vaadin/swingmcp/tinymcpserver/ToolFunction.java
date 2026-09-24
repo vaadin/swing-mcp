@@ -33,7 +33,7 @@ import org.jspecify.annotations.Nullable;
 public interface ToolFunction {
     /**
      * @return the one content item, or {@code null} for {@code "content": []}
-     *         — valid MCP, since {@code content} has no {@code minItems}
+     *         — valid MCP (R_mcp_empty_content)
      * @throws MCPErrorResponseException for {@code isError: true} with exactly its message
      * @throws MCPServerException        sent as the JSON-RPC error, as-is
      * @throws Exception                 anything else is {@code isError: true} with

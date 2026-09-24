@@ -68,8 +68,8 @@ class SnapshotNode {
     static final int MAX_DESCRIPTION_LENGTH = 120;
 
     /**
-     * Cap on the inline {@code text="…"} preview, counted after quote escaping
-     * (D_inline_value_preview) — the same cap as the mutation echo.
+     * Cap on the inline {@code text="…"} preview, counted after quote escaping as
+     * {@code design/snapshot-format.md} fixes — the same cap as the mutation echo.
      */
     static final int PREVIEW_MAX_LENGTH = 15;
 

@@ -1086,6 +1086,44 @@ class SwingSnapshotToolTest extends AbstractHeadlessTest {
     }
 
     @Test
+    void textPreview_fifteenCharactersFitWhole() throws Exception {
+        assertTextPreview("abcdefghijklmno", "abcdefghijklmno");
+    }
+
+    @Test
+    void textPreview_escapedQuoteCountsAsTwo() throws Exception {
+        // 14 characters plus a quote fit as 15 after escaping; one more character does not.
+        assertTextPreview("abcdefghijklm\"", "abcdefghijklm\\\"");
+        assertTextPreview("abcdefghijklmn\"", "abcdefghijklmn…");
+    }
+
+    @Test
+    void textPreview_cutDropsTrailingSpace() throws Exception {
+        assertTextPreview("abcdefghijklm nopq", "abcdefghijklm…");
+    }
+
+    @Test
+    void textPreview_cutDropsBackslashOfSplitQuote() throws Exception {
+        // The cut at 14 lands between the \ and the " of the escaped quote.
+        assertTextPreview("abcdefghijklm\"xyz", "abcdefghijklm…");
+    }
+
+    @Test
+    void textPreview_contentPastTheRawReadEndsInEllipsis() throws Exception {
+        // Only 64 characters are read; "a" and 63 spaces collapse to "a", but "b" follows.
+        assertTextPreview("a" + " ".repeat(70) + "b", "a…");
+    }
+
+    private void assertTextPreview(String content, String expectedPreview) throws Exception {
+        JPanel panel = new JPanel();
+        panel.add(new JTextField(content));
+        assertEquals(
+                "- JPanel (panel)\n"
+                + "  - JTextField (text) [ref=1] text=\"" + expectedPreview + "\" actions: get_text, set_text",
+                snapshot(panel));
+    }
+
+    @Test
     void br13_longLabelName_rendersFullNameUncapped() throws Exception {
         // D_quoted_slot_sanitizing: the name is identity, so it is never capped.
         StringBuilder longName = new StringBuilder(300);
