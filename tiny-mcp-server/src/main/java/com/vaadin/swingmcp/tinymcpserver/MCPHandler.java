@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -511,6 +512,22 @@ public class MCPHandler {
         result.setCapabilities(capabilities);
 
         return new InitializeOutcome(session.getId(), result);
+    }
+
+    /**
+     * Refuses an {@code MCP-Protocol-Version} header naming a version this server does not
+     * speak; a missing header passes (D_protocol_version_header).
+     *
+     * @throws MCPServerException HTTP 400, listing the supported versions
+     */
+    static void requireSupportedProtocolVersion(@Nullable String version) {
+        if (version == null || SUPPORTED_PROTOCOL_VERSIONS.contains(version)) {
+            return;
+        }
+        throw new MCPServerException(400, MCPServerException.INVALID_REQUEST,
+                "Unsupported MCP-Protocol-Version '" + version + "'. This server supports "
+                        + String.join(", ", new TreeSet<>(SUPPORTED_PROTOCOL_VERSIONS))
+                        + "; send the version negotiated at initialize.");
     }
 
     /** Answers {@code ping} with {@code {}}, without touching any session. */

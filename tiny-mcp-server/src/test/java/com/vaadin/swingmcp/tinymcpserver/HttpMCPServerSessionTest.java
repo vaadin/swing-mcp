@@ -114,6 +114,19 @@ class HttpMCPServerSessionTest {
         return http.send(builder.build(), HttpResponse.BodyHandlers.ofString());
     }
 
+    private HttpResponse<String> postWithVersion(String jsonRpcBody, String sessionId, String version)
+            throws Exception {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(serverUri)
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json, text/event-stream")
+                .header("MCP-Protocol-Version", version)
+                .POST(HttpRequest.BodyPublishers.ofString(jsonRpcBody));
+        if (sessionId != null) {
+            builder.header("Mcp-Session-Id", sessionId);
+        }
+        return http.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+    }
+
     private HttpResponse<String> delete(String sessionId) throws Exception {
         HttpRequest.Builder builder = HttpRequest.newBuilder(serverUri).DELETE();
         if (sessionId != null) {
@@ -150,6 +163,59 @@ class HttpMCPServerSessionTest {
     }
 
     // ===== Tests =====
+
+    // --- MCP-Protocol-Version (D_protocol_version_header) ---
+
+    private static final String UNSUPPORTED_VERSION_MESSAGE =
+            "Unsupported MCP-Protocol-Version '%s'. This server supports 2024-11-05, 2025-03-26, "
+                    + "2025-06-18, 2025-11-25; send the version negotiated at initialize.";
+
+    @Test
+    void toolsCallWithSupportedVersionSucceeds() throws Exception {
+        String sid = initialize();
+        HttpResponse<String> resp = postWithVersion(jsonRpcToolsCall(2), sid, "2025-06-18");
+        assertEquals(200, resp.statusCode(), resp.body());
+    }
+
+    @Test
+    void toolsCallWithoutVersionSucceeds() throws Exception {
+        String sid = initialize();
+        HttpResponse<String> resp = post(jsonRpcToolsCall(2), sid);
+        assertEquals(200, resp.statusCode(), resp.body());
+    }
+
+    @Test
+    void toolsCallWithUnsupportedVersionReturns400() throws Exception {
+        String sid = initialize();
+        HttpResponse<String> resp = postWithVersion(jsonRpcToolsCall(2), sid, "2099-01-01");
+        assertJsonRpcError(resp, 400, -32600, String.format(UNSUPPORTED_VERSION_MESSAGE, "2099-01-01"));
+    }
+
+    @Test
+    void toolsCallWithMalformedVersionReturns400() throws Exception {
+        String sid = initialize();
+        HttpResponse<String> resp = postWithVersion(jsonRpcToolsCall(2), sid, "latest");
+        assertJsonRpcError(resp, 400, -32600, String.format(UNSUPPORTED_VERSION_MESSAGE, "latest"));
+    }
+
+    @Test
+    void initializeWithUnsupportedVersionHeaderStillNegotiates() throws Exception {
+        // A client ahead of this server must reach negotiation, which offers it a supported version.
+        HttpResponse<String> resp = postWithVersion(jsonRpc("initialize", 1), null, "2099-01-01");
+        assertEquals(200, resp.statusCode(), resp.body());
+    }
+
+    @Test
+    void deleteWithUnsupportedVersionStillCloses() throws Exception {
+        String sid = initialize();
+        HttpResponse<String> resp = http.send(HttpRequest.newBuilder(serverUri).DELETE()
+                        .header("Mcp-Session-Id", sid)
+                        .header("MCP-Protocol-Version", "2099-01-01")
+                        .build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, resp.statusCode());
+        assertJsonRpcError(post(jsonRpcToolsCall(2), sid), 404, -32002, "Session not found.");
+    }
 
     @Test
     void toolsListBeforeInitializeReturns400() throws Exception {

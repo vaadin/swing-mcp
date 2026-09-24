@@ -249,6 +249,10 @@ public class HttpMCPServer {
                     handler.tombstoneOrDefault(incomingSessionId));
         }
 
+        // D_protocol_version_header: checked only past initialize, so negotiation is never refused.
+        MCPHandler.requireSupportedProtocolVersion(
+                rpc.getHttpExchange().getRequestHeaders().getFirst("MCP-Protocol-Version"));
+
         rpc.setSessionId(session.getId());
         Object result = session.handlePost(request, rpc.getTransportHeaders());
         rpc.sendResponse(result);

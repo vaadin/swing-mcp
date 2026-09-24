@@ -33,7 +33,8 @@ the `R_`), one symbol's behaviour (its doc comment), the package map (`AGENTS.md
 1. `HttpMCPServer` routes the POST and reads `Mcp-Session-Id`. A present-but-unknown id is 404
    before the body is touched; the tombstone map supplies the reason (`D_supersede_sessions`).
 2. The body is parsed. `initialize` and `ping` are answered by the handler directly; anything
-   else with no session header is 400 (`D_session_gate_two_stage`).
+   else with no session header is 400 (`D_session_gate_two_stage`), and so is one whose
+   `MCP-Protocol-Version` names a version the server does not speak (`D_protocol_version_header`).
 3. The named `MCPSession` runs the request inside `runLocked`, which refreshes its last-access
    stamp and fails fast if the session was already closed.
 4. `MCPToolHandler` looks the tool up, parses arguments against the declared schema, and invokes

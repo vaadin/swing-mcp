@@ -261,6 +261,37 @@ already doomed by their header alone, which is the cheap-to-reject case.
 session-state violation is a server-state condition, which is precisely what the
 implementation-defined -32000..-32099 range exists for.
 
+## D_protocol_version_header — Why refuse an unsupported `MCP-Protocol-Version`, and only past `initialize`?
+
+A POST other than `initialize` or `ping` whose `MCP-Protocol-Version` names a version outside the
+supported list gets HTTP 400 with -32600, and a message listing the supported versions. A missing
+header passes, and so does any header on `initialize`, `ping` or `DELETE`.
+
+**Why refuse at all.** The specification requires it (`R_mcp_protocol_version_header`), and it
+cannot lock out a client newer than this server: negotiation always settles on a supported
+version, the client's own if listed and the latest otherwise, so a client that sends what it
+negotiated always sends one this server speaks.
+
+**Why not on `initialize`.** A client ahead of this server may send its own newest version before
+anything is negotiated; refusing it there locks it out of the step that would offer it a usable
+one.
+
+**Why a missing header passes.** The session already knows what it negotiated; the
+specification's fallback exists for servers that cannot tell.
+
+**Why not refuse any version other than the one this session negotiated.** Rejected — stricter
+than the specification for no gain: a client that negotiated 2025-06-18 and sends 2025-03-26 is
+refused although this server speaks both.
+
+**Why not refuse only a malformed header.** Rejected — it breaks a MUST to protect a client that
+ignores the negotiated version. Revisit if a real client turns out to send its own version.
+
+**Why `DELETE` passes.** It is the client leaving; refusing it only keeps alive a session nobody
+will use.
+
+**Why -32600 rather than -32002.** The session is fine; the request carries a header the server
+cannot honour, which is malformed input (contrast `D_session_gate_two_stage`).
+
 ## D_session_policy_injected — Why is the session-admission policy injected rather than built in?
 
 `MCPHandler` is multi-session, which is the specification's default, and takes a policy function

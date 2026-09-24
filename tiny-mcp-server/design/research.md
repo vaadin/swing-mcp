@@ -74,3 +74,5 @@ later one trims to its length — which is how long this file gets, so keep it s
   `2025-03-26`. **[docs, spec 2025-06-18]**
 - A server that receives an invalid or unsupported version MUST answer `400 Bad Request`.
   **[docs, spec 2025-06-18]**
+- Whether Claude Code sends the negotiated version or its own latest is unchecked.
+  **[unverified]**
