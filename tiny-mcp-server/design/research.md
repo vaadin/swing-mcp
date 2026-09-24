@@ -74,5 +74,8 @@ later one trims to its length — which is how long this file gets, so keep it s
   `2025-03-26`. **[docs, spec 2025-06-18]**
 - A server that receives an invalid or unsupported version MUST answer `400 Bad Request`.
   **[docs, spec 2025-06-18]**
-- Whether Claude Code sends the negotiated version or its own latest is unchecked.
-  **[unverified]**
+- Claude Code sends the negotiated version, not its own latest: after negotiating `2025-11-25`
+  every request carried `2025-11-25`, and `initialize` carried none.
+  **[verified 2026-09-24, Claude Code 2.1.281, logging proxy]**
+- Before `initialize` it probes with `server/discover` carrying `2026-07-28` and no session; an
+  HTTP 400 makes it fall back to `initialize`. **[verified 2026-09-24, Claude Code 2.1.281]**

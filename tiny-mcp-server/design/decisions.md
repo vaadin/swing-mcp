@@ -284,7 +284,7 @@ than the specification for no gain: a client that negotiated 2025-06-18 and send
 refused although this server speaks both.
 
 **Why not refuse only a malformed header.** Rejected — it breaks a MUST to protect a client that
-ignores the negotiated version. Revisit if a real client turns out to send its own version.
+ignores the negotiated version, which Claude Code does not (`R_mcp_protocol_version_header`).
 
 **Why `DELETE` passes.** It is the client leaving; refusing it only keeps alive a session nobody
 will use.
