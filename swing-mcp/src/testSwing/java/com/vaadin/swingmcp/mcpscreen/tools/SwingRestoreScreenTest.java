@@ -90,30 +90,6 @@ class SwingRestoreScreenTest extends AbstractScreenTest {
         return frame;
     }
 
-    /**
-     * Polls {@link Frame#getExtendedState()} until {@code (state & mask) == expected}
-     * or {@code timeoutMs} elapses. Returns silently on timeout; the caller's next
-     * assertion reports it.
-     *
-     * <p>{@code setExtendedState} only posts a request to the window manager: on X11
-     * the reported state lags by tens of milliseconds, and a second request chained
-     * before the first settles can be silently dropped.
-     */
-    private static void awaitExtendedState(Frame frame, int mask, int expected, long timeoutMs) {
-        long deadline = System.currentTimeMillis() + timeoutMs;
-        while (System.currentTimeMillis() < deadline) {
-            if ((frame.getExtendedState() & mask) == expected) {
-                return;
-            }
-            try {
-                Thread.sleep(20);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return;
-            }
-        }
-    }
-
     private JInternalFrame showInternalFrame(boolean iconifiable) throws Exception {
         JFrame host = new JFrame("Host");
         host.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);

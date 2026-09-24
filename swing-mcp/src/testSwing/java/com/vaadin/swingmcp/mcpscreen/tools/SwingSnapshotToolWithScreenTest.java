@@ -589,25 +589,6 @@ class SwingSnapshotToolWithScreenTest extends AbstractScreenTest {
     // ══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Polls {@link Frame#getExtendedState()} until {@code (state & mask) == expected}
-     * or {@code timeoutMs} elapses.
-     */
-    private static void awaitExtendedState(Frame frame, int mask, int expected, long timeoutMs) {
-        long deadline = System.currentTimeMillis() + timeoutMs;
-        while (System.currentTimeMillis() < deadline) {
-            if ((frame.getExtendedState() & mask) == expected) {
-                return;
-            }
-            try {
-                Thread.sleep(20);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return;
-            }
-        }
-    }
-
-    /**
      * Creates a JFrame that will never receive WM focus, so the snapshot
      * output is deterministic (no WM-dependent {@code [focused]} state).
      */

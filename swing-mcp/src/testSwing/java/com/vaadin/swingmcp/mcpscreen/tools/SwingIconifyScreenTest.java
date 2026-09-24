@@ -82,41 +82,49 @@ class SwingIconifyScreenTest extends AbstractScreenTest {
         return result;
     }
 
+    /**
+     * Shows a decorated JFrame that never takes focus, so its snapshot line carries no
+     * WM-dependent {@code [focused]} state.
+     */
+    private JFrame showFrame(String title) throws Exception {
+        JFrame frame = new JFrame(title);
+        frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        frame.setFocusableWindowState(false);
+        currentWindow = frame;
+        executeOnEDT(() -> { frame.setSize(200, 100); frame.setVisible(true); return null; });
+        return frame;
+    }
+
+    /** Requests ICONIFIED directly, as the user would through the title bar, and waits for the WM. */
+    private static void iconifyDirectly(JFrame frame) throws Exception {
+        executeOnEDT(() -> { frame.setExtendedState(Frame.ICONIFIED); return null; });
+        awaitExtendedState(frame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
+        assertEquals(Frame.ICONIFIED, frame.getExtendedState() & Frame.ICONIFIED, "precondition: frame is iconified");
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // JFrame — happy path
     // ══════════════════════════════════════════════════════════════════════════
 
     @Test
     void jframeIsIconified() throws Exception {
-        JFrame frame = new JFrame("Test");
-        frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        currentWindow = frame;
-        executeOnEDT(() -> { frame.setSize(200, 100); frame.setVisible(true); return null; });
+        JFrame frame = showFrame("Test");
 
         snapshot(frame);
         iconify(context.getRefOf(frame));
+        awaitExtendedState(frame, Frame.ICONIFIED, Frame.ICONIFIED, 2000);
 
-        assertTrue((frame.getExtendedState() & Frame.ICONIFIED) != 0,
-                "frame should be iconified");
-
-        String text = snapshot(frame);
-        assertTrue(text.contains("iconified"), "snapshot should show [iconified]");
-        assertFalse(text.contains("actions: ") && text.contains("iconify"),
-                "iconified frame should not list iconify action");
+        assertEquals(Frame.ICONIFIED, frame.getExtendedState() & Frame.ICONIFIED, "frame should be iconified");
+        assertEquals("- JFrame (frame) \"Test\" [ref=1, iconified] actions: close, restore\n"
+                        + "  - [Contents hidden — window is iconified. Call swing_restore to interact with this window.]",
+                snapshot(frame));
     }
 
     @Test
     void jframeSnapshotShowsIconifyAction() throws Exception {
-        JFrame frame = new JFrame("Test");
-        frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        currentWindow = frame;
-        executeOnEDT(() -> { frame.setSize(200, 100); frame.setVisible(true); return null; });
+        JFrame frame = showFrame("Test");
 
-        String text = snapshot(frame);
-
-        int ref = context.getRefOf(frame);
-        assertTrue(ref > 0, "decorated JFrame should have a ref");
-        assertTrue(text.contains("iconify"), "snapshot should list iconify action");
+        assertEquals("- JFrame (frame) \"Test\" [ref=1] actions: close, iconify", snapshot(frame));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -140,33 +148,22 @@ class SwingIconifyScreenTest extends AbstractScreenTest {
 
     @Test
     void alreadyIconifiedJframeDoesNotShowIconifyInSnapshot() throws Exception {
-        JFrame frame = new JFrame("Iconified");
-        frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        currentWindow = frame;
-        executeOnEDT(() -> { frame.setSize(200, 100); frame.setVisible(true); return null; });
-        executeOnEDT(() -> { frame.setExtendedState(Frame.ICONIFIED); return null; });
+        JFrame frame = showFrame("Iconified");
+        iconifyDirectly(frame);
 
-        String text = snapshot(frame);
-        assertTrue(text.contains("iconified"), "snapshot should show [iconified]");
-        for (String line : text.split("\n")) {
-            if (line.contains("JFrame") && line.contains("actions:")) {
-                assertFalse(line.contains("iconify"),
-                        "already-iconified JFrame should not list iconify action");
-            }
-        }
+        assertEquals("- JFrame (frame) \"Iconified\" [ref=1, iconified] actions: close, restore\n"
+                        + "  - [Contents hidden — window is iconified. Call swing_restore to interact with this window.]",
+                snapshot(frame));
     }
 
     @Test
     void alreadyIconifiedJframeViaStaleRefReturnsMcpError() throws Exception {
-        JFrame frame = new JFrame("Iconified");
-        frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        currentWindow = frame;
-        executeOnEDT(() -> { frame.setSize(200, 100); frame.setVisible(true); return null; });
+        JFrame frame = showFrame("Iconified");
 
         snapshot(frame);
         int ref = context.getRefOf(frame);
 
-        executeOnEDT(() -> { frame.setExtendedState(Frame.ICONIFIED); return null; });
+        iconifyDirectly(frame);
 
         MCPErrorResponseException ex = assertThrows(MCPErrorResponseException.class,
                 () -> executeOnEDT(() -> iconifyTool.execute(new Parameters(Map.of("ref", ref)), context)));

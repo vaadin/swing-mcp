@@ -19,10 +19,6 @@ numbers are from the commit after the pass.
 
 ## Tests that prove less than they claim
 
-- **`SwingIconifyScreenTest`**:
-  - `jframeIsIconified` checks `text.contains("actions: ") && text.contains("iconify")`,
-    which is weak.
-  - `alreadyIconified*` sets ICONIFIED without waiting for the window manager, so it may be flaky.
 - **`InputSchemaEqualityTest.propertyEnumOrderMatters`** pins a choice that tiny-mcp-server's
   structural-schema-equality decision does not cover: whether enum order matters.
 

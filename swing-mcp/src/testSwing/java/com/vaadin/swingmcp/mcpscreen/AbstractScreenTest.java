@@ -23,6 +23,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 
 import javax.swing.*;
+import java.awt.Frame;
 import java.net.URI;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
@@ -81,5 +82,29 @@ public abstract class AbstractScreenTest {
             throw error.get();
         }
         return result.get();
+    }
+
+    /**
+     * Polls {@link Frame#getExtendedState()} until {@code (state & mask) == expected}
+     * or {@code timeoutMs} elapses. Returns silently on timeout; the caller's next
+     * assertion reports it.
+     *
+     * <p>{@code setExtendedState} only posts a request to the window manager: on X11
+     * the reported state lags by tens of milliseconds, and a second request chained
+     * before the first settles can be silently dropped.
+     */
+    protected static void awaitExtendedState(Frame frame, int mask, int expected, long timeoutMs) {
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        while (System.currentTimeMillis() < deadline) {
+            if ((frame.getExtendedState() & mask) == expected) {
+                return;
+            }
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
     }
 }
