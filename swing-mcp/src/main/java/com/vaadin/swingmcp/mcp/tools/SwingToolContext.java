@@ -17,7 +17,7 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
-import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
+import com.github.mvysny.tinymcpserver.MCPErrorResponseException;
 
 import javax.accessibility.Accessible;
 import java.awt.Component;

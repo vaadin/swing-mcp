@@ -285,6 +285,6 @@ trims to its length — which is how long this file gets, so keep it short.
   --verbose`, prompting the child to start and stop the application through Bash (allow its
   script with `--allowedTools`) between tool calls. Launch the application under
   `xvfb-run -a java -javaagent:swing-mcp-agent.jar …`; its JUL log (`unknown Mcp-Session-Id`,
-  `Session superseded`, and every POST body at FINE on `com.vaadin.swingmcp.tinymcpserver`)
+  `Session superseded`, and every POST body at FINE on `com.github.mvysny.tinymcpserver`)
   shows what the client actually sent, and `--debug-file <path>` shows why. A stdlib Python
   server with the same session rules, needing no build, is in #96733.

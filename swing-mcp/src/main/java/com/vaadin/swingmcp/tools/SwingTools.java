@@ -16,8 +16,8 @@
  */
 package com.vaadin.swingmcp.tools;
 
-import com.vaadin.swingmcp.ToolDescriptor;
-import com.vaadin.swingmcp.tinymcpserver.InputSchemaBuilder;
+import com.github.mvysny.tinymcpserver.ToolDescriptor;
+import com.github.mvysny.tinymcpserver.InputSchemaBuilder;
 
 import java.util.List;
 

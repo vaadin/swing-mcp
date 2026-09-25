@@ -16,11 +16,11 @@
  */
 package com.vaadin.swingmcp.mcp;
 
-import com.vaadin.swingmcp.tinymcpserver.HttpMCPServer;
-import com.vaadin.swingmcp.tinymcpserver.MCPHandler;
-import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
-import com.vaadin.swingmcp.tinymcpserver.MCPSession;
-import com.vaadin.swingmcp.tinymcpserver.SessionDecision;
+import com.github.mvysny.tinymcpserver.HttpMCPServer;
+import com.github.mvysny.tinymcpserver.MCPHandler;
+import com.github.mvysny.tinymcpserver.MCPProtocol;
+import com.github.mvysny.tinymcpserver.MCPSession;
+import com.github.mvysny.tinymcpserver.SessionDecision;
 import com.vaadin.swingmcp.tools.SwingTools;
 import javax.swing.SwingUtilities;
 import com.vaadin.swingmcp.mcp.tools.AbstractSwingTool;
@@ -208,7 +208,7 @@ public class SwingMCP {
      * Runs {@code block} on the EDT and waits for its result — the one way any Swing state is
      * touched.
      *
-     * @throws com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException carrying the EDT's
+     * @throws com.github.mvysny.tinymcpserver.MCPErrorResponseException carrying the EDT's
      *     stack trace, if the block has not finished within {@link #EDT_TIMEOUT_MS}
      * @throws Exception whatever {@code block} throws
      */
@@ -242,7 +242,7 @@ public class SwingMCP {
             } else {
                 msg.append("EDT thread not yet started.\n");
             }
-            throw new com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException(msg.toString());
+            throw new com.github.mvysny.tinymcpserver.MCPErrorResponseException(msg.toString());
         }
 
         if (error.get() != null) {

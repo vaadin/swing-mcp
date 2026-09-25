@@ -19,7 +19,7 @@ plugins {
 }
 
 dependencies {
-    api(project(":tiny-mcp-server"))
+    api(libs.tinymcpserver)
 
     testImplementation(libs.junit)
     testImplementation(libs.bytebuddy)

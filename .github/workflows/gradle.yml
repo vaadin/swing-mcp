@@ -9,8 +9,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         # 11 is the floor the shipped jars target, and building on it proves a
-        # developer stuck there can still work on this project — that leg skips
-        # the official-SDK conformance tests, which need 17. 24 is the ceiling:
+        # developer stuck there can still work on this project. 24 is the ceiling:
         # Gradle 8.14.3 does not run on 25, and 8.14.3 is the last Gradle that
         # runs on 11. See D_java11_floor.
         java: [11, 17, 21, 24]
