@@ -4,6 +4,43 @@ An in-process MCP (Model Context Protocol) HTTP server for Java Swing apps,
 designed to enable AI-driven inspection and interaction with Swing UIs.
 The primary use case is AI-assisted migration of Swing apps to Vaadin.
 
+## Quick Demo
+
+See it work on the bundled demo app before wiring it into your own. You need a
+JDK between 11 and 24 to build.
+
+1. Start the demo app. A "Select Application" dialog opens:
+   ```bash
+   ./gradlew :test-apps:run
+   ```
+2. Register the server with Claude Code (once):
+   ```bash
+   claude mcp add --transport http swing-mcp http://127.0.0.1:18088/mcp
+   ```
+3. Start `claude` **after** the app is up. Claude Code connects to MCP
+   servers only at startup (see
+   [below](#when-the-agent-says-the-swing-tools-are-missing)). Then ask:
+
+   > Launch the Login App, try logging in as bob/bob and tell me what
+   > happens, then log in as admin/admin and quit via the File menu.
+
+Claude reads each screen as a text snapshot rather than a screenshot. Here is
+the one it gets after the failed login:
+
+```
+[modal stack (3, topmost first): JDialog "Login Failed" / LoginDialog "Login" / JFrame "Login App"]
+- JDialog (dialog) "Login Failed" [ref=1, modal] actions: close
+  - JOptionPane (alert)
+    - JLabel (label) "Invalid username or password."
+    - JLabel (icon)
+    - JButton (push_button) "OK" [ref=2, focused] actions: click
+```
+
+It then clicks, types and selects through the app's real listeners, one
+`ref` at a time. For a migration, try:
+
+> Explore every screen of this app and sketch the equivalent Vaadin views.
+
 ## Using in Swing Apps
 
 ### Option 1: Java Agent (no code changes)
