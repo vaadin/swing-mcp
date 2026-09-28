@@ -59,6 +59,9 @@ additional classpath entries are needed.
 
 ### Option 2: Programmatic startup
 
+> **Not released yet.** Only the agent is published so far; the `swing-mcp`
+> library will follow. Until then, use Option 1.
+
 Add `swing-mcp` as a dependency and start `SwingMCP` from your code:
 
 ```java
