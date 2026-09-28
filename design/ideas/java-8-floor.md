@@ -56,9 +56,9 @@ Dependencies are not blockers. gson 2.13.2 and jspecify 1.0 are both class-file 
   - Rewrite it on `HttpURLConnection`, which is what `D_java11_floor` calls "real work".
 
   Moving it looks cheaper, but it collides with the tests being held to the floor (next question).
-- `Q_test_floor` — `D_java11_floor` holds the tests to the floor too, and `testJava11` re-runs them
+- `Q_test_floor` — `D_java11_floor` holds the tests to the floor too, and CI's JDK 11 job runs them
   on a real 11 VM. That VM run is what catches a newer class pulled in by the shadow jar or an API
-  reached reflectively. Going to 8 means a `testJava8` on a Temurin 8 JVM (`mise`). Either the
+  reached reflectively. Going to 8 means a CI job that runs the tests on a Temurin 8 JVM. Either the
   tests also compile for 8, which the test-fixtures client blocks, or `--release 8` covers main
   only and a smaller set of tests runs on 8. Which one?
 - `Q_runtime_behaviour` — Swing and `javax.accessibility` on 8 differ from 11, whereas the research

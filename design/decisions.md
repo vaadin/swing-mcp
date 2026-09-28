@@ -1092,12 +1092,14 @@ customer as `NoSuchMethodError`. The old setting was 17 and had therefore never 
 
 **Why the tests are held to the floor too, and run on an 11 VM.** `--release 11` proves no
 post-11 API is *called*; it cannot prove the jars load and run on an 11 VM, which a v61 class
-pulled in by shadowJar or an API reached reflectively would break. So `testJava11` re-runs the
-whole headless suite on a real Java 11 launcher, and CI builds on 11 as well as 17/21/24. That
-cost JUnit 6 (17-only) for JUnit 5.14.4, and Gradle 9.5 for 8.14.3 — the last Gradle that runs
-on 11, which in turn means the build no longer runs on Java 25.
+pulled in by shadowJar or an API reached reflectively would break. So CI runs the whole build,
+`testSwing` included, on JDK 11 as well as 17/21/24. That cost JUnit 6 (17-only) for JUnit
+5.14.4, and Gradle 9.5 for 8.14.3 — the last Gradle that runs on 11, which in turn means the
+build no longer runs on Java 25. Why not a local `testJava11` toolchain leg as well: we had one
+until 2026-09; it re-ran only the headless tests, duplicated CI's 11 job, and a Java 11 break is
+rare enough that hearing of it from CI minutes later costs nothing.
 
-The leg paid for itself twice on the first run: `R_jslider_actions_since_17`, and a server bug
+The 11 run paid for itself twice on the first run: `R_jslider_actions_since_17`, and a server bug
 where a rejection path answered without draining the request body, so `com.sun.net.httpserver`
 closed a connection the client had already pooled. Java 11's `HttpClient` does not retry a POST
 that dies that way (JDK 12+ does), so only the 11 leg ever saw it.

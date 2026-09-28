@@ -63,7 +63,7 @@ Every fact lives in exactly one of these; the others link to it.
 
 - `./gradlew` — clean, build, all tests. The default task, and what CI runs. It includes `testSwing`, so it needs a display: `xvfb-run -a ./gradlew` where there is none.
 - **Build with a JDK between 11 and 24** — Gradle 8.14.3 is the last that runs on 11 and does not run on 25.
-- `./gradlew testJava11` — re-runs the headless tests on a Java 11 JVM; registered only when Gradle finds a JDK 11 (`export JDK11=$(mise where java@temurin-11)`).
+- **Java 11 runtime compatibility is CI's job** — its JDK 11 leg runs the whole build there; a local build on any JDK 11–24 is enough.
 - `./gradlew test` — every headless test; `./gradlew :swing-mcp:testSwing` — the screen-mode ones (Xvfb in CI).
 - `./gradlew test --tests "com.vaadin.swingmcp.mcp.SessionCloseTest"` — one class; append `.methodName` for one method.
 - `design/verify_design_tripwires.sh` — the doc layer.
