@@ -6,6 +6,8 @@ in the commit that makes it; `RELEASING.md` turns that section into a version.
 
 ## [Unreleased]
 
+## [1.0] - 2026-09-28
+
 ### Added
 
 - First release: `swing-mcp-agent`, a `-javaagent` fat jar that starts an in-process MCP HTTP
