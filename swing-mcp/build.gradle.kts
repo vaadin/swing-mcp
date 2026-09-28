@@ -30,7 +30,23 @@ dependencies {
 val configureMavenCentral = ext["configureMavenCentral"] as (artifactId: String) -> Unit
 configureMavenCentral("swing-mcp")
 
+// Writes the project version beside SwingTools, which advertises it as
+// initialize.serverInfo.version.
+val versionResources = layout.buildDirectory.dir("generated/version-resources")
+val writeVersionProperties by tasks.registering(WriteProperties::class) {
+    destinationFile = versionResources.map { it.file("com/vaadin/swingmcp/tools/version.properties") }
+    property("version", project.version.toString())
+}
+
+// The expected value for the test that pins serverInfo.version to the build.
+tasks.withType<Test> {
+    systemProperty("swingmcp.expectedVersion", project.version.toString())
+}
+
 sourceSets {
+    main {
+        resources.srcDir(files(versionResources).builtBy(writeVersionProperties))
+    }
     create("testSwing") {
         java.srcDir("src/testSwing/java")
         resources.srcDir("src/testSwing/resources")

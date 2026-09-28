@@ -66,6 +66,11 @@ class SwingToolsCoherenceTest {
     }
 
     @Test
+    void serverVersionIsTheBuildVersion() {
+        assertEquals(System.getProperty("swingmcp.expectedVersion"), SwingTools.SERVER_VERSION);
+    }
+
+    @Test
     void instructionsMatchSwingToolsConstants() {
         assertEquals(SwingTools.INSTRUCTIONS, initResult.getInstructions());
     }

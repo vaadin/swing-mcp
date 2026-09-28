@@ -19,7 +19,12 @@ package com.vaadin.swingmcp.tools;
 import com.github.mvysny.tinymcpserver.ToolDescriptor;
 import com.github.mvysny.tinymcpserver.InputSchemaBuilder;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
+import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Everything the model reads about this server, in one place: the server
@@ -41,11 +46,31 @@ public final class SwingTools {
 
     private SwingTools() {}
 
+    private static final Logger LOG = Logger.getLogger(SwingTools.class.getName());
+
     /** Server name advertised in {@code initialize.serverInfo.name}. */
     public static final String SERVER_NAME = "Swing MCP";
 
-    /** Server version advertised in {@code initialize.serverInfo.version}. */
-    public static final String SERVER_VERSION = "0.0.1";
+    /**
+     * Server version advertised in {@code initialize.serverInfo.version}: the project version,
+     * which the build writes to {@code version.properties} beside this class; {@code "unknown"}
+     * when the sources were compiled without that step.
+     */
+    public static final String SERVER_VERSION = readVersion();
+
+    private static String readVersion() {
+        try (InputStream in = SwingTools.class.getResourceAsStream("version.properties")) {
+            if (in == null) {
+                return "unknown";
+            }
+            Properties properties = new Properties();
+            properties.load(in);
+            return properties.getProperty("version", "unknown");
+        } catch (IOException e) {
+            LOG.log(Level.WARNING, "Could not read version.properties", e);
+            return "unknown";
+        }
+    }
 
     /** Multi-paragraph instructions advertised in {@code initialize.instructions}. */
     public static final String INSTRUCTIONS =
