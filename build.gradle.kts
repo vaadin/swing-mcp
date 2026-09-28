@@ -28,7 +28,7 @@ defaultTasks("clean", "build")
 
 allprojects {
     group = "com.vaadin.swing-mcp"
-    version = "1.0"
+    version = "1.1-SNAPSHOT"
 
     repositories {
         mavenCentral()
