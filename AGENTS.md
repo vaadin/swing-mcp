@@ -17,6 +17,8 @@ The primary use case is AI-assisted migration of Swing apps to Vaadin.
 | File | Owns | Loaded |
 |---|---|---|
 | `README.md` | the pitch, the Swing component reference, how to install and register it | — |
+| `CHANGELOG.md` | what each release changed for a user of the agent jar | — |
+| `RELEASING.md` | how a maintainer cuts a release | — |
 | `AGENTS.md` (this) | promises, invariants, the module map, conventions, commands | every turn |
 | `design/architecture.md` | how the pieces compose — the tool pipeline, the ref lifecycle, threading, the flows; normative | lazy |
 | `design/decisions.md` | why this and not that — `D_` entries, FAQ-shaped | lazy |
@@ -54,7 +56,8 @@ Every fact lives in exactly one of these; the others link to it.
 - **A tool-level failure is `MCPErrorResponseException`** carrying a recovery hint the model can act on, never a bare exception. That includes a well-formed ref that addresses nothing; `INVALID_PARAMS` is only for a malformed argument.
 - **Component identity is the Swing class name** in everything a person or model reads; the accessibility role appears in the snapshot only. See `D_role_in_snapshot_only`.
 - **Every `.java` and `.gradle.kts` file opens with the Apache-2.0 Vaadin header**, verbatim; the full text is `LICENSE`.
-- **Pre-1.0: break APIs freely** — every consumer is in this repository.
+- **The agent's outside surface is the API** — `swing.mcp.port`, the default port, the tool names and arguments; the `swing-mcp` Java API is internal while only the agent ships, so break it freely.
+- **A user-visible change adds a line under `[Unreleased]` in `CHANGELOG.md`** in the same commit; a break of the outside surface starts with `Breaking:` and carries the migration.
 
 ## Commands
 

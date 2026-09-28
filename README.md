@@ -45,11 +45,13 @@ It then clicks, types and selects through the app's real listeners, one
 
 ### Option 1: Java Agent (no code changes)
 
-Attach `swing-mcp-agent` as a `-javaagent` when launching your app.
-The MCP server starts automatically before `main()` runs:
+Download `swing-mcp-agent-<version>.jar` from the
+[releases page](https://github.com/vaadin/swing-mcp/releases) and attach it as a
+`-javaagent` when launching your app. The MCP server starts automatically before
+`main()` runs:
 
 ```bash
-java -javaagent:swing-mcp-agent-0.0.1-SNAPSHOT.jar -jar your-app.jar
+java -javaagent:swing-mcp-agent-1.0.jar -jar your-app.jar
 ```
 
 The agent is a fat jar — it bundles all required dependencies, so no
