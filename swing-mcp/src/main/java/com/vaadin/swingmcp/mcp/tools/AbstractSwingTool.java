@@ -16,11 +16,11 @@
  */
 package com.vaadin.swingmcp.mcp.tools;
 
-import com.github.mvysny.tinymcpserver.ToolDescriptor;
+import com.vaadin.swingmcp.ToolDescriptor;
 import com.vaadin.swingmcp.mcp.SwingUtils;
-import com.github.mvysny.tinymcpserver.MCPErrorResponseException;
-import com.github.mvysny.tinymcpserver.MCPProtocol;
-import com.github.mvysny.tinymcpserver.Parameters;
+import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
+import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tinymcpserver.Parameters;
 
 import javax.accessibility.Accessible;
 import javax.swing.JTable;
@@ -90,7 +90,7 @@ public abstract class AbstractSwingTool {
      *
      * @throws MCPErrorResponseException a refusal the model can act on: {@code isError=true} with
      *         this message
-     * @throws com.github.mvysny.tinymcpserver.MCPServerException a JSON-RPC protocol error, e.g.
+     * @throws com.vaadin.swingmcp.tinymcpserver.MCPServerException a JSON-RPC protocol error, e.g.
      *         {@code INVALID_PARAMS} for a malformed parameter
      * @throws Exception on an unexpected failure
      */

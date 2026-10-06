@@ -16,8 +16,8 @@
  */
 package com.vaadin.swingmcp.mcp;
 
-import com.github.mvysny.tinymcpserver.MCPProtocol;
-import com.github.mvysny.tinymcpserver.MCPServerException;
+import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tinymcpserver.MCPServerException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * The ref map lives in a {@link com.vaadin.swingmcp.mcp.tools.SwingToolContext} attached to each
- * {@link com.github.mvysny.tinymcpserver.MCPSession}, never in {@link SwingMCP} itself: a client
+ * {@link com.vaadin.swingmcp.tinymcpserver.MCPSession}, never in {@link SwingMCP} itself: a client
  * that connects after another never resolves the refs the earlier client's snapshot handed out,
  * whether that session was deleted or evicted (D_single_session).
  */

@@ -153,7 +153,8 @@ native transfer phase (`DropTarget` events) follows is platform-dependent.
 
 Subprojects:
 
-- **`swing-mcp`** — Swing-specific MCP tools built on top of [TinyMCPServer](https://github.com/mvysny/tinymcpserver), a minimal MCP server in pure Java (GSON + built-in HttpServer). Provides accessibility tree snapshots, screenshots, and UI interaction tools.
+- **`tiny-mcp-server`** — A generic, minimal MCP server in pure Java (GSON + built-in HttpServer): HTTP and stdio transports, plus a small HTTP client. No external framework dependencies.
+- **`swing-mcp`** — Swing-specific MCP tools built on top of `tiny-mcp-server`. Provides accessibility tree snapshots, screenshots, and UI interaction tools.
 - **`swing-mcp-agent`** — A Java Instrumentation Agent that starts the MCP server automatically via `-javaagent`. No code changes to the target app required.
 - **`test-apps`** — Demo Swing applications and screen-mode integration tests.
 
