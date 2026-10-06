@@ -18,7 +18,7 @@ package com.vaadin.swingmcp.mcpscreen.tools;
 
 import com.vaadin.swingmcp.mcp.tools.SwingScreenshotTool;
 import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
-import com.github.mvysny.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 

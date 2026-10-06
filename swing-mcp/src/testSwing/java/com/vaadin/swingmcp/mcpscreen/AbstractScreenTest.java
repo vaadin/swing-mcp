@@ -17,8 +17,8 @@
 package com.vaadin.swingmcp.mcpscreen;
 
 import com.vaadin.swingmcp.mcp.FakeSwingMCP;
-import com.github.mvysny.tinymcpserver.client.MCPClient;
-import com.github.mvysny.tinymcpserver.client.TinyMCPClient;
+import com.vaadin.swingmcp.tinymcpclient.MCPClient;
+import com.vaadin.swingmcp.tinymcpclient.TinyMCPClient;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 

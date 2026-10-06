@@ -16,8 +16,8 @@
  */
 package com.vaadin.swingmcp.mcp.tools;
 
-import com.github.mvysny.tinymcpserver.MCPProtocol;
-import com.github.mvysny.tinymcpserver.Parameters;
+import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tools.SwingTools;
 
 import javax.accessibility.Accessible;

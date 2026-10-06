@@ -41,14 +41,14 @@ Every fact lives in exactly one of these; the others link to it.
 
 ## Module map
 
-- The MCP protocol, both transports and the HTTP client are [TinyMCPServer](https://github.com/mvysny/tinymcpserver), a separate product this depends on as `com.github.mvysny.tinymcpserver:mcp-server`; its own decisions and conformance suite live in that repository.
+- `tiny-mcp-server` — a separate product vendored here: the MCP protocol, both transports, a small HTTP client. Rules: `tiny-mcp-server/AGENTS.md`
 - `swing-mcp` — the Swing tools themselves: the snapshot, the screenshot, every interaction tool, and the manifest the model reads.
 - `swing-mcp-agent` — a `-javaagent` that starts the server before `main()`, so the host application needs no code change.
 - `test-apps` — demo Swing applications and the screen-mode integration tests.
 
 ## Conventions
 
-- **Java 11 is the floor, tests included**; `--release` enforces it, so no records and no `sealed`. See `D_java11_floor`.
+- **Java 11 is the floor, tests included**; `--release` enforces it, so no records and no `sealed`. The official MCP SDK is 17-only and confined to `tiny-mcp-server/src/testOfficial`. See `D_java11_floor`.
 - **Tests: JUnit 5, two source sets.** `src/test` runs headless; `src/testSwing` needs a display and owns anything that must instantiate a real `Window`.
 - **Every tool test walks the component matrix** — a correct refusal is as much a result as a success; the matrix is in `design/architecture.md` § Testing.
 - **Diagnostics go to `java.util.logging`**, never to `System.out`; the LLM reads the error body, the developer reads stderr.
@@ -64,9 +64,10 @@ Every fact lives in exactly one of these; the others link to it.
 - `./gradlew` — clean, build, all tests. The default task, and what CI runs. It includes `testSwing`, so it needs a display: `xvfb-run -a ./gradlew` where there is none.
 - **Build with a JDK between 11 and 24** — Gradle 8.14.3 is the last that runs on 11 and does not run on 25.
 - **Java 11 runtime compatibility is CI's job** — its JDK 11 leg runs the whole build there; a local build on any JDK 11–24 is enough.
+- `./gradlew :tiny-mcp-server:testOfficial` — the conformance suite through the official MCP SDK; needs a 17+ build JDK.
 - `./gradlew test` — every headless test; `./gradlew :swing-mcp:testSwing` — the screen-mode ones (Xvfb in CI).
-- `./gradlew test --tests "com.vaadin.swingmcp.mcp.SessionCloseTest"` — one class; append `.methodName` for one method.
-- `design/verify_design_tripwires.sh` — the doc layer.
+- `./gradlew test --tests "com.vaadin.swingmcp.tinymcpserver.TinyMcpServerTest"` — one class; append `.methodName` for one method.
+- `design/verify_design_tripwires.sh` and `tiny-mcp-server/design/verify_design_tripwires.sh` — the two doc layers.
 
 ## Skills this project follows
 

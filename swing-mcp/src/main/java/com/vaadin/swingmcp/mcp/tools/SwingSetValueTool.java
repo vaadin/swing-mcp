@@ -17,9 +17,9 @@
 package com.vaadin.swingmcp.mcp.tools;
 
 import com.vaadin.swingmcp.mcp.SwingUtils;
-import com.github.mvysny.tinymcpserver.MCPErrorResponseException;
-import com.github.mvysny.tinymcpserver.MCPProtocol;
-import com.github.mvysny.tinymcpserver.Parameters;
+import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
+import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.tools.SwingTools;
 import org.jspecify.annotations.Nullable;
 

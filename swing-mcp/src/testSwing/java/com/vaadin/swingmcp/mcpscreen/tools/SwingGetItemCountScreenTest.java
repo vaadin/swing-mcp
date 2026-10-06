@@ -16,15 +16,15 @@
  */
 package com.vaadin.swingmcp.mcpscreen.tools;
 
-import com.github.mvysny.tinymcpserver.Parameters;
+import com.vaadin.swingmcp.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.mcp.tools.SwingGetItemCountTool;
 import com.vaadin.swingmcp.mcp.tools.SwingSetTextTool;
 import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
 import com.vaadin.swingmcp.mcpscreen.AbstractScreenTest;
 import com.vaadin.swingmcp.mcpscreen.JFilterableComboBox;
-import com.github.mvysny.tinymcpserver.MCPErrorResponseException;
-import com.github.mvysny.tinymcpserver.MCPProtocol;
+import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
+import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

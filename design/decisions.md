@@ -957,9 +957,9 @@ Reconnect per session that started before the application, at the whole price ab
 practice it never worked well. A proxy is cheap to rebuild and the client cheap to re-measure, so
 run the recipe in `R_claude_code_http_lifecycle` before reviving one.
 
-**Why the client's silent re-initialize after a restart is safe here.** TinyMCPServer's own
+**Why the client's silent re-initialize after a restart is safe here.** tiny-mcp-server's own
 client deliberately never re-initializes on a lost session (its no-auto-retry decision, in
-that repository's `design/decisions.md`), because a replay against a fresh session can land on
+`tiny-mcp-server/design/decisions.md`), because a replay against a fresh session can land on
 state nobody intended. Claude Code does exactly that. It is safe for this server because the ref
 map lives on the session. A restarted application starts with an empty one, so a ref the model
 held from before the restart is refused as stale rather than addressing a different widget, and
@@ -1063,7 +1063,8 @@ pure fire-and-forget shape.
 
 ## D_java11_floor — Why does the shipped code target Java 11 rather than 17?
 
-`options.release = 11` on every compile task, tests included. The published jars are class-file version 55, so they load into a
+`options.release = 11` on every compile task, tests included; only tiny-mcp-server's
+`testOfficial` compiles at 17. The published jars are class-file version 55, so they load into a
 Java 11 JVM.
 
 **Why, at all.** This drops into a Swing application built years ago, and those run on old JVMs.
@@ -1075,10 +1076,10 @@ the artifact is the whole argument, and a language floor is the cheapest way to 
 
 **Why 11 and not 8.** `var`, `List.of`/`List.copyOf` and `String.isBlank`/`repeat`/`strip` are
 used throughout the shipped code, and `TinyMCPClient` is built on `java.net.http.HttpClient`. The
-client ships in TinyMCPServer's main jar although only tests use it. A `--release 8`
+client ships in tiny-mcp-server's main source set although only tests use it. A `--release 8`
 compile of everything shipped fails with 69 errors (2026-09-23): nearly all mechanical, with the
-client the one real blocker. Java 8 would mean a Java 8 TinyMCPServer with that client relocated or
-rewritten, and every such call here. That is real work, for a JVM generation nobody has yet shown the migration target needs.
+client the one real blocker. Java 8 would mean relocating or rewriting the client and every such
+call. That is real work, for a JVM generation nobody has yet shown the migration target needs.
 
 **Why not 17, keeping records and `sealed`.** Rejected on what it costs to reverse. The nine
 records and one sealed interface were about forty lines of hand-written boilerplate to undo
@@ -1104,8 +1105,9 @@ where a rejection path answered without draining the request body, so `com.sun.n
 closed a connection the client had already pooled. Java 11's `HttpClient` does not retry a POST
 that dies that way (JDK 12+ does), so only the 11 leg ever saw it.
 
-**Why no test here uses the official MCP SDK.** It has no Java 11 build — every release from
-0.7.0 to 2.0.1 is class-file 61 — so it cannot be the thing that drives a suite which must also
-run on 11. The conformance leg through it lives in TinyMCPServer, compiled at 17 and skipped on an
-older build JDK. Everything here drives the server through TinyMCPServer's `TinyMCPClient`, which
-is the right layer anyway.
+**Why the official MCP SDK is confined to one source set.** It has no Java 11 build — every
+release from 0.7.0 to 2.0.1 is class-file 61 — so it cannot be the thing that drives a suite
+which must also run on 11. It stays in `tiny-mcp-server/src/testOfficial`, compiled at 17 and
+skipped entirely on an older build JDK. Everything above that module drives the server through
+this repository's own `TinyMCPClient`, which is the right layer anyway. Why the SDK is worth
+keeping at all is that module's own decision, in `tiny-mcp-server/design/decisions.md`.
