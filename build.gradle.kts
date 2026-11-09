@@ -73,8 +73,7 @@ subprojects {
         // --release (not source/targetCompatibility) is what actually enforces
         // the API floor: it compiles against that JDK's API signatures, so a
         // post-11 method fails the build instead of failing at the customer.
-        // Tests are held to the same floor so they can run on a Java 11 JVM;
-        // tiny-mcp-server's `testOfficial` set is the one documented exception.
+        // Tests are held to the same floor so they can run on a Java 11 JVM.
         options.release = 11
     }
 

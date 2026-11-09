@@ -16,7 +16,7 @@
  */
 package com.vaadin.swingmcp.mcp;
 
-import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.github.mvysny.tinymcpserver.MCPProtocol;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

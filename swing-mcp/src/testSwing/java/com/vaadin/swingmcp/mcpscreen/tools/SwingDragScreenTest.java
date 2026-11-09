@@ -18,7 +18,7 @@ package com.vaadin.swingmcp.mcpscreen.tools;
 
 import com.vaadin.swingmcp.mcp.DragRecordingPanel;
 import com.vaadin.swingmcp.mcp.MouseEventRecorder;
-import com.vaadin.swingmcp.tinymcpserver.Parameters;
+import com.github.mvysny.tinymcpserver.Parameters;
 import com.vaadin.swingmcp.mcp.tools.SwingDragTool;
 import com.vaadin.swingmcp.mcp.tools.SwingGetCellsTool;
 import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;

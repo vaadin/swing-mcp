@@ -17,11 +17,6 @@
 # The set of checks is closed: a project never adds one here. Rules about the project's own code
 # belong in its tests and linters, which are better at it. The checks carry no ids — each is
 # named by what it checks.
-#
-# Scoping: this repository holds two products, each with its own README and its own design/.
-# This copy checks everything EXCEPT tiny-mcp-server, which has its own copy, so the two D_ / R_
-# namespaces stay separate. Scoping the same checks to a subtree is not adding one. That module's
-# own decisions register says why it lives here at all.
 set -euo pipefail
 export LC_ALL=C   # byte order for sort/comm, byte counts for the caps
 cd "$(git rev-parse --show-toplevel)"
@@ -29,15 +24,11 @@ cd "$(git rev-parse --show-toplevel)"
 fail=0
 err() { printf 'tripwire: %s\n' "$*" >&2; fail=1; }
 DESIGN=design
-OTHER_PRODUCT=tiny-mcp-server
 
-# Tracked files belonging to this product, listed once. An empty listing is a failure: a vacuous
-# pass is indistinguishable from a green one.
+# Tracked files, listed once. An empty listing is a failure: a vacuous pass is indistinguishable
+# from a green one.
 files=()
-while IFS= read -r -d '' f; do
-  case "$f" in "$OTHER_PRODUCT"/*) continue ;; esac
-  files+=("$f")
-done < <(git ls-files -z)
+while IFS= read -r -d '' f; do files+=("$f"); done < <(git ls-files -z)
 [ "${#files[@]}" -gt 0 ] || { err "git ls-files listed nothing in $PWD"; exit 1; }
 tracked() { printf '%s\0' "${files[@]}"; }
 

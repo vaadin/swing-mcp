@@ -16,8 +16,8 @@
  */
 package com.vaadin.swingmcp.mcpscreen.tools;
 
-import com.vaadin.swingmcp.tinymcpserver.Parameters;
-import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
+import com.github.mvysny.tinymcpserver.Parameters;
+import com.github.mvysny.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.mcp.tools.SwingClickTool;
 import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
@@ -96,7 +96,7 @@ class SwingClickScreenTest extends AbstractScreenTest {
 
         snapshot(frame);
         int ref = context.getRefOf(button);
-        var ex = assertThrows(com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException.class,
+        var ex = assertThrows(com.github.mvysny.tinymcpserver.MCPErrorResponseException.class,
                 () -> click(ref));
         assertTrue(ex.getMessage().contains("disabled"));
     }
@@ -140,7 +140,7 @@ class SwingClickScreenTest extends AbstractScreenTest {
 
         snapshot(dialog);
         int ref = context.getRefOf(button);
-        var ex = assertThrows(com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException.class,
+        var ex = assertThrows(com.github.mvysny.tinymcpserver.MCPErrorResponseException.class,
                 () -> click(ref));
         assertTrue(ex.getMessage().contains("disabled"));
     }
@@ -201,7 +201,7 @@ class SwingClickScreenTest extends AbstractScreenTest {
 
         snapshot(host);
         int ref = context.getRefOf(button);
-        var ex = assertThrows(com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException.class,
+        var ex = assertThrows(com.github.mvysny.tinymcpserver.MCPErrorResponseException.class,
                 () -> click(ref));
         assertTrue(ex.getMessage().contains("disabled"));
     }

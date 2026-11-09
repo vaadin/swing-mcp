@@ -17,9 +17,9 @@
 package testapp;
 
 import com.vaadin.swingmcp.mcp.SwingMCP;
-import com.vaadin.swingmcp.tinymcpclient.MCPClient;
-import com.vaadin.swingmcp.tinymcpclient.TinyMCPClient;
-import com.vaadin.swingmcp.tinymcpserver.MCPProtocol;
+import com.github.mvysny.tinymcpserver.client.MCPClient;
+import com.github.mvysny.tinymcpserver.client.TinyMCPClient;
+import com.github.mvysny.tinymcpserver.MCPProtocol;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
