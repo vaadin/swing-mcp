@@ -28,5 +28,5 @@ header`), and the client falls back to `initialize`.
 
 - `Q_discover_spec` — Which specification revision or proposal defines `server/discover`, and what
   should a server that does not support it answer? Probably JSON-RPC "method not found", rather
-  than the session error it gets now. Answering that way is tiny-mcp-server's change, and its
+  than the session error it gets now. Answering that way is TinyMCPServer's change, and its
   research register is where the finding goes.

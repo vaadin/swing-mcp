@@ -11,7 +11,7 @@ comment), the module map (`AGENTS.md`).
 ## Wiring
 
 - Dependencies point one way: `swing-mcp-agent` and `test-apps` → `swing-mcp` →
-  `tiny-mcp-server`. An MCP client talks to `SwingMCP` over loopback HTTP directly; there is no
+  TinyMCPServer. An MCP client talks to `SwingMCP` over loopback HTTP directly; there is no
   process in between (`D_direct_http_only`).
 - `SwingMCP` owns the `MCPHandler`, the `HttpMCPServer` wrapping it, and `toolLock`. It composes
   the transport rather than extending it, and registers every tool through one shared wrapper.
@@ -27,7 +27,7 @@ comment), the module map (`AGENTS.md`).
 - `SwingUtils` holds every capability probe — `supportsClick`, `supportsGetText`,
   `supportsSetValue`, `isEffectivelyEnabled`, `sanitizeForQuotedSlot`. The snapshot and the tools
   call the same probe, so what is advertised and what is accepted cannot diverge.
-- Tool arguments arrive already wrapped in `tiny-mcp-server`'s `Parameters`, which is where
+- Tool arguments arrive already wrapped in TinyMCPServer's `Parameters`, which is where
   type coercion and the `INVALID_PARAMS` messages live; no tool touches a raw map.
 
 ## Flows

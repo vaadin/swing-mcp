@@ -16,8 +16,8 @@
  */
 package com.vaadin.swingmcp.mcpscreen.tools;
 
-import com.vaadin.swingmcp.tinymcpserver.Parameters;
-import com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException;
+import com.github.mvysny.tinymcpserver.Parameters;
+import com.github.mvysny.tinymcpserver.MCPErrorResponseException;
 import com.vaadin.swingmcp.mcp.tools.SwingSnapshotTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToggleExpandTool;
 import com.vaadin.swingmcp.mcp.tools.SwingToolContext;
@@ -101,7 +101,7 @@ class SwingToggleExpandScreenTest extends AbstractScreenTest {
             snapshot(host);
             // It has a ref through its close/iconify actions, but no toggle_expand
             int ref = context.getRefOf(iframe);
-            var ex = assertThrows(com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException.class,
+            var ex = assertThrows(com.github.mvysny.tinymcpserver.MCPErrorResponseException.class,
                     () -> executeOnEDT(() -> {
                         toggleExpandTool.execute(new Parameters(Map.of("ref", ref)), context);
                         return null;
@@ -122,7 +122,7 @@ class SwingToggleExpandScreenTest extends AbstractScreenTest {
         try {
             snapshot(host);
             context.putRef(99, desktop);
-            var ex = assertThrows(com.vaadin.swingmcp.tinymcpserver.MCPErrorResponseException.class,
+            var ex = assertThrows(com.github.mvysny.tinymcpserver.MCPErrorResponseException.class,
                     () -> executeOnEDT(() -> {
                         toggleExpandTool.execute(new Parameters(Map.of("ref", 99)), context);
                         return null;
